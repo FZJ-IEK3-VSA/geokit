@@ -1,5 +1,3 @@
-from .util import *
-from .extent import *
 from .regionMask import *
 
 # Distribute items with a minimal separation within available areas
@@ -178,7 +176,7 @@ def placeItemsInRaster(raster, distance, output=None, outputAsPoints=True, overw
     band = ds.GetRasterBand(1)
     data = band.ReadAsArray()
 
-    info = describeRaster(ds)
+    info = rasterInfo(ds)
     scale = (info.pixelHeight+info.pixelWidth)/2
 
     # place items
@@ -370,7 +368,7 @@ def combineRasters(master, datasets, flipY=False, **kwargs):
         masterDS = gdal.Open(master, gdal.GA_Update)
 
         # Ensure each datasets has the same projection and resolution as master
-        ras = describeRaster(masterDS)
+        ras = rasterInfo(masterDS)
 
         dx = ras.pixelWidth
         dy = ras.pixelHeight
@@ -380,7 +378,7 @@ def combineRasters(master, datasets, flipY=False, **kwargs):
 
         # Iterate over files
         for fi in range(len(datasets)):
-            ras = describeRaster(datasets[fi])
+            ras = rasterInfo(datasets[fi])
 
             if( dx!=ras.dx or dy!=ras.dy or not srs.IsSame(ras.srs) or dataType!=ras.dtype):
                 msg = "Dataset {0} does not match master configuration".format(fi)
@@ -395,7 +393,7 @@ def combineRasters(master, datasets, flipY=False, **kwargs):
         # Gather collective stats
         first=True
         for ds in datasets:
-            ras = describeRaster(ds)
+            ras = rasterInfo(ds)
 
             # Ensure each datasets has the same projection and resolution
             if(first):

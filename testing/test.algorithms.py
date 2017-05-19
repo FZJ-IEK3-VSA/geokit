@@ -51,6 +51,5 @@ if __name__ == "__main__":
 	placeItemsInMatrix_()
 	placeItemsInRaster_()
 	growMatrix_()
-	# THIS IS overlayRasters_()
 	combineRasters_()
 	coordinateFilter_()
