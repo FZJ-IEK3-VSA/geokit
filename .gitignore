@@ -1,0 +1,20 @@
+# directories
+env/*
+*.egg-info/
+.ipynb-checkpoints/*
+__pycache__/
+analysis/regions/*
+
+# file types to ignore
+*.ipynb
+*.aux.xml
+
+# Remove things in testing results dir
+testing/results/*.tif
+testing/results/*.shp
+testing/results/*.dbf
+testing/results/*.shx
+testing/results/*.prj
+testing/results/*.cpg
+testing/results/*.csv
+testing/results/eligibility_plots
