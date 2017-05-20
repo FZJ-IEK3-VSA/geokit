@@ -351,7 +351,7 @@ class Extent(object):
 
         # test srs
         if not s.srs.IsSame(extent.srs):
-            raise GToolsExtentError("extents are not of the same srs")
+            raise GeoKitExtentError("extents are not of the same srs")
 
         # try to unpack the resolution
         try:
@@ -370,7 +370,7 @@ class Extent(object):
         yOff = int(np.round(tmpY))
 
         if not (isclose(xOff, tmpX) or isclose(yOff, tmpY)):
-            raise GToolsExtentError("The extents are not relatable on the given resolution")
+            raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Get window sizes
 
@@ -381,7 +381,7 @@ class Extent(object):
         yWin = int(np.round(tmpY))
 
         if not (isclose(xWin, tmpX) or isclose(yWin, tmpY)):
-            raise GToolsExtentError("The given extent does not fit on the given resolution")
+            raise GeoKitExtentError("The given extent does not fit on the given resolution")
 
         # Done!
         return xOff, yOff, xWin, yWin

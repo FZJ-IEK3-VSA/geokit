@@ -1,4 +1,4 @@
-from .util import GToolsError, GToolsSRSError, GToolsRasterError, GToolsVectorError, \
+from .util import GeoKitError, GeoKitSRSError, GeoKitRasterError, GeoKitVectorError, \
 			 	  SRSCOMMON, EPSG4326, EPSG3035, scaleMatrix
 
 

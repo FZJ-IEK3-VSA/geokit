@@ -16,7 +16,7 @@ def loadVector(x, stringOnly=False):
         ds = x
     
     if(ds is None):
-        raise GToolsVectorError("Could not load input dataSource: ", str(x))
+        raise GeoKitVectorError("Could not load input dataSource: ", str(x))
     return ds
 
 # Feature looper
@@ -103,7 +103,7 @@ def makeEmptyGeom(name, srs=None):
     name options: Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
     """
     if not hasattr(ogr,"wkb"+name):
-        raise GToolsVectorError("Could not find geometry named: "+name)
+        raise GeoKitVectorError("Could not find geometry named: "+name)
     geom = ogr.Geometry(getattr(ogr,"wkb"+name))
 
     if not srs is None:
@@ -115,7 +115,7 @@ def makeGeomFromWkt( wkt, srs=None):
     """Make a geometry from a WKT string"""
     geom = ogr.CreateGeometryFromWkt( wkt ) # Create new geometry from string 
     if not isinstance(geom,ogr.Geometry): # test for success
-        raise GToolsVectorError("Failed to create geometry")
+        raise GeoKitVectorError("Failed to create geometry")
     if srs:
         srs = loadSRS(srs)
         geom.AssignSpatialReference(srs) # Assign the given srs
@@ -143,7 +143,7 @@ def makeGeomFromMask( mask, bounds=None, srs=None, flatten=False):
                 xMin, yMin, xMax, yMax = bounds.xyXY
                 srs = bounds.srs
             except:
-                raise GToolsVectorError("Could not underdtane 'bounds' input")
+                raise GeoKitVectorError("Could not underdtane 'bounds' input")
 
 
         pixelHeight = (yMax-yMin)/mask.shape[0]
@@ -174,7 +174,7 @@ def makeGeomFromMask( mask, bounds=None, srs=None, flatten=False):
     # Polygonize geometry
     result = gdal.Polygonize(rasBand, maskBand, vecLyr, 0)
     if( result != 0):
-        raise GToolsVectorError("Failed to polygonize geometry")
+        raise GeoKitVectorError("Failed to polygonize geometry")
 
     # Check how many features were created
     ftrN = vecLyr.GetFeatureCount()
@@ -371,7 +371,7 @@ def vectorItem(**kwargs):
     # try to get a second result
     s = nect(getter)
     if not s is None:
-        raise GToolsVectorError("More than one feature found")
+        raise GeoKitVectorError("More than one feature found")
 
     # Done!
     return geom,attr    
@@ -514,7 +514,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         
         # check if length is good
         if(fieldVals.shape[0]!=len(geoms)):
-            raise GToolsVectorError("Values table length does not equal geometry count")
+            raise GeoKitVectorError("Values table length does not equal geometry count")
 
         # Ensure fieldDefs exists and is a dict
         if( fieldDef is None): # Try to determine data types
@@ -649,7 +649,7 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
     vecDS = loadVector(source)
     vecLyr = vecDS.GetLayer()
     vecSRS = vecLyr.GetSpatialRef()
-    if(vecSRS is None): raise GToolsVectorError("Could not determine source SRS")
+    if(vecSRS is None): raise GeoKitVectorError("Could not determine source SRS")
 
     # Apply filters to source
     if(extent):
@@ -657,7 +657,7 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
 
     if(not where is None):
         r = vecLyr.SetAttributeFilter(where)
-        if( r!=0): raise GToolsVectorError("Error applying where statement")
+        if( r!=0): raise GeoKitVectorError("Error applying where statement")
 
     # TEST THE FEATURES!!!!
     if( vecLyr.GetFeatureCount()==0 ): 
@@ -721,7 +721,7 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
             goodOutput = False
 
         if (not goodOutput):
-            raise GToolsVectorError( "Error encountered while processing")
+            raise GeoKitVectorError( "Error encountered while processing")
 
         # Look if wkt was returned. If so, convert to geom
         if( isinstance(g, str) ):
@@ -737,7 +737,7 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
                 values[k] = [v,]
 
     if( len(geoms)==0 ):
-        raise GToolsVectorError("Invalid geometry count")
+        raise GeoKitVectorError("Invalid geometry count")
 
     # Create a new shapefile from the results 
     newDS = createVector( geoms, srs=srs, fieldVals=values, fieldDef=fieldTypes, output=output, **kwargs )
@@ -746,7 +746,7 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
         return
     else:
         if(newDS is None):
-            raise GToolsVectorError("Failed to create working shapefile")
+            raise GeoKitVectorError("Failed to create working shapefile")
         return newDS
 
 

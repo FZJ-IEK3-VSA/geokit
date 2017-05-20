@@ -1,5 +1,6 @@
 from .util import *
 
+
 ####################################################################
 # INTERNAL FUNCTIONS
 
@@ -15,7 +16,7 @@ def loadRaster(x):
         ds = x
 
     if(ds is None):
-        raise GToolsRasterError("Could not load input dataSource: ", str(x))
+        raise GeoKitRasterError("Could not load input dataSource: ", str(x))
     return ds
 
 
@@ -42,7 +43,7 @@ def gdalType(s):
     elif( s is int ): return _gdalType[int]
     elif( s is float ): return _gdalType[float]
     elif( isinstance(s,Iterable) ): return gdalType( s[0] )
-    raise GToolsRasterError("GDAL type could not be determined")  
+    raise GeoKitRasterError("GDAL type could not be determined")  
 
 # raster stat calculator
 def calculateStats( source ):
@@ -52,7 +53,7 @@ def calculateStats( source ):
     if isinstance(source,str):
         source = gdal.Open(source, 1)
     if source is None:
-        raise GToolsRasterError("Failed to open source: ", source)
+        raise GeoKitRasterError("Failed to open source: ", source)
 
     band = source.GetRasterBand(1)
     band.ComputeBandStats(0)
@@ -123,7 +124,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
                 if(os.path.isfile(output+".aux.xml")):
                     os.remove(output+".aux.xml")
             else:
-                raise GToolsRasterError("Output file already exists: %s" %output)
+                raise GeoKitRasterError("Output file already exists: %s" %output)
 
     # Calculate axis information
     try: # maybe the user passed in an Extent object, test for this...
@@ -159,7 +160,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
 
     if(raster is None):
-        raise GToolsRasterError("Failed to create raster")
+        raise GeoKitRasterError("Failed to create raster")
 
     raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
     #raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, pixelHeight))
@@ -186,7 +187,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     else:
         # make sure dimension size is good
         if not (data.shape[0]==rows and data.shape[1]==cols):
-            raise GToolsRasterError("Raster dimensions and input data dimensions do not match")
+            raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
         
         # See if data needs flipping
         if pixelHeight<0:
@@ -377,7 +378,13 @@ def describeRaster(x):
 
 ####################################################################
 # Fetch specific points in a raster
-def rasterValues(source, points, winRange=0):
+def _pointGen(x,y,s):
+    tmpPt = ogr.Geometry(ogr.wkbPoint)
+    tmpPt.AddPoint(x, y)
+    tmpPt.AssignSpatialReference(s)
+    return tmpPt
+
+def rasterValues(source, points, pointSRS='latlon', winRange=0):
     """Extracts the value of a raster a a given point or collection of points. Can also extract a window of values if desired
 
     * If the given raster is not in the 'flipped-y' orientation, the result will be automatically flipped
@@ -395,26 +402,36 @@ def rasterValues(source, points, winRange=0):
         points
             [ogr-Point, ] -- An array of OGR point-geometry objects
             ogr-Point -- A single OGR point-geometry object
-            (lat, lon) -- A single lattitude/longitude pair
-            [ (lat,lon), ] -- A list of latitude longitude pairs
+            (lon, lat) -- A single lattitude/longitude pair
+            [ (lon, lat), ] -- A list of latitude longitude pairs
 
         winRange - (0)
             int -- The number of raster pixels to include around the located points
             * Result extends 'winRange' pixes in all directions, so a winRange of 0 will result in a returned a window of shape (1,1), a winRange of 1 will result in a returned window of shape (3,3), and so on...
     """
-    # Be sure we have a raster
+    # Be sure we have a raster and srs
     source = loadRaster(source)
     info = rasterInfo(source)
+    pointSRS = loadSRS(pointSRS)
 
     # See if point is a point geometry array, if not make it into one
     if isinstance(points, ogr.Geometry):
         points = [points, ]
-    elif not isinstance(points[0], ogr.Geometry):
+
+    elif isinstance( points, tuple ): # Check if points is a single location (as a tuple) 
+        points = [_pointGen(points[0], points[1], pointSRS), ] # Assume tuple is (lon,lat)
+
+    else: # Assume points is iterable
         try:
-            points = [pointGeom(points[0], points[1], EPSG4326),]
-        except:
-            points = [pointGeom(pt[0], pt[1], EPSG4326) for pt in points]
-    pointSRS = points[0].GetSpatialReference()
+            points = [_pointGen(pt[0], pt[1], pointSRS) for pt in points] # first check for basic lat/lon
+        except: 
+            points = points # Assmume points is already an array of point geometries
+
+    # Get point srs directly from the first point (also checks if we have an array of points)
+    try:
+        pointSRS = points[0].GetSpatialReference()
+    except:
+        raise GeoKitRasterError("Failed to load points")
 
     # Cast to source srs
     if not pointSRS.IsSame(info.srs):
@@ -431,7 +448,7 @@ def rasterValues(source, points, winRange=0):
     xIndexes = np.round( xValues )
     xOffset = xValues-xIndexes
     
-    if info.flipY:
+    if info.yAtTop:
         yValues = ((info.yMax-0.5*info.pixelWidth)-y)/abs(info.pixelHeight)
         yIndexes = np.round( yValues )
         yOffset = yValues-yIndexes
@@ -449,7 +466,7 @@ def rasterValues(source, points, winRange=0):
     window = 2*winRange+1
 
     if xStarts.min()<0 or yStarts.min()<0 or (xStarts.max()+window)>info.xWinSize or (yStarts.max()+window)>info.yWinSize:
-        raise GToolsRasterError("One of the given points (or extraction windows) exceeds the source's limits")
+        raise GeoKitRasterError("One of the given points (or extraction windows) exceeds the source's limits")
 
     # Read values
     values = []
@@ -460,7 +477,7 @@ def rasterValues(source, points, winRange=0):
         data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
 
         # flip if not in the 'flipped-y' orientation
-        if not info.flipY:
+        if not info.yAtTop:
             data=data[::-1,:]
 
         # Append to values
@@ -470,11 +487,108 @@ def rasterValues(source, points, winRange=0):
     return values, offsets
 
 ####################################################################
-# Shortcut for getting a single point value
-def rasterValue(source, point):
-    """Convenience wrapper for 'rasterValues' to simply get the closest raster value at the given point"""
-    return rasterValues(source, point)[0][0][0]
+# Shortcut for getting just the raster value
+def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
+    """Retrieve a single value for each point(s)
 
+    Inputs:
+        source
+            str -- Path to a raster datasource
+            gdal.Dataset -- A previously opened gdal raster dataset
+
+        point
+            (float,float) -- X and Y coordinates of the point to search for
+            [(float, float),] -- A list of X and Y coordinates to search for
+            ogr-Point-Geometry -- A search point as an OGR point geometry
+            [ogr-Point-Geometry, ] -- A list of OGR point geomerties to search for
+            * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
+              (opposite of what you may think...)
+
+        pointSRS ('latlon') - Any recongnizable SRS identifier
+            * Can use an EPSG number, a WKT string, an SRSCOMMOM member, or an already 
+              open srs object
+            * Default is latitude and longitude
+        
+        mode -- The interpolation scheme to use
+            * options are...
+                - "near" - Just gets the nearest value (this is default)
+                - "linear-spline" - calculates a linear spline inbetween points
+                - "cubic-spline" - calculates a cubic spline inbetween points
+                - "average" - calculates average across a window
+                - "func" - uses user-provided calculator
+
+        Kwargs:
+            winRange -- An integer window range to extract
+                * Useful when using "average" or "func" mode to control the window size
+                * Example: winRange=3 will extract 3 rows/columns away from the located point 
+                  (creates a 7x7 matrix) 
+            func -- A function which takes an NxN matrix as input, does a calculation
+                    and returns a single scalar
+                * Required when using the "func" interpolation mode
+        
+        """
+
+    if mode=='near':
+        # Simple get the nearest value
+        result = rasterValues(source, point, pointSRS=pointSRS, winRange=0)[0]
+
+    elif mode=="linear-spline": # use a spline interpolation scheme
+        # setup inputs
+        win = 2
+        x = np.linspace(-1*win,win,2*win+1)
+        y = np.linspace(-1*win,win,2*win+1)
+
+        # get raw data
+        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+
+        # Calculate interpolated values
+        result=[]
+        for z,pt in zip(rasterData,offsets):
+            rbs = RectBivariateSpline(y,x,z, kx=1, ky=1)
+
+            result.append(rbs(pt[1],pt[0]))
+
+    elif mode=="cubic-spline": # use a spline interpolation scheme
+        # setup inputs
+        win = 4
+        x = np.linspace(-1*win,win,2*win+1)
+        y = np.linspace(-1*win,win,2*win+1)
+        
+        # Get raw data
+        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        
+        # Calculate interpolated values
+        result=[]
+        for z,pt in zip(rasterData,offsets):
+            rbs = RectBivariateSpline(y,x,z)
+
+            result.append(rbs(pt[1],pt[0]))
+
+    elif mode == "average": # Get the average in a window
+        win = kwargs.get("winRange",3)
+        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        result = []
+        for z,pt in zip(rasterData,offsets):
+            result.append([[z.mean()]])
+
+    elif mode == "func": # Use a general function processor
+        win = kwargs.get("winRange",3)
+        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        result = []
+        for z,pt in zip(rasterData,offsets):
+            result.append( kwargs["func"](z) )
+
+        if len(result)==1: return result[0]
+        else: return np.array(result)
+
+    else:
+        raise GeoKitRasterError("Interpolation mode not understood: ", mode)
+
+    # Done!
+    if len(result)==1: return result[0][0][0]
+    else: return np.array([r[0][0] for r in result])
+        
+    
 ####################################################################
 # General raster mutator
 def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, **kwargs):
@@ -554,7 +668,7 @@ def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, *
 
     # Ensure returned matrix is okay
     if( processedData.shape != sourceData.shape ):
-        raise GToolsRasterError( "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",format(rawSuitability.shape, sourceData.shape ))
+        raise GeoKitRasterError( "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",format(rawSuitability.shape, sourceData.shape ))
     del sourceData
 
     # Create an output raster
@@ -563,7 +677,7 @@ def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, *
 
     # Done!
     if(output is None):
-        if(outDS is None): raise GToolsRasterError("Error creating temporary working raster")
+        if(outDS is None): raise GeoKitRasterError("Error creating temporary working raster")
         outDS.FlushCache() # just for good measure
 
         return outDS

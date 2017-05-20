@@ -1,4 +1,4 @@
-from GTools import *
+from geokit import *
 import numpy as np
 from os.path import join
 import ogr, gdal, osr

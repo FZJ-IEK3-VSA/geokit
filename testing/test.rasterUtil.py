@@ -46,12 +46,71 @@ def rasterInfo_():
   if not (info.srs.IsSame(EPSG3035)) : error("decribeRaster - srs")
   if not (info.noData == 0) : error("decribeRaster - noData")
   if not (info.flipY == True) : error("decribeRaster - flipY")
-      
-def rasterValues_():
-  print("MAKE rasterValues TESTER!!!!!!!!!")
 
+## Get values directly from a raster
+def rasterValues_():
+  points = [(6.06590,50.51939), (6.02141,50.61491), (6.371634,50.846025)]
+  realValue = [24, 3, 23]
+  realDiffs = [(-0.18841865745838504, -0.1953854267578663), 
+               (0.03190063584128211, -0.019478775579500507), 
+               (0.18415527009869948, 0.022563403500242885)]
+
+  # test simple case
+  v1 = rasterValues(CLC_RASTER_PATH, points)
+
+  for v, real in zip(v1[0], realValue): 
+    if not (v[0][0]==real) : 
+      error("rasterValues 1")
+  for v, real in zip(v1[1], realDiffs): 
+    if not ( isclose(v[0],real[0]) or isclose(v[1],real[1])): 
+      error("rasterValues 1")
+
+  # test flipped 
+  v2 = rasterValues(CLC_FLIPCHECK_PATH, points)
+
+  for v, real in zip(v2[0], realValue): 
+    if not (v==real) : 
+      error("rasterValues 2")
+  for v, real in zip(v2[1], realDiffs): 
+    if not ( isclose(v[0],real[0]) or isclose(v[1],real[1])): 
+      error("rasterValues 2")
+
+  # test point input
+  pt = ogr.Geometry(ogr.wkbPoint)
+  pt.AddPoint(4061794.7,3094718.4)
+  pt.AssignSpatialReference(EPSG3035)
+
+  v3 = rasterValues(CLC_RASTER_PATH, pt)
+
+  if not (v3[0][0][0]==3): error("rasterValues 3")
+  if not isclose(v3[1][0][0], 0.44700000000187856): error("rasterValues 3")
+  if not isclose(v3[1][0][1], 0.31600000000094042): error("rasterValues 3")
+
+  # test window fetch
+  real = np.array([[ 12, 12, 12, 12, 12  ],
+                   [ 12, 12, 12, 12, 12  ],
+                   [ 12, 12,  3,  3, 12  ],
+                   [ 12, 12, 12,  3,  3  ],
+                   [ 12,  3,  3,  3,  3  ]])
+
+  v4 = rasterValues(CLC_RASTER_PATH, pt, winRange=2)
+  if not isclose(np.abs(v4[0]-real).sum(),0.0): error("rasterValues 4")
+
+
+# A nicer way to get a single value
 def rasterValue_():
-  print("MAKE rasterValue TESTER!!!!!!!!!")
+  point = (4061794.7,3094718.4)
+
+  # test simple
+  rv1 = rasterValue(CLC_RASTER_PATH, point, pointSRS='europe_m')
+  if not rv1==3: raise error("rasterValue 1")
+
+  # test interpolate
+  rv2 = rasterValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="interpolate")
+  print(rv2)
+  if not rv1==3: raise error("rasterValue 1")
+
+
 
 def rasterMatrix_():
   print("MAKE rasterMatrix TESTER!!!!!!!!!")
@@ -148,11 +207,11 @@ def rasterMutate_():
   if not (arr2f==arr2).all(): error("rasterMutate 2f - flipping error!")
 
 if __name__=="__main__":
-    gdalType_()
-    createRaster_()
-    rasterInfo_()
+    #gdalType_()
+    #createRaster_()
+    #rasterInfo_()
     rasterValues_()
     rasterValue_()
     rasterMatrix_()
     rasterGradient_()
-    rasterMutate_()
+    #rasterMutate_()

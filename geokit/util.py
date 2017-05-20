@@ -6,6 +6,7 @@ from glob import glob
 import warnings
 from collections import namedtuple, Iterable
 import pandas as pd
+from scipy.interpolate import RectBivariateSpline
 
 
 ######################################################################################
@@ -23,13 +24,13 @@ if(not res==0 ):
 ######################################################################################
 # An few errors just for me!
 
-class GToolsError(Exception): pass
+class GeoKitError(Exception): pass
 
-class GToolsSRSError(GToolsError): pass
-class GToolsRasterError(GToolsError): pass
-class GToolsVectorError(GToolsError): pass
-class GToolsExtentError(GToolsError): pass
-class GToolsRegionMaskError(GToolsError): pass
+class GeoKitSRSError(GeoKitError): pass
+class GeoKitRasterError(GeoKitError): pass
+class GeoKitVectorError(GeoKitError): pass
+class GeoKitExtentError(GeoKitError): pass
+class GeoKitRegionMaskError(GeoKitError): pass
 
 ######################################################################################
 # Common SRS library
@@ -90,7 +91,7 @@ def loadSRS(source):
     elif( isinstance(source,int) ):
         srs.ImportFromEPSG(source)
     else:
-        raise GToolsSRSError("Unknown srs source type: ", type(source))
+        raise GeoKitSRSError("Unknown srs source type: ", type(source))
         
     return srs
 
@@ -183,7 +184,7 @@ def scaleMatrix(mat, scale, strict=True):
         # ensure scale is a factor of both xSize and ySize
         if strict:
             if( not( mat.shape[0]%yScale==0 and mat.shape[1]%xScale==0)):
-                raise GToolsError("Matrix can only be scaled down by a factor of it's dimensions")
+                raise GeoKitError("Matrix can only be scaled down by a factor of it's dimensions")
             yPad = 0
             xPad = 0
         else:
@@ -209,7 +210,7 @@ def scaleMatrix(mat, scale, strict=True):
         if yPad>0: out[-1,-1]  *= yScale*xScale/(yScale-yPad)/(xScale-xPad) # fix the bot-left point
 
     else: # we have both a scaleup and a scale down
-        raise GToolsError("Dimensions must be scaled in the same direction")
+        raise GeoKitError("Dimensions must be scaled in the same direction")
 
     return out
 

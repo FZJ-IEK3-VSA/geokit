@@ -143,7 +143,7 @@ class RegionMask(object):
         
         err = gdal.Rasterize( maskRaster, sourceDS, bands=bands, burnValues=burnValues, **kwargs)
         if(err != 1):
-            raise GToolsRegionMaskError("Error while rasterizing:\n%s"%err)
+            raise GeoKitRegionMaskError("Error while rasterizing:\n%s"%err)
 
         maskRaster.FlushCache()
 
@@ -267,10 +267,10 @@ class RegionMask(object):
         if( isinstance(select,str) ):
             where = select
             t = vecLyr.SetAttributeFilter(where)
-            if( t!=0 ): raise GToolsRegionMaskError("Error in select statement: \""+where+"\"")
+            if( t!=0 ): raise GeoKitRegionMaskError("Error in select statement: \""+where+"\"")
             
-            if vecLyr.GetFeatureCount()  > 1: raise GToolsRegionMaskError("Multiple fetures found")
-            if vecLyr.GetFeatureCount() == 0: raise GToolsRegionMaskError("Zero features found")
+            if vecLyr.GetFeatureCount()  > 1: raise GeoKitRegionMaskError("Multiple fetures found")
+            if vecLyr.GetFeatureCount() == 0: raise GeoKitRegionMaskError("Zero features found")
 
             vecFtr = vecLyr.GetNextFeature()
             
@@ -280,7 +280,7 @@ class RegionMask(object):
             vecFtr = vecLyr.GetFeature(select)
             
         if vecFtr is None:
-            raise GToolsRegionMaskError("Could not extract feature!")
+            raise GeoKitRegionMaskError("Could not extract feature!")
 
         # Create a new Region
         geom = vecFtr.GetGeometryRef()
@@ -310,7 +310,7 @@ class RegionMask(object):
 
         !!Only available when pixelWidth equals pixelHeight!!"""
         if s._pixelSize is None:
-            raise GToolsRegionMaskError("Function only accessable when pixelWidth equals pixelHeight")
+            raise GeoKitRegionMaskError("Function only accessable when pixelWidth equals pixelHeight")
         return s._pixelSize
 
     @property
@@ -484,7 +484,7 @@ class RegionMask(object):
                 break
         
         if( not featureFound ):
-            raise GToolsRegionMaskError("No containing feature found")
+            raise GeoKitRegionMaskError("No containing feature found")
 
         # cleanup
         del masterLyr, masterDS
@@ -555,7 +555,7 @@ class RegionMask(object):
 
         elif( Y>s.height and X>s.width ):
             if( not Y%s.height==0 or not X%s.width==0 ):
-                raise GToolsRegionMaskError("Matrix dimensions must be multiples of mask dimensions")
+                raise GeoKitRegionMaskError("Matrix dimensions must be multiples of mask dimensions")
 
             yScale = Y//s.height
             xScale = X//s.width
@@ -565,7 +565,7 @@ class RegionMask(object):
             out[sel] = noData
 
         else:
-            raise GToolsRegionMaskError("Could not map mask onto matrix")
+            raise GeoKitRegionMaskError("Could not map mask onto matrix")
 
         return out
 
@@ -630,7 +630,7 @@ class RegionMask(object):
             dtype = dtype if dtype else dsInfo.dtype
 
             targetDS = s.createRaster(resolutionDiv, dtype=dtype)
-            if(targetDS is None): raise GToolsRegionMaskError("Error creating temporary mask-like matrix")
+            if(targetDS is None): raise GeoKitRegionMaskError("Error creating temporary mask-like matrix")
 
             # Warp working raster to the mask-like raster
             mt = kwargs.pop("multithread", True)
@@ -698,7 +698,7 @@ class RegionMask(object):
 
         tmp = gdal.Rasterize( outputDS, source, bands=bands, **kwargs)
         if(tmp==0):
-            raise GToolsRegionMaskError("Rasterization failed!")
+            raise GeoKitRegionMaskError("Rasterization failed!")
         outputDS.FlushCache()
 
         # Read array
@@ -825,7 +825,7 @@ class RegionMask(object):
                 elif isinstance(value,float):
                     where += "%s=%f OR "%(whereField, value)
                 else:
-                    raise GToolsRegionMaskError("Could not determine value type")
+                    raise GeoKitRegionMaskError("Could not determine value type")
             where = where[:-4]
             kwargs["where"] = where
         
