@@ -1,3 +1,12 @@
+import Util
+import GeomUtil
+import RasterUtil
+import VectorUtil
+from .Extent import Extent
+from .RegionMask import RegionMask, RM_DEFAULT_SRS, RM_DEFAULT_RES, RM_DEFAULT_PAD
+import Special
+
+'''
 from .util import GeoKitError, GeoKitSRSError, GeoKitRasterError, GeoKitVectorError, \
 			 	  SRSCOMMON, EPSG4326, EPSG3035, scaleMatrix
 
@@ -16,3 +25,4 @@ from .regionMask import RegionMask, RM_DEFAULT_SRS, RM_DEFAULT_RES, RM_DEFAULT_P
 
 
 from .algorithms import placeItemsInMatrix, placeItemsInRaster, growMatrix, combineRasters, coordinateFilter
+'''

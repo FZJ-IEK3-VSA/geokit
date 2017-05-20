@@ -111,9 +111,9 @@ def rasterValue_():
   if not rv1==3: raise error("rasterValue 1")
 
 
-
 def rasterMatrix_():
-  print("MAKE rasterMatrix TESTER!!!!!!!!!")
+  # This one really doesn't need to be tested....
+  pass
 
 def rasterGradient_():
   print("MAKE rasterGradient TESTER!!!!!!!!!")
@@ -207,11 +207,11 @@ def rasterMutate_():
   if not (arr2f==arr2).all(): error("rasterMutate 2f - flipping error!")
 
 if __name__=="__main__":
-    #gdalType_()
-    #createRaster_()
-    #rasterInfo_()
+    gdalType_()
+    createRaster_()
+    rasterInfo_()
     rasterValues_()
     rasterValue_()
     rasterMatrix_()
     rasterGradient_()
-    #rasterMutate_()
+    rasterMutate_()
