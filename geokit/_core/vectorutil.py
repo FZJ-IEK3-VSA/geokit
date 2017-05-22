@@ -68,11 +68,36 @@ def ogrType(s):
     raise ValueError("OGR type could not be determined")
 
 
+
+def filterLayer(layer, geom=None, where=None):
+    if (not geom is None):
+        if isinstance(geom,ogr.Geometry):
+            if(geom.GetSpatialReference() is None):
+                raise GeoKitVectorError("Input geom must have a srs")
+            if(not geom.GetSpatialReference().IsSame(layer.GetSpatialRef())):
+                geom = geom.Clone()
+                geom.TransformTo(layer.GetSpatialRef())
+            layer.SetSpatialFilter(geom)
+        else:
+            if isinstance(geom, tuple): # maybe geom is a simple tuple
+                xMin, yMin, xMax, yMax = geom 
+            else:
+                try: # maybe geom is an extent object
+                    xMin, yMin, xMax, yMax = geom.castTo(layer.GetSpatialRef()).xyXY
+                except:
+                    raise GeoKitVectorError("Geom input not understood")
+            layer.SetSpatialFilterRect(xMin, yMin, xMax, yMax)
+
+    if(not where is None):
+        r = layer.SetAttributeFilter(where)
+        if( r!=0): raise GeoKitVectorError("Error applying where statement")
+
 ####################################################################
 # Vector feature count
-def vectorCount(source):
+def vectorCount(source, geom=None, where=None):
     ds = loadVector(source)
     layer = ds.GetLayer()
+    filterLayer(layer, geom, where)
     return layer.GetFeatureCount()
 
 
@@ -115,6 +140,7 @@ def vectorItems(source, geom=None, where=None, outputSRS=None):
 
     ds = loadVector(source)
     layer = ds.GetLayer()
+    filterLayer(layer, geom, where)
 
     trx=None
     if(not outputSRS is None):
@@ -122,19 +148,6 @@ def vectorItems(source, geom=None, where=None, outputSRS=None):
         if (not lyrSRS.IsSame(outputSRS)):
             trx = osr.CoordinateTransformation(lyrSRS, outputSRS)
     
-    if (not geom is None):
-        if(geom.GetSpatialReference() is None):
-            raise RuntimeError("Input geom must have a srs")
-        if(not geom.GetSpatialReference().IsSame(layer.GetSpatialRef())):
-            geom = geom.Clone()
-            geom.TransformTo(layer.GetSpatialRef())
-            #trx = osr.CoordinateTransformation(layer.GetSpatialRef(), geom.GetSpatialReference())
-        layer.SetSpatialFilter(geom)
-
-    if(not where is None):
-        r = layer.SetAttributeFilter(where)
-        if( r!=0): raise RuntimeError("Error applying where statement")
-
     for ftr in loopFeatures(layer):
         oGeom = ftr.GetGeometryRef().Clone()
         if ( not trx is None): oGeom.Transform(trx)
@@ -142,17 +155,28 @@ def vectorItems(source, geom=None, where=None, outputSRS=None):
 
         yield (oGeom, oItems)
 
-def vectorItem(**kwargs):
+def vectorItem(source, feature=None, geom=None, where=None, outputSRS=None):
     """convenience function to get a single geometry from a source"""
-    getter = vectorItems(**wargs)
+    if feature is None:
+        getter = vectorItems(source, geom, where, outputSRS)
 
-    # Get first result
-    geom,attr = next(getter)
+        # Get first result
+        geom,attr = next(getter)
 
-    # try to get a second result
-    s = nect(getter)
-    if not s is None:
-        raise GeoKitVectorError("More than one feature found")
+        # try to get a second result
+        try:
+            s = next(getter)
+        except StopIteration:
+            pass
+        else:
+            raise GeoKitVectorError("More than one feature found")
+    else:
+        ds = loadVector(source)
+        lyr = ds.GetLayer()
+        ftr = lyr.GetFeature(feature)
+
+        geom = ftr.GetGeometryRef().Clone()
+        attr = ftr.items().copy()
 
     # Done!
     return geom,attr    
@@ -238,7 +262,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
             raise ValueError("srs must be given when passing wkt strings")
 
         # Create geoms
-        finalGeoms = [makeGeomFromWkt(wkt,srs) for wkt in geoms]
+        finalGeoms = [convertWKT(wkt,srs) for wkt in geoms]
 
     else:
         raise ValueError("Geometry inputs must be ogr.Geometry objects or WKT strings")
@@ -359,7 +383,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
 ####################################################################
 # mutuate a vector
-def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fieldTypes=None, output=None, **kwargs):
+def vectorMutate(source, processor=None, workingSRS=None, geom=None, where=None, fieldTypes=None, output=None, **kwargs):
     """Process a vector dataset according to a given function
 
     Returns or creates an ogr dataset with the resulting data
@@ -433,16 +457,11 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
     if(vecSRS is None): raise GeoKitVectorError("Could not determine source SRS")
 
     # Apply filters to source
-    if(extent):
-        vecLyr.SetSpatialFilterRect(*extent.castTo(vecSRS).xyXY)
-
-    if(not where is None):
-        r = vecLyr.SetAttributeFilter(where)
-        if( r!=0): raise GeoKitVectorError("Error applying where statement")
+    filterLayer(vecLyr, geom, where)
 
     # TEST THE FEATURES!!!!
     if( vecLyr.GetFeatureCount()==0 ): 
-        print("No geometries found, returning None")
+        print("No geometries found, returning None (MAKE THIS INTO A REAL WARINING!)")
         return None #No geometries found!!
 
     # Sometimes the filtering seems to fail in an odd way when we're applying filters 
@@ -450,15 +469,15 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
     #  but calling layer.GetNextFeature() will return None. So, we will just do a test for 
     #  this, too...
     if( vecLyr.GetNextFeature() is None ): 
-        print("No geometries found, returning None")
+        print("No geometries found, returning None (MAKE THIS INTO A REAL WARINING!)")
         return None #No geometries found!!
     vecLyr.ResetReading()
     
     # See if a projection to a working srs is necessary
-    if( srs is None):
+    if( workingSRS is None):
         srs = vecSRS
     else:
-        srs=loadSRS(srs)
+        srs=loadSRS(workingSRS)
 
     if( vecSRS.IsSame(srs) ):
         projectionReq = False
@@ -531,11 +550,3 @@ def vectorMutate(source, extent=None, processor=None, where=None, srs=None, fiel
         return newDS
 
 
-
-####################################################################
-# 
-
-
-
-####################################################################
-# 

@@ -1,7 +1,5 @@
 from .util import *
 
-class GeoKitSRSError(GeoKitError): pass
-
 ######################################################################################
 # Common SRS library
 

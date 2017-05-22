@@ -1,7 +1,8 @@
 from helpers import *
+from geokit.util import *
 
 ## Scale Matrix
-def scaleMatrix_():
+def test_scaleMatrix():
   # setup
   sumCheck = MASK_DATA.sum()
 
@@ -24,7 +25,7 @@ def scaleMatrix_():
   try:
     scaledMatrix4 = scaleMatrix(MASK_DATA,-3)
     error("scalingMatrix 4 - strict scaling fail")
-  except GToolsError as e:
+  except GeoKitError as e:
     pass
   else:
     error("scalingMatrix 4 - strict scaling fail")
@@ -34,4 +35,4 @@ def scaleMatrix_():
   #print(scaledMatrix1.sum()*3, sumCheck)
 
 if __name__=="__main__":
-  scaleMatrix_()
+  test_scaleMatrix()

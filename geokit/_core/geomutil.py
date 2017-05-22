@@ -1,20 +1,44 @@
 from .util import *
 from .srsutil import *
 
-class GeoKitGeomError(GeoKitError): pass
-
 ####################################################################
 # Geometry convenience functions
 
-def makePoint(x,y,srs='latlon'):
+def makePoint(*args, srs='latlon'):
+    """Make a simple point geometry
+    
+    Usage:
+        makePoint(x, y [,srs])
+        makePoint( (x, y) [,srs] )
+
+    """
+    if len(args)==1:
+        x,y = args[0]
+    elif len(args)==2:
+        x = args[0]
+        y = args[1]
+    else:
+        raise GeoKitGeomError("Too many positional inputs. Did you mean to specify \"srs=\"?")
+
     """make a point geometry from given coordinates (x,y) and srs"""
     pt = ogr.Geometry(ogr.wkbPoint)
     pt.AddPoint(x,y)
     pt.AssignSpatialReference(loadSRS(srs))
     return pt
 
-def makeBox(xMin,yMin,xMax,yMax, srs=None):
-    """Make an ogr polygon object from extents"""
+def makeBox(*args, srs=None):
+    """Make an ogr polygon object from extents
+
+    Usage:
+        makeBox(xMin, yMin, xMax, yMax [, srs])
+        makeBox( (xMin, yMin, xMax, yMax) [, srs])
+    """
+    if (len(args)==1):
+        xMin,yMin,xMax,yMax = args[0]
+    elif (len(args)==4):
+        xMin,yMin,xMax,yMax = args
+    else:
+        raise GeoKitGeomError("Incorrect number positional inputs (only accepts 1 or 4). Did you mean to specify \"srs=\"?")
 
     # make sure inputs are good
     xMin = float(xMin)
@@ -50,19 +74,18 @@ def makeEmpty(name, srs=None):
 
 #################################################################################3
 # Make a geometry from a WKT string
-def fromWKT( wkt, srs=None):
+def convertWKT( wkt, srs=None):
     """Make a geometry from a WKT string"""
     geom = ogr.CreateGeometryFromWkt( wkt ) # Create new geometry from string 
-    if not isinstance(geom,ogr.Geometry): # test for success
+    if geom is None: # test for success
         raise GeoKitGeomError("Failed to create geometry")
     if srs:
-        srs = loadSRS(srs)
-        geom.AssignSpatialReference(srs) # Assign the given srs
+        geom.AssignSpatialReference(loadSRS(srs)) # Assign the given srs
     return geom
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def fromMask( mask, bounds=None, srs=None, flatten=False):
+def convertMask( mask, bounds=None, srs=None, flat=False):
     """Create a geometry from a matrix mask"""
     # Make sure we have a numpy array
     if not isinstance(mask, np.ndarray):
@@ -78,18 +101,17 @@ def fromMask( mask, bounds=None, srs=None, flatten=False):
         pixelHeight = 1
         pixelWidth  = 1
 
-    else:
-        try: # first try for a tuple
-            xMin, yMin, xMax, yMax = bounds
-        except: # next assume the user gave an extent object
-            try:
-                xMin, yMin, xMax, yMax = bounds.xyXY
-                srs = bounds.srs
-            except:
-                raise GeoKitGeomError("Could not understand 'bounds' input")
+    try: # first try for a tuple
+        xMin, yMin, xMax, yMax = bounds
+    except: # next assume the user gave an extent object
+        try:
+            xMin, yMin, xMax, yMax = bounds.xyXY
+            srs = bounds.srs
+        except:
+            raise GeoKitGeomError("Could not understand 'bounds' input")
 
-        pixelHeight = (yMax-yMin)/mask.shape[0]
-        pixelWidth  = (xMax-xMin)/mask.shape[1]
+    pixelHeight = (yMax-yMin)/mask.shape[0]
+    pixelWidth  = (xMax-xMin)/mask.shape[1]
 
     if not srs is None: srs=loadSRS(srs)
 
@@ -128,7 +150,7 @@ def fromMask( mask, bounds=None, srs=None, flatten=False):
     #rasDS = createRaster(bounds=bounds, data=mask, noDataValue=0, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=srs)
 
     # Do a polygonize
-    rasBand = rasDS.GetRasterBand(1)
+    rasBand = raster.GetRasterBand(1)
     maskBand = rasBand.GetMaskBand()
 
     # Open an empty vector dataset, layer, and field
@@ -174,20 +196,34 @@ def fromMask( mask, bounds=None, srs=None, flatten=False):
         ftr = vecLyr.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
 
-    final = flatten(geoms) if flatten else geoms
+    final = flatten(geoms) if flat else geoms
         
     # Cleanup
     vecLyr = None
     vecDS = None
     maskBand = None
     rasBand = None
-    rasDS = None
+    raster = None
 
     return final
 
 # geometry transformer
-def transform( geoms, fromSRS='europe_m', toSRS='latlon'):
+def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
     """Transforms a geometry, or a list of geometries, from one SRS to another"""
+    # make sure geoms is a list
+    if isinstance(geoms, ogr.Geometry):
+        geoms = [geoms, ]
+    else: # assume geoms is iterable
+        try:
+            geoms = list(geoms)
+        except Exception as e:
+            print("Could not determine geometry SRS")
+            raise e
+
+    # make sure geoms is a list
+    if fromSRS is None:
+        fromSRS = geoms[0].GetSpatialReference()
+        
     # load srs's
     fromSRS = loadSRS(fromSRS)
     toSRS = loadSRS(toSRS)
@@ -196,17 +232,16 @@ def transform( geoms, fromSRS='europe_m', toSRS='latlon'):
     trx = osr.CoordinateTransformation(fromSRS, toSRS)
 
     # Do transformation
-    if isinstance(geoms, ogr.Geometry):
-        geoms = geoms.Clone()
-        r = geoms.Transform(trx)
-        print("CHECK ME FOR ERROR: ",r)
-    else: # assume geoms is iterable
-        geoms = [g.Clone(trx) for g in geoms]
-        r = [g.Transform(trx) for g in geoms]
-        print("CHECK ME FOR ERRORS: ",r)
+    geoms = [g.Clone() for g in geoms]
+    if not segment is None: [g.Segmentize(segment) for g in geoms]
+    
+    r = [g.Transform(trx) for g in geoms]
+    if sum(r)>0: # check fro errors
+        raise GeoKitGeomError("Errors in geometry transformations")
         
     # Done!
-    return geoms
+    if len(geoms)==1: return geoms[0]
+    else: return geoms
 
 #################################################################################3
 # Flatten a list of geometries

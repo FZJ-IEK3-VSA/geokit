@@ -2,9 +2,6 @@ from .util import *
 from .srsutil import *
 
 ####################################################################
-class GeoKitRasterError(GeoKitError): pass
-
-####################################################################
 # INTERNAL FUNCTIONS
 
 # Basic Loader
@@ -215,7 +212,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
 
 ####################################################################
 # Fetch the raster as a matrix
-def rasterMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
+def fetchMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
     """ Fetch all or part of a raster as a numpy matrix"""
 
     sourceDS = loadRaster(source) # BE sure we have a raster
@@ -234,7 +231,7 @@ def rasterMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
 
 ####################################################################
 # Gradient calculator
-def rasterGradient( source, mode ="total", factor=1, asMatrix=False, asDegree=False, **kwargs):
+def gradient( source, mode ="total", factor=1, asMatrix=False, **kwargs):
     """Calculate a raster's gradient and return as a new dataset or simply a matrix
 
     Inputs:
@@ -281,7 +278,7 @@ def rasterGradient( source, mode ="total", factor=1, asMatrix=False, asDegree=Fa
             xFactor = factor
 
     # Calculate gradient
-    arr = rasterMatrix(source)
+    arr = fetchMatrix(source)
     
     if mode in ["north-south", "ns", "total", "slope", "dir"]:
         ns = np.zeros(arr.shape)
@@ -387,7 +384,7 @@ def _pointGen(x,y,s):
     tmpPt.AssignSpatialReference(s)
     return tmpPt
 
-def rasterValues(source, points, pointSRS='latlon', winRange=0):
+def pointValues(source, points, pointSRS='latlon', winRange=0):
     """Extracts the value of a raster a a given point or collection of points. Can also extract a window of values if desired
 
     * If the given raster is not in the 'flipped-y' orientation, the result will be automatically flipped
@@ -491,7 +488,7 @@ def rasterValues(source, points, pointSRS='latlon', winRange=0):
 
 ####################################################################
 # Shortcut for getting just the raster value
-def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
+def pointValue(source, point, pointSRS='latlon', mode='near', **kwargs):
     """Retrieve a single value for each point(s)
 
     Inputs:
@@ -533,7 +530,7 @@ def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
 
     if mode=='near':
         # Simple get the nearest value
-        result = rasterValues(source, point, pointSRS=pointSRS, winRange=0)[0]
+        result = pointValues(source, point, pointSRS=pointSRS, winRange=0)[0]
 
     elif mode=="linear-spline": # use a spline interpolation scheme
         # setup inputs
@@ -542,7 +539,7 @@ def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
         y = np.linspace(-1*win,win,2*win+1)
 
         # get raw data
-        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        rasterData, offsets = pointValues(source, point, pointSRS=pointSRS, winRange=win)
 
         # Calculate interpolated values
         result=[]
@@ -558,7 +555,7 @@ def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
         y = np.linspace(-1*win,win,2*win+1)
         
         # Get raw data
-        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        rasterData, offsets = pointValues(source, point, pointSRS=pointSRS, winRange=win)
         
         # Calculate interpolated values
         result=[]
@@ -569,14 +566,16 @@ def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
 
     elif mode == "average": # Get the average in a window
         win = kwargs.get("winRange",3)
-        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        rasterData, offsets = pointValues(source, point, pointSRS=pointSRS, winRange=win)
         result = []
         for z,pt in zip(rasterData,offsets):
             result.append([[z.mean()]])
 
     elif mode == "func": # Use a general function processor
+        if not "func" in kwargs:
+            raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = kwargs.get("winRange",3)
-        rasterData, offsets = rasterValues(source, point, pointSRS=pointSRS, winRange=win)
+        rasterData, offsets = pointValues(source, point, pointSRS=pointSRS, winRange=win)
         result = []
         for z,pt in zip(rasterData,offsets):
             result.append( kwargs["func"](z) )
@@ -594,7 +593,7 @@ def rasterValue(source, point, pointSRS='latlon', mode='near', **kwargs):
     
 ####################################################################
 # General raster mutator
-def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, **kwargs):
+def rasterMutate(source, processor=None, output=None, dtype=None, **kwargs):
     """
     Process a raster according to a given function
 
@@ -607,10 +606,6 @@ def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, *
             str -- The path to the raster to processes
             gdal.Dataset -- The input data source as a gdal dataset object
 
-        extent: (None)
-            Extent Object -- A geographic extent to clip the source dataset to before processing
-            * If the Extent is not in the same SRS as the source's SRS, then it will be cast to the source's SRS, resulting in a new extent which will be >= the original extent
-            
         processor: (None) 
             func -- A function for processing the source data
             * The function will take single argument (a 2D numpy.ndarray) 
@@ -651,10 +646,7 @@ def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, *
         result = processRaster( <source-path>, processor=calcSuitability )
     """
     # open the dataset and get SRS
-    rasDS = loadRaster(source)
-
-    # Clip input dataset to the region (if required)
-    workingDS = extent.clipRaster(rasDS) if extent else rasDS
+    workingDS = loadRaster(source)
 
     # Get ds info
     dsInfo = rasterInfo(workingDS)
@@ -673,6 +665,10 @@ def rasterMutate(source, extent=None, processor=None, output=None, dtype=None, *
     if( processedData.shape != sourceData.shape ):
         raise GeoKitRasterError( "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",format(rawSuitability.shape, sourceData.shape ))
     del sourceData
+
+    # Check if flipping is required
+    if dsInfo.yAtTop:
+        processedData = processedData[::-1,:]
 
     # Create an output raster
     outDS = createRaster( pixelHeight=dsInfo.dy, pixelWidth=dsInfo.dx, bounds=workingExtent, 

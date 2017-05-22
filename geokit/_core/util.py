@@ -22,6 +22,10 @@ if(not res==0 ):
 ######################################################################################
 # An few errors just for me!
 class GeoKitError(Exception): pass
+class GeoKitSRSError(GeoKitError): pass
+class GeoKitGeomError(GeoKitError): pass
+class GeoKitRasterError(GeoKitError): pass
+class GeoKitVectorError(GeoKitError): pass
 
 ##################################################################
 # General funcs
@@ -92,7 +96,7 @@ def scaleMatrix(mat, scale, strict=True):
 
     if (xScale==0 and yScale==0): return mat # no scaling (it would just be silly to call this)
     elif (xScale>0 and yScale>0): # scale up
-        out = _np.zeros((mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
+        out = np.zeros((mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
         for yo in range(yScale):
             for xo in range(xScale):
                 out[yo::yScale, xo::xScale] = mat
@@ -114,10 +118,10 @@ def scaleMatrix(mat, scale, strict=True):
             if xPad==xScale: xPad=0
 
             # Do y-padding
-            if yPad>0: mat = _np.concatenate( (mat, _np.zeros((yPad,mat.shape[1])) ), 0)
-            if xPad>0: mat = _np.concatenate( (mat, _np.zeros((mat.shape[0],xPad)) ), 1)
+            if yPad>0: mat = np.concatenate( (mat, np.zeros((yPad,mat.shape[1])) ), 0)
+            if xPad>0: mat = np.concatenate( (mat, np.zeros((mat.shape[0],xPad)) ), 1)
         
-        out = _np.zeros((mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
+        out = np.zeros((mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
         for yo in range(yScale):
             for xo in range(xScale):
                 out += mat[yo::yScale, xo::xScale]

@@ -1,35 +1,30 @@
 from helpers import *
+from geokit.vector import *
+from geokit.geom import makeBox
+from geokit.util import GeoKitError
 
-def makePoint_():
-  print("MAKE 'makePoint' TESTER!!!!!!!!!!!!")
-def makeEmptyGeom_():
-  print("MAKE 'makeEmptyGeom' TESTER!!!!!!!!!!!!")
-def makeGeomFromWkt_():
-  print("MAKE 'makeGeomFromWkt' TESTER!!!!!!!!!!!!")
-def makeGeomFromMask_():
-  print("MAKE 'makeGeomFromMask' TESTER!!!!!!!!!!!!")
-def geomTransform_():
-  print("MAKE 'geomTransform' TESTER!!!!!!!!!!!!")
-def geomListFlatten_():
-  print("MAKE 'geomListFlatten' TESTER!!!!!!!!!!!!")
-def coordTransform_():
-  print("MAKE 'coordTransform' TESTER!!!!!!!!!!!!")
-def vectorCount_():
-  print("MAKE 'vectorCount' TESTER!!!!!!!!!!!!")
-def vectorInfo_():
-  print("MAKE 'vectorInfo' TESTER!!!!!!!!!!!!")
-def vectorMutate_():
-  print("MAKE 'vectorMutate' TESTER!!!!!!!!!!!!")
+## ogrType
+def test_ogrType():
+    if( ogrType(bool) != "OFTInteger" ): error("ogr type")
+    if( ogrType("float32") != "OFTReal" ): error("ogr type")
+    if( ogrType("Integer64") != "OFTInteger64" ): error("ogr type")
+    if( ogrType(NUMPY_FLOAT_ARRAY) != "OFTReal" ): error("ogr type")
+    if( ogrType(NUMPY_FLOAT_ARRAY.dtype) != "OFTReal" ): error("ogr type")
 
-## box
-def makeBox_():
-  # fun func
-  b1 = makeBox(0,0,5,10, srs=EPSG3035)
-  
-  # check results
-  if( b1.Area() != 50 ): error("Box Creation")
 
-def vectorItems_():
+def test_vectorCount():
+    if vectorCount(MULTI_FTR_SHAPE_PATH) != 4: error("Simple vector count")
+
+    if vectorCount(MULTI_FTR_SHAPE_PATH, geom=makeBox(5.89,48.77,6.89,49.64, srs=EPSG4326)) != 2:
+        error("Vector count - same SRS, geom filter")
+
+    if vectorCount(MULTI_FTR_SHAPE_PATH, geom=makeBox(4022802,2867575, 4104365,2938843, srs=EPSG3035)) != 2:
+        error("Vector count - different SRS, geom filter")
+
+    if vectorCount(MULTI_FTR_SHAPE_PATH, where="name LIKE 'mo%'") != 2:
+        error("Vector count - where filter")
+
+def test_vectorItems():
   # test basic
   vi = list(vectorItems(BOXES))
   
@@ -45,7 +40,7 @@ def vectorItems_():
   if (vi[2][1]['name']!="hermoine"): error("vectorItems 1 - attribute mismatch")
 
   # test clip
-  vi = list(vectorItems(BOXES, geom=makeBox(0,0,3,3, EPSG4326)))
+  vi = list(vectorItems(BOXES, geom=makeBox(0,0,3,3, srs=EPSG4326)))
 
   if len(vi)!=2: error("vectorItems 2 - count mismatch")   
 
@@ -63,20 +58,26 @@ def vectorItems_():
   if (not vi[0][0].GetSpatialReference().IsSame(EPSG3035)): error("vectorItems 3 - srs mismatch")
   if (vi[0][1]['name']!="hermoine"): error("vectorItems 3 - attribute mismatch")
 
-def vectorItem_():
-  print("MAKE 'vectorItem' TESTER!!!!!!!")
+def test_vectorItem():
+    # test succeed
+    geom, attr = vectorItem(BOXES, feature=1)
+    if (geom.Area()!=4.0): error("vectorItem 1 - geom mismatch")
+    if (attr['name']!="ron"): error("vectorItem 1 - attribute mismatch")
 
+    geom, attr = vectorItem(BOXES, where="name='harry'")
+    if (geom.Area()!=1.0): error("vectorItem 2 - geom mismatch")
+    if (attr['name']!="harry"): error("vectorItem 2 - attribute mismatch")
 
-## ogrType
-def ogrType_():
-  if( ogrType(bool) != "OFTInteger" ): error("ogr type")
-  if( ogrType("float32") != "OFTReal" ): error("ogr type")
-  if( ogrType("Integer64") != "OFTInteger64" ): error("ogr type")
-  if( ogrType(NUMPY_FLOAT_ARRAY) != "OFTReal" ): error("ogr type")
-  if( ogrType(NUMPY_FLOAT_ARRAY.dtype) != "OFTReal" ): error("ogr type")
+    # test fail
+    try:
+        geom, attr = vectorItem(BOXES, where="smart=0")
+    except GeoKitError:
+        pass
+    else:
+        error("vectorItem 3 - fail test")
 
 ## Create shape file
-def createVector_():
+def test_createVector():
   ## Setup
   out1 = result("util_shape1.shp")
   out2 = result("util_shape2.shp")
@@ -131,10 +132,11 @@ def createVector_():
     if not ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i]):
       error("Vector creation 4 - feature mismatch")
 
-def vectorMutate_():
+def test_vectorMutate():
   # Setup
-  ext_small = Extent.from_xyXY((6.1,50.7,6.25,50.9), EPSG4326)
-  ext_aachen = Extent.fromVector(AACHEN_SHAPE_PATH)
+  ext_small = (6.1, 50.7, 6.25, 50.9)
+  box_aachen = makeBox(AACHEN_SHAPE_EXTENT, srs=EPSG4326)
+  box_aachen.TransformTo(EPSG3035)
 
   sentance = ["Never","have","I","ever","ridden","on","a","horse","Did","you","know","that","?"]
   sentanceSmall = ["Never","have","I","ever","you"]
@@ -150,7 +152,7 @@ def vectorMutate_():
     if res1[i][1]['word'] != sentance[i]: error("vectorMutate 1 - attribute writing")
 
   ## spatial filtering
-  ps2 = vectorMutate( AACHEN_POINTS, extent=ext_small )
+  ps2 = vectorMutate( AACHEN_POINTS, geom=ext_small )
 
   res2 = list(vectorItems(ps2))
   if len(res2)!=5: error( "vectorMutate 2 - item count")
@@ -158,7 +160,7 @@ def vectorMutate_():
     if not (res2[i][1]['word'] == sentanceSmall[i]): error("vectorMutate 2 - attribute writing")
 
   ## attribute and spatial filtering
-  ps3 = vectorMutate( AACHEN_POINTS, extent=ext_small, where="id<5" )
+  ps3 = vectorMutate( AACHEN_POINTS, geom=ext_small, where="id<5" )
 
   res3 = list(vectorItems(ps3))
   if len(res3)!=4: error( "vectorMutate 3 - item count")
@@ -178,7 +180,9 @@ def vectorMutate_():
 
     return newGeom,i
 
-  ps5 = vectorMutate( AACHEN_POINTS, processor=growByWordLength, srs=EPSG3035)#, output="DELETEME.shp" )
+  output5 = result("vectorMutate5.shp")
+  vectorMutate( AACHEN_POINTS, processor=growByWordLength, workingSRS=EPSG3035, output=output5, overwrite=True)
+  ps5 = loadVector(output5)
 
   res5 = list(vectorItems(ps5))
   if len(res5)!=13: error( "vectorMutate 5 - item count")
@@ -193,21 +197,12 @@ def vectorMutate_():
     if not abs(1 - area/res5[i][0].Area())<0.001: error("vectorMutate 5 - geom area")
 
   ## Test inline processor, with filtering, and writign to file
-  vectorMutate( AACHEN_ZONES, extent=ext_aachen, where="YEAR>2000", processor=lambda g,i: (g.Centroid(), {"YEAR":i["YEAR"]}), output=result("algorithms_vectorMutate_6.shp"), overwrite=True)
+  vectorMutate( AACHEN_ZONES, geom=box_aachen, where="YEAR>2000", processor=lambda g,i: (g.Centroid(), {"YEAR":i["YEAR"]}), output=result("vectorMutate6.shp"), overwrite=True)
 
 if __name__=="__main__":
-  makePoint_()
-  makeEmptyGeom_()
-  makeGeomFromWkt_()
-  makeGeomFromMask_()
-  geomTransform_()
-  geomListFlatten_()
-  coordTransform_()
-  vectorCount_()
-  vectorInfo_()
-  vectorMutate_()
-  makeBox_()
-  vectorItems_()
-  vectorItem_()
-  ogrType_()
-  createVector_()
+    test_ogrType()
+    test_vectorCount()
+    test_vectorItems()
+    test_vectorItem()
+    test_createVector()
+    test_vectorMutate()
