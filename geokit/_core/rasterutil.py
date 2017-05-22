@@ -1,5 +1,8 @@
 from .util import *
+from .srsutil import *
 
+####################################################################
+class GeoKitRasterError(GeoKitError): pass
 
 ####################################################################
 # INTERNAL FUNCTIONS

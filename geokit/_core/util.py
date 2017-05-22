@@ -8,99 +8,20 @@ from collections import namedtuple, Iterable
 import pandas as pd
 from scipy.interpolate import RectBivariateSpline
 
-
 ######################################################################################
 # test modules
 
 # The main SRS for lat/lon coordinates
-EPSG4326 = osr.SpatialReference()
-res = EPSG4326.ImportFromEPSG(4326)
+_test = osr.SpatialReference()
+res = _test.ImportFromEPSG(4326)
 
 # Quick check if gdal loaded properly
 if(not res==0 ):
     raise RuntimeError("GDAL did not load properly. Check your 'GDAL_DATA' environment variable")
 
-
 ######################################################################################
 # An few errors just for me!
-
 class GeoKitError(Exception): pass
-
-class GeoKitSRSError(GeoKitError): pass
-class GeoKitRasterError(GeoKitError): pass
-class GeoKitVectorError(GeoKitError): pass
-class GeoKitExtentError(GeoKitError): pass
-class GeoKitRegionMaskError(GeoKitError): pass
-
-######################################################################################
-# Common SRS library
-
-# Some other srs shortcuts
-class _SRSCOMMON:
-    # basic lattitude and longitude
-    _latlon = osr.SpatialReference()
-    _latlon.ImportFromEPSG(4326)
-
-    @property
-    def latlon(s):
-        """Basic SRS for unprojected latitude and longitude coordinates
-
-        Units: Degrees"""
-        return s._latlon
-    # basic lattitude and longitude
-    _europe_m = osr.SpatialReference()
-    _europe_m.ImportFromEPSG(3035)
-
-    @property
-    def europe_m(s):
-        """Equal-Area projection centered around Europe.
-
-        * Good for relational operations within Europe
-
-        Units: Meters"""
-        return s._europe_m
-    
-    # basic getter
-    def __getitem__(s, name):
-        if not hasattr( s, name ):
-            raise ValueError("SRS \"%s\" not found"%name)
-        return getattr(s, "_"+name)
-
-# Initialize
-SRSCOMMON = _SRSCOMMON()
-
-################################################
-# Basic loader
-def loadSRS(source):
-    """
-    Load a spatial reference system from various sources.
-    """
-    # Do initial check of source
-    if(isinstance(source, osr.SpatialReference)):
-        return source
-    
-    # Create an empty SRS
-    srs = osr.SpatialReference()
-
-    # Check if source is a string
-    if( isinstance(source,str) ):
-        if hasattr(SRSCOMMON, source): 
-            srs = SRSCOMMON[source] # assume a name for one of the common SRS's was given
-        else:
-            srs.ImportFromWkt(source) # assume a Wkt string was input
-    elif( isinstance(source,int) ):
-        srs.ImportFromEPSG(source)
-    else:
-        raise GeoKitSRSError("Unknown srs source type: ", type(source))
-        
-    return srs
-
-
-
-# Load a few typical constants
-EPSG3035 = loadSRS(3035)
-EPSG4326 = loadSRS(4326)
-
 
 ##################################################################
 # General funcs
@@ -109,8 +30,6 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     Convenience function for checking if two float vlaues a 'close-enough'
     """
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-
-
 
 # matrix scaler
 def scaleMatrix(mat, scale, strict=True):
@@ -173,7 +92,7 @@ def scaleMatrix(mat, scale, strict=True):
 
     if (xScale==0 and yScale==0): return mat # no scaling (it would just be silly to call this)
     elif (xScale>0 and yScale>0): # scale up
-        out = np.zeros((mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
+        out = _np.zeros((mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
         for yo in range(yScale):
             for xo in range(xScale):
                 out[yo::yScale, xo::xScale] = mat
@@ -195,10 +114,10 @@ def scaleMatrix(mat, scale, strict=True):
             if xPad==xScale: xPad=0
 
             # Do y-padding
-            if yPad>0: mat = np.concatenate( (mat, np.zeros((yPad,mat.shape[1])) ), 0)
-            if xPad>0: mat = np.concatenate( (mat, np.zeros((mat.shape[0],xPad)) ), 1)
+            if yPad>0: mat = _np.concatenate( (mat, _np.zeros((yPad,mat.shape[1])) ), 0)
+            if xPad>0: mat = _np.concatenate( (mat, _np.zeros((mat.shape[0],xPad)) ), 1)
         
-        out = np.zeros((mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
+        out = _np.zeros((mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
         for yo in range(yScale):
             for xo in range(xScale):
                 out += mat[yo::yScale, xo::xScale]

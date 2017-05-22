@@ -1,8 +1,8 @@
-from geokit._core.util import *
-from geokit._core.srsutil import *
-from geokit._core.geomutil import *
-from geokit._core.rasterutil import *
-from geokit._core.vectorutil import *
+from .util import *
+from .srsutil import *
+from .geomutil import *
+from .rasterutil import *
+from .vectorutil import *
 
 class Extent(object):
     """Geographic extent

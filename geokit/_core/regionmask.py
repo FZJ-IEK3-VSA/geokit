@@ -1,9 +1,9 @@
-from geokit._core.util import *
-from geokit._core.srsutil import *
-from geokit._core.geomutil import *
-from geokit._core.rasterutil import *
-from geokit._core.vectorutil import *
-from geokit._core.extent import Extent
+from .util import *
+from .srsutil import *
+from .geomutil import *
+from .rasterutil import *
+from .vectorutil import *
+from .extent import Extent
 
 class RegionMask(object):
     """The RegionMask object represents a given region and exposes methods allowing for easy
