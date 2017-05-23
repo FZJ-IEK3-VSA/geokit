@@ -1,12 +1,13 @@
 # directories
 env/*
 *.egg-info/
-.ipynb-checkpoints/*
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 __pycache__/
 analysis/regions/*
 
 # file types to ignore
-*.ipynb
+#*.ipynb
 *.aux.xml
 
 # Remove things in testing results dir

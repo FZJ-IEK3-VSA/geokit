@@ -26,6 +26,8 @@ class GeoKitSRSError(GeoKitError): pass
 class GeoKitGeomError(GeoKitError): pass
 class GeoKitRasterError(GeoKitError): pass
 class GeoKitVectorError(GeoKitError): pass
+class GeoKitExtentError(GeoKitError): pass
+class GeoKitRegionMaskError(GeoKitError): pass
 
 ##################################################################
 # General funcs

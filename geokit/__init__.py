@@ -6,7 +6,7 @@ import geokit.geom
 import geokit.raster
 import geokit.vector
 from geokit._core.extent import Extent
-from geokit._core.regionmask import RegionMask
+#from geokit._core.regionmask import RegionMask
 
 '''
 import Special

@@ -71,6 +71,7 @@ def test_vectorItem():
     # test fail
     try:
         geom, attr = vectorItem(BOXES, where="smart=0")
+        error("vectorItem 3 - fail test")
     except GeoKitError:
         pass
     else:

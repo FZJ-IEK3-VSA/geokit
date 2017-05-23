@@ -4,6 +4,9 @@ from .geomutil import *
 from .rasterutil import *
 from .vectorutil import *
 
+
+IndexSet = namedtuple("IndexSet","xStart yStart xWin yWin xEnd yEnd")
+
 class Extent(object):
     """Geographic extent
 
@@ -22,7 +25,15 @@ class Extent(object):
         - Extent.fromVector( vector-file-path )
         - Extent.fromRaster( raster-file-path )
     """
-    def __init__(s, xMin, yMin, xMax, yMax, srs='latlon'):
+    def __init__(s, *args, srs='latlon'):
+        # Unpack args
+        if len(args)==1:
+            xMin, yMin, xMax, yMax = args[0]
+        elif len(args)==4:
+            xMin, yMin, xMax, yMax = args
+        else:
+            raise GeoKitExtentError("Incorrect number of positional arguments givin in init (accepts 1 or 4). Is an srs given as 'srs=...'?")
+        
         # Ensure good inputs
         xMin, xMax = min(xMin, xMax), max(xMin, xMax)
         yMin, yMax = min(yMin, yMax), max(yMin, yMax) 
@@ -33,18 +44,7 @@ class Extent(object):
         s.yMax = yMax
         s.srs  = loadSRS(srs)
 
-        s._box = makeBox(s.xMin, s.yMin, s.xMax, s.yMax, s.srs)
-
-    @staticmethod
-    def from_xyXY(bounds, srs='latlon'):
-        """Create extent from explicitly defined boundaries
-
-        Inputs:
-          bounds - (xMin, yMin, xMax, yMax)
-          srs - The Spatial Reference system to use (default EPSG4326)
-            * 
-        """
-        return Extent(bounds[0], bounds[1], bounds[2], bounds[3], srs)
+        s._box = makeBox(s.xMin, s.yMin, s.xMax, s.yMax, srs=s.srs)
 
     @staticmethod
     def from_xXyY(bounds, srs='latlon'):
@@ -75,7 +75,7 @@ class Extent(object):
         # Ensure geom is an ogr.Geometry object
         if isinstance(geom, str):
             if srs is None: raise ValueError("srs must be provided when geom is a string")
-            geom = makeGeomFromWkt(geom, srs)
+            geom = convertWKT(geom, srs)
         elif (srs is None):
             srs = geom.GetSpatialReference()
 
@@ -87,7 +87,7 @@ class Extent(object):
         xMin, xMax, yMin, yMax = geom.GetEnvelope()
 
         # Done!
-        return Extent(xMin, yMin, xMax, yMax, geom.GetSpatialReference())
+        return Extent(xMin, yMin, xMax, yMax, srs=geom.GetSpatialReference())
 
     @staticmethod
     def fromVector( source ):
@@ -104,7 +104,7 @@ class Extent(object):
         
         xMin,xMax,yMin,yMax = shapeLayer.GetExtent()
 
-        return Extent(xMin, yMin, xMax, yMax, shapeSRS)
+        return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
 
     @staticmethod
     def fromRaster( source ):
@@ -118,11 +118,11 @@ class Extent(object):
 
         xMin,yMin,xMax,yMax = dsInfo.bounds
 
-        return Extent(xMin, yMin, xMax, yMax, dsInfo.srs)
+        return Extent(xMin, yMin, xMax, yMax, srs=dsInfo.srs)
 
     @staticmethod
     def _fromInfo(info):
-        return Extent( info.xMin, info.yMin, info.xMax, info.yMax, info.srs)
+        return Extent( info.xMin, info.yMin, info.xMax, info.yMax, srs=info.srs)
 
     @property
     def xyXY(s): 
@@ -199,8 +199,8 @@ class Extent(object):
             unitX, unitY = unit, unit
         
         # Look for bad sizes
-        if (unitX> s.xMax-s.xMin): raise ValueError("Unit size is larger than extent width")
-        if (unitY> s.yMax-s.yMin): raise ValueError("Unit size is larger than extent width")
+        if (unitX> s.xMax-s.xMin): raise GeoKitExtentError("Unit size is larger than extent width")
+        if (unitY> s.yMax-s.yMin): raise GeoKitExtentError("Unit size is larger than extent width")
 
         # Calculate new extent
         newXMin = s.xMin-s.xMin%unitX
@@ -216,9 +216,9 @@ class Extent(object):
 
         # Done!
         if dtype is None or isinstance(unitX,dtype):
-            return Extent( newXMin, newYMin, newXMax, newYMax, s.srs )
+            return Extent( newXMin, newYMin, newXMax, newYMax, srs=s.srs )
         else:
-            return Extent( dtype(newXMin), dtype(newYMin), dtype(newXMax), dtype(newYMax), s.srs )
+            return Extent( dtype(newXMin), dtype(newYMin), dtype(newXMax), dtype(newYMax), srs=s.srs )
 
     def corners(s, asPoints=False):
         """Shortcut function to get the four corners of the extent as ogr geometry points
@@ -285,22 +285,27 @@ class Extent(object):
             Y.append(point.GetY())
 
         # return new extent
-        return Extent(min(X), min(Y), max(X), max(Y), targetSRS)
+        return Extent(min(X), min(Y), max(X), max(Y), srs=targetSRS)
 
     def inSourceExtent(s, source):
         """Tests if the extent box intersects the extent box of of the given source"""
         sourceExtent = Extent.fromVector(source).castTo(s.srs)
         return s._box.Intersects(sourceExtent.box)
 
-    def filterSourceDir(s, searchDir, globString="*.shp"):
-        """Search a given directory for shape files whose's envelope overlaps a given region.
+    def filterSources(s, sources):
+        """Filter a list of sources whose's envelope overlaps a given extent.
 
-        Arguments:
-            searchDirectory
-                : str -- The path to the directory containing vector data sources
+        Input 'sources' can either be:
+            * A list of vector sources
+            * A glob string which will generate a list of source paths
+                - see glob.glob for more info
         """
         # create list of searchable files
-        directoryList = glob(os.path.join(searchDir,globString))
+        if isinstance(sources, str):
+            directoryList = glob(sources)
+        else:
+            directoryList = sources
+
         return filter(s.inSourceExtent, directoryList)
     
     def contains(s, extent, res=None):
@@ -334,7 +339,7 @@ class Extent(object):
                 return False
         return True
 
-    def findWithin(s, extent, res=100, flipY=True):
+    def findWithin(s, extent, res=100, yAtTop=True):
         """Finds the given extent within the main extent according to the given resolution. Assumes the two extents are a part of the same 'grid'
     
         Inputs:
@@ -344,7 +349,7 @@ class Extent(object):
             res - float, (float, float) (default 100)
                 * The resolution of the 'grid'
 
-            flipY - bool (default True)
+            yAtTop - bool (default True)
                 * Instructs the offsetting to begin from yMax instead of from yMin
 
         Returns:
@@ -365,30 +370,29 @@ class Extent(object):
         tmpX = (extent.xMin - s.xMin)/dx
         xOff = int(np.round(tmpX))
 
-        if( flipY ):
+        if( yAtTop ):
             tmpY = (s.yMax - extent.yMax)/dy
         else:
             tmpY = (extent.yMin - s.yMin)/dy
         yOff = int(np.round(tmpY))
 
-        if not (isclose(xOff, tmpX) or isclose(yOff, tmpY)):
+        if not (isclose(xOff, tmpX) and isclose(yOff, tmpY)):
             raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Get window sizes
-
         tmpX = (extent.xMax - extent.xMin)/dx
         xWin = int(np.round(tmpX))
 
         tmpY = (extent.yMax - extent.yMin)/dy
         yWin = int(np.round(tmpY))
 
-        if not (isclose(xWin, tmpX) or isclose(yWin, tmpY)):
-            raise GeoKitExtentError("The given extent does not fit on the given resolution")
+        if not (isclose(xWin, tmpX) and isclose(yWin, tmpY)):
+            raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Done!
-        return xOff, yOff, xWin, yWin
+        return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
     
-    def extractFromRaster(s, source, band=1):
+    def extractRaster(s, source):
         """Extracts the extent from the given raster source as a matrix. The called extent must fit somewhere within the raster's grid
 
         Returns: extracted-data-matrix:
@@ -404,14 +408,12 @@ class Extent(object):
 
         # Find the main extent within the raster extent
         try:
-            xO, yO, xW, yW = rasExtent.findWithin(s, res=(rasInfo.dx, rasInfo.dy), flipY=rasInfo.flipY)
-        except Exception as e:
-            print( "The extent does not appear to fit within the given raster")
-            raise e
+            xO, yO, xW, yW, xE, yE = rasExtent.findWithin(s, res=(rasInfo.dx, rasInfo.dy), yAtTop=rasInfo.yAtTop)
+        except GeoKitExtentError:
+            raise GeoKitExtentError( "The extent does not appear to fit within the given raster")
             
         # Extract and return the matrix
-        b = rasDS.GetRasterBand(band)
-        arr = b.ReadAsArray(xoff=xO, yoff=yO, win_xsize=xW, win_ysize=yW)
+        arr = fetchMatrix(rasDS, xOff=xO, yOff=yO, xWin=xW, yWin=yW)
 
         # make sure we are returing data in the 'flipped-y' orientation
         if not rasInfo.flipY:
@@ -419,7 +421,7 @@ class Extent(object):
         
         return arr
 
-    def clipRaster(s, source, output=None, asMatrix=False):
+    def clipRaster(s, source, output=None):
         """
         Clip a given raster around the extent object while maintaining the original source's
         projection and resolution
@@ -465,13 +467,8 @@ class Extent(object):
         gdal.Warp(outputDS, source, outputBounds=extent.xyXY) # Warp source onto the new raster
 
         # Done
-        if(output is None and asMatrix==False):
+        if(output is None):
             return outputDS
-        elif asMatrix==True:
-            outputDS.FlushCache()
-            bd = outputDS.GetRasterBand(1)
-            mat = bd.ReadAsArray()
-            return mat, extent
         else:
             return
 
