@@ -168,6 +168,7 @@ class Extent(object):
             * The amount to pad the edges within the extent's reference system
             * Can also accept a negative padding
         """
+        if pad is None or pad == 0 : return s
         return Extent(s.xMin-pad, s.yMin-pad, s.xMax+pad, s.yMax+pad, srs=s.srs)
 
     def shift(s, dx=0, dy=0): 
@@ -181,6 +182,20 @@ class Extent(object):
         
         """
         return Extent(s.xMin+dx, s.yMin+dy, s.xMax+dx, s.yMax+dy, srs=s.srs)
+
+    def fitsResolution(s, unit):
+        try:
+            unitX, unitY = unit
+        except:
+            unitX, unitY = unit, unit
+
+        xResidual = (s.xMax-s.xMin)%unitX
+        if not isclose(xResidual, 0.0): return False
+
+        yResidual = (s.yMax-s.yMin)%unitY
+        if not isclose(yResidual, 0.0): return False
+
+        return True
 
     def fit(s, unit, dtype=None):
         """Fit the extent to a given pixel resolution

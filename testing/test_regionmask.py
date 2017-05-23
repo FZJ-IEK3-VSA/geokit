@@ -2,6 +2,17 @@ from helpers import *
 
 ## Creation
 def init_():
+    # init structures
+    rm1 = RegionMask(mask=MASK_DATA, extent=Extent(0,0,100,100,EPSG3035)) # mask + extent
+    rm1 = RegionMask(mask=MASK_DATA, extent=Extent(0,0,100,100,EPSG3035)) # geom + pixelSize
+    rm1 = RegionMask(mask=MASK_DATA, extent=Extent(0,0,100,100,EPSG3035)) # extent + geom + pixelSize
+    rm1 = RegionMask(mask=MASK_DATA, extent=Extent(0,0,100,100,EPSG3035)) # mask + geom + pixelSize
+    rm1 = RegionMask(mask=MASK_DATA, extent=Extent(0,0,100,100,EPSG3035)) # mask + extent + geom + pixelSize 
+
+    if not (rm1.geometry.Area()-MASK_DATA.sum() < 0.001): error("init 1 - simple")
+
+
+
   # simple
   rm1 = RegionMask(MASK_DATA, Extent(0,0,100,100,EPSG3035))
   if not (rm1.geometry.Area()-MASK_DATA.sum() < 0.001): error("init 1 - simple")
@@ -336,3 +347,23 @@ if __name__=="__main__":
   indicateValues_()
   indicateAreas_()
   draw_()
+
+
+  test_init()
+  test_fromVector()
+  test_fromGeom()
+  test_fromVectorFeature()
+  test_envelope()
+  test_pixelSize()
+  test_geometry()
+  test_draw()
+  test_rebuildGeometry()
+  test__tempFile()
+  test___del__()
+  test_extractAttributes()
+  test_createRaster()
+  test_applyMask()
+  test_warp()
+  test_rasterize()
+  test_indicateValues()
+  test_indicateAreas()
