@@ -172,7 +172,7 @@ def test_gradient():
 
     if not isclose(slopeMat.mean(),0.0663805622803): error("gradient - elevation slope")
 
-def test_rasterMutate():
+def test_mutateValues():
     # Setup
     def isOdd(mat): return np.mod(mat,2)
     
@@ -180,47 +180,47 @@ def test_rasterMutate():
     sourceInfo = rasterInfo(source)
 
     ## Process Raster with no processor or extent
-    res1 = rasterMutate(source)#, overwrite=True, output=result("algorithms_rasterMutate_1.tif"))
+    res1 = mutateValues(source)#, overwrite=True, output=result("algorithms_mutateValues_1.tif"))
 
     info1 = rasterInfo(res1)
-    if not info1.srs.IsSame(sourceInfo.srs): error("rasterMutate 1 - srs")
-    if not info1.bounds == sourceInfo.bounds: error("rasterMutate 1 - bounds")
+    if not info1.srs.IsSame(sourceInfo.srs): error("mutateValues 1 - srs")
+    if not info1.bounds == sourceInfo.bounds: error("mutateValues 1 - bounds")
 
-    ## rasterMutate with a simple processor
-    output2 = result("algorithms_rasterMutate_2.tif")
-    rasterMutate(source, processor=isOdd, overwrite=True, output=output2)
+    ## mutateValues with a simple processor
+    output2 = result("algorithms_mutateValues_2.tif")
+    mutateValues(source, processor=isOdd, overwrite=True, output=output2)
     res2 = gdal.Open(output2)
 
     info2 = rasterInfo(res2)
-    if not info2.srs.IsSame(sourceInfo.srs): error("rasterMutate 2 - srs")
-    if not isclose(info2.xMin, sourceInfo.xMin): error("rasterMutate 2 - bounds")
-    if not isclose(info2.xMax, sourceInfo.xMax): error("rasterMutate 2 - bounds")
-    if not isclose(info2.yMin, sourceInfo.yMin): error("rasterMutate 2 - bounds")
-    if not isclose(info2.yMax, sourceInfo.yMax): error("rasterMutate 2 - bounds")
+    if not info2.srs.IsSame(sourceInfo.srs): error("mutateValues 2 - srs")
+    if not isclose(info2.xMin, sourceInfo.xMin): error("mutateValues 2 - bounds")
+    if not isclose(info2.xMax, sourceInfo.xMax): error("mutateValues 2 - bounds")
+    if not isclose(info2.yMin, sourceInfo.yMin): error("mutateValues 2 - bounds")
+    if not isclose(info2.yMax, sourceInfo.yMax): error("mutateValues 2 - bounds")
 
     band2 = res2.GetRasterBand(1)
     arr2 = band2.ReadAsArray()
 
-    if not (arr2.sum()==156515): error("rasterMutate 2 - data")
+    if not (arr2.sum()==156515): error("mutateValues 2 - data")
 
     ## Process Raster with a simple processor (flip check)
-    output2f = output=result("algorithms_rasterMutate_2f.tif")
-    rasterMutate(CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f)
+    output2f = output=result("algorithms_mutateValues_2f.tif")
+    mutateValues(CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f)
     res2f = gdal.Open(output2f)
 
     info2f = rasterInfo(res2f)
-    if not info2f.srs.IsSame(sourceInfo.srs): error("rasterMutate 2f - srs")
-    if not isclose(info2f.xMin, sourceInfo.xMin): error("rasterMutate 2f - bounds")
-    if not isclose(info2f.xMax, sourceInfo.xMax): error("rasterMutate 2f - bounds")
-    if not isclose(info2f.yMin, sourceInfo.yMin): error("rasterMutate 2f - bounds")
-    if not isclose(info2f.yMax, sourceInfo.yMax): error("rasterMutate 2f - bounds")
+    if not info2f.srs.IsSame(sourceInfo.srs): error("mutateValues 2f - srs")
+    if not isclose(info2f.xMin, sourceInfo.xMin): error("mutateValues 2f - bounds")
+    if not isclose(info2f.xMax, sourceInfo.xMax): error("mutateValues 2f - bounds")
+    if not isclose(info2f.yMin, sourceInfo.yMin): error("mutateValues 2f - bounds")
+    if not isclose(info2f.yMax, sourceInfo.yMax): error("mutateValues 2f - bounds")
 
     arr2f = fetchMatrix(res2f)
 
-    if not (arr2f.sum()==156515): error("rasterMutate 2f - data")
+    if not (arr2f.sum()==156515): error("mutateValues 2f - data")
 
     ## Check flipped data
-    if not (arr2f==arr2).all(): error("rasterMutate 2f - flipping error!")
+    if not (arr2f==arr2).all(): error("mutateValues 2f - flipping error!")
 
 if __name__=="__main__":
     test_gdalType()
@@ -229,4 +229,4 @@ if __name__=="__main__":
     test_pointValues()
     test_pointValue()
     test_gradient()
-    test_rasterMutate()
+    test_mutateValues()

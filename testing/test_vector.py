@@ -133,7 +133,7 @@ def test_createVector():
     if not ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i]):
       error("Vector creation 4 - feature mismatch")
 
-def test_vectorMutate():
+def test_mutateFeatures():
   # Setup
   ext_small = (6.1, 50.7, 6.25, 50.9)
   box_aachen = makeBox(AACHEN_SHAPE_EXTENT, srs=EPSG4326)
@@ -143,35 +143,35 @@ def test_vectorMutate():
   sentanceSmall = ["Never","have","I","ever","you"]
 
   ## simple repeater
-  ps1 = vectorMutate( AACHEN_POINTS )
+  ps1 = mutateFeatures( AACHEN_POINTS )
 
   res1 = list(vectorItems(ps1))
-  if len(res1)!=13: error( "vectorMutate 1 - item count")
+  if len(res1)!=13: error( "mutateFeatures 1 - item count")
   for i in range(13):
-    if not res1[i][0].GetSpatialReference().IsSame(EPSG4326): error("vectorMutate 1 - geom srs")
-    if not res1[i][0].GetGeometryName()=="POINT": error("vectorMutate 1 - geom type")
-    if res1[i][1]['word'] != sentance[i]: error("vectorMutate 1 - attribute writing")
+    if not res1[i][0].GetSpatialReference().IsSame(EPSG4326): error("mutateFeatures 1 - geom srs")
+    if not res1[i][0].GetGeometryName()=="POINT": error("mutateFeatures 1 - geom type")
+    if res1[i][1]['word'] != sentance[i]: error("mutateFeatures 1 - attribute writing")
 
   ## spatial filtering
-  ps2 = vectorMutate( AACHEN_POINTS, geom=ext_small )
+  ps2 = mutateFeatures( AACHEN_POINTS, geom=ext_small )
 
   res2 = list(vectorItems(ps2))
-  if len(res2)!=5: error( "vectorMutate 2 - item count")
+  if len(res2)!=5: error( "mutateFeatures 2 - item count")
   for i in range(5):
-    if not (res2[i][1]['word'] == sentanceSmall[i]): error("vectorMutate 2 - attribute writing")
+    if not (res2[i][1]['word'] == sentanceSmall[i]): error("mutateFeatures 2 - attribute writing")
 
   ## attribute and spatial filtering
-  ps3 = vectorMutate( AACHEN_POINTS, geom=ext_small, where="id<5" )
+  ps3 = mutateFeatures( AACHEN_POINTS, geom=ext_small, where="id<5" )
 
   res3 = list(vectorItems(ps3))
-  if len(res3)!=4: error( "vectorMutate 3 - item count")
+  if len(res3)!=4: error( "mutateFeatures 3 - item count")
   for i in range(4):
-    if not (res3[i][1]['word'] == sentanceSmall[i]): error("vectorMutate 3 - attribute writing")
+    if not (res3[i][1]['word'] == sentanceSmall[i]): error("mutateFeatures 3 - attribute writing")
 
   ## Test no items found
-  ps4 = vectorMutate( AACHEN_POINTS, where="id<0" )
+  ps4 = mutateFeatures( AACHEN_POINTS, where="id<0" )
 
-  if not ps4 is None: error("vectorMutate 4 - no items found")
+  if not ps4 is None: error("mutateFeatures 4 - no items found")
 
   ## Simple grower func ina new srs
   def growByWordLength(g,i):
@@ -181,24 +181,24 @@ def test_vectorMutate():
 
     return newGeom,i
 
-  output5 = result("vectorMutate5.shp")
-  vectorMutate( AACHEN_POINTS, processor=growByWordLength, workingSRS=EPSG3035, output=output5, overwrite=True)
+  output5 = result("mutateFeatures5.shp")
+  mutateFeatures( AACHEN_POINTS, processor=growByWordLength, workingSRS=EPSG3035, output=output5, overwrite=True)
   ps5 = loadVector(output5)
 
   res5 = list(vectorItems(ps5))
-  if len(res5)!=13: error( "vectorMutate 5 - item count")
+  if len(res5)!=13: error( "mutateFeatures 5 - item count")
   for i in range(13):
-    if not res5[i][0].GetSpatialReference().IsSame(EPSG3035): error("vectorMutate 5 - geom srs")
-    if not res5[i][0].GetGeometryName()=="POLYGON": error("vectorMutate 5 - geom type")
-    if not (res5[i][1]['word'] == sentance[i]): error("vectorMutate 5 - attribute writing")
-    if not (res5[i][1]['size'] == len(sentance[i])*1000): error("vectorMutate 5 - attribute writing")
+    if not res5[i][0].GetSpatialReference().IsSame(EPSG3035): error("mutateFeatures 5 - geom srs")
+    if not res5[i][0].GetGeometryName()=="POLYGON": error("mutateFeatures 5 - geom type")
+    if not (res5[i][1]['word'] == sentance[i]): error("mutateFeatures 5 - attribute writing")
+    if not (res5[i][1]['size'] == len(sentance[i])*1000): error("mutateFeatures 5 - attribute writing")
 
     # test if the new areas are close to what they shoud be 
     area = 1000*len(sentance[i])*1000*len(sentance[i])*np.pi
-    if not abs(1 - area/res5[i][0].Area())<0.001: error("vectorMutate 5 - geom area")
+    if not abs(1 - area/res5[i][0].Area())<0.001: error("mutateFeatures 5 - geom area")
 
   ## Test inline processor, with filtering, and writign to file
-  vectorMutate( AACHEN_ZONES, geom=box_aachen, where="YEAR>2000", processor=lambda g,i: (g.Centroid(), {"YEAR":i["YEAR"]}), output=result("vectorMutate6.shp"), overwrite=True)
+  mutateFeatures( AACHEN_ZONES, geom=box_aachen, where="YEAR>2000", processor=lambda g,i: (g.Centroid(), {"YEAR":i["YEAR"]}), output=result("mutateFeatures6.shp"), overwrite=True)
 
 if __name__=="__main__":
     test_ogrType()
@@ -206,4 +206,4 @@ if __name__=="__main__":
     test_vectorItems()
     test_vectorItem()
     test_createVector()
-    test_vectorMutate()
+    test_mutateFeatures()

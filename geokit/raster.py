@@ -7,4 +7,4 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      rasterInfo,
                                      pointValues,
                                      pointValue,
-                                     rasterMutate)
+                                     mutateValues)

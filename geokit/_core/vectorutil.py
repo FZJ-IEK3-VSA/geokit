@@ -67,8 +67,6 @@ def ogrType(s):
 
     raise ValueError("OGR type could not be determined")
 
-
-
 def filterLayer(layer, geom=None, where=None):
     if (not geom is None):
         if isinstance(geom,ogr.Geometry):
@@ -383,7 +381,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
 ####################################################################
 # mutuate a vector
-def vectorMutate(source, processor=None, workingSRS=None, geom=None, where=None, fieldTypes=None, output=None, **kwargs):
+def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=None, fieldTypes=None, output=None, **kwargs):
     """Process a vector dataset according to a given function
 
     Returns or creates an ogr dataset with the resulting data

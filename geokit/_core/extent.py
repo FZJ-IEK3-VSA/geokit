@@ -183,17 +183,21 @@ class Extent(object):
         """
         return Extent(s.xMin+dx, s.yMin+dy, s.xMax+dx, s.yMax+dy, srs=s.srs)
 
-    def fitsResolution(s, unit):
+    def fitsResolution(s, unit, tolerance=1e-6):
         try:
             unitX, unitY = unit
         except:
             unitX, unitY = unit, unit
 
-        xResidual = (s.xMax-s.xMin)%unitX
-        if not isclose(xResidual, 0.0): return False
+        xSteps = (s.xMax-s.xMin)/unitX
+        xResidual = abs(xSteps-np.round(xSteps))
+        if xResidual > tolerance:
+            return False
 
-        yResidual = (s.yMax-s.yMin)%unitY
-        if not isclose(yResidual, 0.0): return False
+        ySteps = (s.yMax-s.yMin)/unitY
+        yResidual = abs(ySteps-np.round(ySteps))
+        if yResidual > tolerance:
+            return False
 
         return True
 

@@ -40,10 +40,12 @@ class RegionMask(object):
     DEFAULT_RES = 100
     DEFAULT_PAD = None
 
-    def __init__(s):
+    """
+    def __init__(s, **kwargs):
         raise GeoKitRegionMaskError("Do not directly initialize a RegionMask object, use one of the provided constructors")
+    """
 
-    def _init_RegionMask_(s, extent, pixel, mask=None, geom=None, attributes=None):
+    def __init__(s, extent, pixel, mask=None, geom=None, attributes=None, **kwargs):
         """!!!!!!!!!UPDATE ME!!!!!!!
         The default constructor for RegionMask objects. Creates a RegionMask directly from a matrix mask and a given extent (and optionally a geometry). Pixel resolution is calculated in accordance with the shape of the mask mask and the provided extent
 
@@ -62,60 +64,80 @@ class RegionMask(object):
                 * An OGR Geometry object which represents the region.
                 ! Be careful that this geometry matches with the required "mask" input. This is not checked within the constructor
         """
+        # Check for bad input
+        if mask is None and geom is None: raise GeoKitRegionMaskError("Either mask or geom should be defined")    
+        if not kwargs.get("mask_plus_geom_is_okay",False):
+            if not mask is None and not geom is None: raise GeoKitRegionMaskError("mask and geom cannot be defined simultaneously")
+
         # Set basic values
         s.extent = extent
         s.srs = extent.srs
 
-        is s.srs is None:
-            raise GeoKitRegionMaskError("SRS cannot be None")
-
-        # Set mask
-        s._mask = mask
-
-        # Set geometry
-        s._geometry = geom
-
-        # Check input
-        if s._mask is None and s._geometry is None:
-            raise GeoKitRegionMaskError("Either mask or geometry must be given")
+        if s.srs is None:
+            raise GeoKitRegionMaskError("Extent SRS cannot be None")
 
         # Set Pixel Size
+        if not extent.fitsResolution(pixel):
+            raise GeoKitRegionMaskError("The given extent does not fit the given pixelSize")
+
         try:
             pixelWidth, pixelHeight = pixel
         except:
             pixelWidth, pixelHeight = pixel, pixel
 
-        s.pixelWidth = pixelWidth
-        s.pixelHeight = pixelHeight
+        s.pixelWidth = abs(pixelWidth)
+        s.pixelHeight = abs(pixelHeight)
 
         if( s.pixelHeight == s.pixelWidth ):
             s._pixelSize = s.pixelHeight
         else:
             s._pixelSize = None
 
+        # set height and width
+        s.width = int(np.round((s.extent.xMax-s.extent.xMin)/s.pixelWidth))
+        s.height = int(np.round((s.extent.yMax-s.extent.yMin)/s.pixelHeight))
+
+        # Set mask
+        s._mask = mask
+        if not mask is None: # test the mask
+            # test type
+            if(mask.dtype != "bool" and mask.dtype != "uint8" ): 
+                raise GeoKitRegionMaskError("Mask must be bool type")
+            if(mask.dtype == "uint8"):
+                mask = mask.astype("bool")
+
+            if not isclose(extent.xMin+pixelWidth*mask.shape[1], extent.xMax) or not isclose(extent.yMin+pixelHeight*mask.shape[0], extent.yMax):
+               raise GeoKitRegionMaskError("Extent and pixels sizes do not correspond to mask shape")
+
+        # Set geometry
+        if not geom is None: # test the geometry
+            if not isinstance(geom, ogr.Geometry):
+                raise GeoKitRegionMaskError("geom is not an ogr.Geometry object")
+            
+            s._geometry = geom.Clone()
+            gSRS = geom.GetSpatialReference()
+            if gSRS is None:
+                raise GeoKitRegionMaskError("geom does not have an srs")
+
+            if not gSRS.IsSame(s.srs): transform(s._geometry, toSRS=s.srs, fromSRS=gSRS)
+        else:
+            s._geometry = None
+
         # set attributes
         s.attributes = {} if attributes is None else attributes
-        
-        # done!
-        return s
 
     @staticmethod
     def fromMask(extent, mask, attributes=None):
         """MAKE A DOC STRING!!!!!"""
 
-        if(mask.dtype != "bool" and mask.dtype != "uint8" ): 
-            raise ValueError("Mask must be bool type")
-        if(mask.dtype == "uint8"):
-            mask = mask.astype("bool")
-
         # get pixelWidth and pixelHeight
         pixelWidth = (extent.xMax-extent.xMin)/(mask.shape[1])
         pixelHeight = (extent.yMax-extent.yMin)/(mask.shape[0])
 
-        return RegionMask._init_RegionMask_(extent, (pixelWidth, pixelHeight), mask=mask, attributes=attributes)
+        return RegionMask(extent=extent, pixel=(pixelWidth, pixelHeight), mask=mask, attributes=attributes)
 
     @staticmethod
-    def fromGeom(geom, pixelSize=RegionMask.DEFAULT_RES, srs=RegionMask.DEFAULT_SRS, extent=None, padExtent=RegionMask.DEFAULT_PAD, attributes=None):    
+    def fromGeom(geom, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, wktSRS='latlon', extent=None, padExtent=DEFAULT_PAD, attributes=None):    
             """
             Make a raster mask of a given shape or shapefile
 
@@ -132,10 +154,10 @@ class RegionMask(object):
                     : osr.SpatialReference -- The WKT SRS to use
                     * Must be defined if wkt is given
                 
-                pixelSize - (RegionMask.DEFAULT_RES)
+                pixelSize - (DEFAULT_RES)
                     : float -- the raster's pixel size in units of the srs
 
-                srs - (RegionMask.DEFAULT_SRS)
+                srs - (DEFAULT_SRS)
                     : int -- The WKT SRS to use as an EPSG integer
                     : str -- The WKT SRS to use as a WKT string
                     : osr.SpatialReference -- The WKT SRS to use
@@ -143,7 +165,7 @@ class RegionMask(object):
                 extent - (None) 
                     : (xMin, yMix, xMax, yMax) -- the extents of the raster file to create
                 
-                padExtent - RegionMask.DEFAULT_PAD
+                padExtent - DEFAULT_PAD
                     float -- An extra paddind to ad onto the extent
 
                 *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
@@ -153,13 +175,10 @@ class RegionMask(object):
             """
             # make sure we have a geometry with an srs
             if( isinstance(geom, str)):
-                if srs is None: raise GeoKitRegionMaskError("srs must be provided when geom is a string")
-                geom = convertWKT(geom, srs)
+                if wktSRS is None: raise GeoKitRegionMaskError("wktSRS must be provided when geom is a string")
+                geom = convertWKT(geom, wktSRS)
 
             geom = geom.Clone() # clone to make sure we're free of outside dependencies
-            if geom.GetSpatialReference() is None:
-                if srs is None: raise GeoKitRegionMaskError("srs is None and geometry does not have an SRS")
-                geom.AssignSpatialReference(srs)
 
             # set extent (if not given)
             if extent is None:
@@ -167,16 +186,14 @@ class RegionMask(object):
             else:
                 if not extent.srs.IsSame(srs):
                     raise GeoKitRegionMaskError("The given srs does not match the extent's srs")
-                if not extent.fitsResolution(pixelSize):
-                    raise GeoKitRegionMaskError("The given extent does not fit the given pixelSize")
-                extent = extent.pad(padExtent)
+                #extent = extent.pad(padExtent)
 
             # make a RegionMask object
-            return RegionMask._init_RegionMask_(extent, pixelSize, geom=geom, attributes=attributes)
+            return RegionMask(extent=extent, pixel=pixelSize, geom=geom, attributes=attributes)
 
 
     @staticmethod
-    def fromVector(source, pixelSize=RegionMask.DEFAULT_RES, srs=RegionMask.DEFAULT_SRS, extent=None, padExtent=RegionMask.DEFAULT_PAD, **kwargs):    
+    def fromVector(source, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, **kwargs):    
         """!!!!WARN ABOUT RASTERIZING AND DATA SIZE!!!!
         Make a raster mask of a given shape or shapefile
 
@@ -187,17 +204,17 @@ class RegionMask(object):
                 : str -- Path to an input shapefile
                 * either source or wkt must be provided
             
-            pixelSize - (RegionMask.DEFAULT_RES)
+            pixelSize - (DEFAULT_RES)
                 : float -- the raster's pixel size in units of the srs
 
-            srs - (RegionMask.DEFAULT_SRS)
+            srs - (DEFAULT_SRS)
                 : int -- The WKT SRS to use as an EPSG integer
                 : str -- The WKT SRS to use as a WKT string
                 : osr.SpatialReference -- The WKT SRS to use
 
             extent - (None) 
                 : (xMin, yMix, xMax, yMax) -- the extents of the ter file to creat           
-            padExtent - RegionMask.DEFAULT_PAD
+            padExtent - DEFAULT_PAD
                 float -- An extra paddind to ad onto the extent
 
             *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
@@ -238,7 +255,7 @@ class RegionMask(object):
 
         # Get final stats
         band = maskRaster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        array = band.ReadAsArray().astype('bool')
 
         # check if layer only has one feature, if so assume it is the geometry we will want
         if(layer.GetFeatureCount()==1):
@@ -262,10 +279,10 @@ class RegionMask(object):
         del shapeSRS, layer, sourceDS
 
         # Done!
-        return RegionMask._init_RegionMask_(extent=extent, pixelSize, mask=array, geom=geom)
+        return RegionMask(extent=extent, pixel=pixelSize, mask=array, geom=geom, mask_plus_geom_is_okay=True)
 
     @staticmethod
-    def fromVectorFeature(source, select=0, pixelSize=RegionMask.DEFAULT_RES, srs=RegionMask.DEFAULT_SRS, extent=None, padExtent=RegionMask.DEFAULT_PAD, **kwargs):
+    def fromVectorFeature(source, select=0, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, **kwargs):
         """Load a specific feature from a shapefile as a Region, including feature attributes
 
         Inputs:
@@ -277,10 +294,10 @@ class RegionMask(object):
                 int -- The feature index to select
                 str -- An SQL where statement to fiter source features
 
-            pixelSize - (RegionMask.DEFAULT_RES)
+            pixelSize - (DEFAULT_RES)
                 : float -- the raster's pixel size in units of the srs
 
-            srs - (RegionMask.DEFAULT_SRS)
+            srs - (DEFAULT_SRS)
                 : int -- The WKT SRS to use as an EPSG integer
                 : str -- The WKT SRS to use as a WKT string
                 : osr.SpatialReference -- The WKT SRS to use
@@ -288,7 +305,7 @@ class RegionMask(object):
             extent - (None) 
                 : (xMin, yMix, xMax, yMax) -- the extents of the raster file to create
             
-            padExtent - RegionMask.DEFAULT_PAD
+            padExtent - DEFAULT_PAD
                 float -- An extra paddind to ad onto the extent
 
             *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
@@ -326,20 +343,12 @@ class RegionMask(object):
                                     padExtent=padExtent, attributes=vecFtr.items() )
 
     @property
-    def envelope(s):
-        """Shortcut to obtain the envelope of the RasterMask's extent as an OGR Geometry"""
-        if( not hasattr(s,"_envelope")):
-            xMin, yMin, xMax, yMan = s.extent.xyXY
-            s._envelope = makeBox(xMin, yMin, xMax, yMan, s.srs)
-        return s._envelope.Clone()
-
-    @property
     def pixelSize(s):
         """The RegionMask's pixel size. 
 
         !!Only available when pixelWidth equals pixelHeight!!"""
         if s._pixelSize is None:
-            raise GeoKitRegionMaskError("Function only accessable when pixelWidth equals pixelHeight")
+            raise GeoKitRegionMaskError("pixelSize only accessable when pixelWidth equals pixelHeight")
         return s._pixelSize
 
 
@@ -352,7 +361,7 @@ class RegionMask(object):
         if s._geometry is None:
             raise GeoKitRegionMaskError("Cannot build mask when geometry is None")
 
-        s.mask = None
+        s._mask = None
 
         geomDS = createVector(s._geometry)
 
@@ -367,7 +376,7 @@ class RegionMask(object):
 
         # Get final stats
         band = maskRaster.GetRasterBand(1)
-        s._mask = band.ReadAsArray()
+        s._mask = band.ReadAsArray().astype('bool')
 
     @property
     def mask(s):
@@ -386,7 +395,7 @@ class RegionMask(object):
         if s._mask is None:
             raise GeoKitRegionMaskError("Cannot build geometry when mask is None")
         s._geometry = None
-        s._geometry = convertMask( s.mask, bounds=s.extent.xyXY, srs=s.extent.srs, flatten=True )
+        s._geometry = convertMask( s.mask, bounds=s.extent.xyXY, srs=s.extent.srs, flat=True )
 
     @property
     def geometry(s):
@@ -508,57 +517,6 @@ class RegionMask(object):
     def __del__(s):
         if(hasattr(s, "_TMPDIR")): s._TMPDIR.cleanup()
 
-    def extractAttributes(s, source, header=""):
-        """
-        Extract the attributes of a vector source which contains a given geometry
-        * The first feature which contains at least 90% of the given geometry will be selected
-
-        Input arguments:
-            source - (required) 
-                str -- The path to the containing vector data source
-
-            header - (default "")
-                str -- A header to add to the source's fields when inserting into the RM's attribute dictionary
-        """
-
-        # Open master ds
-        masterDS = loadVector(source)
-        masterLyr = masterDS.GetLayer()
-        masterSRS = masterLyr.GetSpatialRef()
-
-        # Filter source 
-        masterLyr.SetSpatialFilterRect(*s.extent.castTo(masterSRS).xyXY)
-
-        # Cast region, maybe?
-        regGeom = s.geometry
-        if( not masterSRS.IsSame(regGeom.GetSpatialReference())):
-            regGeom.TransformTo(masterSRS)
-
-        regArea = regGeom.Area()
-
-        # Find containing feature
-        featureFound = False
-        for masterFtr in loopFeatures(masterLyr):
-            masterGeom = masterFtr.GetGeometryRef()
-
-            overlap = regGeom.Intersection(masterGeom)
-            overlapArea = overlap.Area()
-
-            if ( overlapArea/regArea >= 0.95 ):
-                featureFound = True
-                containingFtr = masterFtr
-                break
-        
-        if( not featureFound ):
-            raise GeoKitRegionMaskError("No containing feature found")
-
-        # cleanup
-        del masterLyr, masterDS
-
-        # assign into attributed
-        for k,v in containingFtr.items().items():
-            s.attributes[header+k] = v
-
     def createRaster(s, resolutionDiv=1, **kwargs):
         """Creates a new raster with the same extent and resolution as the parent Mask, but with a optional datatype and fill.
 
@@ -610,14 +568,11 @@ class RegionMask(object):
         Y,X = mat.shape
 
         # make output array
-        #out = np.zeros(mat.shape, dtype=mat.dtype)
-        #if( noData!=0 ): out.fill(noData)
         out = np.array(mat)
 
         # Apply mask
-        if( s.shape == mat.shape ): # matrix dimensions coincide with mask's data
-            sel = np.where(~s.mask)
-            out[sel] = noData
+        if( s.mask.shape == mat.shape ): # matrix dimensions coincide with mask's data
+            out[~s.mask] = noData
 
         elif( Y>s.height and X>s.width ):
             if( not Y%s.height==0 or not X%s.width==0 ):
@@ -781,7 +736,7 @@ class RegionMask(object):
     
     #######################################################################################
     ## Raw value processor
-    def indicateValues(s, dataSet, value, nanFill=None, forceMaskShape=True, **kwargs):
+    def indicateValues(s, source, value, nanFill=None, forceMaskShape=True, **kwargs):
         """
         Convenience function to indicates a particular value or range of values from a given raster datasource onto the RegionMask.
 
@@ -793,7 +748,7 @@ class RegionMask(object):
         Returns a raster mask matching the RegionMask's mask dimensions where 0 means the pixels is not included in the indicated set, and 1 meaning the pixel is included in the indicated set. 
 
         Arguments:
-            dataSet
+            source
                 str -- Path to the raster file over which to process
                 gdal.Dataset -- The input data source as a gdal dataset object
 
@@ -833,7 +788,8 @@ class RegionMask(object):
             return output
 
         # Do processing
-        processedDS = rasterMutate(dataSet, s.extent, processor=processor, dtype="bool")
+        clippedDS = s.extent.clipRaster(source)
+        processedDS = mutateValues(clippedDS, processor=processor, dtype="bool")
 
         # Warp onto region
         final = s.warp(processedDS, dtype="float32", **kwargs)
@@ -852,8 +808,8 @@ class RegionMask(object):
         return final
 
     #######################################################################################
-    ## Vector processor
-    def indicateAreas(s, dataSet, whereField=None, whereValues=None, forceMaskShape=True, **kwargs):
+    ## Vector feature indicator
+    def indicateFeatures(s, dataSet, whereField=None, whereValues=None, forceMaskShape=True, **kwargs):
         """
         Convenience function to indicates the RegionMask (RM) pixels which are found within the areas (or a subset of the areas) defined in a given vector datasource
 

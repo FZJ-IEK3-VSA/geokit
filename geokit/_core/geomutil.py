@@ -87,13 +87,14 @@ def convertWKT( wkt, srs=None):
 # Make a geometry from a matrix mask
 def convertMask( mask, bounds=None, srs=None, flat=False):
     """Create a geometry from a matrix mask"""
-    # Make sure we have a numpy array
+    
+    # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
-        mask = np.array(mask, dtype='bool')
-
-    # Make sure mask is bool type
-    if not mask.dtype == np.bool:
-        raise ValueError("mask must be of bool type to be turned into a geometry")
+        raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
+    if(mask.dtype != "bool" and mask.dtype != "uint8" ): 
+        raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
+    if(mask.dtype == "uint8"):
+        mask = mask.astype("bool")
 
     # Make boundaries if not given
     if bounds is None:

@@ -593,7 +593,7 @@ def pointValue(source, point, pointSRS='latlon', mode='near', **kwargs):
     
 ####################################################################
 # General raster mutator
-def rasterMutate(source, processor=None, output=None, dtype=None, **kwargs):
+def mutateValues(source, processor=None, output=None, dtype=None, **kwargs):
     """
     Process a raster according to a given function
 
@@ -667,7 +667,7 @@ def rasterMutate(source, processor=None, output=None, dtype=None, **kwargs):
     del sourceData
 
     # Check if flipping is required
-    if dsInfo.yAtTop:
+    if not dsInfo.yAtTop:
         processedData = processedData[::-1,:]
 
     # Create an output raster
