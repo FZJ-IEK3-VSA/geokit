@@ -7,4 +7,5 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      rasterInfo,
                                      pointValues,
                                      pointValue,
-                                     mutateValues)
+                                     mutateValues,
+                                     drawImage)

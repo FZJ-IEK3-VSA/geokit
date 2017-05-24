@@ -3,7 +3,6 @@ from .srsutil import *
 
 ####################################################################
 # Geometry convenience functions
-
 def makePoint(*args, srs='latlon'):
     """Make a simple point geometry
     
@@ -23,7 +22,8 @@ def makePoint(*args, srs='latlon'):
     """make a point geometry from given coordinates (x,y) and srs"""
     pt = ogr.Geometry(ogr.wkbPoint)
     pt.AddPoint(x,y)
-    pt.AssignSpatialReference(loadSRS(srs))
+    if not srs is None:
+        pt.AssignSpatialReference(loadSRS(srs))
     return pt
 
 def makeBox(*args, srs=None):
@@ -278,3 +278,128 @@ def flatten( geoms ):
                 newGeoms.append(geoms[gi])
         geoms = newGeoms
     return geoms[0]
+
+
+def drawGeoms(geoms, ax=None, srs=None, simplification=None, mplParams={}):
+    """geometry drawing action!"""
+    # do some imports
+    from descartes import PolygonPatch
+    from json import loads
+
+    showPlot = False
+    if ax is None:
+        showPlot = True
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(12,12))
+        ax = plt.subplot(111)
+
+    # Be sure we have an array of geoms
+    if isinstance(geoms,ogr.Geometry):
+        geoms = [geoms,]
+    else: #Assume its an iterable
+        geoms = list(geoms)
+
+    # Test the first geometry to see if the srs needs transforming
+    if not srs is None:
+        gSRS = geoms[0].GetSpatialReference()
+        if not gSRS.IsSame(srs):
+            geoms = transform(geoms, toSRS=srs, fromSRS=gSRS)
+
+    # Apply simplifications if required
+    if not simplification is None:
+        geoms = [g.Simplify(simplification) for g in geoms]
+
+    # Consider matplotlib parameters
+    if isinstance(mplParams, dict):
+        mplForEachGeom = False
+    else:
+        mplForEachGeom = True
+        mplParams = list(mplParams) # make sure mplParams is a list
+
+    # unpack multigeomsgons and make into shapey objects
+    polys = []
+    polyParams = []
+    lines = []
+    lineParams = []
+    points = []
+    pointParams = []
+
+    for gi in range(len(geoms)):
+        g = geoms[gi]
+        if g.GetGeometryName()=="POLYGON":
+            polys.append( loads(g.ExportToJson()))
+            if mplForEachGeom: polyParams.append(mplParams[gi])
+            else: polyParams.append(mplParams)
+
+        elif g.GetGeometryName()=="MULTIPOLYGON":
+            for sgi in range(g.GetGeometryCount()):
+                gg = g.GetGeometryRef(sgi)
+                polys.append( loads(gg.ExportToJson()))
+                if mplForEachGeom: polyParams.append(mplParams[gi])
+                else: polyParams.append(mplParams)
+
+        elif g.GetGeometryName()=="LINESTRING":
+            pts = np.array(g.GetPoints())
+            lines.append( (pts[:,0], pts[:,1]) )
+            if mplForEachGeom: lineParams.append(mplParams[gi])
+            else: lineParams.append(mplParams)
+
+        elif g.GetGeometryName()=="LINEARRING":
+            g.CloseRings()
+            pts = np.array(g.GetPoints())
+            lines.append( (pts[:,0], pts[:,1]) )
+            if mplForEachGeom: lineParams.append(mplParams[gi])
+            else: lineParams.append(mplParams)
+
+        elif g.GetGeometryName()=="MULTILINESTRING":
+            for sgi in range(g.GetGeometryCount()):
+                gg = g.GetGeometryRef(sgi)
+                pts = np.array(gg.GetPoints())
+                lines.append( (pts[:,0], pts[:,1]) )
+                if mplForEachGeom: lineParams.append(mplParams[gi])
+                else: lineParams.append(mplParams)
+
+        elif g.GetGeometryName()=="POINT":
+            points.append( ([g.GetX(),], [g.GetY()] ) )
+            
+            tmp = mplParams[gi].copy() if mplForEachGeom else mplParams.copy()
+            tmp["linestyle"] = tmp.get('linestyle','None')
+            tmp["marker"] = tmp.get('marker','o')
+            pointParams.append(tmp)
+
+        elif g.GetGeometryName()=="MULTIPOINT":
+            x = []
+            y = []
+            for sgi in range(g.GetGeometryCount()):
+                gg = g.GetGeometryRef(sgi)
+                pts = np.array(gg.GetPoints())
+                x.append( gg.GetX() )
+                y.append( gg.GetY() )
+            points.append((x,y))
+            
+            tmp = mplParams[gi].copy() if mplForEachGeom else mplParams.copy()
+            tmp["linestyle"] = tmp.get('linestyle','None')
+            tmp["marker"] = tmp.get('marker','o')
+            pointParams.append(tmp)
+
+        else:
+            raise GeoKitGeomError("Function can't understand geometry: "+g.GetGeometryName())
+
+    ### Do Plotting
+    # make patches
+    patches = [PolygonPatch(sp, **kwargs) for sp, kwargs in zip(polys, polyParams)]
+    poly_handels = [ax.add_patch(p) for p in patches]
+
+    # make lines
+    line_handels = [ax.plot( *xy, **kwargs) for xy, kwargs in zip(lines, lineParams) ]
+
+    # make points
+    point_handels = [ax.plot( *xy, **kwargs) for xy, kwargs in zip(points, pointParams) ]
+
+    # done!
+    if showPlot: 
+        ax.set_aspect('equal')
+        ax.autoscale(enable=True)
+        plt.show()
+
+    else: return dict(polys=poly_handels, lines=line_handels, points=point_handels)

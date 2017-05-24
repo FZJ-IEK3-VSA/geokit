@@ -83,7 +83,6 @@ def test_flatten():
 
     if not (f1.GetSpatialReference().IsSame(EPSG4326)): error("flattened srs")
 
-
 def test_transform():
     # test a single point
     pt = makePoint(7,48, srs=EPSG4326)

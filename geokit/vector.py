@@ -1,3 +1,3 @@
 from geokit._core.vectorutil import ( loadVector, ogrType, vectorCount, 
-	                                  vectorInfo, vectorItems, vectorItem, 
+	                                  vectorInfo, fetchFeatures, fetchFeature, 
 	                                  createVector, mutateFeatures )

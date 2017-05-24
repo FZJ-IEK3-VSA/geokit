@@ -684,3 +684,35 @@ def mutateValues(source, processor=None, output=None, dtype=None, **kwargs):
         calculateStats(output)
         return
 
+def drawImage(data, bounds=None, ax=None, scaling=1, yAtTop=True, **kwargs):
+    """Draw some data"""
+    showPlot = False
+    if ax is None:
+        showPlot = True
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(12,12))
+        ax = plt.subplot(111)
+
+    # If bounds is none, make a boundary
+    if bounds is None:
+        xMin,yMin,xMax,yMax = 0,0,data.shape[1],data.shape[0] # bounds = xMin,yMin,xMax,yMax
+    else:
+        try:
+            xMin,yMin,xMax,yMax = bounds
+        except: # maybe bounds is an ExtentObject
+            xMin,yMin,xMax,yMax = bounds.xyXY
+
+    # Set extent
+    if yAtTop: extent = (xMin,xMax,yMax,yMin)
+    else: extent = (xMin,xMax,yMin,yMax)
+
+    # Draw image
+    h = ax.imshow(scaleMatrix(data,scaling,strict=False), extent=extent, **kwargs)
+
+    # Done!
+    if showPlot:
+        ax.set_aspect('equal')
+        ax.autoscale(enable=True)
+        plt.show()
+    else:
+        return h

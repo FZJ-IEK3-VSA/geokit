@@ -5,4 +5,5 @@ from geokit._core.geomutil import (GeoKitGeomError,
 								  convertWKT,
 								  convertMask,
 								  transform,
-								  flatten,)
+								  flatten,
+								  drawGeoms)

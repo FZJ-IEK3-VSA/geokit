@@ -95,7 +95,7 @@ OSM_DIR = source("OSM-aachenClipped/")
 
 ## Def a visualizer func
 def vis(mat, points=None):
-    plt.figure(figsize=(15,15))
+    plt.figure(figsize=(10,10))
     h = plt.imshow(mat)
     plt.colorbar(h)
 

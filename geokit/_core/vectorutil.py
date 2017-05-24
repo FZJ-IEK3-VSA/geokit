@@ -127,7 +127,7 @@ def vectorInfo(source):
 
 ####################################################################
 # Iterable to loop over vector items
-def vectorItems(source, geom=None, where=None, outputSRS=None):
+def fetchFeatures(source, geom=None, where=None, outputSRS=None):
     """Loops over an input vector sources's features
 
     !!! WARN ABOUT FEATURE MAY NOT BE IN THE REGION (JUST THE REGION EXTENT) !!!
@@ -153,10 +153,10 @@ def vectorItems(source, geom=None, where=None, outputSRS=None):
 
         yield (oGeom, oItems)
 
-def vectorItem(source, feature=None, geom=None, where=None, outputSRS=None):
+def fetchFeature(source, feature=None, geom=None, where=None, outputSRS=None):
     """convenience function to get a single geometry from a source"""
     if feature is None:
-        getter = vectorItems(source, geom, where, outputSRS)
+        getter = fetchFeatures(source, geom, where, outputSRS)
 
         # Get first result
         geom,attr = next(getter)
@@ -548,3 +548,13 @@ def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=Non
         return newDS
 
 
+def drawGeom(geom, ax=None, srs=None, simplification=None):
+    """Draw a geometry"""
+    showPlot = False
+    if ax is None:
+        showPlot = True
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(12,12))
+        ax = plt.subplot(111)
+
+    # Get the geometry points

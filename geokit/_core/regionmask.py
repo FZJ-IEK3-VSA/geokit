@@ -409,98 +409,17 @@ class RegionMask(object):
 
         return s._geometry.Clone()
 
-    def draw( s, method='image', plotOb=None, downScaleFactor=5, srs=None, **kwargs ):
+    def drawMask( s, **kwargs):
         """Draw the region on a matplotlib figure
 
-        !!Currently in testing!!
+        * All kwargs (except 'bounds') are passed on to raster.drawMask()"""
+        return drawImage( s.mask, bounds=s.extent.xyXY, **kwargs )
 
-        Returns a handle to the drawn object
+    def drawGeometry( s, **kwargs):
+        """Draw the region on a matplotlib figure
 
-        Inputs:
-            method - (default 'line')
-                str -- The method to use when drawing
-                    * If 'line' draw the RegionMask's geometry's boundary as a line using plt.plot( xVals, yVals)
-                    * If 'image' draw the RegionMask's mask matrix as an image using plt.imshow
-                        !NOTE! imshow will draw the mask on an index-grid, and will not line up with actual coordinates
-            plotOb - (default None)
-                matplotlib.pyplot object -- The plot object to use when plotting
-                    * If None is given, generate one in the function and then call 'plt.show()'
-
-            downScaleFactor - (default 0)
-                int -- The amount to downscale the visualized data
-                    * If method is 'line', downScaleFactor will simple choose every N-th boundary coordinate (where N is equal to the downScaleFactor)
-                    * if method is 'image, downScaleFactor controls the downScaling of RM's mask matrix via metisGIS.scaleMatrix(...)
-
-            kwargs are passed on to either plt.plot or plt.imshow depending on the given method
-
-        """
-        # Test if we need to import matplotlib
-        doShow = False
-        if plotOb is None:
-            import matplotlib.pyplot as plotOb
-            doShow = True
-
-        # Do "line" draw
-        if method == 'line':
-            print("DONT FORGET BUG! - fails for multipolygon geoms")
-            # Make the boundary
-            boundary = s.geometry.Boundary()
-
-            # Do transform, maybe
-            if srs and not srs.IsSame(s.srs):
-                boundary.TransformTo(srs)
-            
-            # get the points!
-            pts = np.array(boundary.GetPoints())
-                
-            if downScaleFactor == 0:
-                xPts = pts[:,0]
-                yPts = pts[:,1]
-
-            elif downScaleFactor > 0:
-                xPts = [x.mean() for x in np.array_split(pts[:,0], pts.shape[0]//downScaleFactor)]
-                yPts = [y.mean() for y in np.array_split(pts[:,1], pts.shape[0]//downScaleFactor)]
-
-                xPts.append(xPts[0])
-                yPts.append(yPts[0])
-
-            else:
-                raise RuntimeError("downScaleFactor must be integers >= 0")
-
-            h = plotOb.plot(xPts,yPts, **kwargs)
-
-        # Do "image" draw
-        elif method == 'image':
-            
-            if downScaleFactor == 0:
-                drawMat = s.mask
-            elif downScaleFactor > 0:
-                drawMat = scaleMatrix(s.mask, -1*downScaleFactor, strict=False)    
-            else:
-                raise RuntimeError("downScaleFactor must be integers >= 0")
-            
-            h =  plotOb.imshow(drawMat, **kwargs)
-
-        # Do "image" draw
-        elif method == 'contour':
-            
-            if downScaleFactor == 0:
-                drawMat = s.mask
-            elif downScaleFactor > 0:
-                drawMat = scaleMatrix(s.mask, -1*downScaleFactor, strict=False)    
-            else:
-                raise RuntimeError("downScaleFactor must be integers >= 0")
-            
-            y = np.linspace(s.extent.yMin,s.extent.yMax, drawMat.shape[0])
-            x = np.linspace(s.extent.xMin,s.extent.xMax, drawMat.shape[1])
-            
-            h =  plotOb.contourf(x,y,drawMat[::-1,:], **kwargs)
-        
-        # All done!
-        if (doShow):
-            plotOb.show()
-        else:
-            return h
+        * All kwargs passed on to geom.drawPolygons()"""
+        return drawGeoms( s.geometry, **kwargs )
 
     def _tempFile(s, head="tmp", ext=".tif"):
         """***RM INTERNAL***
@@ -853,6 +772,34 @@ class RegionMask(object):
         
         # Do rasterize
         final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+
+        # Make sure we have the mask's shape
+        if forceMaskShape:
+            rd = kwargs.get("resolutionDiv",None)
+            if not rd is None:
+                final = scaleMatrix(final, -1*rd)
+
+        # Return
+        return final
+
+
+    #######################################################################################
+    ## Vector feature indicator
+    def indicateGeoms(s, geom, forceMaskShape=True, **kwargs):
+        """Indicate by a geometry (or a list of geometries)"""
+        # Ensure geom is a list of geometries
+        if isinstance(geom, ogr.Geometry):
+            geom = [geom,]
+        elif isinstance(geom, list):
+            pass
+        else: # maybe geom is iterable
+            geom = list(geom)
+
+        # Make a vector dataset
+        ds = createVector(geoms)
+        
+        # Do rasterize
+        final = s.rasterize( ds, dtype="bool", bands=[1], burnValues=[1], **kwargs )
 
         # Make sure we have the mask's shape
         if forceMaskShape:
