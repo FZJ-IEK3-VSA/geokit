@@ -1,1 +1,2 @@
 from geokit._algorithms.placeItemsInMask import placeItemsInMask
+from geokit._algorithms.filterCoordinates import coordinateFilter
