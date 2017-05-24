@@ -388,4 +388,17 @@ def test_indicateFeatures():
 
 
 if __name__=="__main__":
-    pass
+    test_init()
+    test_fromMask()
+    test_fromGeom()
+    test_fromVectorFeature()
+    test_fromVector()
+    test_pixelSize()
+    test_mask()
+    test_geometry()
+    test_createRaster()
+    test_applyMask()
+    test_warp()
+    test_rasterize()
+    test_indicateValues()
+    test_indicateFeatures()

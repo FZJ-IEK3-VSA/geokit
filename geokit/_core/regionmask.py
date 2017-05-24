@@ -337,7 +337,7 @@ class RegionMask(object):
             raise GeoKitRegionMaskError("Could not extract feature!")
 
         # Create a new RegionMask
-        geom = vecFtr.GetGeometryRef()
+        geom = vecFtr.GetGeometryRef().Clone()
 
         return RegionMask.fromGeom( geom, pixelSize=pixelSize, srs=srs, extent=extent, 
                                     padExtent=padExtent, attributes=vecFtr.items() )
