@@ -131,7 +131,7 @@ def convertMask( mask, bounds=None, srs=None, flat=False):
     raster = driver.Create('', cols, rows, 1, getattr(gdal,dtype))
 
     if(raster is None):
-        raise GeoKitGeomError("Failed to create temporary raster raster")
+        raise GeoKitGeomError("Failed to create temporary raster")
 
     raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
     

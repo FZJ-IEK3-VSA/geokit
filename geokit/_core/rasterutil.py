@@ -209,7 +209,6 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     
     return
 
-
 ####################################################################
 # Fetch the raster as a matrix
 def fetchMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
@@ -227,6 +226,73 @@ def fetchMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
 
     # get Data
     return sourceBand.ReadAsArray(**kwargs)
+
+cutlineInfo = namedtuple("cutlineInfo","data info")
+def fetchCutline(source, geom, cropToCutline=True, **kwargs):
+    """Create a cutout of a raster source's data which is within a given geometry"""
+    # make sure we have a polygon or multipolygon geometry
+    if not isinstance(geom, ogr.Geometry):
+        raise GeoKitGeomError("Geom must be an OGR Geometry object")
+    if not geom.GetGeometryName() in ["POLYGON","MULTIPOLYGON"]:
+        raise GeoKitGeomError("Geom must be a Polygon or MultiPolygon type")
+
+    # make geom into raster srs
+    source = loadRaster(source)
+    rInfo = rasterInfo(source)
+
+    if not geom.GetSpatialReference().IsSame(rInfo.srs):
+        geom.TransformTo(rInfo.srs)
+
+    # make a quick vector dataset
+    t = TemporaryDirectory()
+    vecName = quickVector(geom,output=os.path.join(t.name,"tmp.shp"))
+    
+    # Do cutline
+    cutName = os.path.join(t.name,"cut.tif")
+    
+    cutDS = gdal.Warp(cutName, source, cutlineDSName=vecName, cropToCutline=cropToCutline, **kwargs)
+    cutDS.FlushCache()
+
+    cutInfo = rasterInfo(cutDS)
+
+    # Almost Done!
+    returnVal = cutlineInfo(fetchMatrix(cutDS), cutInfo)
+
+    # cleanup
+    t.cleanup()
+
+    # Now Done!
+    return returnVal
+
+def stats( source, geom=None, ignoreValue=None, **kwargs):
+    """Compute the raster statistics of a raster.
+
+    * Can clip the raster with a geometry
+    * Can ignore certain values if the raster doesnt have a no-data-value
+    """
+
+    source = loadRaster(source)
+
+    # Get the matrix to calculate over
+    if geom is None:
+        rawData = fetchMatrix(source)
+        dataInfo = rasterInfo(source)
+    else:
+        rawData, dataInfo = fetchCutline(source, geom, **kwargs)
+
+    # exclude nodata and ignore values
+    sel = np.ones(rawData.shape, dtype='bool')
+
+    if not ignoreValue is None:
+        np.logical_and(rawData!= ignoreValue, sel,sel)
+
+
+    if not dataInfo.noData is None:
+        np.logical_and(rawData!= dataInfo.noData, sel,sel)
+
+    # compute statistics
+    data = rawData[sel].flatten()
+    return describe(data)
 
 
 ####################################################################
@@ -371,10 +437,6 @@ def rasterInfo(sourceDS):
 
     # return
     return Info(**output)
-
-def describeRaster(x): 
-    print("CHANGE CALL TO 'rasterInfo'")
-    return rasterInfo(x)
 
 ####################################################################
 # Fetch specific points in a raster

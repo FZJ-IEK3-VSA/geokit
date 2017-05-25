@@ -546,15 +546,3 @@ def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=Non
         if(newDS is None):
             raise GeoKitVectorError("Failed to create working shapefile")
         return newDS
-
-
-def drawGeom(geom, ax=None, srs=None, simplification=None):
-    """Draw a geometry"""
-    showPlot = False
-    if ax is None:
-        showPlot = True
-        import matplotlib.pyplot as plt
-        plt.figure(figsize=(12,12))
-        ax = plt.subplot(111)
-
-    # Get the geometry points

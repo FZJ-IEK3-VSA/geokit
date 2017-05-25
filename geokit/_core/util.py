@@ -6,6 +6,7 @@ from glob import glob
 import warnings
 from collections import namedtuple, Iterable
 import pandas as pd
+from scipy.stats import describe
 from scipy.interpolate import RectBivariateSpline
 
 ######################################################################################
@@ -140,3 +141,73 @@ def scaleMatrix(mat, scale, strict=True):
     return out
 
 
+def quickVector(geom, output=None):
+    ######## Create a quick vector source
+    if output:
+        driver = gdal.GetDriverByName("ESRI Shapefile")
+        dataSource = driver.Create( output, 0,0 )
+    else:
+        driver = gdal.GetDriverByName("Memory")
+        
+        # Using 'Create' from a Memory driver leads to an error. But creating
+        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
+        #  and then using 'CreateCopy' seems to work
+        tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
+        t = TemporaryDirectory()
+        tmp_dataSource = tmp_driver.Create( t.name+"tmp.shp", 0, 0 )
+
+        dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
+        t.cleanup()
+        del tmp_dataSource, tmp_driver, t
+
+    # Create the layer and write feature
+    layer = dataSource.CreateLayer( "", geom.GetSpatialReference(), geom.GetGeometryType() )
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry( geom )
+
+    # Create the feature
+    layer.CreateFeature( feature )
+    feature.Destroy()
+
+    # Done!
+    if output: return output
+    else: return dataSource
+
+
+def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None):
+    xMin, yMin, xMax, yMax = bounds
+    
+    # Make a raster dataset and pull the band/maskBand objects
+    cols = round((xMax-xMin)/dx) # used 'round' instead of 'int' because this matched GDAL behavior better
+    rows = round((yMax-yMin)/abs(dy))
+    originX = xMin
+    originY = yMax # Always use the "Y-at-Top" orientation
+    
+    # Open the driver
+    driver = gdal.GetDriverByName('Mem') # create a raster in memory
+    raster = driver.Create('', cols, rows, 1, getattr(gdal,dtype))
+
+    if(raster is None):
+        raise GeoKitError("Failed to create temporary raster")
+
+    raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+    
+    # Set the SRS
+    if not srs is None:
+        rasterSRS = loadSRS(srs)
+        raster.SetProjection( rasterSRS.ExportToWkt() )
+    
+    # get the band
+    band = raster.GetRasterBand(1)
+
+    # set nodata
+    if noData: band.SetNoDataValue(noData)
+
+    # do fill
+    if fill: band.Fill(fillValue)
+
+    # Done!
+    band.FlushCache()
+    del band
+    raster.FlushCache()
+    return raster
