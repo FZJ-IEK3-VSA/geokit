@@ -10,3 +10,4 @@ import geokit.algorithms
 
 import geokit.shortcuts
 
+import __main__
