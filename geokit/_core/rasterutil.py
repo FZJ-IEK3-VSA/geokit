@@ -746,7 +746,7 @@ def mutateValues(source, processor=None, output=None, dtype=None, **kwargs):
         calculateStats(output)
         return
 
-def drawImage(data, bounds=None, ax=None, scaling=1, yAtTop=True, **kwargs):
+def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, **kwargs):
     """Draw some data"""
     showPlot = False
     if ax is None:
@@ -765,11 +765,14 @@ def drawImage(data, bounds=None, ax=None, scaling=1, yAtTop=True, **kwargs):
             xMin,yMin,xMax,yMax = bounds.xyXY
 
     # Set extent
-    if yAtTop: extent = (xMin,xMax,yMax,yMin)
-    else: extent = (xMin,xMax,yMin,yMax)
+    extent = (xMin,xMax,yMin,yMax)
+    
+    # handle flipped data
+    if not yAtTop: data=data[::-1,:]
 
     # Draw image
-    h = ax.imshow(scaleMatrix(data,scaling,strict=False), extent=extent, **kwargs)
+    if scaling: data=scaleMatrix(data,scaling,strict=False)
+    h = ax.imshow( data, extent=extent, **kwargs)
 
     # Done!
     if showPlot:

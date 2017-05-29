@@ -342,6 +342,35 @@ class RegionMask(object):
         return RegionMask.fromGeom( geom, pixelSize=pixelSize, srs=srs, extent=extent, 
                                     padExtent=padExtent, attributes=vecFtr.items() )
 
+    @staticmethod
+    def load(region, **kwargs):
+        """Tries to initialize and return a RegionMask in a smart way. 
+
+        Meaning, if 'region' input is...
+            - already a RegionMask, simply return it
+            - a file path...
+                - and a "select" kwarg was given, assume it is meant to be loaded by RegionMask.fromVectorFeature
+                - and no "select" kwarg is given, assume it is meant to be loaded by RegionMask.fromVector
+            - a string but not a file path, assume is it a WKT geometry string to be loaded by RegionMask.fromGeom
+            - an OGR Geometry object, assume is it to be loaded by RegionMask.fromGeom
+        
+        * All kwargs are passed on to the called initializer
+        """
+        if isinstance(region, RegionMask): return region
+        elif isinstance( region, str):
+            if os.path.isfile(region):
+                if 'select' in kwargs:
+                    return RegionMask.fromVectorFeature(region, **kwargs)
+                else:
+                    return RegionMask.fromVector(region, **kwargs)
+            else:
+                return RegionMask.fromGeom(region, **kwargs)
+        elif isinstance(region, ogr.Geometry):
+            return RegionMask.fromGeom(region, **kwargs)
+        else:
+            raise GeoKitRegionMaskError("Could not understand region input")
+
+
     @property
     def pixelSize(s):
         """The RegionMask's pixel size. 
