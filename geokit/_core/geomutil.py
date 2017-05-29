@@ -358,8 +358,10 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
         """
     # make sure geoms is a list
     if isinstance(geoms, ogr.Geometry):
+        returnSingle = True
         geoms = [geoms, ]
     else: # assume geoms is iterable
+        returnSingle = False
         try:
             geoms = list(geoms)
         except Exception as e:
@@ -388,7 +390,7 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
         raise GeoKitGeomError("Errors in geometry transformations")
         
     # Done!
-    if len(geoms)==1: return geoms[0]
+    if returnSingle: return geoms[0]
     else: return geoms
 
 #################################################################################3
@@ -482,7 +484,7 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
         ax = plt.subplot(111)
 
     # Be sure we have a list
-    if isinstance(geoms,ogr.Geometry) or isinstance(geoms, dict):
+    if isinstance(geoms,ogr.Geometry) or isinstance(geoms, dict) or isinstance(geoms, tuple):
         geoms = [geoms,]
     else: #Assume its an iterable
         geoms = list(geoms)
@@ -511,9 +513,12 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
     geoms = tmpGeoms
     # Test the first geometry to see if the srs needs transforming
     if not srs is None:
+        srs = loadSRS(srs   )
         gSRS = geoms[0].GetSpatialReference()
+        
         if not gSRS.IsSame(srs):
             geoms = transform(geoms, toSRS=srs, fromSRS=gSRS)
+
 
     # Apply simplifications if required
     if not simplification is None:
