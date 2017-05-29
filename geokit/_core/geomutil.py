@@ -9,7 +9,8 @@ def makePoint(*args, srs='latlon'):
     Usage:
         makePoint(x, y [,srs])
         makePoint( (x, y) [,srs] )
-
+    
+    * srs must be given as a keyword argument
     """
     if len(args)==1:
         x,y = args[0]
@@ -32,6 +33,8 @@ def makeBox(*args, srs=None):
     Usage:
         makeBox(xMin, yMin, xMax, yMax [, srs])
         makeBox( (xMin, yMin, xMax, yMax) [, srs])
+
+    * srs must be given as a keyword argument
     """
     if (len(args)==1):
         xMin,yMin,xMax,yMax = args[0]
@@ -59,9 +62,101 @@ def makeBox(*args, srs=None):
         box.AssignSpatialReference(srs)
     return box
 
+def makePolygon(outerRing, *args, srs=None):
+    """Creates an OGR Polygon obect from a given set of points
+
+    Inputs:
+        outerRing : The polygon's outer edge
+            - an iterable of (x,y) coordinates
+            - an Nx2 numpy array also works
+
+        *args : The inner edges of the polygon
+            - iterable (x,y) coordinate sets
+            * Each input forms a single edge
+            * Inner rings cannot interset the outer ring or one another 
+            * NOTE! For proper drawing, inner rings must be given in the opposite orientation as 
+              the outer ring (clockwise vs counterclockwise)
+
+        srs : The Spatial reference system to apply to the created geometry
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * srs must be given as a keyword argument
+    
+    Example: Make a diamond cut out of a box
+
+        box = [(-2,-2), (-2,2), (2,2), (2,-2), (-2,-2)]
+        diamond = [(0,1), (-0.5,0), (0,-1), (0.5,0), (0,1)]
+
+        geom = makePolygon( box, diamond )
+    """
+    if not srs is None: srs = loadSRS(srs)
+
+    # Make the complete geometry
+    g = ogr.Geometry(ogr.wkbPolygon)
+    if not srs is None: g.AssignSpatialReference(srs)
+
+    # Make the outer ring
+    otr = ogr.Geometry(ogr.wkbLinearRing)
+    if not srs is None: otr.AssignSpatialReference(srs)
+    [otr.AddPoint(x,y) for x,y in outerRing]
+    g.AddGeometry(otr)
+
+    # Make the inner rings (maybe)
+    for innerRing in args:
+        tmp = ogr.Geometry(ogr.wkbLinearRing)
+        if not srs is None: tmp.AssignSpatialReference(srs)
+        [tmp.AddPoint(x,y) for x,y in innerRing]
+
+        g.AddGeometry(tmp)
+        
+    # Make sure geom is valid
+    g.CloseRings()
+    if not g.IsValid(): raise GeoKitGeomError("Polygon is invalid")
+
+    # Done!
+    return g
+
+def makeLine(points, srs=None):
+    """Creates an OGR Polygon obect from a given set of points
+
+    Inputs:
+        points : The line's point coordinates
+            - an iterable of (x,y) coordinates
+            - Also works for an Nx2 numpy array
+            * Forms the outermost edge of the polygon
+
+        srs : The Spatial reference system to apply to the created geometry
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * srs must be given as a keyword argument
+    """
+
+    # Make the complete geometry
+    g = ogr.Geometry(ogr.wkbLineString)
+    if not srs is None: g.AssignSpatialReference(srs)
+
+    # Make the line
+    [g.AddPoint(x,y) for x,y in points]
+    #g.AddGeometry(otr)
+
+    # Ensure valid
+    if not g.IsValid(): raise GeoKitGeomError("Polygon is invalid")
+
+    # Done!
+    return g
+
+
 def makeEmpty(name, srs=None):
     """
+    Make an generic OGR geometry
+
     name options: Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
+
+    *Not for the feint of heart*
     """
     if not hasattr(ogr,"wkb"+name):
         raise GeoKitGeomError("Could not find geometry named: "+name)
@@ -86,7 +181,29 @@ def convertWKT( wkt, srs=None):
 #################################################################################3
 # Make a geometry from a matrix mask
 def convertMask( mask, bounds=None, srs=None, flat=False):
-    """Create a geometry from a matrix mask"""
+    """Create a geometry set from a matrix mask
+
+    Inputs:
+        mask : The matrix which will be turned into a geometry
+            - a 2D boolean matrix
+            * True values are interpreted as 'in the geometry'
+
+        bounds : Determines the boundary context for the given mask and will scale the geometry's coordinates accordingly
+            - (xMin, yMin, xMax, yMax)
+            - geokit.Extent object
+            * If a boundary is not given, the geometry coordinates will correspond to the mask's indicies
+            * If the boundary is given as an Extent object, an srs input is not required
+
+        srs : The Spatial reference system to apply to the created geometries
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * This input is ignored if bounds is a geokit.Extent object
+
+        flat : If True, flattens the resulting geometries into a single geometry object
+            - True/False
+    """
     
     # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
@@ -210,7 +327,35 @@ def convertMask( mask, bounds=None, srs=None, flat=False):
 
 # geometry transformer
 def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
-    """Transforms a geometry, or a list of geometries, from one SRS to another"""
+    """Transforms a geometry, or a list of geometries, from one SRS to another
+
+    Inputs:
+        geoms : The geometry or geometries to transform
+            - ogr Geometry object
+            - and iterable of og Geometry objects
+            * All geometries must have the same spatial reference
+
+        toSRS : The srs of the output geometries
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+
+        fromSRS : The srs of the input geometries
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * If fromSRS is None, the geometry's internal srs will be used
+            * If fromSRS is given, it will override any geometry's SRS (will likely cause weird outputs)
+
+        segment : An optional segmentation length of the input geometries
+            - float
+            * Units are in the input geometry's native unit
+            * If given, the input geometries will be segmented such that no line segment is longer than the given 
+              segment size
+              - use this for a more detailed transformation!
+        """
     # make sure geoms is a list
     if isinstance(geoms, ogr.Geometry):
         geoms = [geoms, ]
@@ -224,6 +369,8 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
     # make sure geoms is a list
     if fromSRS is None:
         fromSRS = geoms[0].GetSpatialReference()
+        if fromSRS is None:
+            raise GeoKitGeomError("Could not determine fromSRS from geometry")
         
     # load srs's
     fromSRS = loadSRS(fromSRS)
@@ -247,7 +394,11 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
 #################################################################################3
 # Flatten a list of geometries
 def flatten( geoms ):
-    """Flatten a list of geometries into a single geometry"""
+    """Flatten a list of geometries into a single geometry object
+
+    Example:
+        - A list of Polygons/Multipolygons will become a single Multipolygon
+        - A list of Linestrings/MultiLinestrings will become a single MultiLinestring"""
     if not isinstance(geoms,list):
         geoms = list(geoms)
         try: # geoms is not a list, but it might be iterable
@@ -280,8 +431,45 @@ def flatten( geoms ):
     return geoms[0]
 
 
-def drawGeoms(geoms, ax=None, srs=None, simplification=None, mplParams={}):
-    """geometry drawing action!"""
+def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
+    """Draw geometries onto a matplotlib figure
+    
+    * Each geometry type is displayed as an appropriate plotting type
+        -> Points/ Multipoints are displayed as points using plt.plot(...)
+        -> Lines/ MultiLines are displayed as lines using plt.plot(...)
+        -> Polygons/ MultiPolygons are displayed as patches using the descartes library
+    * Each geometry can be given its own set of matplotlib plotting parameters
+
+    Inputs:
+        geoms : The geometry/geometries to draw
+            - a single ogr Geometry object
+            - a tuple -- (ogr Geometry, dict of plotting parameters for this geometry)
+            - a dict containing at least one 'geom' key pointing to an ogr Geometry object
+                * other kwargs are treated as plotting parameters for the geometry
+            - An iterable of any the above
+            * All geometries must have the same native SRS
+        
+        ax  : a matplotlib axeis object to plot on
+            * if ax is None, the function will create its own axis and automatically show it
+
+        srs : The SRS to draw the geometries in
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * if srs is None, the geometries' native SRS will be used
+
+        simplification : A simplification factor to apply onto each geometry whichs ensure no line segment is shorter
+                         than the given value
+            * float
+            - Units are the same as the 'srs' input
+            - Using this will make plotting easier and use less resources
+
+        **mplargs : matplotlib keyword arguments to apply to each geometry
+            * Specified keyword arguments for each geometry inherit from mplargs 
+    
+    Retuns: A list of matplotlib handels for the created items
+    """
     # do some imports
     from descartes import PolygonPatch
     from json import loads
@@ -293,12 +481,34 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, mplParams={}):
         plt.figure(figsize=(12,12))
         ax = plt.subplot(111)
 
-    # Be sure we have an array of geoms
-    if isinstance(geoms,ogr.Geometry):
+    # Be sure we have a list
+    if isinstance(geoms,ogr.Geometry) or isinstance(geoms, dict):
         geoms = [geoms,]
     else: #Assume its an iterable
         geoms = list(geoms)
 
+    # Separate geoms into geometries and mpl-parameters
+    mplParams = []
+    tmpGeoms = []
+    for g in geoms:
+        params = mplargs.copy()
+        if isinstance(g, ogr.Geometry): 
+            tmpGeoms.append(g)
+            mplParams.append(params)
+        
+        elif isinstance(g,tuple):
+            tmpGeoms.append(g[0])
+
+            params.update(g[1])
+            mplParams.append(params)
+
+        elif isinstance(g,dict):
+            tmpGeoms.append(g.pop('geom'))
+
+            params.update(g)
+            mplParams.append(params)
+
+    geoms = tmpGeoms
     # Test the first geometry to see if the srs needs transforming
     if not srs is None:
         gSRS = geoms[0].GetSpatialReference()
@@ -387,14 +597,15 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, mplParams={}):
 
     ### Do Plotting
     # make patches
+    handels = []
     patches = [PolygonPatch(sp, **kwargs) for sp, kwargs in zip(polys, polyParams)]
-    poly_handels = [ax.add_patch(p) for p in patches]
+    handels.extend([ax.add_patch(p) for p in patches])
 
     # make lines
-    line_handels = [ax.plot( *xy, **kwargs) for xy, kwargs in zip(lines, lineParams) ]
+    handels.extend([ax.plot( *xy, **kwargs) for xy, kwargs in zip(lines, lineParams) ])
 
     # make points
-    point_handels = [ax.plot( *xy, **kwargs) for xy, kwargs in zip(points, pointParams) ]
+    handels.extend([ax.plot( *xy, **kwargs) for xy, kwargs in zip(points, pointParams) ])
 
     # done!
     if showPlot: 
@@ -402,4 +613,4 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, mplParams={}):
         ax.autoscale(enable=True)
         plt.show()
 
-    else: return dict(polys=poly_handels, lines=line_handels, points=point_handels)
+    else: return handels

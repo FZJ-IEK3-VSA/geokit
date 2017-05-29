@@ -411,7 +411,7 @@ class Extent(object):
         # Done!
         return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
     
-    def extractRaster(s, source):
+    def extractMatrix(s, source):
         """Extracts the extent from the given raster source as a matrix. The called extent must fit somewhere within the raster's grid
 
         Returns: extracted-data-matrix:

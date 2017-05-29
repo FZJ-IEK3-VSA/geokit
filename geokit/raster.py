@@ -10,4 +10,5 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      pointValues,
                                      pointValue,
                                      mutateValues,
-                                     drawImage)
+                                     #drawImage,
+                                     )

@@ -40,45 +40,54 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
 
 # matrix scaler
 def scaleMatrix(mat, scale, strict=True):
-    """Scale given 2 dimensional matrix. For example a 2x2 matrix, with a scale of 2, will become a 4x4 matrix
+    """Scale a 2-dimensional matrix. For example, a 2x2 matrix, with a scale of 2, will become a 4x4 matrix. Or
+    scaling a 24x24 matrix with a scale of -3 will produce an 8x8 matrix.
+
     * Scaling UP (positive) results in a dimensionally larger matrix where each value is repeated scale^2 times
     * scaling DOWN (negative) results in a dimensionally smaller matrix where each value is the average of the 
         associated 'up-scaled' block
 
     Inputs:
-        mat
-            numpy.ndarray : A two-dimensional numpy nd array
-            [[numeric,],] : A Two dimensional matrix of numerical values
-        scale 
-            int : A dimensional scaling factor for both the x and y dimension
-            (int, int) : y-scaling demnsion, x-scaling dimension
-            * If scaling down, the scaling factors must be a factor of the their associated dimension 
-              in the input matrix (unless 'strict' is set fo False)
+        mat - numpy.ndarray : A two-dimensional numpy nd array
+            - [[numeric,],] : A Two dimensional matrix of numerical values
         
-        strict - True
-            bool : Flags whether or not to force a fail when scaling-down by a scaling which is not a dimensional factor
-            * When scaling down by a non-dimensional factor, the matrix will be padded with zeros such that the new matrix has dimensional sizes which are divisible by the scaling factor. The points which are not at the right or bottom boundary are averaged, same as before. The points which lie on the edge however, are also averaged across all the values which lie in those pixels, but they are corrected so that the averaging does NOT take into account the padded zeros.
+        scale - int : A dimensional scaling factor for both the x and y dimension
+              - (int, int) : y-scaling demnsion, x-scaling dimension
+              
+              * If scaling down, the scaling factors must be a factor of the their associated dimension 
+                in the input matrix (unless 'strict' is set fo False)
+        
+        strict - bool : Flags whether or not to force a fail when scaling-down by a scaling factor which is not a
+                        dimensional factor
+               * When scaling down by a non-dimensional factor, the matrix will be padded with zeros such that the new 
+                 matrix has dimensional sizes which are divisible by the scaling factor. The points which are not at 
+                 the right or bottom boundary are averaged, same as before. The points which lie on the edge however, 
+                 are also averaged across all the values which lie in those pixels, but they are corrected so that the 
+                 averaging does NOT take into account the padded zeros.
 
-    EXAMPLE:
+    EXAMPLES:
 
-    | 1 2 |   -> scaled by 2 ->  | 1 1 2 2 |
-    | 3 4 |                      | 1 1 2 2 |
-                                 | 3 3 4 4 |
-                                 | 3 3 4 4 |
+    INPUT       Scaleing Factor      Output
+    -----       ---------------      ------
+
+    | 1 2 |             2           | 1 1 2 2 |
+    | 3 4 |                         | 1 1 2 2 |
+                                    | 3 3 4 4 |
+                                    | 3 3 4 4 |
 
 
-    | 1 1 1 1 |  -> Scaled by -2 -> | 1.5  2.0 | 
+    | 1 1 1 1 |        -2           | 1.5  2.0 | 
     | 2 2 3 3 |                     | 5.25 6.75|
     | 4 4 5 5 |
     | 6 7 8 9 |
 
 
-     original    -> Scaled by -3   ->   result
-    -----------     * strict=False    ---------
-    | 1 1 1 1 |                       | 2.55  3.0 |
-    | 2 2 3 3 |       padded          | 7.0    9  |
-    | 4 4 5 5 |     ----------
-    | 6 7 8 9 |    | 1 1 1 1 0 0 |
+    | 1 1 1 1 |        -3           | 2.55  3.0 |
+    | 2 2 3 3 |   * strict=False    | 7.0    9  |
+    | 4 4 5 5 |                       
+    | 6 7 8 9 |       *padded*          
+                    -------------
+                   | 1 1 1 1 0 0 |
                    | 2 2 3 3 0 0 |
                    | 4 4 5 5 0 0 |
                    | 6 7 8 9 0 0 |
@@ -142,6 +151,7 @@ def scaleMatrix(mat, scale, strict=True):
 
 
 def quickVector(geom, output=None):
+    """GeoKit internal for quickly creating a vector datasource"""
     ######## Create a quick vector source
     if output:
         driver = gdal.GetDriverByName("ESRI Shapefile")
@@ -175,6 +185,7 @@ def quickVector(geom, output=None):
 
 
 def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None):
+    """GeoKit internal for quickly creating a raster datasource"""
     xMin, yMin, xMax, yMax = bounds
     
     # Make a raster dataset and pull the band/maskBand objects

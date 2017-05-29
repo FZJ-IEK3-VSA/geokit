@@ -7,7 +7,7 @@ from .srsutil import *
 # Basic Loader
 def loadRaster(x):
     """
-    ***GIS INTERNAL***
+    ***GeoKit INTERNAL***
     Load a raster dataset from various sources.
     """
     if(isinstance(x,str)):
@@ -47,7 +47,7 @@ def gdalType(s):
 
 # raster stat calculator
 def calculateStats( source ):
-    """GIS INTERNAL: Calculates the statistics of a raster and writes results into the raster
+    """GeoKit INTERNAL: Calculates the statistics of a raster and writes results into the raster
     * Assumes that the raster is writable
     """
     if isinstance(source,str):
@@ -62,58 +62,75 @@ def calculateStats( source ):
 
 ####################################################################
 # Raster writer
-def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noDataValue=None, overwrite=False, fillValue=None, data=None):
+def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=False, fill=None, data=None, **kwargs):
     """
     Create a raster file
 
-    NOTE! Raster datasets are always written in the 'flipped-y' orientation. Meaning that the first row of data values (either written to or read from the dataset) will refer to the TOP of the defined boundary, and will then move downward from there
+    !NOTE! Raster datasets are always written in the 'yAtTop' orientation. Meaning that the first row of data values 
+           (either written to or read from the dataset) will refer to the TOP of the defined boundary, and will then 
+           move downward from there
 
-        * If a data matrix is given, and a negative pixelWidth is defined, the data will be flipped automatically
+    * If a data matrix is given, and a negative pixelWidth is defined, the data will be flipped automatically
 
     Return: None or gdal raster dataset (depending on whether an output path is given)
 
     Keyword inputs:
-        bounds
-            (xMin, yMix, xMax, yMax) -- the extents of the raster file to create
+        bounds : The geographic extents spanned by the raster
+            - (xMin, yMix, xMax, yMax)
+            - geokit.Extent object
         
-        output - (None) 
-            string : path to the output file
-            * If not defined, raster will be made in memory and a dataset will be returned
+        output : A path to an output file 
+            - string
+            * If output is None, the raster will be created in memory and a dataset handel will be returned
+            * If output is given, the raster will be written to disk and nothing will be returned
         
-        pixelWidth - (100)
-            float : the raster's pixel width corrsponding to the input SRS
+        pixelWidth : The pixel width of the raster in units of the input srs
+            - float
+            * The keyword 'dx' can be used as well and will override anything given assigned to 'pixelWidth'
         
-        pixelHeight - (100)
-            float : the raster's pixel height corrsponding to the input SRS
-        
-        dtype - (None) 
-            str : the data type which the raster file will expect
-            * Options are: Byte, Int16, Int32, Int64, Float32, Float64
-        
-        srs - (EPSG3035) 
-            int : EPSG integer
-            str : WKT string representing the desired spatial reference
-            osr.SpatialReference : the raster's reference system
+        pixelHeight : The pixel height of the raster in units of the input srs
+            - float
+            * The keyword 'dy' can be used as well and will override anything given assigned to 'pixelHeight'
 
-        compress - (True) 
-            bool : use compression on the final file
+        dtype : The datatype of the represented by the created raster's band
+            - string
+            * Options are: Byte, Int16, Int32, Int64, Float32, Float64
+            * If dtype is None and data is None, the assumed datatype is a 'Byte'
+            * If dtype is None and data is not None, the datatype will be inferred from the given data
+        
+        srs : The Spatial reference system to apply to the created raster
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * If 'bounds' is an Extent object, the bounds' internal srs will override the 'srs' input
+
+        compress :  A flag instructing the output raster to use a compression algorithm
+            - True/False
             * only useful if 'output' has been defined
             * "DEFLATE" used for Linux/Mac, "LZW" used for windows
         
-        noDataValue - (None)
-            float : the raster's 'noData' value
+        noData : Specifies which value should be considered as 'no data' in the created raster
+            - numeric
+            * Must be the same datatye as the 'dtype' input (or that which is derived)
 
-        fillValue - (None) 
-            float : the raster's initial values
-            * None implies a no fill value of zero
+        fill : The initial value given to all pixels in the created raster band
+            - numeric
+            * Must be the same datatye as the 'dtype' input (or that which is derived)
 
-        overwrite - (False) 
-            bool : force overwriting the output file if it exists
+        overwrite : A flag to overwrite a pre-existing output file
+            - True/False
 
-        data - (None) 
-            np.ndarray : A dataset to write into the final raster.
-            * array dimensions must fit raster dimensions
+        data : A 2D matrix to write into the resulting raster
+            - np.ndarray
+            * array dimensions must fit raster dimensions!!
     """
+
+    # Fix some inputs for backwards compatibility
+    pixelWidth = kwargs.pop("dx",pixelWidth)
+    pixelHeight = kwargs.pop("dy",pixelHeight)
+    fillValue = kwargs.pop("fillValue",fill)
+    noDataValue = kwargs.pop("noDataValue",noData)
 
     # Check for existing file
     if(not output is None):
@@ -131,6 +148,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         xMin, yMin, xMax, yMax = bounds 
     except TypeError:
         xMin, yMin, xMax, yMax = bounds.xyXY
+        srs = bounds.srs
 
     cols = round((xMax-xMin)/pixelWidth) # used 'round' instead of 'int' because this matched GDAL behavior better
     rows = round((yMax-yMin)/abs(pixelHeight))
@@ -212,7 +230,24 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
 ####################################################################
 # Fetch the raster as a matrix
 def fetchMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
-    """ Fetch all or part of a raster as a numpy matrix"""
+    """Fetch all or part of a raster's band as a numpy matrix
+    
+    * Unless one is trying to get the entire matrix from the raster dataset, usage of this function requires 
+      intimate knowledge of the raster's characteristics. In this case it probably easier to use Extent.extractMatrix
+
+    Inputs:
+        source : The raster datasource
+            - str -- A path on the filesystem 
+            - gdal Dataset
+
+        xOff - int : The index offset in the x-dimension
+
+        yOff - int : The index offset in the y-dimension
+
+        xWin - int : The window size in the x-dimension
+
+        yWin - int : The window size in the y-dimension
+    """
 
     sourceDS = loadRaster(source) # BE sure we have a raster
     sourceBand = sourceDS.GetRasterBand(1) # get band
@@ -227,9 +262,32 @@ def fetchMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
     # get Data
     return sourceBand.ReadAsArray(**kwargs)
 
+# Cutline fetcher
 cutlineInfo = namedtuple("cutlineInfo","data info")
 def fetchCutline(source, geom, cropToCutline=True, **kwargs):
-    """Create a cutout of a raster source's data which is within a given geometry"""
+    """Fetch a cutout of a raster source's data which is within a given geometry 
+
+    Inputs:
+        source : The raster datasource
+            - str -- A path on the filesystem 
+            - gdal Dataset
+
+        geom : The geometry overwhich to cut out the raster's data
+            - ogr Geometry object
+            * Must be a Polygon or MultiPolygon
+
+        cropToCutline : A flag which restricts the bounds of the returned matrix to that which most closely matches 
+                        the geometry
+            - True/False
+
+        **kwargs
+            * All kwargs are passes on to a call to gdal.Warp
+            * See gdal.WarpOptions for more details
+            * For example, 'allTouched' may be useful
+
+    Returns:
+        ( matrix-data, a rasterInfo output in the context of the created matrix )
+    """
     # make sure we have a polygon or multipolygon geometry
     if not isinstance(geom, ogr.Geometry):
         raise GeoKitGeomError("Geom must be an OGR Geometry object")
@@ -265,10 +323,11 @@ def fetchCutline(source, geom, cropToCutline=True, **kwargs):
     return returnVal
 
 def stats( source, geom=None, ignoreValue=None, **kwargs):
-    """Compute the raster statistics of a raster.
+    """Compute some basic statistics of the values contained in a raster dataset.
 
     * Can clip the raster with a geometry
     * Can ignore certain values if the raster doesnt have a no-data-value
+    * All kwargs are passed on to 'fetchCutline' when a 'geom' input is given
     """
 
     source = loadRaster(source)
