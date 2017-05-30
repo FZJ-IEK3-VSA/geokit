@@ -203,7 +203,15 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None):
         yield (oGeom, oItems)
 
 def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
-    """convenience function to get a single geometry from a source"""
+    """convenience function to get a single geometry from a source using extractFeatures
+    
+    Returns a tuple containing:
+        - The identified feature's geometry as an ogr Geometry object
+        - The identified attribute values as a dictionary
+
+    * See geokit.vector.extractFeatures for more info on inputs
+    * This function will fail if more than one feature is identified
+    """
     if feature is None:
         getter = extractFeatures(source, geom, where, outputSRS)
 
@@ -235,38 +243,40 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
     Create a vector file from a list of geometries, optionally including field values 
 
     keyword inputs:
-        geoms
-            [ogr-geometry,] : A list of ogr Geometry objects
+        geoms : The geometries to write into the raster file
+            - ogr Geometry
+            - str : A WKT string representing a single geometry
+            - An iterable of either of the above (exclusively one or the other)
                 * All geometries must share the same type (point, line, polygon, ect...)
                 * All geometries must share the same SRS
-                * If geometry SRS differ from an input srs, then all geometries will be 
-                  projected to the input srs
-            [str,] : a list of WKT strings
-                * All geometries must share the same type (point, line, polygon, ect...)
-                * SRS must be provided via the srs input
+            * If geometry SRS differs from the 'srs' input, then all geometries will be projected to the input srs
+            * SRS must be provided via the 'srs' input when the input geometries are WKT strings
 
-        output - None
-            str : The path to the output file
-                * Assumed to be of "ESRI Shapefile" format
-                * Will create a number of files with different extensions
+        output : An optional output path
+            str - The path on the file system
+            * If output is None, the vector dataset will be created in memory
+            * Assumed to be of "ESRI Shapefile" format
+            * Will create a number of files with different extensions
 
-        srs - None
-            int : The SRS to use as an EPSG integer
-            str : The SRS to use as a WKT string
-            osr.SpatialReference : The SRS to use
+        srs : The Spatial reference system to apply to the created vector
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
 
-        fieldVals - None
-            pandas-DataFrame : A DataFrame of the field names(taken from column names) and 
-                values corresponding to the geometries
-            dict : A dictionry of the field names (taken from keys) and and associated lists of the geometry's field values
+        fieldVals : Attribute values to assign to each geometry
+            - pandas-DataFrame : A DataFrame of the field names(taken from column names) and corresponding values
+            - dict : A dictionry of the field names (taken from keys) and associated lists of the geometry's field values
+            * The order of each column/list will correspond to the order geometries are written into the dataset
+            * The length of each column/list must match the number of geometries
         
-        fieldDef - {}
-            dict : Mapping of field names to data types to write into file
+        fieldDef - dict : A dictionary enforcing the datatype of each attribute when written into the final dataset
             * Options are defined from ogr.OFT[...]
               - ex. Integer, Real, String
+            * The ogrType function can be used to map typical python and numpy types to appropriate ogr types
 
-        overwrite - False
-            bool : Flag to overwrite preexisting file
+        overwrite - True/False : A Flag determining whether prexisting files should be overwritten
+            * Only used when output is not None
     """
     if(srs): srs = loadSRS(srs)
 
@@ -430,45 +440,43 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
 ####################################################################
 # mutuate a vector
-def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=None, fieldTypes=None, output=None, **kwargs):
+def mutateFeatures(source, processor, srs=None, geom=None, where=None, fieldDef=None, output=None, **kwargs):
     """Process a vector dataset according to a given function
 
-    Returns or creates an ogr dataset with the resulting data
+    Returns or creates an ogr dataset containing the resulting data
 
-    * If the user wishes to generate an output file (by giving an 'output' input), then nothing will be returned to help avoid dependance issues. If no output is provided, however, the function will return a dataset for immediate use
+    * If the user wishes to generate an output file (by giving an 'output' input), then nothing will be returned to help 
+      avoid dependance issues. If no output is provided, however, the function will return a dataset for immediate use
 
     Inputs:
-        source 
-            str -- The path to the raster to processes
-            gdal.Dataset -- The input data source as a gdal dataset object
+        source : The vector source to extract from
+            - path : A path on the file system
+            - ogr Dataset
 
-        extent: (None)
-            Extent Object -- A geographic extent to clip the source around to before processing
-            * If the Extent is not in the same SRS as the source's SRS, then it will be cast to the source's SRS, resulting in a new extent which will be >= the original extent
-            * Uses the "SetSpatialFilterRect" method which means all features which extent into (or are contained within) this rectangle will be included
-
-        processor: (None) 
-            func -- A function for processing the source data
-            * If none is given, feature will will be "processed" by simply returning themselves
+        processor - function : The processing function performing the mutation 
             * The function will take 2 arguments: an ogr.Geometry object and an attribute dictionary 
             * The function must return a tuple containing the geometry and an attribute dictionary
                 - The returned geometry can be an ogr.Geometry object or a WKT string
-                - If the user wishes to process the objects using shapely, the input geometries should first be cast to WKT strings (using <geometry>.ExportToWkt()) before being used to initialize a shapely object. After processing, the shapely objects should be cast back into WKT strings
-                - If a WKT string is returned, it is assumed to be in the same srs as the "srs" input provided with this function
+                - If the user wishes to process the objects using shapely, the input geometries should first be cast to 
+                  WKT strings (using <geometry>.ExportToWkt()) before being used to initialize a shapely object. After 
+                  processing, the shapely objects should be cast back into WKT strings
+                - If a WKT string is returned, it is assumed to be in the same srs as the "srs" input
             * The attribute dictionary should always contain the same names for all features
             * The attribute dictionary's values should only be numeric types and strings
             * See example below for more info
 
-        where: (None)
-            str -- the "where" statement used to filter features by attribute
+        where : str -- the "where" statement used to filter features by attribute
             * follows the SQL-where syntax
 
-        srs: (None)
-            skt-string, osr.SpatialReference, EPSG-int -- The spatial referenece to use while processing and in the final dataset
+        srs : The Spatial reference system to apply to the created vector
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
             * If no SRS is given, use the source's default SRS
             * If the given SRS is different from the source's SRS, all feature geometries will be cast to the given SRS before processing
 
-        fieldTypes: (None)
+        fieldDef: (None)
             dict -- The datatypes to use for the calculated attributes
             * Use this to control what datatype the fields are written as into the final dataset
             * Pattern is: dict(<field-name>=<datatype>)
@@ -521,10 +529,10 @@ def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=Non
     vecLyr.ResetReading()
     
     # See if a projection to a working srs is necessary
-    if( workingSRS is None):
+    if( srs is None):
         srs = vecSRS
     else:
-        srs=loadSRS(workingSRS)
+        srs=loadSRS(srs)
 
     if( vecSRS.IsSame(srs) ):
         projectionReq = False
@@ -587,7 +595,7 @@ def mutateFeatures(source, processor=None, workingSRS=None, geom=None, where=Non
         raise GeoKitVectorError("Invalid geometry count")
 
     # Create a new shapefile from the results 
-    newDS = createVector( geoms, srs=srs, fieldVals=values, fieldDef=fieldTypes, output=output, **kwargs )
+    newDS = createVector( geoms, srs=srs, fieldVals=values, fieldDef=fieldDef, output=output, **kwargs )
 
     if not output is None: 
         return
