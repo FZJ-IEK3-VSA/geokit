@@ -5,6 +5,12 @@ from .util import *
 
 # Some other srs shortcuts
 class _SRSCOMMON:
+    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
+    
+    * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
+        1: SRSCOMMON.<srs>
+        2: SRSCOMMON["<srs>"]
+    """
     # basic lattitude and longitude
     _latlon = osr.SpatialReference()
     _latlon.ImportFromEPSG(4326)
@@ -70,12 +76,24 @@ EPSG4326 = loadSRS(4326)
 ####################################################################
 # point transformer
 def xyTransform( xy, fromSRS='latlon', toSRS='europe_m'):
-    """Transform points between coordinate systems
+    """Transform xy points between coordinate systems
 
     Inputs:
-        xy 
-            (float,float) -- X and Y coordinates
-            [ (x1,y1), (x2,y2), ] -- A list of XY coordinates
+        xy  : The coordinates to transform
+            - (float,float) -- X and Y coordinates
+            - [ (x1,y1), (x2,y2), ] -- A list of XY coordinates
+
+        toSRS : The srs of the output points
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+
+        fromSRS : The srs of the input points
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
 
     """
     # load srs's

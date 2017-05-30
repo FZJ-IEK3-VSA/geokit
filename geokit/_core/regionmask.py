@@ -239,10 +239,10 @@ class RegionMask(object):
             pWidth, pHeight = pixelSize
         except:
             pWidth, pHeight = pixelSize, pixelSize
-        
+
         # Create an empty raster
         maskRaster = createRaster(bounds=extent.xyXY, pixelWidth=pWidth, pixelHeight=pHeight, srs=extent.srs)
-        
+    
         # Rasterize the shape
         bands = kwargs.pop("bands", [1])
         burnValues = kwargs.pop("burnValues", [1])
@@ -266,7 +266,7 @@ class RegionMask(object):
             del tmpGeom, ftr
         else: # Otherwise try to get the union of all features
             try:
-                geom = flatten([ftr.GetGeometryRef() for ftr in loopFeatures(layer)])
+                geom = flatten([ftr.GetGeometryRef().Clone() for ftr in loopFeatures(layer)])
             except:
                 geom=None
 
@@ -428,7 +428,7 @@ class RegionMask(object):
 
     @property
     def geometry(s):
-        """Fetched a clone of the RegionMask's geometry (as an OGR Geometry object).
+        """Fetches a clone of the RegionMask's geometry (as an OGR Geometry object).
 
         * If a geometry was not provided when the RegionMask was initialized, then one will be generated from RegionMask's mask matrix in the RegionMask's extent
         * The geometry can always be deleted and rebuild using the RegionMask.rebuildGeometry() function

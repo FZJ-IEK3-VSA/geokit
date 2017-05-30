@@ -46,7 +46,7 @@ def placeItemsInMask( mask, separation, extent=None, placementDiv=10, itemsAtEdg
         dy = (extent.yMax-extent.yMin)/mask.shape[0]
 
         if not isclose(dx,dy):
-            raise GeoKitError("Computes pixelWidth does not match pixelHeight. Try a different Extent")
+            raise GeoKitError("Computed pixelWidth does not match pixelHeight. Try a different Extent")
 
         distance = separation/dx
 

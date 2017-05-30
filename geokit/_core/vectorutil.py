@@ -9,7 +9,7 @@ from .rasterutil import *
 # Loaders Functions
 def loadVector(x, stringOnly=False):
     """
-    ***GIS INTERNAL***
+    ***GeoKit INTERNAL***
     Load a vector dataset from various sources.
     """
     if(isinstance(x,str)):
@@ -23,9 +23,10 @@ def loadVector(x, stringOnly=False):
 
 # Feature looper
 def loopFeatures(source):
-    """Loops over an input layer's features
+    """Geokit internal
 
-      * Will reset the reading counter before looping is initiated
+    *Loops over an input layer's features
+    * Will reset the reading counter before looping is initiated
     """
     if(isinstance(source,str)): # assume input source is a path to a datasource
         ds = ogr.Open(source)
@@ -68,6 +69,10 @@ def ogrType(s):
     raise ValueError("OGR type could not be determined")
 
 def filterLayer(layer, geom=None, where=None):
+    """GeoKit internal
+
+    Filters an ogr Layer object accordint to a geometry and where statement
+    """
     if (not geom is None):
         if isinstance(geom,ogr.Geometry):
             if(geom.GetSpatialReference() is None):
@@ -92,7 +97,12 @@ def filterLayer(layer, geom=None, where=None):
 
 ####################################################################
 # Vector feature count
-def vectorCount(source, geom=None, where=None):
+def countFeatures(source, geom=None, where=None):
+    """Returns the number of features found in the given source
+
+    * Use 'geom' to filter by an ogr Geometry object
+    * Use 'where' to filter by an SQL-style where statement
+    """
     ds = loadVector(source)
     layer = ds.GetLayer()
     filterLayer(layer, geom, where)
@@ -103,6 +113,18 @@ def vectorCount(source, geom=None, where=None):
 # Vector feature count
 vecInfo = namedtuple("vecInfo","srs bounds xMin yMin xMax yMax count attributes")
 def vectorInfo(source):
+    """Extract general information about a vector source
+
+    Determines:
+        srs : The source's SRS system
+        bounds : The source's boundaries (in the srs's units)
+        xMin : The source's xMin boundaries (in the srs's units)
+        yMin : The source's xMax boundaries (in the srs's units)
+        xMax : The source's yMin boundaries (in the srs's units)
+        yMax : The source's yMax boundaries (in the srs's units)
+        count : The number of features in the source
+        attributes : The attribute titles for the source's features
+    """
     info = {}
 
     vecDS = loadVector(source)
@@ -127,13 +149,40 @@ def vectorInfo(source):
 
 ####################################################################
 # Iterable to loop over vector items
-def fetchFeatures(source, geom=None, where=None, outputSRS=None):
-    """Loops over an input vector sources's features
+def extractFeatures(source, geom=None, where=None, outputSRS=None):
+    """Creates a generator which extracte the features contained within the source
+    
+    * Iteravely returns (feature-geometry, feature-fields)    
+    
+    !NOTE! Be careful when filtering by a geometry as the extracted features may not necessarily be IN the given shape
+        * Sometimes they may only overlap
+        * Sometimes they are only in the geometry's envelope
+        * To be sure an extracted geometry fits the selection criteria, you may need to do further processing
 
-    !!! WARN ABOUT FEATURE MAY NOT BE IN THE REGION (JUST THE REGION EXTENT) !!!
-    !!! HANDEL THIS OUTSIDE OF THE FUNC
+    Inputs:
+        source : The vector source to extract from
+            - path : A path on the file system
+            - ogr Dataset
+        
+        geom : A spatial context filtering the features which are extracted
+            - ogr Geometry 
+            - (xMin, yMin, xMax, yMax) : boundary extents in the vector source's native srs
+            - A geokit.Extent object
 
-    * Iteravely returns (feature-geometry, feature-fields)
+        where - str : An SQL-style where statement
+
+        outputSRS : An SRS which instructs the function to output the feature's geometries in a particular SRS
+    
+    Examples:
+        - If you wanted to iterate over features in a source which have an attribute called 'color' 
+            * You only want features whose color attribute equals 'blue'
+
+        >>> for geom, attribute in extractFeatures(<source>, where="color='blue'"):
+        >>>     ...
+
+        - If you simply ant a list of all the geometries described above
+
+        >>> geoms = [geom for geom, attribute in extractFeatures(<source>, where="color='blue'")] 
     """
 
     ds = loadVector(source)
@@ -153,10 +202,10 @@ def fetchFeatures(source, geom=None, where=None, outputSRS=None):
 
         yield (oGeom, oItems)
 
-def fetchFeature(source, feature=None, geom=None, where=None, outputSRS=None):
+def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
     """convenience function to get a single geometry from a source"""
     if feature is None:
-        getter = fetchFeatures(source, geom, where, outputSRS)
+        getter = extractFeatures(source, geom, where, outputSRS)
 
         # Get first result
         geom,attr = next(getter)

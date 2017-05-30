@@ -1,6 +1,13 @@
 from .util import *
 from .srsutil import *
 
+POINT = ogr.wkbPoint
+MULTIPOINT = ogr.wkbMultiPoint
+LINE = ogr.wkbLineString
+MULTILINE = ogr.wkbMultiLineString
+POLYGON = ogr.wkbPolygon
+MULTIPOLYGON = ogr.wkbMultiPolygon
+
 ####################################################################
 # Geometry convenience functions
 def makePoint(*args, srs='latlon'):
@@ -470,7 +477,7 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
         **mplargs : matplotlib keyword arguments to apply to each geometry
             * Specified keyword arguments for each geometry inherit from mplargs 
     
-    Retuns: A list of matplotlib handels for the created items
+    Retuns: A list of matplotlib handels to the created items
     """
     # do some imports
     from descartes import PolygonPatch

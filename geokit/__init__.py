@@ -17,12 +17,8 @@ from geokit._core.regionmask import RegionMask
 from geokit._core.rasterutil import drawImage
 from geokit._core.geomutil import drawGeoms
 
-
 # import the special algorithms
 import geokit.algorithms
-
-# Import a shortcuts library
-import geokit.shortcuts
 
 # Import the CLI
 import __main__

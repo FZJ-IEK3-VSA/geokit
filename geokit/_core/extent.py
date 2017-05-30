@@ -432,7 +432,7 @@ class Extent(object):
             raise GeoKitExtentError( "The extent does not appear to fit within the given raster")
             
         # Extract and return the matrix
-        arr = fetchMatrix(rasDS, xOff=xO, yOff=yO, xWin=xW, yWin=yW)
+        arr = extractMatrix(rasDS, xOff=xO, yOff=yO, xWin=xW, yWin=yW)
 
         # make sure we are returing data in the 'flipped-y' orientation
         if not rasInfo.flipY:

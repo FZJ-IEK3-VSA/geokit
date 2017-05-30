@@ -75,8 +75,8 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 
-        # Fetch the dataset's matrix
-        dMatrix = fetchMatrix(datasets[i])
+        # extract the dataset's matrix
+        dMatrix = extractMatrix(datasets[i])
         if not infoSet[i].yAtTop:
             dMatrix = dMatrix[::-1,:]
 
