@@ -26,6 +26,19 @@ class Extent(object):
         - Extent.fromRaster( raster-file-path )
     """
     def __init__(s, *args, srs='latlon'):
+        """Create extent from explicitly defined boundaries
+        
+        Usage:
+            Extent(xMin, yMin, xMax, yMax [, srs=<srs>])
+            Extent( (xMin, yMin, xMax, yMax) [, srs=<srs>])
+        
+        Where:
+            xMin - The minimal x value in the respective SRS
+            yMin - The minimal y value in the respective SRS
+            xMax - The maximal x value in the respective SRS
+            yMax - The maximal y value in the respective SRS
+            srs - The Spatial Reference system to use
+        """
         # Unpack args
         if len(args)==1:
             xMin, yMin, xMax, yMax = args[0]
@@ -48,7 +61,7 @@ class Extent(object):
 
     @staticmethod
     def from_xXyY(bounds, srs='latlon'):
-        """Create extent from explicitly defined boundaries
+        """Create an Extent from explicitly defined boundaries
 
         Inputs:
           bounds - (xMin, xMax, yMin, yMax)
@@ -61,12 +74,17 @@ class Extent(object):
         """Create extent around a given geometry
 
         Inputs:
-          geom - ogr.Geometry, str
-            * The geometry to use when generating the extent
-            * If a string is given, it is assumed to be a WKT string. In this case, an srs must also be provided
-          srs - osr.SpatialReference, int, str (default None)
-            * The srs of the given geometry
-            * If an ogr.Geometry is given for the "geom" input, then that geometry will be transformed into the given srs. Unless no srs is given in which the geometry's native srs will be used
+            geom : The geometry to create the Extent around 
+                - ogr.Geometry
+                - str
+                * If a string is given, it is assumed to be a WKT string. In this case, an srs must also be provided
+
+            srs : The Spatial reference system to apply to the created Extent
+                - osr.SpatialReference object
+                - an EPSG integer ID
+                - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+                - a WKT string
+                * If 'geom' is an ogr Geometry and 'srs' is not None, the geometry will be transformed to the given srs 
         """
         # ensure we have an osr.SpatialReference object
         if not srs is None:
@@ -80,7 +98,7 @@ class Extent(object):
             srs = geom.GetSpatialReference()
 
         # Test if a reprojection is required
-        if not srs.IsSame( geom.GetSpatialReference()):
+        if not srs.IsSame( geom.GetSpatialReference() ):
             geom.TransformTo(srs)
 
         # Read Envelope
@@ -91,11 +109,10 @@ class Extent(object):
 
     @staticmethod
     def fromVector( source ):
-        """Create extent around a vector source
+        """Create extent around the contemts of a vector source
 
         Inputs:
-          source - str
-            * The path to a vector file
+          source - str : The path to a vector file
         """
         shapeDS = loadVector(source)
 
@@ -108,11 +125,10 @@ class Extent(object):
 
     @staticmethod
     def fromRaster( source ):
-        """Create extent around a raster source
+        """Create extent around the contents of a raster source
 
         Inputs:
-          source - str
-            * The path to a vector file
+          source - str : The path to a raster file
         """
         dsInfo = rasterInfo(source)
 
@@ -122,6 +138,10 @@ class Extent(object):
 
     @staticmethod
     def _fromInfo(info):
+        """GeoKit internal
+
+        Creates an Extent from rasterInfo's returned value
+        """
         return Extent( info.xMin, info.yMin, info.xMax, info.yMax, srs=info.srs)
 
     @property
@@ -138,7 +158,7 @@ class Extent(object):
 
     @property
     def box(s): 
-        """Returns a new rectangular ogr.Geometry object representing the extent"""
+        """Returns a rectangular ogr.Geometry object representing the extent"""
         return s._box.Clone()
 
     def __eq__(s,o):
@@ -161,29 +181,39 @@ class Extent(object):
         return out
 
     def pad(s, pad): 
-        """Pad the edges of the extent by some amount
+        """Creates a new extent which has been padded in all directions compared to the original extent
 
-        Inputs:
-          pad - float
-            * The amount to pad the edges within the extent's reference system
+        pad - float : The amount to pad in all directions
+            * In units of the extent's srs
             * Can also accept a negative padding
         """
         if pad is None or pad == 0 : return s
         return Extent(s.xMin-pad, s.yMin-pad, s.xMax+pad, s.yMax+pad, srs=s.srs)
 
     def shift(s, dx=0, dy=0): 
-        """Shift the edges of the extent by some amount in either direction
+        """Creates a new extent which has been spatialy shifted from the original extent
 
-        Inputs:
-          dx - float (default 0)
-            * The amount to shift the x-edges within the extent's reference system
-          dy - float (default 0)
-            * The amount to shift the y-edges within the extent's reference system
-        
+        dx - float : Shifts the extent's edges in the x-direction
+        dy - float : Shifts the extent's edges in the y-direction
         """
         return Extent(s.xMin+dx, s.yMin+dy, s.xMax+dx, s.yMax+dy, srs=s.srs)
 
     def fitsResolution(s, unit, tolerance=1e-6):
+        """Returns True if the calling Extent first around the given unit(s) (at least within an error defined 
+           by 'tolerance')
+        
+        Inputs:
+            unit : the unit value(s) to check
+                - float : A single resolution value
+                - ( float, float) : A tuple of resolutions for both dimensions (x, y)
+
+        Example:
+            >>> ex = Extent( 100, 100, 300, 500)
+            >>> ex.fits(25) # True!
+            >>> ex.fits( (25, 10) ) # True!
+            >>> ex.fits(33) # False!
+            >>> ex.fits( (25, 33) ) # False!
+        """
         try:
             unitX, unitY = unit
         except:
@@ -207,10 +237,12 @@ class Extent(object):
         * The extent is always expanded to fit onto the given unit
 
         Inputs:
-          unit - float, (float, float)
-            * The unit (or (xUnit, yUnit) ) dimension to fit the extent onto
-          dtype - type (default None)
-            * An optional caster which will force the output dimensions to be the given data type
+            unit : The unit to fit
+                - float : a single resolution value
+                - (float, float) : A (x,y) tuple of resolution values
+            
+            dtype : An optional data type which the extent boundaries will be cast to 
+                - type : a python numeric type (int, float)
         """
         try:
             unitX, unitY = unit
@@ -240,16 +272,8 @@ class Extent(object):
             return Extent( dtype(newXMin), dtype(newYMin), dtype(newXMax), dtype(newYMax), srs=s.srs )
 
     def corners(s, asPoints=False):
-        """Shortcut function to get the four corners of the extent as ogr geometry points
-
-        * The extent is always expanded to fit onto the given unit
-
-        Inputs:
-          unit - float, (float, float)
-            * The unit (or (xUnit, yUnit) ) dimension to fit the extent onto
-          dtype - type (default None)
-            * An optional caster which will force the output dimensions to be the given data type
-        """
+        """Shortcut function to get the four corners of the extent as ogr geometry points or as x,y coordinates in 
+           the extent's srs"""
 
         if (asPoints):
             # Make corner points
@@ -269,14 +293,13 @@ class Extent(object):
 
     def castTo(s, targetSRS):
         """
-        Transforms an extent from a source SRS to a target SRS. 
-        Note: The resulting region will be equal to or (almost certainly) larger than the origional
+        Creates a new Extent by transforming an extent from the original Extent's srs to a target SRS. 
+        Note: The resulting region spanned by the extent will be equal-to or (almost certainly) larger than the origional
         
-        keyword inputs:
-            targetSRS - (required)
-                : int -- The target SRS to use as an EPSG integer
-                : str -- The target SRS to use as a WKT string
-                : osr.SpatialReference -- The target SRS to use
+        targetSRS : The srs to cast to
+            : int -- The target SRS to use as an EPSG integer
+            : str -- The target SRS to use as a WKT string
+            : osr.SpatialReference -- The target SRS to use
         """
         targetSRS=loadSRS(targetSRS)
 
@@ -307,17 +330,22 @@ class Extent(object):
         return Extent(min(X), min(Y), max(X), max(Y), srs=targetSRS)
 
     def inSourceExtent(s, source):
-        """Tests if the extent box intersects the extent box of of the given source"""
+        """Tests if the extent box is at least partially contained in the extent-box of the given vector source"""
         sourceExtent = Extent.fromVector(source).castTo(s.srs)
         return s._box.Intersects(sourceExtent.box)
 
     def filterSources(s, sources):
-        """Filter a list of sources whose's envelope overlaps a given extent.
+        """Filter a list of sources by those whose's envelope overlaps the Extent.
+        
+        * Creates a filter object which can be immidiately iterated over, or else can be cast as a list
 
-        Input 'sources' can either be:
-            * A list of vector sources
-            * A glob string which will generate a list of source paths
-                - see glob.glob for more info
+        Inputs:
+            sources : The sources to filter
+                - An iterable of vector sources
+                - An iterable of paths pointing to vector sources
+                - A glob string which will generate a list of source paths
+                    * see glob.glob for more info
+
         """
         # create list of searchable files
         if isinstance(sources, str):
@@ -333,10 +361,13 @@ class Extent(object):
         * If an optional resolution ('res') is given, the containment value is also dependant on whether or not the given extent fits within the larger extent AND is situated along the given resolution
 
         Inputs:
-            extent - Extent object
-                * The other extent
-            res - float, (float, float) (default None)
-                * The resolution on which the interior extent should fit
+            extent : The (potentially) contained Extent 
+                - Extent object
+            
+            res : An optional resolution to check containment on
+                - float : A single resolution
+                - (float, float) : An (x,y) tuple of resolution values
+                
         """
         # test raw bounds
         if( not extent.srs.IsSame(s.srs) or 
@@ -359,16 +390,20 @@ class Extent(object):
         return True
 
     def findWithin(s, extent, res=100, yAtTop=True):
-        """Finds the given extent within the main extent according to the given resolution. Assumes the two extents are a part of the same 'grid'
-    
+        """Finds the indexes of the given extent within the main extent according to the given resolution.
+        
+        * Use this to compute the index offsets and window sizes of a window within a raster dataset
+        * The two extents MUST share the same SRS
+
         Inputs:
-            extent - Extent
-                * The other extent
+            extent : The other extent 
+                - Extent
 
-            res - float, (float, float) (default 100)
-                * The resolution of the 'grid'
+            res : A resolution to check containment on
+                - float : A single resolution
+                - (float, float) : An (x,y) tuple of resolution values
 
-            yAtTop - bool (default True)
+            yAtTop - True/False : Indicates whether the main (larger) extent is in the y-starts-at-top orientation
                 * Instructs the offsetting to begin from yMax instead of from yMin
 
         Returns:
@@ -412,12 +447,9 @@ class Extent(object):
         return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
     
     def extractMatrix(s, source):
-        """Extracts the extent from the given raster source as a matrix. The called extent must fit somewhere within the raster's grid
+        """Extracts the extent directly from the given raster source as a matrix. The called extent must fit somewhere within the raster's grid
 
-        Returns: extracted-data-matrix:
-                * The data matrix from the raster which corresponds to the called extent
-
-        !NOTE! - If a raster is given which is not in the 'flipped-y' orientation, it will be clipped in its native state, but the returned matrix will be automatically flipped
+        !NOTE! If a raster is given which is not in the 'y-starts-at-top' orientation, it will be clipped in its native state, but the returned matrix will be automatically flipped
         """
         
         # open the dataset and get description
@@ -442,24 +474,18 @@ class Extent(object):
 
     def clipRaster(s, source, output=None):
         """
-        Clip a given raster around the extent object while maintaining the original source's
-        projection and resolution
+        Clip a given raster around the extent object and create a new raster dataset which maintains the original
+        source's projection and resolution
 
-        * Returns a gdal.Datasource if an 'output' path is not provided and asMatrix is False
-        * Creates a raster file if and 'output' path is provided. Will return nothing if asMatrix is False
-        * Always returns a matrix and the associated extent if asMatrix is True
-            - order is: (Matrix, Extent)
+        * Returns a gdal.Datasource if an 'output' path is not provided
+        * Creates a raster file if an 'output' path is provided
 
         Inputs:
-            source - gdal.Datasource, str 
-                * The datasource to clip
-                * If a string is given, it must be a path to a datasource which gdal can open
+            source : The datasource to clip
+                - gdal.Datasource
+                - str : A path to a raster datasource on the file system 
 
-            output - str (None)
-                * A path to an output file
-
-            asMatrix - bool (default False)
-                * Instructs the method to return the clipped raster as a matrix
+            output - str : A optional path to an output file
         """
 
         # open the dataset and get description
