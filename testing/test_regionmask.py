@@ -1,6 +1,6 @@
 from helpers import *
 from geokit import RegionMask, Extent
-from geokit.geom import makePoint
+from geokit.geom import makePoint, convertWKT
 from geokit.util import GeoKitRegionMaskError, scaleMatrix
 from geokit.raster import rasterInfo
 
@@ -76,7 +76,7 @@ def test_fromMask():
 
 def test_fromGeom():
     # fromGeom with wkt
-    rm1 = RegionMask.fromGeom(POLY, pixelSize=1000)
+    rm1 = RegionMask.fromGeom( convertWKT(POLY, srs='latlon'), pixelSize=1000)
     if( rm1.extent.xXyY != (4329000.0, 4771000.0, 835000.0, 1682000.0)):
         error("fromGeom - extent bounds")
     if not ( rm1.extent.srs.IsSame(EPSG3035) ): error("fromGeom - extent srs")

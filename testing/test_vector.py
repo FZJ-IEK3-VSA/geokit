@@ -12,70 +12,70 @@ def test_ogrType():
     if( ogrType(NUMPY_FLOAT_ARRAY.dtype) != "OFTReal" ): error("ogr type")
 
 
-def test_vectorCount():
-    if vectorCount(MULTI_FTR_SHAPE_PATH) != 4: error("Simple vector count")
+def test_countFeatures():
+    if countFeatures(MULTI_FTR_SHAPE_PATH) != 4: error("Simple vector count")
 
-    if vectorCount(MULTI_FTR_SHAPE_PATH, geom=makeBox(5.89,48.77,6.89,49.64, srs=EPSG4326)) != 2:
+    if countFeatures(MULTI_FTR_SHAPE_PATH, geom=makeBox(5.89,48.77,6.89,49.64, srs=EPSG4326)) != 2:
         error("Vector count - same SRS, geom filter")
 
-    if vectorCount(MULTI_FTR_SHAPE_PATH, geom=makeBox(4022802,2867575, 4104365,2938843, srs=EPSG3035)) != 2:
+    if countFeatures(MULTI_FTR_SHAPE_PATH, geom=makeBox(4022802,2867575, 4104365,2938843, srs=EPSG3035)) != 2:
         error("Vector count - different SRS, geom filter")
 
-    if vectorCount(MULTI_FTR_SHAPE_PATH, where="name LIKE 'mo%'") != 2:
+    if countFeatures(MULTI_FTR_SHAPE_PATH, where="name LIKE 'mo%'") != 2:
         error("Vector count - where filter")
 
-def test_fetchFeatures():
+def test_extractFeatures():
   # test basic
-  vi = list(fetchFeatures(BOXES))
+  vi = list(extractFeatures(BOXES))
   
-  if len(vi)!=3: error("fetchFeatures 1 - count mismatch") 
+  if len(vi)!=3: error("extractFeatures 1 - count mismatch") 
 
-  if (vi[0][0].Area()!=1.0): error("fetchFeatures 1 - geom mismatch")
-  if (vi[0][1]['name']!="harry"): error("fetchFeatures 1 - attribute mismatch")
+  if (vi[0][0].Area()!=1.0): error("extractFeatures 1 - geom mismatch")
+  if (vi[0][1]['name']!="harry"): error("extractFeatures 1 - attribute mismatch")
 
-  if (vi[1][0].Area()!=4.0): error("fetchFeatures 1 - geom mismatch")
-  if (vi[1][1]['name']!="ron"): error("fetchFeatures 1 - attribute mismatch")
+  if (vi[1][0].Area()!=4.0): error("extractFeatures 1 - geom mismatch")
+  if (vi[1][1]['name']!="ron"): error("extractFeatures 1 - attribute mismatch")
 
-  if (vi[2][0].Area()!=9.0): error("fetchFeatures 1 - geom mismatch")
-  if (vi[2][1]['name']!="hermoine"): error("fetchFeatures 1 - attribute mismatch")
+  if (vi[2][0].Area()!=9.0): error("extractFeatures 1 - geom mismatch")
+  if (vi[2][1]['name']!="hermoine"): error("extractFeatures 1 - attribute mismatch")
 
   # test clip
-  vi = list(fetchFeatures(BOXES, geom=makeBox(0,0,3,3, srs=EPSG4326)))
+  vi = list(extractFeatures(BOXES, geom=makeBox(0,0,3,3, srs=EPSG4326)))
 
-  if len(vi)!=2: error("fetchFeatures 2 - count mismatch")   
+  if len(vi)!=2: error("extractFeatures 2 - count mismatch")   
 
-  if (vi[0][0].Area()!=1.0): error("fetchFeatures 2 - geom mismatch")
-  if (vi[0][1]['name']!="harry"): error("fetchFeatures 2 - attribute mismatch")
+  if (vi[0][0].Area()!=1.0): error("extractFeatures 2 - geom mismatch")
+  if (vi[0][1]['name']!="harry"): error("extractFeatures 2 - attribute mismatch")
 
-  if (vi[1][0].Area()!=4.0): error("fetchFeatures 2 - geom mismatch")
-  if (vi[1][1]['name']!="ron"): error("fetchFeatures 2 - attribute mismatch")
+  if (vi[1][0].Area()!=4.0): error("extractFeatures 2 - geom mismatch")
+  if (vi[1][1]['name']!="ron"): error("extractFeatures 2 - attribute mismatch")
 
   # test srs change and attribute filter
-  vi = list(fetchFeatures(BOXES, where="smart>0", outputSRS=EPSG3035))
+  vi = list(extractFeatures(BOXES, where="smart>0", outputSRS=EPSG3035))
 
-  if len(vi)!=1: error("fetchFeatures 3 - count mismatch")   
+  if len(vi)!=1: error("extractFeatures 3 - count mismatch")   
 
-  if (not vi[0][0].GetSpatialReference().IsSame(EPSG3035)): error("fetchFeatures 3 - srs mismatch")
-  if (vi[0][1]['name']!="hermoine"): error("fetchFeatures 3 - attribute mismatch")
+  if (not vi[0][0].GetSpatialReference().IsSame(EPSG3035)): error("extractFeatures 3 - srs mismatch")
+  if (vi[0][1]['name']!="hermoine"): error("extractFeatures 3 - attribute mismatch")
 
-def test_fetchFeature():
+def test_extractFeature():
     # test succeed
-    geom, attr = fetchFeature(BOXES, feature=1)
-    if (geom.Area()!=4.0): error("fetchFeature 1 - geom mismatch")
-    if (attr['name']!="ron"): error("fetchFeature 1 - attribute mismatch")
+    geom, attr = extractFeature(BOXES, feature=1)
+    if (geom.Area()!=4.0): error("extractFeature 1 - geom mismatch")
+    if (attr['name']!="ron"): error("extractFeature 1 - attribute mismatch")
 
-    geom, attr = fetchFeature(BOXES, where="name='harry'")
-    if (geom.Area()!=1.0): error("fetchFeature 2 - geom mismatch")
-    if (attr['name']!="harry"): error("fetchFeature 2 - attribute mismatch")
+    geom, attr = extractFeature(BOXES, where="name='harry'")
+    if (geom.Area()!=1.0): error("extractFeature 2 - geom mismatch")
+    if (attr['name']!="harry"): error("extractFeature 2 - attribute mismatch")
 
     # test fail
     try:
-        geom, attr = fetchFeature(BOXES, where="smart=0")
-        error("fetchFeature 3 - fail test")
+        geom, attr = extractFeature(BOXES, where="smart=0")
+        error("extractFeature 3 - fail test")
     except GeoKitError:
         pass
     else:
-        error("fetchFeature 3 - fail test")
+        error("extractFeature 3 - fail test")
 
 ## Create shape file
 def test_createVector():
@@ -143,9 +143,9 @@ def test_mutateFeatures():
   sentanceSmall = ["Never","have","I","ever","you"]
 
   ## simple repeater
-  ps1 = mutateFeatures( AACHEN_POINTS )
+  ps1 = mutateFeatures( AACHEN_POINTS, processor=None )
 
-  res1 = list(fetchFeatures(ps1))
+  res1 = list(extractFeatures(ps1))
   if len(res1)!=13: error( "mutateFeatures 1 - item count")
   for i in range(13):
     if not res1[i][0].GetSpatialReference().IsSame(EPSG4326): error("mutateFeatures 1 - geom srs")
@@ -153,23 +153,23 @@ def test_mutateFeatures():
     if res1[i][1]['word'] != sentance[i]: error("mutateFeatures 1 - attribute writing")
 
   ## spatial filtering
-  ps2 = mutateFeatures( AACHEN_POINTS, geom=ext_small )
+  ps2 = mutateFeatures( AACHEN_POINTS, processor=None, geom=ext_small )
 
-  res2 = list(fetchFeatures(ps2))
+  res2 = list(extractFeatures(ps2))
   if len(res2)!=5: error( "mutateFeatures 2 - item count")
   for i in range(5):
     if not (res2[i][1]['word'] == sentanceSmall[i]): error("mutateFeatures 2 - attribute writing")
 
   ## attribute and spatial filtering
-  ps3 = mutateFeatures( AACHEN_POINTS, geom=ext_small, where="id<5" )
+  ps3 = mutateFeatures( AACHEN_POINTS, processor=None, geom=ext_small, where="id<5" )
 
-  res3 = list(fetchFeatures(ps3))
+  res3 = list(extractFeatures(ps3))
   if len(res3)!=4: error( "mutateFeatures 3 - item count")
   for i in range(4):
     if not (res3[i][1]['word'] == sentanceSmall[i]): error("mutateFeatures 3 - attribute writing")
 
   ## Test no items found
-  ps4 = mutateFeatures( AACHEN_POINTS, where="id<0" )
+  ps4 = mutateFeatures( AACHEN_POINTS, processor=None, where="id<0" )
 
   if not ps4 is None: error("mutateFeatures 4 - no items found")
 
@@ -182,10 +182,10 @@ def test_mutateFeatures():
     return newGeom,i
 
   output5 = result("mutateFeatures5.shp")
-  mutateFeatures( AACHEN_POINTS, processor=growByWordLength, workingSRS=EPSG3035, output=output5, overwrite=True)
+  mutateFeatures( AACHEN_POINTS, processor=growByWordLength, srs=EPSG3035, output=output5, overwrite=True)
   ps5 = loadVector(output5)
 
-  res5 = list(fetchFeatures(ps5))
+  res5 = list(extractFeatures(ps5))
   if len(res5)!=13: error( "mutateFeatures 5 - item count")
   for i in range(13):
     if not res5[i][0].GetSpatialReference().IsSame(EPSG3035): error("mutateFeatures 5 - geom srs")
@@ -202,8 +202,8 @@ def test_mutateFeatures():
 
 if __name__=="__main__":
     test_ogrType()
-    test_vectorCount()
-    test_fetchFeatures()
-    test_fetchFeature()
+    test_countFeatures()
+    test_extractFeatures()
+    test_extractFeature()
     test_createVector()
     test_mutateFeatures()

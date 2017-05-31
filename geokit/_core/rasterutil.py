@@ -561,8 +561,8 @@ def extractValues(source, points, pointSRS='latlon', winRange=0):
     # Ensure we have a list of point geometries
     def loadPoint(pt,s):
         """GeoKit internal. Shortcut for making points"""
-        if isinstance(pt,ogr.Geometry): 
-            if pt.GetGeometryType()!=POINT:
+        if isinstance(pt,ogr.Geometry):
+            if pt.GetGeometryName()!="POINT":
                 raise GeoKitGeomError("Invalid geometry given")
             return pt
 

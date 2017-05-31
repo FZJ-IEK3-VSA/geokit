@@ -133,29 +133,29 @@ def test_clipRaster():
     # NOTE! arr2 does NOT need flipping here since clipRaster is creating a NEW raster which by default is in the flipped-y orientation
     if not (arr1==arr2).all(): error("clipRaster - raster reading")
 
-def test_extractRaster():
+def test_extractMatrix():
   # setup
   ex = Extent(6.022,50.477,6.189,50.575).castTo(EPSG3035).fit(100)
   
   # extract
-  mat1 = ex.extractRaster(CLC_RASTER_PATH)
-  if mat1.sum()!=392284: error("extractRaster - matrix")
+  mat1 = ex.extractMatrix(CLC_RASTER_PATH)
+  if mat1.sum()!=392284: error("extractMatrix - matrix")
   
   # extract
-  mat2 = ex.extractRaster(CLC_FLIPCHECK_PATH)
-  if mat2.sum()!=392284: error("extractRaster - matrix")
+  mat2 = ex.extractMatrix(CLC_FLIPCHECK_PATH)
+  if mat2.sum()!=392284: error("extractMatrix - matrix")
   
   # Make sure matricies are the same
-  if not (mat1==mat2).all(): error("extractRaster - fliping error")
+  if not (mat1==mat2).all(): error("extractMatrix - fliping error")
 
   # test fail
   try:
-      p = ex.shift(dx=1).extractRaster(CLC_RASTER_PATH)
-      error("extractRaster - fail test")
+      p = ex.shift(dx=1).extractMatrix(CLC_RASTER_PATH)
+      error("extractMatrix - fail test")
   except GeoKitError as e:
       pass
   else:
-      error("extractRaster - fail test")
+      error("extractMatrix - fail test")
 
 
 
@@ -170,4 +170,4 @@ if __name__ == "__main__":
     test_filterSources()
     test_findWithin()
     test_clipRaster()
-    test_extractRaster()
+    test_extractMatrix()

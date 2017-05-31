@@ -854,15 +854,15 @@ class RegionMask(object):
             raise ValueError(msg)
         
         # Create a where statement if needed
-        if whereField:
+        if attribute:
             where = ""
-            for value in whereValues:
+            for value in values:
                 if isinstance(value,str):
-                    where += "%s='%s' OR "%(whereField, value)
+                    where += "%s='%s' OR "%(attribute, value)
                 elif isinstance(value,int):
-                    where += "%s=%d OR "%(whereField, value)
+                    where += "%s=%d OR "%(attribute, value)
                 elif isinstance(value,float):
-                    where += "%s=%f OR "%(whereField, value)
+                    where += "%s=%f OR "%(attribute, value)
                 else:
                     raise GeoKitRegionMaskError("Could not determine value type")
             where = where[:-4]

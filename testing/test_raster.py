@@ -65,7 +65,7 @@ def test_createRaster():
     if(arr.sum() != data.sum()): error("Creating raster on disk - data mismatch")
 
 ## Get values directly from a raster
-def test_pointValues():
+def test_extractValues():
     points = [(6.06590,50.51939), (6.02141,50.61491), (6.371634,50.846025)]
     realValue = [24, 3, 23]
     realDiffs = [(-0.18841865745838504, -0.1953854267578663), 
@@ -73,35 +73,35 @@ def test_pointValues():
                  (0.18415527009869948, 0.022563403500242885)]
 
     # test simple case
-    v1 = pointValues(CLC_RASTER_PATH, points)
+    v1 = extractValues(CLC_RASTER_PATH, points)
 
-    for v, real in zip(v1[0], realValue): 
-        if not (v[0][0]==real) : 
-            error("pointValues 1")
-    for v, real in zip(v1[1], realDiffs): 
-        if not ( isclose(v[0],real[0]) or isclose(v[1],real[1])): 
-            error("pointValues 1")
+    for v, real in zip(v1, realValue): 
+        if not (v.data==real) : 
+            error("extractValues 1")
+    for v, real in zip(v1, realDiffs): 
+        if not ( isclose(v.xOffset,real[0]) or isclose(v.yOffset,real[1])): 
+            error("extractValues 1")
 
     # test flipped 
-    v2 = pointValues(CLC_FLIPCHECK_PATH, points)
+    v2 = extractValues(CLC_FLIPCHECK_PATH, points)
 
-    for v, real in zip(v2[0], realValue): 
-        if not (v==real) : 
-            error("pointValues 2")
-    for v, real in zip(v2[1], realDiffs): 
-        if not ( isclose(v[0],real[0]) or isclose(v[1],real[1])): 
-            error("pointValues 2")
+    for v, real in zip(v2, realValue): 
+        if not (v.data==real) : 
+            error("extractValues 2")
+    for v, real in zip(v2, realDiffs): 
+        if not ( isclose(v.xOffset,real[0]) or isclose(v.yOffset,real[1])): 
+            error("extractValues 2")
 
     # test point input
     pt = ogr.Geometry(ogr.wkbPoint)
     pt.AddPoint(4061794.7,3094718.4)
     pt.AssignSpatialReference(EPSG3035)
 
-    v3 = pointValues(CLC_RASTER_PATH, pt)
+    v3 = extractValues(CLC_RASTER_PATH, pt)
 
-    if not (v3[0][0][0]==3): error("pointValues 3")
-    if not isclose(v3[1][0][0], 0.44700000000187856): error("pointValues 3")
-    if not isclose(v3[1][0][1], 0.31600000000094042): error("pointValues 3")
+    if not (v3.data==3): error("extractValues 3")
+    if not isclose(v3.xOffset, 0.44700000000187856): error("extractValues 3")
+    if not isclose(v3.yOffset, 0.31600000000094042): error("extractValues 3")
 
     # test window fetch
     real = np.array([[ 12, 12, 12, 12, 12  ],
@@ -110,24 +110,24 @@ def test_pointValues():
                      [ 12, 12, 12,  3,  3  ],
                      [ 12,  3,  3,  3,  3  ]])
 
-    v4 = pointValues(CLC_RASTER_PATH, pt, winRange=2)
-    if not isclose(np.abs(v4[0]-real).sum(),0.0): error("pointValues 4")
+    v4 = extractValues(CLC_RASTER_PATH, pt, winRange=2)
+    if not isclose(np.abs(v4.data-real).sum(),0.0): error("extractValues 4")
 
 
 # A nicer way to get a single value
-def test_pointValue():
+def test_interpolateValues():
     point = (4061794.7,3094718.4)
 
-    if not isclose(pointValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="near"), 3): 
-        error("pointValue - ")
-    if not isclose(pointValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="linear-spline"), 4.572732): 
-        error("pointValue - linear-spline")
-    if not isclose(pointValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="cubic-spline"), 2.4197586642): 
-        error("pointValue - cubic-spline")
-    if not isclose(pointValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="average"), 9.0612244898): 
-        error("pointValue - average")
-    if not isclose(pointValue(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="func", func = lambda x: x.max()),12): 
-        error("pointValue - func")
+    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="near"), 3): 
+        error("interpolateValues - ")
+    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="linear-spline"), 4.572732): 
+        error("interpolateValues - linear-spline")
+    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="cubic-spline"), 2.4197586642): 
+        error("interpolateValues - cubic-spline")
+    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="average"), 9.0612244898): 
+        error("interpolateValues - average")
+    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="func", func = lambda d,xo,yo: d.max()),12): 
+        error("interpolateValues - func")
 
 def test_gradient():
     # create a sloping surface dataset
@@ -168,7 +168,7 @@ def test_gradient():
     # calculate elevation slope
     output = result("slope_calculation.tif")
     slopeDS = gradient(ELEVATION_PATH, factor='latlonToM', output=output, overwrite=True)
-    slopeMat = fetchMatrix(output)
+    slopeMat = extractMatrix(output)
 
     if not isclose(slopeMat.mean(),0.0663805622803): error("gradient - elevation slope")
 
@@ -180,7 +180,7 @@ def test_mutateValues():
     sourceInfo = rasterInfo(source)
 
     ## Process Raster with no processor or extent
-    res1 = mutateValues(source)#, overwrite=True, output=result("algorithms_mutateValues_1.tif"))
+    res1 = mutateValues(source, processor=None)#, overwrite=True, output=result("algorithms_mutateValues_1.tif"))
 
     info1 = rasterInfo(res1)
     if not info1.srs.IsSame(sourceInfo.srs): error("mutateValues 1 - srs")
@@ -215,7 +215,7 @@ def test_mutateValues():
     if not isclose(info2f.yMin, sourceInfo.yMin): error("mutateValues 2f - bounds")
     if not isclose(info2f.yMax, sourceInfo.yMax): error("mutateValues 2f - bounds")
 
-    arr2f = fetchMatrix(res2f)
+    arr2f = extractMatrix(res2f)
 
     if not (arr2f.sum()==156515): error("mutateValues 2f - data")
 
@@ -226,7 +226,7 @@ if __name__=="__main__":
     test_gdalType()
     test_rasterInfo()
     test_createRaster()
-    test_pointValues()
-    test_pointValue()
+    test_extractValues()
+    test_interpolateValues()
     test_gradient()
     test_mutateValues()
