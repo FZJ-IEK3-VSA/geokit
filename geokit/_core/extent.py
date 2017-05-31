@@ -478,7 +478,7 @@ class Extent(object):
         source's projection and resolution
 
         * Returns a gdal.Datasource if an 'output' path is not provided
-        * Creates a raster file if an 'output' path is provided
+        * Creates a raster file if an 'output' path is provided and returns nothing
 
         Inputs:
             source : The datasource to clip

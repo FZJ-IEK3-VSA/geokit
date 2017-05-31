@@ -24,16 +24,17 @@ class RegionMask(object):
       resolution via the ".warp" method
     * Any vector source can be rasterized onto the region-mask's extent, projection, and 
       resolution via the ".rasterize" method
-    * The default mask set-up is as follows:
-       SRS -------- EPSG3035
-       RESOLUTION - 100m
-       EXTENT ----- tight (as described above)
+    * The default mask set-up is defined by the constant members: DEFAULT_SRS, DEFAULT_RES, and DEFAULT_PAD
 
-    Initialization:
-        * RegionMask(mask-array, geographic-extent[, geometry ]) ### This is not the preferred way
-        * RegionMask.fromVector( vector-data-source )
-        * RegionMask.fromVectorFeature( vector-data-source, featureID )
-        * RegionMask.fromGeom( OGR-Geometry or WKT-string, spatial-reference-system ) 
+    Initializers:
+        * RegionMask(...) 
+            - This is not the preferred way
+        * RegionMask.fromVector( ... )
+        * RegionMask.fromVectorFeature( ... )
+        * RegionMask.fromGeom( ... )
+        * RegionMask.fromMask( ... ) 
+        * RegionMask.load( ... )
+            - This function tries to determine which of the other initializers should be used based off the input
     """   
 
     DEFAULT_SRS = 'europe_m'
@@ -46,23 +47,35 @@ class RegionMask(object):
     """
 
     def __init__(s, extent, pixel, mask=None, geom=None, attributes=None, **kwargs):
-        """!!!!!!!!!UPDATE ME!!!!!!!
-        The default constructor for RegionMask objects. Creates a RegionMask directly from a matrix mask and a given extent (and optionally a geometry). Pixel resolution is calculated in accordance with the shape of the mask mask and the provided extent
+        """
+        The default constructor for RegionMask objects. Creates a RegionMask directly from a matrix mask and a given 
+        extent (and optionally a geometry). Pixel resolution is calculated in accordance with the shape of the mask 
+        mask and the provided extent
 
-        * Generally one should use one of the .fromXXX methods to create RegionMasks
+        * Generally one should use the '.load' or else one of the '.fromXXX' methods to create RegionMasks
 
         Inputs:
-            mask - numpy-ndarray object
-                * A 2-Dimensional numpy array of boolean values describing the region, where:
+            extent - Extent object : The geospatial context of the region mask
+                * The extent must fit the given pixel sizes
+                * All computations using the RegionMask will be evaluated within this spatial context
+            
+            pixel : The RegionMask's native pixel size(s)
+                - float : A pixel size to apply to both the X and Y dimension
+                - (float float) : An X-dimension and Y-dimension pixel size
+                * All computations using the RegionMask will generate results in reference to these pixel sizes (i.e.
+                  either at this resolution or at some scaling of this resolution)
+
+            mask - numpy-ndarray : A mask over the context area defining which pixel as inside the region and which are 
+                                   outside
+                * Must be a 2-Dimensional matrix of boolean values describing the region, where:
                     - 0/False -> "not in the region"
                     - 1/True  -> "Inside the region"
+                * Either a mask or a geometry must be given, but not both
 
-            extent - Extent object
-                * The geographic extent and reference of the area represented by the mask mask
+            geom - ogr-Geomertry object : A geometric representation of the RegionMask's region
+                * Either a mask or a geometry must be given, but not both
 
-            geom - ogr-Geomertry object (default None)
-                * An OGR Geometry object which represents the region.
-                ! Be careful that this geometry matches with the required "mask" input. This is not checked within the constructor
+            attributes - dict : Keyword attributes and values to carry along with the RegionMask
         """
         # Check for bad input
         if mask is None and geom is None: raise GeoKitRegionMaskError("Either mask or geom should be defined")    
@@ -128,7 +141,23 @@ class RegionMask(object):
 
     @staticmethod
     def fromMask(extent, mask, attributes=None):
-        """MAKE A DOC STRING!!!!!"""
+        """Make a RegionMask directly from amask matrix and extent
+
+        * Pixel sizes are calculated from the extent boundaries and mask dimensional sizes
+
+        Inputs:
+            extent - Extent object : The geospatial context of the region mask
+                * All computations using the RegionMask will be evaluated within this spatial context
+            
+            mask - numpy-ndarray : A mask over the context area defining which pixel as inside the region and which are 
+                                   outside
+                * Must be a 2-Dimensional matrix of boolean values describing the region, where:
+                    - 0/False -> "not in the region"
+                    - 1/True  -> "Inside the region"
+                * Either a mask or a geometry must be given, but not both
+
+            attributes - dict : Keyword attributes and values to carry along with the RegionMask
+        """
 
         # get pixelWidth and pixelHeight
         pixelWidth = (extent.xMax-extent.xMin)/(mask.shape[1])
@@ -137,46 +166,46 @@ class RegionMask(object):
         return RegionMask(extent=extent, pixel=(pixelWidth, pixelHeight), mask=mask, attributes=attributes)
 
     @staticmethod
-    def fromGeom(geom, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, wktSRS='latlon', extent=None, padExtent=DEFAULT_PAD, attributes=None):    
+    def fromGeom(geom, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None):    
             """
-            Make a raster mask of a given shape or shapefile
+            Make a RasterMask from a given geometry
 
-            Returns a Mask object 
-
-            Keyword inputs:
-                geom - (None)
-                    : str -- A WKT string representing the shape
-                    * either source or wkt must be provided
-
-                wktSRS - (None)
-                    : int -- The WKT SRS to use as an EPSG integer
-                    : str -- The WKT SRS to use as a WKT string
-                    : osr.SpatialReference -- The WKT SRS to use
-                    * Must be defined if wkt is given
+            Inputs:
+                geom : A geometric representation of the RegionMask's region
+                    - ogr-Geomertry object
+                    - str : A WKT string
+                        * Coordinates must correspond to the given 'srs' input
                 
-                pixelSize - (DEFAULT_RES)
-                    : float -- the raster's pixel size in units of the srs
-
-                srs - (DEFAULT_SRS)
-                    : int -- The WKT SRS to use as an EPSG integer
-                    : str -- The WKT SRS to use as a WKT string
-                    : osr.SpatialReference -- The WKT SRS to use
-
-                extent - (None) 
-                    : (xMin, yMix, xMax, yMax) -- the extents of the raster file to create
+                pixelSize : The RegionMask's native pixel size(s)
+                    - float : A pixel size to apply to both the X and Y dimension
+                    - (float float) : An X-dimension and Y-dimension pixel size
+                    * All computations using the RegionMask will generate results in reference to these pixel sizes (i.e.
+                      either at this resolution or at some scaling of this resolution)
+                    * Units correspond to the 'srs' input's units
                 
-                padExtent - DEFAULT_PAD
-                    float -- An extra paddind to ad onto the extent
+                srs : The SRS of the created RegionMask
+                    - osr.SpatialReference object
+                    - an EPSG integer ID
+                    - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+                    - a WKT string
+                    * If the 'srs' input differs from the geometry's SRS, the geometry will be cast to the given 'srs'
+                
+                extent : Extent object : An optional geospatial context for the region mask
+                    * If 'extent' is None, an extent will be computed accroding to the geometry's envelope and 
+                      the RegionMask's pixel size
+                    * The extent must fit the given pixel sizes
+                    * All computations using the RegionMask will be evaluated within this spatial context
+                
+                padExtent - float : An optional padding to add around the extent
+                    * Must be divisible by the the pixel size
 
-                *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
-                  Ex:
-                    - allTouched=True
-                    - where="color=='blue'"
+                attributes - dict : Keyword attributes and values to carry along with the RegionMask
+
             """
+            srs = loadSRS(srs)
             # make sure we have a geometry with an srs
             if( isinstance(geom, str)):
-                if wktSRS is None: raise GeoKitRegionMaskError("wktSRS must be provided when geom is a string")
-                geom = convertWKT(geom, wktSRS)
+                geom = convertWKT(geom, srs)
 
             geom = geom.Clone() # clone to make sure we're free of outside dependencies
 
@@ -193,35 +222,49 @@ class RegionMask(object):
 
 
     @staticmethod
-    def fromVector(source, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, **kwargs):    
-        """!!!!WARN ABOUT RASTERIZING AND DATA SIZE!!!!
-        Make a raster mask of a given shape or shapefile
+    def fromVector(source, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None, **kwargs):
+        """
+        Make a RasterMask from a given vector source
 
-        Returns a RegionMask object 
+        !NOTE! Becareful when creating a RegionMask over a large area (such as a country)! Using the default pixel 
+               size for a large area (such as a country) can easily consume your system's memory resources
 
         Inputs:
-            source - (None)
-                : str -- Path to an input shapefile
-                * either source or wkt must be provided
+            source : The vector source to extract from
+                - path : A path on the file system
+                - ogr Dataset
             
-            pixelSize - (DEFAULT_RES)
-                : float -- the raster's pixel size in units of the srs
+            pixelSize : The RegionMask's native pixel size(s)
+                - float : A pixel size to apply to both the X and Y dimension
+                - (float float) : An X-dimension and Y-dimension pixel size
+                * All computations using the RegionMask will generate results in reference to these pixel sizes (i.e.
+                  either at this resolution or at some scaling of this resolution)
+                * Units correspond to the 'srs' input's units
+            
+            srs : The SRS of the created RegionMask
+                - osr.SpatialReference object
+                - an EPSG integer ID
+                - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+                - a WKT string
+            
+            extent : Extent object : An optional geospatial context for the RegionMask
+                * If 'extent' is None, an extent will be computed accroding to the vector's envelope and 
+                  the RegionMask's pixel size
+                * The extent must fit the given pixel sizes
+                * All computations using the RegionMask will be evaluated within this spatial context
+            
+            padExtent - float : An optional padding to add around the extent
+                * Must be divisible by the the pixel size
 
-            srs - (DEFAULT_SRS)
-                : int -- The WKT SRS to use as an EPSG integer
-                : str -- The WKT SRS to use as a WKT string
-                : osr.SpatialReference -- The WKT SRS to use
+            attributes - dict : Keyword attributes and values to carry along with the RegionMask
 
-            extent - (None) 
-                : (xMin, yMix, xMax, yMax) -- the extents of the ter file to creat           
-            padExtent - DEFAULT_PAD
-                float -- An extra paddind to ad onto the extent
-
-            *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
-              Ex:
-                - allTouched=True
-                - where="color=='blue'"
+            **kwargs : Extra keyword arguments will be passed on to a call to gdal.Rasterize
+                * These can be used to filter the vector source's features or to customize the rasterization
+                * For example: 
+                    - allTouched=True
+                    - where="color=='blue'"
         """
+        
         # Handel source input
         sourceDS = loadVector(source)
         layer = sourceDS.GetLayer()
@@ -279,40 +322,54 @@ class RegionMask(object):
         del shapeSRS, layer, sourceDS
 
         # Done!
-        return RegionMask(extent=extent, pixel=pixelSize, mask=array, geom=geom, mask_plus_geom_is_okay=True)
+        return RegionMask(extent=extent, pixel=pixelSize, mask=array, geom=geom, mask_plus_geom_is_okay=True, attributes=attributes)
 
     @staticmethod
-    def fromVectorFeature(source, select=0, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, **kwargs):
-        """Load a specific feature from a shapefile as a Region, including feature attributes
+    def fromVectorFeature(source, select=0, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None):
+        """
+        Make a RegionMask from a specific feature in a given vector source
+
+        * The RegionMask's attributes dictionary will be automatically extracted from the feature identified in the 
+          source
+
+        !NOTE! Becareful when creating a RegionMask over a large area (such as a country)! Using the default pixel 
+               size for a large area (such as a country) can easily consume your system's memory resources
 
         Inputs:
-            source
-                str -- Path to the source shapefile
-                ogr.Dataset -- The source dataset 
+            source : The vector source to extract from
+                - path : A path on the file system
+                - ogr Dataset
 
-            select - (0)
-                int -- The feature index to select
-                str -- An SQL where statement to fiter source features
-
-            pixelSize - (DEFAULT_RES)
-                : float -- the raster's pixel size in units of the srs
-
-            srs - (DEFAULT_SRS)
-                : int -- The WKT SRS to use as an EPSG integer
-                : str -- The WKT SRS to use as a WKT string
-                : osr.SpatialReference -- The WKT SRS to use
-
-            extent - (None) 
-                : (xMin, yMix, xMax, yMax) -- the extents of the raster file to create
+            select : The feature selection description
+                - int : The feature ID in the source
+                - str : A SQL-style string which filters the features by their attributes
+                * Selection must return exactly one feature
             
-            padExtent - DEFAULT_PAD
-                float -- An extra paddind to ad onto the extent
-
-            *Further kwargs are passed on to a gdal.Rasterize call. Use these to further customize the final mask
-              Ex:
-                - allTouched=True
-                - where="color=='blue'"
+            pixelSize : The RegionMask's native pixel size(s)
+                - float : A pixel size to apply to both the X and Y dimension
+                - (float float) : An X-dimension and Y-dimension pixel size
+                * All computations using the RegionMask will generate results in reference to these pixel sizes (i.e.
+                  either at this resolution or at some scaling of this resolution)
+                * Units correspond to the 'srs' input's units
             
+            srs : The SRS of the created RegionMask
+                - osr.SpatialReference object
+                - an EPSG integer ID
+                - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+                - a WKT string
+            
+            extent : Extent object : An optional geospatial context for the RegionMask
+                * If 'extent' is None, an extent will be computed accroding to the vector's envelope and 
+                  the RegionMask's pixel size
+                * The extent must fit the given pixel sizes
+                * All computations using the RegionMask will be evaluated within this spatial context
+            
+            padExtent - float : An optional padding to add around the extent
+                * Must be divisible by the the pixel size
+
+            attributes - dict : Keyword attributes and values to carry along with the RegionMask
+                * Will be used to update the attributes dictionary of the source's identified feature
+
         """
         # Get DS, Layer, and Feature
         vecDS = loadVector(source)
@@ -344,15 +401,17 @@ class RegionMask(object):
 
     @staticmethod
     def load(region, **kwargs):
-        """Tries to initialize and return a RegionMask in a smart way. 
+        """Tries to initialize and return a RegionMask in the most appropriate way. 
 
         Meaning, if 'region' input is...
-            - already a RegionMask, simply return it
-            - a file path...
+            * already a RegionMask, simply return it
+            * a file path...
                 - and a "select" kwarg was given, assume it is meant to be loaded by RegionMask.fromVectorFeature
                 - and no "select" kwarg is given, assume it is meant to be loaded by RegionMask.fromVector
-            - a string but not a file path, assume is it a WKT geometry string to be loaded by RegionMask.fromGeom
-            - an OGR Geometry object, assume is it to be loaded by RegionMask.fromGeom
+            * a string but not a file path, assume is it a WKT geometry string to be loaded by RegionMask.fromGeom
+            * an OGR Geometry object, assume is it to be loaded by RegionMask.fromGeom
+            * a NumPy array, assume is it to be loaded by RegionMask.fromMask
+                - An 'extent' input must also be given
         
         * All kwargs are passed on to the called initializer
         """
@@ -367,6 +426,8 @@ class RegionMask(object):
                 return RegionMask.fromGeom(region, **kwargs)
         elif isinstance(region, ogr.Geometry):
             return RegionMask.fromGeom(region, **kwargs)
+        elif isinstance(region, np.ndarray):
+            return RegionMask.fromMask(region, **kwargs)
         else:
             raise GeoKitRegionMaskError("Could not understand region input")
 
@@ -386,6 +447,7 @@ class RegionMask(object):
 
         * All kwargs are passed on to a call to gdal.Rasterize
             - 'bands' and 'burnValues' are given as [1]
+
         """
         if s._geometry is None:
             raise GeoKitRegionMaskError("Cannot build mask when geometry is None")
@@ -411,16 +473,14 @@ class RegionMask(object):
     def mask(s):
         """The RegionMask's mask array as an 2-dimensional boolean numpy array.
         
-        * If no mask was given at the time of the RegionMask's creation (and assuming an appropriate geometry, extent, and pixelsize was given), then a mask will be generated on teh first call to the 'mask' property
+        * If no mask was given at the time of the RegionMask's creation, then a mask will be generated on the first call to the 'mask' property
+        * The mask can be rebuilt in a customized way using the RegionMask.buildMask() function
         """
         if(s._mask is None): s.buildMask()
         return s._mask
 
     def buildGeometry(s):
-        """Explicitly build the RM's geometry. Use this if the RM was initialized with an incorrect geometry.
-
-        * This should never happen, but, just in case....
-        """
+        """Explicitly build the RM's geometry"""
         if s._mask is None:
             raise GeoKitRegionMaskError("Cannot build geometry when mask is None")
         s._geometry = None
@@ -428,7 +488,7 @@ class RegionMask(object):
 
     @property
     def geometry(s):
-        """Fetches a clone of the RegionMask's geometry (as an OGR Geometry object).
+        """Fetches a clone of the RegionMask's geometry as an OGR Geometry object
 
         * If a geometry was not provided when the RegionMask was initialized, then one will be generated from RegionMask's mask matrix in the RegionMask's extent
         * The geometry can always be deleted and rebuild using the RegionMask.rebuildGeometry() function
@@ -466,15 +526,17 @@ class RegionMask(object):
         if(hasattr(s, "_TMPDIR")): s._TMPDIR.cleanup()
 
     def createRaster(s, resolutionDiv=1, **kwargs):
-        """Creates a new raster with the same extent and resolution as the parent Mask, but with a optional datatype and fill.
+        """Creates a new raster with the same extent and resolution as the parent Mask, but with a optional 
+           datatype and filling
 
-            * All kwargs are passed on to reslo.gis.createRaster (again, except extent and resolution)
-            * extent, pixelWidth, pixelHeight, and srs are automatically defined
-
-            Inputs:
-                resolutionDiv: int -- A division factor for the raster's resolution
-                    * Determines the resolution of the "divided" raster
-                    * Generally this is only used for internal purposes
+        Inputs:
+            resolutionDiv -int : A division factor for the raster's resolution
+                * Determines the resolution of the "divided" raster
+                * Generally this is only used for internal purposes
+            
+            **kwargs 
+                * All keyword arguments are passed on to geokit.raster.createRaster 
+                * 'extent', 'pixelWidth', 'pixelHeight', and 'srs' are automatically defined
 
         """
         # protect from bad inputs
@@ -497,19 +559,20 @@ class RegionMask(object):
             return rasDS
 
     def applyMask(s, mat, noData=0):
-        """Shortcut to apply the RM's mask to an array
+        """Shortcut to apply the RegionMask's mask to an array
 
-            * When the passed matrix does not have the same extents of the, it is assumed that the RM's mask needs to be scaled so that the matrix dimensions match
+        * When the passed matrix does not have the same extents of the given matrix, it is assumed that the RM's 
+          mask needs to be scaled so that the matrix dimensions match
 
-            * The RM's mask can only be scalled UP, and the given matrix's dimensions must be mutiples of the mask's dimensions
+        * The RM's mask can only be scaled UP, and the given matrix's dimensions must be mutiples of the mask's 
+          dimensions
 
         Inputs:
-            mat: 
-                np.ndarray -- The matrix to apply the mask to
-                * A 2D numpy array
+            mat - np.ndarray : The matrix to apply the mask to
+                * A 2D numpy array whose dimensions equal, or are multiples of, the mask's dimensions
 
-            noData: (default 0.0)
-                float -- The noData value to set the mask-disqualified values in the given matrix to 
+            noData - float : The no-data value to set into matrix's values which are not within the region
+                
         """
         if(noData is None): noData=0
         # Get size
@@ -543,41 +606,40 @@ class RegionMask(object):
     def warp(s, source, dtype=None, resampleAlg='cubic', noDataValue=None, applyMask=True, resolutionDiv=1, **kwargs):
         """Warp a given raster source onto the RM's extent and resolution
 
-        * The source is not clipped around the RM's extent before the warping procedure. This isn't necessary, but if it is desired it is suggested to call 'clipRaster' from the RM's extent (givign the source as an input) and then passing the returned value from that into the source input. 
+        * The source is not clipped around the RM's extent before the warping procedure. This isn't necessary, but if it 
+          is desired it is suggested to call '<RegionMaskObject>.extent.clipRaster' (giving the source as an input) and
+          then passing the returned value from that into the source input. 
             Ex.
-                -> clippedDS = RM.extent.clipRaster(<source>)
-                -> warpedMatrix = RM.warp( clippedDS )
+                >>> clippedDS = RM.extent.clipRaster(<source>)
+                >>> warpedMatrix = RM.warp( clippedDS )
 
         Returns a 2D matrix of the warped data fitting the RM's mask
 
         Inputs:
-            source:
-                str -- The data source to warp
-                gdal-Dataset -- The dataset to warp
-                * Must be a GDAL-Readable source
+            source : The raster datasource to warp
+                - str -- A path on the filesystem 
+                - gdal Dataset
 
-            dtype: (None)
-                str -- the datatype as a numpy-readable string
-                type -- the data type as a native python type
-                * This controls the datatype of the warped data
+            dtype : The datatype of the warped data
+                - str : The datatype as a numpy-readable string
+                - type : The data type as a native python type
 
-            resampleAlg: ('cubic')
-                str -- The resampling algorithm to use when warping
+            resampleAlg - str : The resampling algorithm to use while warping
                 * See gdal.WarpOptions for more info
-                * The common options are: cubic, linear, near
+                * The common options are: 'cubic', 'linear', or 'near'
+                * Choose the resampling algorithm carefully by considering the raster source's contents!
 
-            noDataValue: (None)
-                float -- The no-data-value to use for the warped data
+            noDataValue - float : The no-data-value to use for the warped data
                 * Will be cast into the given dtype if one was provided
 
-            applyMask: (True)
-                bool -- Flag determining whether or not to apply the RM's mask to the resulting data
+            applyMask - True/False : Flag determining whether or not to apply the RM's mask to the resulting data
 
-            resolutionDiv: (1)
-                int: A resolution scaling factor to allow for warping onto the same extent as the RM, but a higher resolution
+            resolutionDiv - int : A resolution scaling factor to allow for warping onto the same extent as the RM, 
+                                  but a higher resolution
                 * Generally this is intended for internal use
 
-            * All kwargs are passed on to a call to gdal.Warp()
+            **kwargs :
+                * Extra keyword arguments are passed on to a call to gdal.Warp()
         """
         # open source and get info
         source = loadRaster(source)
@@ -622,37 +684,36 @@ class RegionMask(object):
         return final
 
     def rasterize(s, source, applyMask=True, dtype="bool", noDataValue=None, resolutionDiv=1, **kwargs):
-        """Rasterizes a given vector source onto the RM's extent and resolution
-
-        Returns a 2D-matrix which matches the RM's mask
+        """Rasterizes a given vector source onto the RM's extent and resolution. The rasterized data can simply 
+        represent inclusion in the vector's features, or it can represent a specific value from the vector features'
+        attributes
 
         Inputs:
-            source:
-                str -- A path to a vector source
-                gdal-Dataset -- A dataset object for the vector source
+            source : The vector source to extract from
+                - path : A path on the file system
+                - ogr Dataset
+            
+            applyMask - True/False : Flag determining whether or not to apply the RM's mask to the resulting data
 
-            applyMask: (True)
-                bool -- Flag determining whether or not to apply the RM's mask to the resulting data
-
-            dtype: (bool)
-                str -- the datatype as a numpy-readable string
-                type -- the data type as a native python type
-                * This controls the datatype of the rasterized data
-
-            noDataValue: (None)
-                float -- The no-data-value to use for the warped data
+            dtype : The datatype of the rasterized data
+                - str : The datatype as a numpy-readable string
+                - type : The data type as a native python type
+            
+            noDataValue - float : The no-data-value to use for the warped data
                 * Will be cast into the given dtype if one was provided
 
-            resolutionDiv: (1)
-                int: A resolution scaling factor to allow for rasterizing onto the same extent as the RM, but at a higher resolution
-                * Generally this is intended for internal use
-                * It is particularly useful in the case when vector features are small compared to the RM's resolution (such as buildings!)
+            resolutionDiv - int : A resolution scaling factor to allow for rasterizing onto the same extent as the RM, 
+                                  but at a higher resolution
+                * It is particularly useful in the case when vector features are small compared to the RM's resolution 
+                  (such as buildings!)
 
-            kwargs:
+            **kwargs:
                 * All kwargs are passed on as options in a call to gdal.Rasterize()
                 * See gdal.RasterizeOptions for more info
-                * If neither an 'attributes' or a 'burnValues' option are given, a 'burnValues' option is added equaling [1]
-                * Most notably, the "where" option can be used to filter and select particular features from the source. Again, see gdal.RasterizeOptions for more info
+                * If neither an 'attributes' or a 'burnValues' option are given, a 'burnValues' option is added 
+                  equaling [1]
+                * Most notably, the "where" option can be used to filter and select particular features from the 
+                  source. Again, see gdal.RasterizeOptions for more info
         """
         # load the vector source
         source = loadVector(source)
@@ -686,27 +747,32 @@ class RegionMask(object):
     ## Raw value processor
     def indicateValues(s, source, value, nanFill=None, forceMaskShape=True, **kwargs):
         """
-        Convenience function to indicates a particular value or range of values from a given raster datasource onto the RegionMask.
+        Indicates those pixels in the RegionMask which correspond to a particular value, or range of values, from a 
+        given raster datasource
 
-        * An 'AND' operation is performed among the different subsets of min, max, and equal 
-          specifiers (assuming they are not 'None')
+        Returns a matrix matching the RegionMask's mask dimensions wherein 0 means the pixels is not included in 
+        the indicated set, and 1 meaning the pixel is included in the indicated set. Intermediate values are also 
+        possible. This results from a scenario when the datasource's resolution does not line up perfectly
+        with the RegionMask's resolution and, as a result, a RegionMask pixel overlaps multiple datasource pixels which
+        are not all indicated (or not-indicated). 
+        
         * Value processing is performed BEFORE a warp takes place (if one is necesary)
-        * After warping, all values >0.5 are set as True. Others are set as False
+        * Output from the warp is clipp to values between 0 and 1
+        * If a boolean matrix is desired of the result, use "result > 0.5"
 
-        Returns a raster mask matching the RegionMask's mask dimensions where 0 means the pixels is not included in the indicated set, and 1 meaning the pixel is included in the indicated set. 
+        Inputs:
+            source : The raster datasource to indicate from
+                - str : A path on the filesystem 
+                - gdal Dataset
 
-        Arguments:
-            source
-                str -- Path to the raster file over which to process
-                gdal.Dataset -- The input data source as a gdal dataset object
+            value : The value or range of values to indicate
+                - float : The value to accept
+                - float, float : The inclusive Min and Max values to accept
+                    * None refers to no bound
+                    * Ex. (None, 5) -> "Indicate all values equal to and below 5"
 
-            value
-                float -- The value to accept
-                float, float -- The inclusion Min and Max to accept
-                * When giving a min/max range, None refers to no bound
-
-            nanFill - (None)
-                numeric (datasource dtype) -- If the raw datasource data contains nan values, fill them with this number before processing
+            forceMaskShape - True/False : Forces the returned matrix to have the same dimension as the RegionMask's mask
+                * Only has effect when a resolutioDiv input is given
 
             kwargs -- Passed on to RegionMask.warp()
                 * Most notably: resampleAlg
@@ -721,8 +787,8 @@ class RegionMask(object):
 
         # make processor
         def processor(data):
-            # fill nan values, maybe
-            if(not nanFill is None): data[ np.isnan(data) ] = nanFill
+            ## fill nan values, maybe
+            #if(not nanFill is None): data[ np.isnan(data) ] = nanFill
             
             output = np.ones(data.shape, dtype="bool")
             
@@ -757,27 +823,30 @@ class RegionMask(object):
 
     #######################################################################################
     ## Vector feature indicator
-    def indicateFeatures(s, dataSet, whereField=None, whereValues=None, forceMaskShape=True, **kwargs):
+    def indicateFeatures(s, dataSet, attribute=None, values=None, forceMaskShape=True, **kwargs):
         """
-        Convenience function to indicates the RegionMask (RM) pixels which are found within the areas (or a subset of the areas) defined in a given vector datasource
+        Indicates the RegionMask pixels which are found within the features (or a subset of the features) contained
+        in a given vector datasource
 
         * A Rasterization is performed from the input data set to the RM's mask.
-          See "gdal.RasterizeOptions" kwargs for info on how to control the 
-          rasterization step.
+            -See "gdal.RasterizeOptions" kwargs for info on how to control the rasterization step
 
         Arguments:
-            dataSet
-                str -- Path to the vector file over which to process
-                ogr.Dataset -- The input data source as an initialized ogr dataset object
+            source : The vector source to extract from
+                - path : A path on the file system
+                - ogr Dataset
 
-            whereField - (None)
-                str -- The name of a column to fliter the vector features by
+            attribute - str : An optional name of a column to fliter the vector features by
 
-            whereField - (None)
-                list -- The values of a filter-column to accept when filtering the vector features
+            values - list : An optional list of values to accept when filtering the vector features
+
+            forceMaskShape - True/False : Forces the returned matrix to have the same dimension as the RegionMask's mask
+                * Only has effect when a resolutioDiv input is given
                 
             kwargs -- Passed on to RegionMask.rasterize()
                 * Most notably: 'where', 'resolutionDiv', and 'allTouched'
+                * For more fine-grained control over the attribute filtering, leave 'attribute' and 'values' as None
+                  and use the 'where' keyword
         """
         # Ensure path to dataSet exists
         if( not isinstance(dataSet, gdal.Dataset) and (not os.path.isfile(dataSet))):
@@ -811,11 +880,15 @@ class RegionMask(object):
         # Return
         return final
 
-
     #######################################################################################
     ## Vector feature indicator
-    def indicateGeoms(s, geom, forceMaskShape=True, **kwargs):
-        """Indicate by a geometry (or a list of geometries)"""
+    def indicateGeoms(s, geom, **kwargs):
+        """
+        Convenience function to indicate values found within a geometry (or a list of geometries)
+
+        * Simply creates a new vector source from the given geometry and then calls RegionMask.indicateFeatures
+        * All keywords are passed on to RegionMask.indicateFeatures
+        """
         # Ensure geom is a list of geometries
         if isinstance(geom, ogr.Geometry):
             geom = [geom,]
@@ -826,7 +899,11 @@ class RegionMask(object):
 
         # Make a vector dataset
         ds = createVector(geoms)
+
+        # Indicate features
+        return s.indicateFeatures(ds)
         
+        '''
         # Do rasterize
         final = s.rasterize( ds, dtype="bool", bands=[1], burnValues=[1], **kwargs )
 
@@ -838,3 +915,4 @@ class RegionMask(object):
 
         # Return
         return final
+        '''
