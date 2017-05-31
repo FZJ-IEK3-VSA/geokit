@@ -3,7 +3,7 @@ from os.path import basename
 
 
 def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **kwargs):
-    """!!! WRITE ME !!!"""
+    """Combines several similar rasters into one"""
 
     # Ensure we have a list of raster datasets
     if isinstance(datasets, str):

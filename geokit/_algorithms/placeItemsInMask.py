@@ -1,33 +1,39 @@
 from geokit._core.regionmask import *
 
-def placeItemsInMask( mask, separation, extent=None, placementDiv=10, itemsAtEdge=True, asPoints=False, yAtTop=True):
+def placeItemsInMask( mask, separation, extent=None, placementDiv=4, itemsAtEdge=True, asPoints=False, yAtTop=True):
     """Places items in a matrix mask with a minimal separation distance between 
     items
 
     * A maximum of one item can be placed somewhere in each mask pixel
+    * Items are alwys placed in the middle of each pixel/sub-pixel
 
     Inputs:
-        extent - geokit.Extent
+        mask - 2d numpy array : The mask which determines where items can and cannot be placed
+            * must be boolean type 
+
+        separation - float : The minimal separation between any two items
+            * If an extent is not given, separation expects a value in 'index' units. Otherwise it expects a value
+              in units corresponding to the extent's srs
+
+        extent - geokit.Extent : An optional extent detailing the spatial context of the mask
             * If an 'extent' is not given, the function will return the index 
               locations within the mask where an item can be placed
             * If an 'extent' is given, the function will compute the item locations 
               in relation to the given extent
 
-        placementDiv - int
-            * Increases the resolution of possibple item placements within each 
-              mask pixel
+        placementDiv - int : The resolution interal to each pixel of possible item placements
+            * Must be >- 1
             * Higher placementDiv means higher computation times
+            * Ex.
+                - a placementdiv of 3 means there are 3x3 sub-pixels where placements are possible within each pixel
 
-        itemsAtEdge - True/False
-            * Determines whether or not items are allowed at the edge of acceptable 
-              regions, or if there should be a buffer (separation/2) between each 
-              item and an edge
+        itemsAtEdge - True/False : Determines whether or not items are allowed at the edge of acceptable regions
+            * If False, its is assumed that there should be a buffer (separation/2) between each item and the an edge
             * Searching for the edge takes extra computation and is slower than when not searching for the edge
 
-        asPoints - True/False
-            * If True, returned value will be a list os OGR point objects
+        asPoints - True/False : Determines if returned value is Point geometries or simply a list of coordinates
 
-        yAtTop - True/False
+        yAtTop - True/False : Indicates that the given mask is intended to be in the y-starts-at-top orientation
             * Only factors in when and extent has been given
             * If True, the mask indexes are assumed to start at the top of the extent's y-dimension
     """
@@ -42,6 +48,7 @@ def placeItemsInMask( mask, separation, extent=None, placementDiv=10, itemsAtEdg
     if extent is None:
         distance = separation
     else:
+        yAtTop=False
         dx = (extent.xMax-extent.xMin)/mask.shape[1]
         dy = (extent.yMax-extent.yMin)/mask.shape[0]
 
@@ -121,6 +128,13 @@ def placeItemsInMask( mask, separation, extent=None, placementDiv=10, itemsAtEdg
     # Compute index locations
     if len(divLocations) == 0: return None
     indexLocations = (np.array(divLocations)-width)/placementDiv
+
+    # Shift the locations so that they fall in the middle of identified pixels/divided-pixels
+    indexLocations[:,0] += 0.5/placementDiv
+    if yAtTop:
+        finalLocations[:,1] -= 0.5/placementDiv
+    else:
+        finalLocations[:,1] += 0.5/placementDiv
 
     # Translate to extent domain, maybe
     if extent is None:

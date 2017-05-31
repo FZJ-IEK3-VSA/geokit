@@ -2,7 +2,25 @@ from geokit._core.regionmask import *
 
 #############################################################################################
 def filterCoordinates(lats, lons, geom):
-    """!!! WRITE ME !!!"""
+    """
+    Filters a set of coordinates by those which are found within a given geometry
+
+    Returns a dataframe detailing which coordinates (and their corresponding indexes) were identified
+
+    Inputs:
+        lats : y-dimension coordinates
+            - list
+            - numpy array
+            * If 'lats' is 2-dimensional, its shape must fit that of 'lons'
+
+        lons : x-dimension coordinates
+            - list
+            - numpy array
+            * If 'lons' is 2-dimensional, its shape must fit that of 'lats'
+
+        geom - ogr Geometry : The Geometry to filter by
+
+    """
 
     # Ensure lats and lons are 2 dim arrays
     if( len(lats.shape)==1 and len(lons.shape)==1 ): # lats and lons are 1D
