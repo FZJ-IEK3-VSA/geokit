@@ -189,8 +189,8 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None):
     xMin, yMin, xMax, yMax = bounds
     
     # Make a raster dataset and pull the band/maskBand objects
-    cols = round((xMax-xMin)/dx) # used 'round' instead of 'int' because this matched GDAL behavior better
-    rows = round((yMax-yMin)/abs(dy))
+    cols = int(round((xMax-xMin)/pixelWidth)) # used 'round' instead of 'int' because this matched GDAL behavior better
+    rows = int(round((yMax-yMin)/abs(pixelHeight)))
     originX = xMin
     originY = yMax # Always use the "Y-at-Top" orientation
     

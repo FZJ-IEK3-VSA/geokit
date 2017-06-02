@@ -419,9 +419,9 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
                 # cast to basic type
                 if( _type == "OFTString" ): 
-                    val = str(value[gi])
-                elif( _type == "OFTInteger" or _type == "OFTInteger64" ): val = int(value[gi])
-                else: val = float(value[gi]) 
+                    val = str(value.iloc[gi])
+                elif( _type == "OFTInteger" or _type == "OFTInteger64" ): val = int(value.iloc[gi])
+                else: val = float(value.iloc[gi]) 
                 
                 # Write to feature                
                 feature.SetField(fieldName, val)

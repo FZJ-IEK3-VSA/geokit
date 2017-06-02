@@ -458,9 +458,9 @@ class Extent(object):
         rasExtent = Extent._fromInfo(rasInfo)
 
         # Find the main extent within the raster extent
-        try:
-            xO, yO, xW, yW, xE, yE = rasExtent.findWithin(s, res=(rasInfo.dx, rasInfo.dy), yAtTop=rasInfo.yAtTop)
-        except GeoKitExtentError:
+        xO, yO, xW, yW, xE, yE = rasExtent.findWithin(s, res=(rasInfo.dx, rasInfo.dy), yAtTop=rasInfo.yAtTop)
+        
+        if xO<0 or yO<0 or xE>rasInfo.xWinSize or yE>rasInfo.yWinSize: 
             raise GeoKitExtentError( "The extent does not appear to fit within the given raster")
             
         # Extract and return the matrix

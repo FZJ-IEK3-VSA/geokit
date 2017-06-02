@@ -151,8 +151,8 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         xMin, yMin, xMax, yMax = bounds.xyXY
         srs = bounds.srs
 
-    cols = round((xMax-xMin)/pixelWidth) # used 'round' instead of 'int' because this matched GDAL behavior better
-    rows = round((yMax-yMin)/abs(pixelHeight))
+    cols = int(round((xMax-xMin)/pixelWidth)) # used 'round' instead of 'int' because this matched GDAL behavior better
+    rows = int(round((yMax-yMin)/abs(pixelHeight)))
     originX = xMin
     originY = yMax # Always use the "Y-at-Top" orientation
     
