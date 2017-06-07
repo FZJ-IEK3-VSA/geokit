@@ -11,5 +11,5 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      extractValues,
                                      interpolateValues,
                                      mutateValues,
-                                     #drawImage,
+                                     drawImage,
                                      )

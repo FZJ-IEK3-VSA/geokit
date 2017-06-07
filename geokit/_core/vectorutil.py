@@ -543,6 +543,8 @@ def mutateFeatures(source, processor, srs=None, geom=None, where=None, fieldDef=
     # process leftover features
     geoms = []
     values = {}
+    noValues = True
+
     if processor is None: # if no processor, simply return the geometry and items
         processor = lambda g,i: (g,i)
 
@@ -560,17 +562,23 @@ def mutateFeatures(source, processor, srs=None, geom=None, where=None, fieldDef=
         # check for good values
         goodOutput = True
         try:
-            g,v = r
+            if isinstance(r,str) or isinstance(r,ogr.Geometry):
+                g,v = r,None
+            else:
+                g,v = r
+                
             if( not (isinstance(g, str) or isinstance(g, ogr.Geometry))):
                 goodOutput = False
             
-            if( not isinstance(v, dict)):
-                v = dict(value=v)
+            if not v is None:
+                noValues = False
+                if( not isinstance(v, dict)):
+                    v = dict(value=v)
 
-            for _k,_v in v.items():
-                if( not (isinstance(_v,int) or isinstance(_v,float) or isinstance(_v,str))):
-                    print("Invalid field value found: " + str(_k) + " - " + str(_v))
-                    goodOutput = False
+                for _k,_v in v.items():
+                    if( not (isinstance(_v,int) or isinstance(_v,float) or isinstance(_v,str))):
+                        print("Invalid field value found: " + str(_k) + " - " + str(_v))
+                        goodOutput = False
 
         except TypeError: 
             goodOutput = False
@@ -585,11 +593,14 @@ def mutateFeatures(source, processor, srs=None, geom=None, where=None, fieldDef=
 
         # Append
         geoms.append(g)
-        for k,v in v.items():
-            if(k in values):
-                values[k].append(v)
-            else:
-                values[k] = [v,]
+        if noValues == False:
+            for k,v in v.items():
+                if(k in values):
+                    values[k].append(v)
+                else:
+                    values[k] = [v,]
+        else: 
+            values=None
 
     if( len(geoms)==0 ):
         raise GeoKitVectorError("Invalid geometry count")

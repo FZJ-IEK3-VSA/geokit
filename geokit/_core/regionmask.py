@@ -745,7 +745,7 @@ class RegionMask(object):
     
     #######################################################################################
     ## Raw value processor
-    def indicateValues(s, source, value, nanFill=None, forceMaskShape=True, **kwargs):
+    def indicateValues(s, source, value, nanFill=None, forceMaskShape=True, buffer=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular value, or range of values, from a 
         given raster datasource
@@ -808,6 +808,11 @@ class RegionMask(object):
         # Warp onto region
         final = s.warp(processedDS, dtype="float32", **kwargs)
 
+        # Apply a buffer if requested
+        if not buffer is None:
+            areaDS = createVector([g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)])
+            final = s.rasterize( areaDS, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+
         # apply a threshold incase of funky warping issues
         final[final>1.0] = 1
         final[final<0.0] = 0
@@ -823,7 +828,7 @@ class RegionMask(object):
 
     #######################################################################################
     ## Vector feature indicator
-    def indicateFeatures(s, dataSet, attribute=None, values=None, forceMaskShape=True, **kwargs):
+    def indicateFeatures(s, dataSet, attribute=None, values=None, forceMaskShape=True, buffer=None, bufferMethod='geom', **kwargs):
         """
         Indicates the RegionMask pixels which are found within the features (or a subset of the features) contained
         in a given vector datasource
@@ -868,8 +873,24 @@ class RegionMask(object):
             where = where[:-4]
             kwargs["where"] = where
         
+        # Do we need to buffer?
+        if not buffer is None and bufferMethod == 'geom':
+            def doBuffer(geom,attr): return geom.Buffer(buffer)
+            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=kwargs.pop("where",None),
+                                     processor = doBuffer )
+
         # Do rasterize
         final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+
+        # maybe we want to do the other buffer method
+        if not buffer is None and bufferMethod == 'area':
+            geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
+
+            geoms = [g.Buffer(buffer) for g in geoms]
+
+            dataSet = createVector(geoms)
+
+            final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
 
         # Make sure we have the mask's shape
         if forceMaskShape:

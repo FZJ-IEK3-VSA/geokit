@@ -8,5 +8,5 @@ from geokit._core.geomutil import (GeoKitGeomError,
 								  convertMask,
 								  transform,
 								  flatten,
-								  #drawGeoms,
+								  drawGeoms,
 								  )
