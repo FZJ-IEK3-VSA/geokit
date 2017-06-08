@@ -518,7 +518,7 @@ def rasterInfo(sourceDS):
 ####################################################################
 # extract specific points in a raster
 ptValue = namedtuple('value',"data xOffset yOffset")
-def extractValues(source, points, pointSRS='latlon', winRange=0):
+def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True):
     """Extracts the value of a raster at a given point or collection of points. Can also extract a window of values if 
        desired
 
@@ -617,6 +617,17 @@ def extractValues(source, points, pointSRS='latlon', winRange=0):
     for xi,yi in zip(xStarts, yStarts):
         # Open and read from raster
         data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
+
+        # Look for nodata
+        if not info.noData is None:
+            nodata = data == info.noData
+            if nodata.any():
+                if noDataOkay:
+                    # data will neaed to be a float type to represent a nodata value
+                    data = data.astype(np.float64)
+                    data[nodata] = np.nan
+                else:
+                    raise GeoKitRasterError("No data values found in extractValues with 'noDataOkay' set to False")
 
         # flip if not in the 'flipped-y' orientation
         if not info.yAtTop:
