@@ -810,8 +810,12 @@ class RegionMask(object):
 
         # Apply a buffer if requested
         if not buffer is None:
-            areaDS = createVector([g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)])
-            final = s.rasterize( areaDS, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+            geoms = [g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)]
+            if len(geoms)>0:
+                areaDS = createVector(geoms)
+                final = s.rasterize( areaDS, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+            else:
+                return np.zeros(s.mask.shape, dtype=bool)
 
         # apply a threshold incase of funky warping issues
         final[final>1.0] = 1
@@ -884,13 +888,12 @@ class RegionMask(object):
 
         # maybe we want to do the other buffer method
         if not buffer is None and bufferMethod == 'area':
-            geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
-
-            geoms = [g.Buffer(buffer) for g in geoms]
-
-            dataSet = createVector(geoms)
-
-            final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+            geoms = [g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)]
+            if len(geoms)>0:
+                dataSet = createVector(geoms)
+                final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+            else:
+                return np.zeros(s.mask.shape, dtype=bool)
 
         # Make sure we have the mask's shape
         if forceMaskShape:
