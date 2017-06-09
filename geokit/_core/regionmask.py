@@ -810,8 +810,9 @@ class RegionMask(object):
 
         # Apply a buffer if requested
         if not buffer is None:
-            geoms = [g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)]
+            geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
             if len(geoms)>0:
+                geoms = [g.Buffer(buffer) for g in geoms]
                 areaDS = createVector(geoms)
                 final = s.rasterize( areaDS, dtype="bool", bands=[1], burnValues=[1], **kwargs )
             else:
@@ -888,8 +889,9 @@ class RegionMask(object):
 
         # maybe we want to do the other buffer method
         if not buffer is None and bufferMethod == 'area':
-            geoms = [g.Buffer(buffer) for g in convertMask(final>0.5, bounds=s.extent, srs=s.srs)]
+            geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
             if len(geoms)>0:
+                geoms = [g.Buffer(buffer) for g in geoms]
                 dataSet = createVector(geoms)
                 final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
             else:
