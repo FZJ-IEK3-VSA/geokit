@@ -877,7 +877,7 @@ def mutateValues(source, processor, output=None, dtype=None, **kwargs):
         calculateStats(output)
         return
 
-def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, **kwargs):
+def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Inputs:
@@ -931,8 +931,11 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, **kwargs):
 
     # Done!
     if showPlot:
+        if bar: plt.colorbar(h)
+
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
+        
         plt.show()
     else:
         return h

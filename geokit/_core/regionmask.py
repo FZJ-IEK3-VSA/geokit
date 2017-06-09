@@ -508,7 +508,7 @@ class RegionMask(object):
         """Draw the region on a matplotlib figure
 
         * All kwargs passed on to geom.drawPolygons()"""
-        return drawGeoms( s.geometry, **kwargs )
+        return drawGeoms( s.geometry, srs=s.srs, **kwargs )
 
     def _tempFile(s, head="tmp", ext=".tif"):
         """***RM INTERNAL***
