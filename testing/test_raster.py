@@ -53,7 +53,7 @@ def test_createRaster():
     outputFileName = result("util_raster1.tif")
 
     createRaster( bounds=(10, 30, 15, 40), output=outputFileName, pixelHeight=0.01, pixelWidth=0.01, compress=True, 
-                  srs=EPSG4326, noDataValue=100, data=data, overwrite=True)
+                  srs=EPSG4326, noDataValue=100, data=data, overwrite=True, meta=dict(bob="bob",TIM="TIMMY"))
 
     ds = gdal.Open(outputFileName)
     bd = ds.GetRasterBand(1)
@@ -63,6 +63,10 @@ def test_createRaster():
 
     arr = bd.ReadAsArray()
     if(arr.sum() != data.sum()): error("Creating raster on disk - data mismatch")
+
+    meta = ds.GetMetadata_Dict()
+    if not meta["bob"] == "bob" or not meta["TIM"] == "TIMMY":
+        error("saving meta data")
 
 ## Get values directly from a raster
 def test_extractValues():
