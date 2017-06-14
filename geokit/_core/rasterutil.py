@@ -63,7 +63,7 @@ def calculateStats( source ):
 
 ####################################################################
 # Raster writer
-def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=False, fill=None, data=None, **kwargs):
+def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=False, fill=None, data=None, meta=None, **kwargs):
     """
     Create a raster file
 
@@ -218,13 +218,18 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     band.FlushCache()
     raster.FlushCache()
 
+    # Write MetaData, maybe
+    if not meta is None:
+        for k,v in meta.items():
+            raster.SetMetadataItem(k,v)
+
     # Return raster if in memory
     if ( output is None): 
         return raster
 
     # Calculate stats if data was given
-    if(not data is None): 
-        calculateStats(raster)
+    #if(not data is None): 
+    #    calculateStats(raster)
     
     return
 
