@@ -882,6 +882,29 @@ def mutateValues(source, processor, output=None, dtype=None, **kwargs):
         calculateStats(output)
         return
 
+# A predefined kernel processor for use in mutateValues
+def KernelProcessor(size, edgeValue=0, outputType=None):
+    def wrapper1(kernel):
+        def wrapper2(matrix):
+            # get the original matrix sizes
+            yN, xN = matrix.shape
+
+            # make a padded version of the matrix
+            paddedMatrix = np.ones((yN+2*size,xN+2*size), dtype=matrix.dtype)*edgeValue
+            paddedMatrix[size:-size,size:-size] = matrix
+
+            # apply kernel to each pixel
+            output = np.zeros((yN,xN), dtype = matrix.dtype if outputType is None else outputType)
+            for yi in range(yN):
+                for xi in range(xN):
+                    slicedMatrix = paddedMatrix[yi:2*size+yi+1, xi:2*size+xi+1]
+                    output[yi,xi] = kernel(slicedMatrix)
+
+            # done!
+            return output
+        return wrapper2
+    return wrapper1
+
 def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 

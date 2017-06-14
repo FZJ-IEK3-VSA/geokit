@@ -10,6 +10,6 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      stats,
                                      extractValues,
                                      interpolateValues,
-                                     mutateValues,
+                                     mutateValues, KernelProcessor, 
                                      drawImage,
                                      )
