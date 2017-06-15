@@ -132,9 +132,9 @@ def placeItemsInMask( mask, separation, extent=None, placementDiv=4, itemsAtEdge
     # Shift the locations so that they fall in the middle of identified pixels/divided-pixels
     indexLocations[:,0] += 0.5/placementDiv
     if yAtTop:
-        finalLocations[:,1] -= 0.5/placementDiv
+        indexLocations[:,1] -= 0.5/placementDiv
     else:
-        finalLocations[:,1] += 0.5/placementDiv
+        indexLocations[:,1] += 0.5/placementDiv
 
     # Translate to extent domain, maybe
     if extent is None:
