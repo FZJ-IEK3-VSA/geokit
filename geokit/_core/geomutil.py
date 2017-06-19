@@ -187,7 +187,7 @@ def convertWKT( wkt, srs=None):
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def convertMask( mask, bounds=None, srs=None, flat=False):
+def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
     """Create a geometry set from a matrix mask
 
     Inputs:
@@ -210,6 +210,8 @@ def convertMask( mask, bounds=None, srs=None, flat=False):
 
         flat : If True, flattens the resulting geometries into a single geometry object
             - True/False
+
+        shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
     """
     
     # Make sure we have a boolean numpy matrix
@@ -306,22 +308,20 @@ def convertMask( mask, bounds=None, srs=None, flat=False):
         if flat: return None
         else: return []
 
-    # If only one feature created, return it
-    if( ftrN==1 ):
-        ftr = vecLyr.GetFeature(0)
-        if flat:
-            final = ftr.GetGeometryRef().Clone()
-        else:
-            final = [ftr.GetGeometryRef().Clone(),]
-
-    # Check if the user doesn't want a flat geometry
-    
+    # If only one feature created, set it
     geoms = []
     for i in range(ftrN):
         ftr = vecLyr.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
 
-    final = flatten(geoms) if flat else geoms
+    # Do shrink, maybe
+    if shrink: geoms = [g.Buffer(-0.001) for g in geoms]
+
+    # Do flatten, maybe
+    if flat:
+        final = flatten(geoms) if len(geoms)>1 else geoms[0]
+    else:
+        final = geoms
         
     # Cleanup
     vecLyr = None
