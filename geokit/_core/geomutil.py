@@ -212,6 +212,8 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
             - True/False
 
         shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
+            * The total amount shrunk should be very small
+            * Generally this should be left as True unless it ABOSLULTELY neccessary to maintain the same area
     """
     
     # Make sure we have a boolean numpy matrix
