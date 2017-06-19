@@ -303,13 +303,13 @@ def convertMask( mask, bounds=None, srs=None, flat=False):
     if( ftrN == 0):
         #raise GlaesError("No features in created in temporary layer")
         print("No features in created in temporary layer")
-        if flatten: return None
+        if flat: return None
         else: return []
 
     # If only one feature created, return it
     if( ftrN==1 ):
         ftr = vecLyr.GetFeature(0)
-        if flatten:
+        if flat:
             final = ftr.GetGeometryRef().Clone()
         else:
             final = [ftr.GetGeometryRef().Clone(),]
