@@ -453,7 +453,7 @@ def gradient( source, mode ="total", factor=1, asMatrix=False, **kwargs):
 
 ####################################################################
 # Get Raster information
-RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize")
+RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta")
 def rasterInfo(sourceDS):
     """Returns a named tuple containing information relating to the input raster
 
@@ -468,6 +468,7 @@ def rasterInfo(sourceDS):
         noData - The noData value used by the raster
         xWinSize - The width of the raster is pixels
         yWinSize - The height of the raster is pixels
+        meta - The raster's meta data
     """
     output = {}
     sourceDS = loadRaster(sourceDS)
@@ -513,6 +514,7 @@ def rasterInfo(sourceDS):
     output['xWinSize'] = xSize
     output['yWinSize'] = ySize
     output['bounds'] = (xMin, yMin, xMax, yMax)
+    output['meta'] = sourceDS.GetMetadata_Dict()
 
     # clean up 
     del sourceBand, sourceDS
