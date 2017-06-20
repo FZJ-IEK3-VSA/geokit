@@ -37,13 +37,17 @@ def test_convertMask():
     # test a simple box
     boxmask = np.array([[0,0,0,0,0],
                         [0,1,1,1,0],
-                        [0,1,1,1,0],
+                        [0,1,0,1,0],
                         [0,1,1,1,0],
                         [0,0,0,0,0]], dtype=np.bool)
 
-    g1 = convertMask(boxmask)
-    if not isclose(g1[0].Area(),9.0): error("convertMask: simple area")
+    g1 = convertMask(boxmask, shrink=None)
+    if not isclose(g1[0].Area(),8.0): error("convertMask: simple area")
     if not g1[0].GetSpatialReference() is None: error("convertMask: empty srs")
+
+    # test shrink
+    g1b = convertMask(boxmask, shrink=0.0001)
+    if not isclose(g1b[0].Area(), 7.9984000085984): error("convertMask: shrunk area")
 
     # test a more complex area
     complexmask = np.array([[0,1,0,0,0],
@@ -52,16 +56,16 @@ def test_convertMask():
                             [1,1,0,1,0],
                             [0,1,0,0,0]], dtype=np.bool)
 
-    g2 = convertMask(complexmask)
+    g2 = convertMask(complexmask, shrink=None)
     if not len(g2)==3: error("convertMask: geometry count")
-    if not isclose(sum([g.Area()for g in g2]),10.0): error("convertMask: area")
+    if not isclose(sum([g.Area() for g in g2]),10.0): error("convertMask: area")
 
     # flatten the complex area
-    g3 = convertMask(complexmask, flat=True)
+    g3 = convertMask(complexmask, flat=True, shrink=None)
     if not isclose(g3.Area(),10.0): error("convertMask: flattened area")
     
     # set a boundary and srs context
-    g4 = convertMask(complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True)
+    g4 = convertMask(complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
     if not isclose(g4.Area(),250.0): error("convertMask: contexted area")
     if not g4.GetSpatialReference().IsSame(EPSG3035): error("convertMask: contexted srs")
 
@@ -98,7 +102,7 @@ def test_transform():
                             [1,1,0,1,0],
                             [0,1,0,0,0]], dtype=np.bool)
 
-    polygons = convertMask( complexmask, bounds=(6, 45, 11, 50), srs=EPSG4326)
+    polygons = convertMask( complexmask, bounds=(6, 45, 11, 50), srs=EPSG4326, shrink=None)
 
     t2 = transform(polygons, toSRS='europe_m', segment=0.1)
     if not ( len(t2)==3): error("Transform Count")

@@ -22,7 +22,6 @@ def test_rasterInfo():
     if not (info.noData == 0) : error("decribeRaster - noData")
     if not (info.flipY == True) : error("decribeRaster - flipY")
 
-
 ## createRaster
 def test_createRaster():
     ######################
@@ -167,7 +166,6 @@ def test_gradient():
     if not isclose(180*aspect[200, 10]/np.pi, 18.4349488229): error("gradient - aspect - sw quartile")
     if not isclose(180*aspect[ 10,150]/np.pi, -161.565051177): error("gradient - aspect - ne quartile")
     if not isclose(180*aspect[200,150]/np.pi, 161.565051177): error("gradient - aspect - se quartile")
-
 
     # calculate elevation slope
     output = result("slope_calculation.tif")

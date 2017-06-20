@@ -187,7 +187,7 @@ def convertWKT( wkt, srs=None):
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
+def convertMask( mask, bounds=None, srs=None, flat=False, shrink=0.001):
     """Create a geometry set from a matrix mask
 
     Inputs:
@@ -211,9 +211,10 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
         flat : If True, flattens the resulting geometries into a single geometry object
             - True/False
 
-        shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
+        shrink - float/None: Shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
+            * If shrink is None, this procedure will be skipped
             * The total amount shrunk should be very small
-            * Generally this should be left as True unless it ABOSLULTELY neccessary to maintain the same area
+            * Generally this should be left as the default unless it is ABSOLUTELY neccessary to maintain the same area
     """
     
     # Make sure we have a boolean numpy matrix
@@ -317,7 +318,7 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
         geoms.append(ftr.GetGeometryRef().Clone())
 
     # Do shrink, maybe
-    if shrink: geoms = [g.Buffer(-0.001) for g in geoms]
+    if (not shrink is None) and shrink > 0: geoms = [g.Buffer(-1*shrink) for g in geoms]
 
     # Do flatten, maybe
     if flat:
