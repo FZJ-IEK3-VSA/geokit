@@ -858,11 +858,12 @@ class RegionMask(object):
         # Apply a buffer if requested
         if not buffer is None:
             geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
+
             if len(geoms)>0:
                 geoms = [g.Buffer(buffer) for g in geoms]
                 areaDS = createVector(geoms)
                 final = s.rasterize( areaDS, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv, 
-                                     applyMask=False, noDataValue=noDataValue, **kwargs )
+                                     applyMask=False, noDataValue=noDataValue)
             else:
                 # no results were found
                 return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
@@ -874,9 +875,8 @@ class RegionMask(object):
 
         # Make sure we have the mask's shape
         if forceMaskShape:
-            rd = kwargs.get("resolutionDiv",None)
-            if not rd is None:
-                final = scaleMatrix(final, -1*rd)
+            if resolutionDiv > 1:
+                final = scaleMatrix(final, -1*resolutionDiv)
 
         # Apply mask?
         if applyMask: final = s.applyMask(final, noDataValue)
@@ -886,7 +886,7 @@ class RegionMask(object):
 
     #######################################################################################
     ## Vector feature indicator
-    def indicateFeatures(s, dataSet, attribute=None, values=None, buffer=None, bufferMethod='geom', resolutionDiv=1, forceMaskShape=False, applyMask=True, noDataValue=0, **kwargs):
+    def indicateFeatures(s, dataSet, where=None, buffer=None, bufferMethod='geom', resolutionDiv=1, forceMaskShape=False, applyMask=True, noDataValue=0, **kwargs):
         """
         Indicates the RegionMask pixels which are found within the features (or a subset of the features) contained
         in a given vector datasource
@@ -899,7 +899,11 @@ class RegionMask(object):
                 - path : A path on the file system
                 - ogr Dataset
 
-            attribute - str : An optional name of a column to fliter the vector features by
+            where - str : An optional SQL-style filtering string
+                * Can be used to filter the input source according to the feature's attributes
+                * For tips, see "http://www.gdal.org/ogr_sql.html"
+                Ex: 
+                    where="eye_color='Green' AND IQ>90"
 
             values - list : An optional list of values to accept when filtering the vector features
             
@@ -931,44 +935,28 @@ class RegionMask(object):
                 * Applies to pixels outside the region (unless applyMask is False), in which case this input is useless...
 
             kwargs -- Passed on to RegionMask.rasterize()
-                * Most notably: 'where', and 'allTouched'
-                * For more fine-grained control over the attribute filtering, leave 'attribute' and 'values' as None
-                  and use the 'where' keyword
+                * Most notably: 'allTouched'
         """
         # Ensure path to dataSet exists
         if( not isinstance(dataSet, gdal.Dataset) and (not os.path.isfile(dataSet))):
             msg = "dataSet path does not exist: {}".format(dataSet)
             raise ValueError(msg)
         
-        # Create a where statement if needed
-        if attribute:
-            where = ""
-            for value in values:
-                if isinstance(value,str):
-                    where += "%s='%s' OR "%(attribute, value)
-                elif isinstance(value,int):
-                    where += "%s=%d OR "%(attribute, value)
-                elif isinstance(value,float):
-                    where += "%s=%f OR "%(attribute, value)
-                else:
-                    raise GeoKitRegionMaskError("Could not determine value type")
-            where = where[:-4]
-            kwargs["where"] = where
-        
         # Do we need to buffer?
         if not buffer is None and bufferMethod == 'geom':
             def doBuffer(geom,attr): return geom.Buffer(buffer)
-            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=kwargs.pop("where",None),
-                                     processor = doBuffer )
+            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=where, processor=doBuffer)
+
+            where=None # Set where to None since the filtering has already been done
 
             if dataSet is None: # this happens when the returned dataset is empty
                 return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
-                                  applyMask=applyMask, noDataValue=noDataValue)
+                                  applyMask=applyMask, noDataValue=noDataValue, **kwargs)
 
         # Do rasterize
-        final = s.rasterize( dataSet, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv, 
-                             applyMask=False, noDataValue=noDataValue, **kwargs )
-        
+        final = s.rasterize( dataSet, dtype="float32", bands=[1], burnValues=[1], where=where, resolutionDiv=resolutionDiv, 
+                             applyMask=False, noDataValue=noDataValue)
+
         # Check for results
         if not (final > 0).any():
             # no results were found
@@ -982,7 +970,7 @@ class RegionMask(object):
                 geoms = [g.Buffer(buffer) for g in geoms]
                 dataSet = createVector(geoms)
                 final = s.rasterize( dataSet, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv, 
-                                     applyMask=False, noDataValue=noDataValue, **kwargs )
+                                     applyMask=False, noDataValue=noDataValue)
             else:
                 return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
                                       applyMask=applyMask, noDataValue=noDataValue)

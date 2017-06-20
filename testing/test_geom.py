@@ -47,7 +47,7 @@ def test_convertMask():
 
     # test shrink
     g1b = convertMask(boxmask, shrink=0.0001)
-    if not isclose(g1b[0].Area(), 7.9984000085984): error("convertMask: shrunk area")
+    if not isclose(g1b[0].Area(), 7.98400085984): error("convertMask: shrunk area")
 
     # test a more complex area
     complexmask = np.array([[0,1,0,0,0],
