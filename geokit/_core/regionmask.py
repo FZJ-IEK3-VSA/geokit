@@ -479,6 +479,10 @@ class RegionMask(object):
         if(s._mask is None): s.buildMask()
         return s._mask
 
+    @property
+    def area(s):
+        return s.mask.sum()*s.pixelWidth*s.pixelHeight
+
     def buildGeometry(s):
         """Explicitly build the RM's geometry"""
         if s._mask is None:

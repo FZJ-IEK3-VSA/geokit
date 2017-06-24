@@ -138,7 +138,7 @@ def vectorInfo(source):
     info["yMin"] = yMin
     info["yMax"] = yMax
 
-    info["count"] = vecLay.GetFeatureCount()
+    info["count"] = vecLyr.GetFeatureCount()
 
     info["attributes"] = []
     layerDef = vecLyr.GetLayerDefn()
