@@ -515,16 +515,14 @@ def mutateFeatures(source, processor, srs=None, geom=None, where=None, fieldDef=
     filterLayer(vecLyr, geom, where)
 
     # TEST THE FEATURES!!!!
-    if( vecLyr.GetFeatureCount()==0 ): 
-        print("No geometries found, returning None (MAKE THIS INTO A REAL WARINING!)")
+    if( vecLyr.GetFeatureCount()==0 ):
         return None #No geometries found!!
 
     # Sometimes the filtering seems to fail in an odd way when we're applying filters 
     #  which return no geometries. layer.GetFeatureCount() will return something above 0,
     #  but calling layer.GetNextFeature() will return None. So, we will just do a test for 
     #  this, too...
-    if( vecLyr.GetNextFeature() is None ): 
-        print("No geometries found, returning None (MAKE THIS INTO A REAL WARINING!)")
+    if( vecLyr.GetNextFeature() is None ):
         return None #No geometries found!!
     vecLyr.ResetReading()
     

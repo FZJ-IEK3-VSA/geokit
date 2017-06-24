@@ -377,17 +377,37 @@ def test_indicateValues():
     # Some pixels will not end up the same due to warping issues
     if not ( (res4>0.5) !=combi).sum()<res4.size*0.001:error("indicateValues - range")
 
+    # Testing buffering
+    res5 = rm.indicateValues(CLC_RASTER_PATH, value=(1,2), buffer=0.01, resolutionDiv=2, forceMaskShape=True)
+    if not isclose(res5.sum(), 65166.0, 1e-4):error("indicateValues - grown")
+
+    # make sure we get an empty mask when nothing is indicated
+    res6 = rm.indicateValues(CLC_RASTER_PATH, value=2000, buffer=0.01, resolutionDiv=2, forceMaskShape=True, noDataValue=-1)
+    if not isclose(res6.sum(), -113526.0, 1e-4):error("indicateValues - empty")
+
 def test_indicateFeatures():
   # setup
   rm = RegionMask.fromVectorFeature(AACHEN_SHAPE_PATH)
 
-  # Its just a simple wrapper, test a simple case...
+  # Simple case
   res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
 
-  if not (isclose(res.sum(),649,1e-6) and isclose(res.std(),0.0603028809232,1e-6)): error("indicateSlopes - northMax")
+  if not (isclose(res.sum(),649,1e-6) and isclose(res.std(),0.0603028809232,1e-6)): error("indicateFeatures - Simple indication")
+
+  # Buffered Cases
+  res2 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, resolutionDiv=3, forceMaskShape=True)
+  if not isclose(res2.sum(),13670.5555556, 1e-6): error("indicateFeatures - grown indication - 1")
+
+  res3 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, bufferMethod='area', resolutionDiv=5, forceMaskShape=True)
+  if not isclose(res3.sum(),13807.320000, 1e-6): error("indicateFeatures - grown indication - 2")
+
+  # No indication case
+  res4 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='D'", buffer=300, bufferMethod='area', resolutionDiv=2, forceMaskShape=True, noDataValue=-1)
+  if not isclose(res4.sum(), -106876.0, 1e-6): error("indicateFeatures - empty case")
 
 
 if __name__=="__main__":
+    
     test_init()
     test_fromMask()
     test_fromGeom()

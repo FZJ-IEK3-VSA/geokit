@@ -749,7 +749,23 @@ class RegionMask(object):
     
     #######################################################################################
     ## Raw value processor
-    def indicateValues(s, source, value, nanFill=None, forceMaskShape=True, buffer=None, **kwargs):
+    def _returnBlank(s, resolutionDiv=1, forceMaskShape=False, applyMask=True, noDataValue=None, **kwargs):
+        # make output
+        if not forceMaskShape and resolutionDiv > 1:
+            yN = s.mask.shape[0]*int(resolutionDiv)
+            xN = s.mask.shape[1]*int(resolutionDiv)
+            output = np.zeros( (yN,xN) )
+        else:
+            output = np.zeros(s.mask.shape)
+
+        # apply mask, maybe
+        if applyMask:
+            output = s.applyMask(output, noDataValue)
+
+        # Done
+        return output
+
+    def indicateValues(s, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noDataValue=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular value, or range of values, from a 
         given raster datasource
@@ -775,11 +791,27 @@ class RegionMask(object):
                     * None refers to no bound
                     * Ex. (None, 5) -> "Indicate all values equal to and below 5"
 
+            buffer - float : An optional buffer region to add around the indicated pixels
+                * Units are in the RM's srs
+                * The buffering occurs AFTER the indication and warping step and so it may not represent the original dataset 
+                  exactly
+                    - Buffering can be made more accurate by increasing the 'resolutionDiv' input
+            
+            resolutionDiv - int : A resolution scaling factor to allow for rasterizing onto the same extent as the RM, 
+                                  but at a higher resolution
+                * It is particularly useful in the case when raster features are small compared to the RM's resolution 
+                  (such as elevation!)
+
             forceMaskShape - True/False : Forces the returned matrix to have the same dimension as the RegionMask's mask
-                * Only has effect when a resolutioDiv input is given
+                * Only has effect when a resolutioDiv input above 1 is given
+
+            applyMask - True/False : Flag determining whether or not to apply the RM's mask to the resulting data
+            
+            noDataValue - float : The no-data-value to use for the resulting data
+                * Applies to no data values in the original raster and to pixels outside teh region (unless applyMask is False)
 
             kwargs -- Passed on to RegionMask.warp()
-                * Most notably: resampleAlg
+                * Most notably: 'resampleAlg'
         """
         # Unpack value
         if isinstance(value, tuple):
@@ -791,36 +823,55 @@ class RegionMask(object):
 
         # make processor
         def processor(data):
-            ## fill nan values, maybe
-            #if(not nanFill is None): data[ np.isnan(data) ] = nanFill
+            ## Find nan values, maybe
+            if(not noDataValue is None): 
+                nodat = np.isnan(data)
             
-            output = np.ones(data.shape, dtype="bool")
-            
-            if(not valueMin is None):
-                np.logical_and(data >= valueMin, output, output)
-            if(not valueMax is None):
-                np.logical_and(data <= valueMax, output, output)
+            ## Do processing
             if(not valueEquals is None):
-                np.logical_and(data == valueEquals, output, output)
+                output = data == valueEquals
+            else:
+                output = np.ones(data.shape, dtype="bool")
+            
+                if(not valueMin is None):
+                    np.logical_and(data >= valueMin, output, output)
+                if(not valueMax is None):
+                    np.logical_and(data <= valueMax, output, output)
+            
+            ## Fill nan values, maybe
+            if(not noDataValue is None): 
+                output[nodat] = noDataValue
 
+            ## Done!
             return output
 
         # Do processing
         clippedDS = s.extent.clipRaster(source)
-        processedDS = mutateValues(clippedDS, processor=processor, dtype="bool")
+        processedDS = mutateValues(clippedDS, processor=processor, dtype="bool", noDataValue=noDataValue)
 
         # Warp onto region
-        final = s.warp(processedDS, dtype="float32", **kwargs)
+        final = s.warp(processedDS, dtype="float32", resolutionDiv=resolutionDiv, 
+                       applyMask=False, noDataValue=noDataValue, **kwargs)
+
+        # Check for results
+        if not (final > 0).any():
+            # no results were found
+            return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
+                                  applyMask=applyMask, noDataValue=noDataValue)
 
         # Apply a buffer if requested
         if not buffer is None:
             geoms = convertMask(final>0.5, bounds=s.extent, srs=s.srs)
+
             if len(geoms)>0:
                 geoms = [g.Buffer(buffer) for g in geoms]
                 areaDS = createVector(geoms)
-                final = s.rasterize( areaDS, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+                final = s.rasterize( areaDS, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv, 
+                                     applyMask=False, noDataValue=noDataValue)
             else:
-                return np.zeros(s.mask.shape, dtype=bool)
+                # no results were found
+                return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
+                                      applyMask=applyMask, noDataValue=noDataValue)
 
         # apply a threshold incase of funky warping issues
         final[final>1.0] = 1
@@ -828,16 +879,18 @@ class RegionMask(object):
 
         # Make sure we have the mask's shape
         if forceMaskShape:
-            rd = kwargs.get("resolutionDiv",None)
-            if not rd is None:
-                final = scaleMatrix(final, -1*rd)
+            if resolutionDiv > 1:
+                final = scaleMatrix(final, -1*resolutionDiv)
+
+        # Apply mask?
+        if applyMask: final = s.applyMask(final, noDataValue)
 
         # Return result
         return final
 
     #######################################################################################
     ## Vector feature indicator
-    def indicateFeatures(s, dataSet, attribute=None, values=None, forceMaskShape=True, buffer=None, bufferMethod='geom', **kwargs):
+    def indicateFeatures(s, dataSet, where=None, buffer=None, bufferMethod='geom', resolutionDiv=1, forceMaskShape=False, applyMask=True, noDataValue=0, **kwargs):
         """
         Indicates the RegionMask pixels which are found within the features (or a subset of the features) contained
         in a given vector datasource
@@ -850,46 +903,69 @@ class RegionMask(object):
                 - path : A path on the file system
                 - ogr Dataset
 
-            attribute - str : An optional name of a column to fliter the vector features by
+            where - str : An optional SQL-style filtering string
+                * Can be used to filter the input source according to the feature's attributes
+                * For tips, see "http://www.gdal.org/ogr_sql.html"
+                Ex: 
+                    where="eye_color='Green' AND IQ>90"
 
             values - list : An optional list of values to accept when filtering the vector features
+            
+            buffer - float : An optional buffer region to add around the indicated features
+                * Units are in the RM's srs
+
+            bufferMethod - str : An indicator determining the method to use when buffereing
+                * Options are: 'geom' and 'area'
+                * If 'geom', the function will attempt to grow each of the geometries directly
+                    - This can fail sometimes when the geometries are particularly complex or if some of the geometries
+                      are not valid (as in, they have self-intersections)
+                * If 'area', the function will first rastarize the raw geometries and will then apply the buffer to the indicated
+                  pixels
+                    - This is the safer option although is not as accurate as the 'geom' option since it does not capture the 
+                      exact edges of the geometries
+                    - This method can be made more accurate by increasing the 'resolutionDiv' input
+
+            resolutionDiv - int : A resolution scaling factor to allow for rasterizing onto the same extent as the RM, 
+                                  but at a higher resolution
+                * It is particularly useful in the case when raster features are small compared to the RM's resolution 
+                  (such as elevation!)
 
             forceMaskShape - True/False : Forces the returned matrix to have the same dimension as the RegionMask's mask
-                * Only has effect when a resolutioDiv input is given
-                
+                * Only has effect when a resolutioDiv input above 1 is given
+
+            applyMask - True/False : Flag determining whether or not to apply the RM's mask to the resulting data
+            
+            noDataValue - float : The no-data-value to use for the resulting data
+                * Applies to pixels outside the region (unless applyMask is False), in which case this input is useless...
+
             kwargs -- Passed on to RegionMask.rasterize()
-                * Most notably: 'where', 'resolutionDiv', and 'allTouched'
-                * For more fine-grained control over the attribute filtering, leave 'attribute' and 'values' as None
-                  and use the 'where' keyword
+                * Most notably: 'allTouched'
         """
         # Ensure path to dataSet exists
         if( not isinstance(dataSet, gdal.Dataset) and (not os.path.isfile(dataSet))):
             msg = "dataSet path does not exist: {}".format(dataSet)
             raise ValueError(msg)
         
-        # Create a where statement if needed
-        if attribute:
-            where = ""
-            for value in values:
-                if isinstance(value,str):
-                    where += "%s='%s' OR "%(attribute, value)
-                elif isinstance(value,int):
-                    where += "%s=%d OR "%(attribute, value)
-                elif isinstance(value,float):
-                    where += "%s=%f OR "%(attribute, value)
-                else:
-                    raise GeoKitRegionMaskError("Could not determine value type")
-            where = where[:-4]
-            kwargs["where"] = where
-        
         # Do we need to buffer?
         if not buffer is None and bufferMethod == 'geom':
             def doBuffer(geom,attr): return geom.Buffer(buffer)
-            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=kwargs.pop("where",None),
-                                     processor = doBuffer )
+            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=where, processor=doBuffer)
+
+            where=None # Set where to None since the filtering has already been done
+
+            if dataSet is None: # this happens when the returned dataset is empty
+                return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
+                                  applyMask=applyMask, noDataValue=noDataValue, **kwargs)
 
         # Do rasterize
-        final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+        final = s.rasterize( dataSet, dtype="float32", bands=[1], burnValues=[1], where=where, resolutionDiv=resolutionDiv, 
+                             applyMask=False, noDataValue=noDataValue)
+
+        # Check for results
+        if not (final > 0).any():
+            # no results were found
+            return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
+                                  applyMask=applyMask, noDataValue=noDataValue)
 
         # maybe we want to do the other buffer method
         if not buffer is None and bufferMethod == 'area':
@@ -897,15 +973,19 @@ class RegionMask(object):
             if len(geoms)>0:
                 geoms = [g.Buffer(buffer) for g in geoms]
                 dataSet = createVector(geoms)
-                final = s.rasterize( dataSet, dtype="bool", bands=[1], burnValues=[1], **kwargs )
+                final = s.rasterize( dataSet, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv, 
+                                     applyMask=False, noDataValue=noDataValue)
             else:
-                return np.zeros(s.mask.shape, dtype=bool)
+                return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
+                                      applyMask=applyMask, noDataValue=noDataValue)
 
         # Make sure we have the mask's shape
         if forceMaskShape:
-            rd = kwargs.get("resolutionDiv",None)
-            if not rd is None:
-                final = scaleMatrix(final, -1*rd)
+            if resolutionDiv > 1:
+                final = scaleMatrix(final, -1*resolutionDiv)
+
+        # Apply mask?
+        if applyMask: final = s.applyMask(final, noDataValue)
 
         # Return
         return final
@@ -931,18 +1011,4 @@ class RegionMask(object):
         ds = createVector(geoms)
 
         # Indicate features
-        return s.indicateFeatures(ds)
-        
-        '''
-        # Do rasterize
-        final = s.rasterize( ds, dtype="bool", bands=[1], burnValues=[1], **kwargs )
-
-        # Make sure we have the mask's shape
-        if forceMaskShape:
-            rd = kwargs.get("resolutionDiv",None)
-            if not rd is None:
-                final = scaleMatrix(final, -1*rd)
-
-        # Return
-        return final
-        '''
+        return s.indicateFeatures(ds, **kwargs)

@@ -1,8 +1,9 @@
 from geokit._core.regionmask import *
 from os.path import basename
+from json import dumps
 
 
-def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **kwargs):
+def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
     """Combines several similar rasters into one"""
 
     # Ensure we have a list of raster datasets
@@ -66,6 +67,9 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **
         raise GeoKitError("Datatype's do not match master dataset")
     
     masterBand = masterDS.GetRasterBand(1)
+    
+    # Make a meta container
+    if updateMeta: meta = masterDS.GetMetadata_Dict()
 
     # Add each dataset to master
     for i in range(len(datasets)):
@@ -84,7 +88,6 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **
         idx = mExtent.findWithin(dExtent, (mInfo.dx, mInfo.dy), yAtTop=mInfo.yAtTop)
 
         # Get master data
-
         mMatrix = masterBand.ReadAsArray(xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin)
 
         # create selector
@@ -100,7 +103,12 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, **
         # Add to master
         masterBand.WriteArray(writeMatrix, idx.xStart, idx.yStart)
         masterBand.FlushCache()
+
+        # update metaData, maybe
+        if updateMeta: meta.update(infoSet[i].meta)
     
+    if updateMeta: masterDS.SetMetadata( meta  )
+
     # Write final raster
     del masterBand
     masterDS.FlushCache()
