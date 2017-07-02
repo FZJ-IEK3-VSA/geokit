@@ -1046,3 +1046,101 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
         plt.show()
     else:
         return h
+
+#################################################################################3
+# Make a geometry from a matrix mask
+PolygonizeResult = namedtuple('PolygonizeResult', "geoms values")
+def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, flat=False):
+    """polygonize a raster/integer data matrix"""
+    
+    # Get the working band
+    if isinstance(source, np.ndarray):
+        # Make boundaries if not given
+        if bounds is None:  bounds = (0,0,source.shape[1], source.shape[0]) # bounds in xMin, yMin, xMax, yMax
+
+        try: # first try for a tuple
+            xMin, yMin, xMax, yMax = bounds
+        except: # next assume the user gave an extent object
+            try:
+                xMin, yMin, xMax, yMax = bounds.xyXY
+                srs = bounds.srs
+            except:
+                raise GeoKitGeomError("Could not understand 'bounds' input")
+
+        pixelHeight = (yMax-yMin)/source.shape[0]
+        pixelWidth  = (xMax-xMin)/source.shape[1]
+
+        if srs is None: srs=EPSG3035
+        else: srs=loadSRS(srs)
+
+        # Get DataType
+        dtype = gdalType(source.dtype)
+
+        # Make a raster dataset and pull the band/maskBand objects
+        raster = quickRaster(bounds, srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noDataValue)
+        band = raster.GetRasterBand(1)
+
+        band.WriteArray(source)
+
+        band.FlushCache()
+        raster.FlushCache()
+    else:
+        ds = loadRaster(source)
+        band = ds.GetRasterBand(1)
+
+    maskBand = band.GetMaskBand()
+
+    # Do polygonize
+    vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
+    vecLyr = vecDS.CreateLayer("mem",srs=srs)
+
+    #vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
+    #vecLyr = vecDS.CreateLayer("layer",srs=srs)
+    
+    vecField = ogr.FieldDefn(field, ogr.OFTInteger)
+    vecLyr.CreateField(vecField)
+
+    # Polygonize geometry
+    result = gdal.Polygonize(band, maskBand, vecLyr, 0)
+    if( result != 0):
+        raise GeoKitGeomError("Failed to polygonize geometry")
+
+    # Check the geoms
+    ftrN = vecLyr.GetFeatureCount()
+
+    if( ftrN == 0):
+        #raise GlaesError("No features in created in temporary layer")
+        print("No features in created in temporary layer")
+        if flat: return None
+        else: return []
+
+    # Read the geoms
+    geoms = []
+    values = []
+    for i in range(ftrN):
+        ftr = vecLyr.GetFeature(i)
+        geoms.append(ftr.GetGeometryRef().Clone())
+        values.append(ftr.items()[field])
+
+    values = np.array(values)
+    geoms = np.array(geoms)
+
+    # Unless we want to flatten the geometries, we're done!
+    if not flat: return PolygonizeResult(geoms, values)
+
+    # Flatten the geometries
+    flatValues = []
+    flatGeoms = []
+    for val in set(values):
+        flatValues.append(val)
+
+        geomList = geoms[values==val]
+        if geomList.size==1:
+            flatGeoms.append(geomList[0])
+        else:
+            flatGeoms.append(flatten(geomList))
+
+    flatValues = np.array(flatValues)
+    flatGeoms = np.array(flatGeoms)
+
+    return PolygonizeResult(flatGeoms, flatValues)

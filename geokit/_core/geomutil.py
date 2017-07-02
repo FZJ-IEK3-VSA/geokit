@@ -187,7 +187,7 @@ def convertWKT( wkt, srs=None):
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
+def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
     """Create a geometry set from a matrix mask
 
     Inputs:
@@ -283,14 +283,15 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True):
     maskBand = rasBand.GetMaskBand()
 
     # Open an empty vector dataset, layer, and field
-    driver = gdal.GetDriverByName("Memory")
-    tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
-    t = TemporaryDirectory()
-    tmp_dataSource = tmp_driver.Create( t.name+"tmp.shp", 0, 0 )
+    #driver = gdal.GetDriverByName("Memory")
+    #tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
+    #t = TemporaryDirectory()
+    #tmp_dataSource = tmp_driver.Create( t.name+"tmp.shp", 0, 0 )
 
-    vecDS = driver.CreateCopy("MEMORY", tmp_dataSource)
-    t.cleanup()
+    #vecDS = driver.CreateCopy("MEMORY", tmp_dataSource)
+    #t.cleanup()
 
+    vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
     vecLyr = vecDS.CreateLayer("mem",srs=srs)
 
     field = ogr.FieldDefn("DN", ogr.OFTInteger)
@@ -631,3 +632,277 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
         plt.show()
 
     else: return handels
+
+def partitionArea2(geom, gridRes, resolution):
+    # test if the geometry is more than 200% of the target area, if not just return it
+    #if geom.Area() <= 2.0*targetArea: return np.array([geom.Clone(), ]), np.array([0,])
+
+    # Get geometry information
+    xMin, xMax, yMin, yMax = geom.GetEnvelope()
+    srs = geom.GetSpatialReference()
+    if srs is None: srs=EPSG3035
+
+    #if min(xMax-xMin,yMax-yMin) <= 2*resolution: raise GeoKitGeomError("resolution is too large compared to the geometry") 
+
+    # make a vector dataset
+    vec = quickVector(geom)
+
+    # Turn geometry into a matrix
+    #res = min((xMax-xMin)/resolutionFactor, (yMax-yMin)/resolutionFactor)
+    res = resolution
+    raster = quickRaster(bounds=(xMin,yMin,xMax,yMax), srs=srs, dx=res, dy=res)
+
+    # rasterize vector onto raster
+    result = gdal.Rasterize(raster, vec, bands=[1], burnValues=[1])
+    if not result==1:
+        raise GeoKitGeomError("Rasterization failed")
+
+    # Get raster info and data
+    matrix = raster.GetRasterBand(1).ReadAsArray()>0.5
+    yN, xN = matrix.shape
+
+    xOrigin, dx, trash, yOrigin, trash, dy = raster.GetGeoTransform()
+    dx = abs(dx)
+    dy = abs(dy)
+
+    xMin = xOrigin
+    yMin = yOrigin - dy*yN
+    xMax = xOrigin + dx*xN
+    yMax = yOrigin
+    
+    # convert target area to a pixel area
+    #targetPixelArea = targetArea/dy/dx
+    pixelGridSize = int(gridRes/min( dy, dx))
+
+    # Make an empty areas matrix
+    noData = 2**30-1
+    isOkay = 0
+    areas = np.zeros(matrix.shape, dtype=np.int32)+noData
+    areas[matrix] = isOkay
+
+    # Loop over all available points which are not too close to the borders
+    count = 1
+    for ys in range(0, yN, pixelGridSize):
+        for xs in range(0, xN, pixelGridSize):
+            yn = min(yN, ys+pixelGridSize)
+            xn = min(xN, xs+pixelGridSize)
+
+            areas[ys:yn, xs:xn][matrix[ys:yn, xs:xn]] = count
+            count += 1
+
+    # Make a new raster of sub-geom indicated pixels
+    raster = None
+    raster = quickRaster(bounds=(xMin,yMin,xMax,yMax), srs=srs, dx=res, dy=res, noData=noData, data=areas)
+    band = raster.GetRasterBand(1)
+    maskBand = band.GetMaskBand()
+
+    # Do polygonize
+    vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
+    vecLyr = vecDS.CreateLayer("mem",srs=srs)
+    
+    vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
+    vecLyr.CreateField(vecField)
+
+    # Polygonize geometry
+    result = gdal.Polygonize(band, maskBand, vecLyr, 0)
+    if( result != 0):
+        raise GeoKitGeomError("Failed to polygonize geometry")
+
+    # Check the geoms
+    ftrN = vecLyr.GetFeatureCount()
+
+    if( ftrN == 0):
+        #raise GlaesError("No features in created in temporary layer")
+        print("No features in created in temporary layer")
+        if flat: return None
+        else: return []
+
+    # Read the geoms
+    geoms = []
+    values = []
+    for i in range(ftrN):
+        ftr = vecLyr.GetFeature(i)
+        geoms.append(ftr.GetGeometryRef().Clone())
+        values.append(ftr.items()["DN"])
+
+    geoms = np.array(geoms)
+    values = np.array(values)
+
+    return geoms,values
+
+    # flatten the geometries
+    flatValues = []
+    flatGeoms = []
+
+    for g in geoms[values==0]:
+        flatGeoms.append(g)
+        flatValues.append(0)
+
+    for val in set(values):
+        if val==0: continue # skip the unpartitioned areas
+        flatValues.append(val)
+
+        geomList = geoms[values==val]
+        if geomList.size==1:
+            flatGeoms.append(geomList[0])
+        else:
+            flatGeoms.append(flatten(geomList))
+
+    flatValues = np.array(flatValues)
+    flatGeoms = np.array(flatGeoms)
+
+    return flatGeoms, flatValues
+
+
+def partitionArea(geom, targetArea, resolution, steps=20, minRatio=0.25):
+    # test if the geometry is more than 200% of the target area, if not just return it
+    #if geom.Area() <= 2.0*targetArea: return np.array([geom.Clone(), ]), np.array([0,])
+
+    # Get geometry information
+    xMin, xMax, yMin, yMax = geom.GetEnvelope()
+    srs = geom.GetSpatialReference()
+    if srs is None: srs=EPSG3035
+
+    #if min(xMax-xMin,yMax-yMin) <= 2*resolution: raise GeoKitGeomError("resolution is too large compared to the geometry") 
+
+    # make a vector dataset
+    vec = quickVector(geom)
+
+    # Turn geometry into a matrix
+    #res = min((xMax-xMin)/resolutionFactor, (yMax-yMin)/resolutionFactor)
+    res = resolution
+    raster = quickRaster(bounds=(xMin,yMin,xMax,yMax), srs=srs, dx=res, dy=res)
+
+    # rasterize vector onto raster
+    result = gdal.Rasterize(raster, vec, bands=[1], burnValues=[1])
+    if not result==1:
+        raise GeoKitGeomError("Rasterization failed")
+
+    # Get raster info and data
+    matrix = raster.GetRasterBand(1).ReadAsArray()
+    yN, xN = matrix.shape
+
+    xOrigin, dx, trash, yOrigin, trash, dy = raster.GetGeoTransform()
+    dx = abs(dx)
+    dy = abs(dy)
+
+    xMin = xOrigin
+    yMin = yOrigin - dy*yN
+    xMax = xOrigin + dx*xN
+    yMax = yOrigin
+    
+    # convert target area to a pixel area
+    targetPixelArea = targetArea/dy/dx
+
+    # get minimum/maximum pixel radius
+    minRadius = np.sqrt(targetPixelArea/np.pi)
+    maxArea = targetPixelArea/minRatio
+    maxRadius = np.sqrt(maxArea/np.pi)
+    mRI = int(np.ceil(maxRadius))
+
+    # pad the availability matrix so that we can evaluate the kernel on the edges
+    tmp = np.zeros((yN+2*mRI, xN+2*mRI), dtype=bool)
+    tmp[mRI:-mRI, mRI:-mRI] = matrix
+    matrix = tmp
+
+    # make a set of inclusion stamps
+    y = x = np.arange(-mRI,mRI+1)
+    xx,yy = np.meshgrid(x,y)
+
+    stamps = [ np.sqrt(xx*xx+yy*yy)<=radius for radius in np.linspace(minRadius,maxRadius,steps) ]
+    stampSizes = [stamp.sum() for stamp in stamps]
+
+    # Make an empty areas matrix
+    noData = 2**30-1
+    isOkay = 0
+    areas = np.zeros(matrix.shape, dtype=np.int32)+noData
+    areas[matrix] = isOkay
+
+    # Loop over all available points which are not too close to the borders
+    count = 1
+    for yi, xi in np.argwhere(matrix):
+        # Be sure index isn't already taken by something
+        if not areas[yi,xi] == isOkay: continue
+        #print("\n",count)
+        for stamp in stamps:
+            # start searching for an acceptable areas
+            areaMat = np.logical_and(matrix[yi-mRI:yi+mRI+1, xi-mRI:xi+mRI+1], stamp)
+            area = areaMat.sum()
+            
+            # If the applicable search area has gotten TOO large, go to the next pixel
+            if area > targetPixelArea*1.1: break
+
+            # Check if the area is acceptable
+            if area >= targetPixelArea: # break out if we have found an area which satisfies the target area
+                # Now that we know something has been found, add the areas to areas matrix indicated by the count
+                areas[yi-mRI:yi+mRI+1, xi-mRI:xi+mRI+1][areaMat] = count
+                count += 1
+
+                # also remove these pixels from the availability matrix
+                matrix[yi-mRI:yi+mRI+1, xi-mRI:xi+mRI+1][areaMat] = 0
+                break
+
+    # unpad the areas matrix
+    areas = areas[mRI:-mRI, mRI:-mRI]
+
+    # Make a new raster of sub-geom indicated pixels
+    raster = None
+    raster = quickRaster(bounds=(xMin,yMin,xMax,yMax), srs=srs, dx=res, dy=res, noData=noData, data=areas)
+    band = raster.GetRasterBand(1)
+    maskBand = band.GetMaskBand()
+
+    # Do polygonize
+    vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
+    vecLyr = vecDS.CreateLayer("mem",srs=srs)
+    
+    vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
+    vecLyr.CreateField(vecField)
+
+    # Polygonize geometry
+    result = gdal.Polygonize(band, maskBand, vecLyr, 0)
+    if( result != 0):
+        raise GeoKitGeomError("Failed to polygonize geometry")
+
+    # Check the geoms
+    ftrN = vecLyr.GetFeatureCount()
+
+    if( ftrN == 0):
+        #raise GlaesError("No features in created in temporary layer")
+        print("No features in created in temporary layer")
+        if flat: return None
+        else: return []
+
+    # Read the geoms
+    geoms = []
+    values = []
+    for i in range(ftrN):
+        ftr = vecLyr.GetFeature(i)
+        geoms.append(ftr.GetGeometryRef().Clone())
+        values.append(ftr.items()["DN"])
+
+    geoms = np.array(geoms)
+    values = np.array(values)
+
+    # flatten the geometries
+    flatValues = []
+    flatGeoms = []
+
+    for g in geoms[values==0]:
+        flatGeoms.append(g)
+        flatValues.append(0)
+
+    for val in set(values):
+        if val==0: continue # skip the unpartitioned areas
+        flatValues.append(val)
+
+        geomList = geoms[values==val]
+        if geomList.size==1:
+            flatGeoms.append(geomList[0])
+        else:
+            flatGeoms.append(flatten(geomList))
+
+    flatValues = np.array(flatValues)
+    flatGeoms = np.array(flatGeoms)
+
+    return flatGeoms, flatValues
+

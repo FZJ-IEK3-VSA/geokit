@@ -9,4 +9,6 @@ from geokit._core.geomutil import (GeoKitGeomError,
 								  transform,
 								  flatten,
 								  drawGeoms,
+								  partitionArea,
+								  partitionArea2
 								  )

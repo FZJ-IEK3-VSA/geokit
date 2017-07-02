@@ -158,18 +158,8 @@ def quickVector(geom, output=None):
         dataSource = driver.Create( output, 0,0 )
     else:
         driver = gdal.GetDriverByName("Memory")
+        dataSource = driver.Create( "", 0, 0, 0, gdal.GDT_Unknown)
         
-        # Using 'Create' from a Memory driver leads to an error. But creating
-        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
-        #  and then using 'CreateCopy' seems to work
-        tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
-        t = TemporaryDirectory()
-        tmp_dataSource = tmp_driver.Create( t.name+"tmp.shp", 0, 0 )
-
-        dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
-        t.cleanup()
-        del tmp_dataSource, tmp_driver, t
-
     # Create the layer and write feature
     layer = dataSource.CreateLayer( "", geom.GetSpatialReference(), geom.GetGeometryType() )
     feature = ogr.Feature(layer.GetLayerDefn())
@@ -184,38 +174,43 @@ def quickVector(geom, output=None):
     else: return dataSource
 
 
-def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None):
+def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None):
     """GeoKit internal for quickly creating a raster datasource"""
-    xMin, yMin, xMax, yMax = bounds
+    try:
+        xMin, yMin, xMax, yMax = bounds
+    except TypeError:
+        xMin, yMin, xMax, yMax = bounds.xyXY
+        srs = bounds.srs
     
     # Make a raster dataset and pull the band/maskBand objects
-    cols = int(round((xMax-xMin)/pixelWidth)) # used 'round' instead of 'int' because this matched GDAL behavior better
-    rows = int(round((yMax-yMin)/abs(pixelHeight)))
+    cols = int(round((xMax-xMin)/dx)) # used 'round' instead of 'int' because this matched GDAL behavior better
+    rows = int(round((yMax-yMin)/abs(dy)))
     originX = xMin
     originY = yMax # Always use the "Y-at-Top" orientation
     
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory
-    raster = driver.Create('', cols, rows, 1, getattr(gdal,dtype))
+    raster = driver.Create('', cols, rows, 1, getattr(gdal,dType))
 
     if(raster is None):
         raise GeoKitError("Failed to create temporary raster")
 
-    raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+    raster.SetGeoTransform((originX, abs(dx), 0, originY, 0, -1*abs(dy)))
     
     # Set the SRS
-    if not srs is None:
-        rasterSRS = loadSRS(srs)
-        raster.SetProjection( rasterSRS.ExportToWkt() )
+    raster.SetProjection( srs.ExportToWkt() )
     
     # get the band
     band = raster.GetRasterBand(1)
 
     # set nodata
-    if noData: band.SetNoDataValue(noData)
+    if not noData is None: band.SetNoDataValue(noData)
 
     # do fill
-    if fill: band.Fill(fillValue)
+    if not fill is None: band.Fill(fillValue)
+
+    # add data
+    if not data is None: band.WriteArray(data)
 
     # Done!
     band.FlushCache()

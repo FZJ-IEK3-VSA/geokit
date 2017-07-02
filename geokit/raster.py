@@ -14,4 +14,5 @@ from geokit._core.rasterutil import (GeoKitRasterError,
                                      KernelProcessor, 
                                      indexToCoord,
                                      drawImage,
+                                     polygonize
                                      )
