@@ -5,6 +5,7 @@ from .rasterutil import *
 from .vectorutil import *
 from .extent import Extent
 
+MaskAndExtent = namedtuple("MaskAndExtent", "mask extent id")
 class RegionMask(object):
     """The RegionMask object represents a given region and exposes methods allowing for easy
     manipulation of geospatial data around that region.
@@ -1012,3 +1013,36 @@ class RegionMask(object):
 
         # Indicate features
         return s.indicateFeatures(ds, **kwargs)
+
+    #######################################################################################
+    ## Make a sub region generator
+    def subRegions(s, gridSize, asMaskAndExtent=False):
+        """Generate a number of sub regions which combine into the total RegionMask area"""
+        # get useful matrix info
+        yN, xN = s.mask.shape
+        pixelGridSize = int(gridSize/min(s.pixelWidth, s.pixelHeight))
+
+        # Make grid areas
+        count = 0
+        for ys in range(0, yN, pixelGridSize):
+
+            yn = min(yN, ys+pixelGridSize)
+            yMin = s.extent.yMax - (ys+yn)*s.pixelHeight
+            yMax = yMin + yn*s.pixelHeight
+
+            for xs in range(0, xN, pixelGridSize):
+                xn = min(xN, xs+pixelGridSize)
+                xMin = s.extent.xMin + xs*s.pixelWidth
+                xMax = xMin + xn*s.pixelWidth
+
+                sectionMask = s.mask[ys:yn, xs:xn]
+                if not sectionMask.any(): continue
+                
+                sectionExtent = Extent( xMin,yMin,xMax,yMax ).fit((s.pixelWidth, s.pixelHeight))
+
+                if asMaskAndExtent:
+                    yield MaskAndExtent( sectionMask, sectionExtent, count)
+                else:
+                    yield RegionMask.fromMask(sectionExtent, sectionMask, dict(id=count))
+
+                count+=1

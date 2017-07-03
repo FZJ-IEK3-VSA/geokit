@@ -1050,7 +1050,7 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
 #################################################################################3
 # Make a geometry from a matrix mask
 PolygonizeResult = namedtuple('PolygonizeResult', "geoms values")
-def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, flat=False, shrink=True):
+def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shrink=True):
     """polygonize a raster/integer data matrix"""
     
     # Get the working band
@@ -1097,7 +1097,7 @@ def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, fla
     #vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
     #vecLyr = vecDS.CreateLayer("layer",srs=srs)
     
-    vecField = ogr.FieldDefn(field, ogr.OFTInteger)
+    vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
     vecLyr.CreateField(vecField)
 
     # Polygonize geometry
@@ -1120,7 +1120,7 @@ def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, fla
     for i in range(ftrN):
         ftr = vecLyr.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
-        values.append(ftr.items()[field])
+        values.append(ftr.items()["DN"])
 
     values = np.array(values)
     geoms = np.array(geoms)
