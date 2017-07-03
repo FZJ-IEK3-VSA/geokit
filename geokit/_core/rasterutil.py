@@ -1050,7 +1050,7 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
 #################################################################################3
 # Make a geometry from a matrix mask
 PolygonizeResult = namedtuple('PolygonizeResult', "geoms values")
-def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, flat=False):
+def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, flat=False, shrink=True):
     """polygonize a raster/integer data matrix"""
     
     # Get the working band
@@ -1124,6 +1124,11 @@ def polygonize( source, field="DN", bounds=None, srs=None, noDataValue=None, fla
 
     values = np.array(values)
     geoms = np.array(geoms)
+
+    # shrink geoms by a timy amount to avoid self intersections
+    if shrink: 
+        # Compute shrink factor
+        geoms = [g.Buffer(0.000001) for g in geoms]
 
     # Unless we want to flatten the geometries, we're done!
     if not flat: return PolygonizeResult(geoms, values)

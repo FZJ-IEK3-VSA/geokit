@@ -10,5 +10,7 @@ from geokit._core.geomutil import (GeoKitGeomError,
 								  flatten,
 								  drawGeoms,
 								  partitionArea,
-								  partitionArea2
+								  partitionArea2,
+								  partitionArea3,
+								  CLOCK,
 								  )

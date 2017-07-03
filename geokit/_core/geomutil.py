@@ -906,3 +906,138 @@ def partitionArea(geom, targetArea, resolution, steps=20, minRatio=0.25):
 
     return flatGeoms, flatValues
 
+import time
+CLOCK = 0
+
+def partitionArea3(geom, targetArea, growStep=None, _startPoint=0):
+    global CLOCK
+    if growStep is None:
+        growStep = np.sqrt(targetArea/np.pi)/2
+
+    # Be sure we are working with a polygon
+    if geom.GetGeometryName()=="POLYGON":
+        pass
+    elif geom.GetGeometryName()=="MULTIPOLYGON":
+        results = []
+        for gi in range(geom.GetGeometryCount()):
+            tmpResults = partitionArea3(geom.GetGeometryRef(gi), targetArea, growStep)
+            results.extend( tmpResults )
+
+        return results
+    else:
+        raise GeoKitGeomError("Geometry is not a polygon or multipolygon object")
+        
+    # Check the geometry's size
+    #st = time.clock()
+    gArea = geom.Area()
+    if gArea < 1.5*targetArea: return [geom.Clone(), ]
+
+    # Find the most starting boundary coordinate
+    boundary = geom.Boundary()
+    if boundary.GetGeometryCount() == 0:
+        coords = boundary.GetPoints()
+    else:
+        coords = boundary.GetGeometryRef(0).GetPoints()
+    
+    #xc, yc = geom.Centroid().GetPoints()[0]
+    y = np.array([c[1] for c in coords])
+    x = np.array([c[0] for c in coords])
+
+    if _startPoint==0: # start from the TOP-LEFT
+        yStart = y.max()
+        xStart = x[y==yStart].min()
+    elif _startPoint==1: # Start from the LEFT-TOP
+        xStart = x.min()
+        yStart = y[x==xStart].max()
+    elif _startPoint==2: # Start from the RIGHT-TOP
+        xStart = x.max()
+        yStart = y[x==xStart].max()
+    elif _startPoint==3: # Start from the BOT-RIGHT
+        yStart = y.min()
+        xStart = x[y==yStart].max()
+    elif _startPoint==4: # Start from the BOT-LEFT
+        yStart = y.min()
+        xStart = x[y==yStart].min()
+    elif _startPoint==5: # Start from the LEFT-BOT
+        xStart = x.min()
+        yStart = y[x==xStart].min()
+    else:
+        raise GeoKitGeomError("Start point failure. There may be an infinite loop in one of the geometries")
+    #i = np.argmax( np.power(y-yc,2)+np.power(x-xc,2) 
+
+
+    start = makePoint(xStart, yStart, srs=geom.GetSpatialReference())
+
+    # start searching
+    searchGeom = start.Buffer(growStep).Intersection(geom)
+    sgArea = searchGeom.Area()
+
+    if gArea < 2*targetArea: # use a slightly smalled target area when the whole geometry
+                             #  is close to twice the target area in order to increase the 
+                             #  liklihood of a usable leftover
+        workingTarget = 0.9*targetArea
+    else: workingTarget = targetArea
+    #clock=int((time.clock()-st)*1e9)
+    #st = time.clock()
+    
+    while sgArea<workingTarget:
+        newGeom = searchGeom.Buffer(growStep).Intersection(geom)
+        newArea = newGeom.Area()
+        if newArea > workingTarget*1.1:
+            #print("special")
+            dA = (newArea-sgArea)/growStep
+            weightedGrowStep = (workingTarget-sgArea)/dA
+            searchGeom = searchGeom.Buffer( weightedGrowStep ).Intersection(geom)
+            break
+
+        searchGeom = newGeom
+        sgArea = newArea
+    #clock=int((time.clock()-st)*1e9)
+
+    # fix the search geometry
+    #  - For some reason the searchGeometry will sometime create a geometry and a linestring,
+    #    in these cases the real geometry was always the second item...
+    if searchGeom.GetGeometryName() == "GEOMETRYCOLLECTION":
+        for gi in range(searchGeom.GetGeometryCount()):
+            g = searchGeom.GetGeometryRef(gi)
+            if g.GetGeometryName()=="POLYGON":
+                searchGeom = g.Clone()
+                break
+
+    # Check the left over geometry, maybe some poops have been created and we need to glue them together
+    st = time.clock()
+    outputGeom = searchGeom.Simplify(growStep/20)
+    geomToDo = []
+
+    leftOvers = geom.Difference(searchGeom)
+    if leftOvers.GetGeometryName() == "MULTIPOLYGON":
+        for gi in range(leftOvers.GetGeometryCount()):
+            leftOver = leftOvers.GetGeometryRef(gi)
+            if leftOver.Area() < targetArea*0.5:
+                outputGeom = outputGeom.Union(leftOver)
+            else:
+                geomToDo.append(leftOver)
+    elif leftOvers.GetGeometryName() == "POLYGON":
+        geomToDo.append(leftOvers)
+    else:
+        raise GeoKitGeomError("FATAL ERROR: Difference did not result in a polygon")
+
+    CLOCK += int((time.clock()-st)*1e9)
+
+    
+    # make an output array
+    if outputGeom.Area()<targetArea*1.5:
+        output = [outputGeom]
+    else:
+        # the search geom plus some (or maybe all) of the left over poops total an area which is too large,
+        #  so it will need recomputing. But in order to decrease the liklihhod of an infinite loop,
+        #  use a difference starting point than the one used before
+        #  - This will loop a maximum of 6 times before an exception is raised
+        output = partitionArea3( outputGeom, targetArea, growStep, _startPoint+1) 
+ 
+    for g in geomToDo:
+        tmpOutput = partitionArea3( g, targetArea, growStep)
+        output.extend(tmpOutput)
+
+    # Done!
+    return output
