@@ -608,7 +608,7 @@ class RegionMask(object):
 
     ##############################################################################    
     # Warp raster onto region
-    def warp(s, source, dtype=None, resampleAlg='cubic', noDataValue=None, applyMask=True, resolutionDiv=1, **kwargs):
+    def warp(s, source, dtype=None, resampleAlg='bilinear', noDataValue=None, applyMask=True, resolutionDiv=1, **kwargs):
         """Warp a given raster source onto the RM's extent and resolution
 
         * The source is not clipped around the RM's extent before the warping procedure. This isn't necessary, but if it 
@@ -1017,7 +1017,7 @@ class RegionMask(object):
     #######################################################################################
     ## Make a sub region generator
     def subRegions(s, gridSize, asMaskAndExtent=False):
-        """Generate a number of sub regions which combine into the total RegionMask area"""
+        """Generate a number of sub regions on a grid which combine into the total RegionMask area"""
         # get useful matrix info
         yN, xN = s.mask.shape
         pixelGridSize = int(gridSize/min(s.pixelWidth, s.pixelHeight))
@@ -1037,7 +1037,7 @@ class RegionMask(object):
 
                 sectionMask = s.mask[ys:yn, xs:xn]
                 if not sectionMask.any(): continue
-                
+
                 sectionExtent = Extent( xMin,yMin,xMax,yMax ).fit((s.pixelWidth, s.pixelHeight))
 
                 if asMaskAndExtent:
