@@ -191,6 +191,7 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None):
 
     trx=None
     if(not outputSRS is None):
+        outputSRS = loadSRS(outputSRS)
         lyrSRS = layer.GetSpatialRef()
         if (not lyrSRS.IsSame(outputSRS)):
             trx = osr.CoordinateTransformation(lyrSRS, outputSRS)
@@ -232,6 +233,11 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
 
         geom = ftr.GetGeometryRef().Clone()
         attr = ftr.items().copy()
+
+    if(not outputSRS is None):
+        outputSRS = loadSRS(outputSRS)
+        if (not geom.GetSpatialRef().IsSame(outputSRS)):
+            geom.TransformTo( outputSRS )
 
     # Done!
     return geom,attr    
