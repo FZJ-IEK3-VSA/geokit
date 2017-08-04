@@ -149,6 +149,7 @@ def vectorInfo(source):
 
 ####################################################################
 # Iterable to loop over vector items
+Feature = namedtuple("Feature", "geom attr")
 def extractFeatures(source, geom=None, where=None, outputSRS=None):
     """Creates a generator which extracte the features contained within the source
     
@@ -201,7 +202,7 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None):
         if ( not trx is None): oGeom.Transform(trx)
         oItems = ftr.items().copy()
 
-        yield (oGeom, oItems)
+        yield Feature(oGeom, oItems)
 
 def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
     """convenience function to get a single geometry from a source using extractFeatures
@@ -240,7 +241,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
             geom.TransformTo( outputSRS )
 
     # Done!
-    return geom,attr    
+    return Feature(geom,attr)    
 
 ####################################################################
 # Create a vector
