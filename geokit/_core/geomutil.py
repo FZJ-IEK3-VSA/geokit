@@ -10,12 +10,12 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 
 ####################################################################
 # Geometry convenience functions
-def makePoint(*args, srs='latlon'):
+def point(*args, srs='latlon'):
     """Make a simple point geometry
     
     Usage:
-        makePoint(x, y [,srs])
-        makePoint( (x, y) [,srs] )
+        point(x, y [,srs])
+        point( (x, y) [,srs] )
     
     * srs must be given as a keyword argument
     """
@@ -34,12 +34,16 @@ def makePoint(*args, srs='latlon'):
         pt.AssignSpatialReference(loadSRS(srs))
     return pt
 
-def makeBox(*args, srs=None):
+def makePoint(*args, **kwargs):
+    """alias for geokit.geom.point(...)"""
+    return point(*args, **kwargs)
+
+def box(*args, srs=None):
     """Make an ogr polygon object from extents
 
     Usage:
-        makeBox(xMin, yMin, xMax, yMax [, srs])
-        makeBox( (xMin, yMin, xMax, yMax) [, srs])
+        box(xMin, yMin, xMax, yMax [, srs])
+        box( (xMin, yMin, xMax, yMax) [, srs])
 
     * srs must be given as a keyword argument
     """
@@ -57,19 +61,23 @@ def makeBox(*args, srs=None):
     yMax = float(yMax)
 
     # make box
-    box = ogr.Geometry(ogr.wkbPolygon)
+    outBox = ogr.Geometry(ogr.wkbPolygon)
 
     ring = ogr.Geometry(ogr.wkbLinearRing)
     for x,y in [(xMin,yMin),(xMax,yMin),(xMax,yMax),(xMin,yMax),(xMin,yMin)]:
         ring.AddPoint(x,y)
 
-    box.AddGeometry(ring)
+    outBox.AddGeometry(ring)
     if(srs): 
         srs = loadSRS(srs)
-        box.AssignSpatialReference(srs)
-    return box
+        outBox.AssignSpatialReference(srs)
+    return outBox
 
-def makePolygon(outerRing, *args, srs=None):
+def makeBox(*args, **kwargs):
+    """alias for geokit.geom.box(...)"""
+    return box(*args, **kwargs)
+
+def polygon(outerRing, *args, srs=None):
     """Creates an OGR Polygon obect from a given set of points
 
     Inputs:
@@ -81,7 +89,7 @@ def makePolygon(outerRing, *args, srs=None):
             - iterable (x,y) coordinate sets
             * Each input forms a single edge
             * Inner rings cannot interset the outer ring or one another 
-            * NOTE! For proper drawing, inner rings must be given in the opposite orientation as 
+            * NOTE! For proper drawing in matplotlib, inner rings must be given in the opposite orientation as 
               the outer ring (clockwise vs counterclockwise)
 
         srs : The Spatial reference system to apply to the created geometry
@@ -96,7 +104,7 @@ def makePolygon(outerRing, *args, srs=None):
         box = [(-2,-2), (-2,2), (2,2), (2,-2), (-2,-2)]
         diamond = [(0,1), (-0.5,0), (0,-1), (0.5,0), (0,1)]
 
-        geom = makePolygon( box, diamond )
+        geom = polygon( box, diamond )
     """
     if not srs is None: srs = loadSRS(srs)
 
@@ -125,7 +133,11 @@ def makePolygon(outerRing, *args, srs=None):
     # Done!
     return g
 
-def makeLine(points, srs=None):
+def makePolygon(*args, **kwargs):
+    """alias for geokit.geom.polygon(...)"""
+    return polygon(*args, **kwargs)
+
+def line(points, srs=None):
     """Creates an OGR Polygon obect from a given set of points
 
     Inputs:
@@ -157,22 +169,30 @@ def makeLine(points, srs=None):
     return g
 
 
-def makeEmpty(name, srs=None):
-    """
-    Make an generic OGR geometry
+def makeLine(*args, **kwargs):
+    """alias for geokit.geom.line(...)"""
+    return line(*args, **kwargs)
 
-    name options: Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
+def empty(gtype, srs=None):
+    """
+    Make a generic OGR geometry of type [gtype]
+
+    gtype options: Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
 
     *Not for the feint of heart*
     """
-    if not hasattr(ogr,"wkb"+name):
-        raise GeoKitGeomError("Could not find geometry named: "+name)
-    geom = ogr.Geometry(getattr(ogr,"wkb"+name))
+    if not hasattr(ogr,"wkb"+gtype):
+        raise GeoKitGeomError("Could not find geometry type: "+gtype)
+    geom = ogr.Geometry(getattr(ogr,"wkb"+gtype))
 
     if not srs is None:
         geom.AssignSpatialReference( loadSRS(srs))
 
     return geom
+
+def makeEmpty(*args, **kwargs):
+    """alias for geokit.geom.empty(...)"""
+    return empty(*args, **kwargs)
 
 #################################################################################3
 # Make a geometry from a WKT string
@@ -444,7 +464,6 @@ def flatten( geoms ):
                 newGeoms.append(geoms[gi])
         geoms = newGeoms
     return geoms[0]
-
 
 def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
     """Draw geometries onto a matplotlib figure
