@@ -237,7 +237,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
 
     if(not outputSRS is None):
         outputSRS = loadSRS(outputSRS)
-        if (not geom.GetSpatialRef().IsSame(outputSRS)):
+        if (not geom.GetGeometryRef().IsSame(outputSRS)):
             geom.TransformTo( outputSRS )
 
     # Done!
