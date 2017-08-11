@@ -1027,18 +1027,18 @@ class RegionMask(object):
         for ys in range(0, yN, pixelGridSize):
 
             yn = min(yN, ys+pixelGridSize)
-            yMin = s.extent.yMax - (ys+yn)*s.pixelHeight
-            yMax = yMin + yn*s.pixelHeight
+            yMax = s.extent.yMax - ys*s.pixelHeight
+            yMin = s.extent.yMax - yn*s.pixelHeight
 
             for xs in range(0, xN, pixelGridSize):
                 xn = min(xN, xs+pixelGridSize)
                 xMin = s.extent.xMin + xs*s.pixelWidth
-                xMax = xMin + xn*s.pixelWidth
+                xMax = s.extent.xMin + xn*s.pixelWidth
 
                 sectionMask = s.mask[ys:yn, xs:xn]
                 if not sectionMask.any(): continue
 
-                sectionExtent = Extent( xMin,yMin,xMax,yMax ).fit((s.pixelWidth, s.pixelHeight))
+                sectionExtent = Extent( xMin,yMin,xMax,yMax, srs=s.srs ).fit((s.pixelWidth, s.pixelHeight))
 
                 if asMaskAndExtent:
                     yield MaskAndExtent( sectionMask, sectionExtent, count)
