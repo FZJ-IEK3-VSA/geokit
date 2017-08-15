@@ -355,6 +355,37 @@ class Extent(object):
 
         return filter(s.inSourceExtent, directoryList)
     
+    def containsPoint(s, pts, pointSRS=None):
+        """Test if the extend contains a point, or a collection of points"""
+        #### Do tests
+        # handle a geometry object 
+        if isinstance(pts,ogr.Geometry):
+            if not s.srs.IsSame(pts.GetSpatialReference()):
+                pts = pts.Clone()
+                pts.TransformTo(s.srs)
+
+            return s.box.Contains(pts)
+        
+        # handle an x,y tuple
+        elif isinstance(pts, tuple):
+            pts = makePoint(*pts,srs=pointSRS)
+            if not pointSRS is None and not s.srs.IsSame(pts.GetSpatialReference()):
+                pts.TransformTo(s.srs)
+
+            return s.box.Contains(pts)
+
+        # Handle something iterable
+        else:
+            if not isinstance(pts[0], ogr.Geometry):
+                pts = [makePoint(*pt, srs=pointSRS) for pt in pts]
+
+            if not s.srs.IsSame(pts[0].GetSpatialReference()):
+                pts = transform(pts, toSRS=s.srs)
+
+            result = np.array([s.box.Contains(pt) for pt in pts])
+
+            return result
+    
     def contains(s, extent, res=None):
         """Tests if the extent contains another given extent
 

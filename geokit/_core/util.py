@@ -8,6 +8,7 @@ from collections import namedtuple, Iterable
 import pandas as pd
 from scipy.stats import describe
 from scipy.interpolate import RectBivariateSpline
+from types import GeneratorType
 
 ######################################################################################
 # test modules
