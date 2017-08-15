@@ -649,7 +649,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     if asSingle: # A single point was given, so return a single result
         return ptValue(values[0], xOffset[0], yOffset[0])
     else:
-        return [ptValue(d,xo,yo) for d,xo,yo in zip(values, xOffset, yOffset)]
+        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset))
 
 ####################################################################
 # Shortcut for getting just the raster value
@@ -733,8 +733,8 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     if mode=='near':
         # Simple get the nearest value
         values = extractValues(source, points, pointSRS=pointSRS, winRange=0)
-        if isinstance(values, list):
-            result = [d for d,xo,yo in values]
+        if not isinstance(values, ptValue):
+            result = values.data.tolist()
         else:
             result = [values.data, ]
 
@@ -749,10 +749,10 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
 
         # Calculate interpolated values
         result=[]
-        for z,xo,yo in values:
-            rbs = RectBivariateSpline(y,x,z, kx=1, ky=1)
+        for v in values.itertuples(index=False):
+            rbs = RectBivariateSpline(y,x,v.data, kx=1, ky=1)
 
-            result.append(rbs(yo,xo)[0][0])
+            result.append(rbs(v.yOffset,v.xOffset)[0][0])
 
     elif mode=="cubic-spline": # use a spline interpolation scheme
         # setup inputs
@@ -765,17 +765,17 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
         
         # Calculate interpolated values
         result=[]
-        for z,xo,yo in values:
-            rbs = RectBivariateSpline(y,x,z)
+        for v in values.itertuples(index=False):
+            rbs = RectBivariateSpline(y,x,v.data)
 
-            result.append(rbs(yo,xo)[0][0])
+            result.append(rbs(v.yOffset,v.xOffset)[0][0])
 
     elif mode == "average": # Get the average in a window
         win = 3 if winRange is None else winRange
         values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         result = []
-        for z,xo,yo in values:
-            result.append(z.mean())
+        for v in values.itertuples(index=False):
+            result.append(v.data.mean())
 
     elif mode == "func": # Use a general function processor
         if func is None:
@@ -783,7 +783,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
         win = 3 if winRange is None else winRange
         values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         result = []
-        for v in values:
+        for v in values.itertuples(index=False):
             result.append( func(*v) )
 
     else:

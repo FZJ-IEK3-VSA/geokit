@@ -356,7 +356,7 @@ class Extent(object):
         return filter(s.inSourceExtent, directoryList)
     
     def containsPoint(s, pts, pointSRS=None):
-        """Test if the extend contains a point, or a collection of points"""
+        """Test if the extendtcontains a point or an iterable of points"""
         #### Do tests
         # handle a geometry object 
         if isinstance(pts,ogr.Geometry):
