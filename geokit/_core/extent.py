@@ -358,6 +358,7 @@ class Extent(object):
     def containsPoint(s, pts, pointSRS=None):
         """Test if the extendtcontains a point or an iterable of points"""
         #### Do tests
+        box = s.box # initialize the box
         # handle a geometry object 
         if isinstance(pts,ogr.Geometry):
             if not s.srs.IsSame(pts.GetSpatialReference()):
@@ -372,7 +373,7 @@ class Extent(object):
             if not pointSRS is None and not s.srs.IsSame(pts.GetSpatialReference()):
                 pts.TransformTo(s.srs)
 
-            return s.box.Contains(pts)
+            return box.Contains(pts)
 
         # Handle something iterable
         else:
@@ -382,7 +383,7 @@ class Extent(object):
             if not s.srs.IsSame(pts[0].GetSpatialReference()):
                 pts = transform(pts, toSRS=s.srs)
 
-            result = np.array([s.box.Contains(pt) for pt in pts])
+            result = np.array([box.Contains(pt) for pt in pts])
 
             return result
     
