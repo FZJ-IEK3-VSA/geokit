@@ -187,8 +187,18 @@ class Extent(object):
             * In units of the extent's srs
             * Can also accept a negative padding
         """
-        if pad is None or pad == 0 : return s
-        return Extent(s.xMin-pad, s.yMin-pad, s.xMax+pad, s.yMax+pad, srs=s.srs)
+        # Check for no input pads
+        if pad is None or pad == 0 or pad == (0,0): return s
+        
+        # try breaking apart by x and y component
+        try: 
+            xpad, ypad = pad
+        except: 
+            xpad = pad
+            ypad = pad
+
+        # Pad the extent
+        return Extent(s.xMin-xpad, s.yMin-ypad, s.xMax+xpad, s.yMax+ypad, srs=s.srs)
 
     def shift(s, dx=0, dy=0): 
         """Creates a new extent which has been spatialy shifted from the original extent

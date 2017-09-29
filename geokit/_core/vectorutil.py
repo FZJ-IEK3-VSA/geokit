@@ -368,81 +368,88 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         t.cleanup()
         del tmp_dataSource, tmp_driver, t
 
+    #### Wrap the whole writing function in a 'try' statement in case it fails
+    try:
+        # Create the layer
+        if(output): layerName = os.path.splitext(os.path.basename(output))[0]
+        else: layerName="Layer"
 
-    # Create the layer
-    if(output): layerName = os.path.splitext(os.path.basename(output))[0]
-    else: layerName="Layer"
+        layer = dataSource.CreateLayer( layerName, srs, geomType )
 
-    layer = dataSource.CreateLayer( layerName, srs, geomType )
+        # Setup fieldVals and fieldDef dicts
+        if( not fieldVals is None):
+            # Ensure fieldVals is a dataframe
+            if( not isinstance(fieldVals, pd.DataFrame)):
+                fieldVals = pd.DataFrame(fieldVals) # If not, try converting it
+            
+            # check if length is good
+            if(fieldVals.shape[0]!=len(geoms)):
+                raise GeoKitVectorError("Values table length does not equal geometry count")
 
-    # Setup fieldVals and fieldDef dicts
-    if( not fieldVals is None):
-        # Ensure fieldVals is a dataframe
-        if( not isinstance(fieldVals, pd.DataFrame)):
-            fieldVals = pd.DataFrame(fieldVals) # If not, try converting it
-        
-        # check if length is good
-        if(fieldVals.shape[0]!=len(geoms)):
-            raise GeoKitVectorError("Values table length does not equal geometry count")
+            # Ensure fieldDefs exists and is a dict
+            if( fieldDef is None): # Try to determine data types
+                fieldDef = {}
+                for k,v in fieldVals.items():
+                    fieldDef[k] = ogrType(v.dtype)
 
-        # Ensure fieldDefs exists and is a dict
-        if( fieldDef is None): # Try to determine data types
-            fieldDef = {}
+            elif( isinstance(fieldDef, dict) ): # Assume fieldDef is a dict mapping fields to inappropriate                                             
+                                                #   datatypes. Fix these to ogr indicators!
+                for k in fieldVals.columns:
+                    try:
+                        fieldDef[k] = ogrType(fieldDef[k])
+                    except KeyError as e:
+                        print("\"%s\" not in attribute definition table"%k)
+                        raise e
+
+            else: # Assume a single data type was given. Apply to all fields
+                _type = ogrType(fieldDef)
+                fieldDef = {}
+                for k in fieldVals.keys():
+                    fieldDef[k] = _type
+
+            # Write field definitions to layer
+            for fieldName, dtype in fieldDef.items():
+                layer.CreateField(ogr.FieldDefn(fieldName, getattr(ogr,dtype)))
+
+            # Ensure list lengths match geom length
             for k,v in fieldVals.items():
-                fieldDef[k] = ogrType(v.dtype)
+                if( len(v) != len(geoms) ): raise RuntimeError("'{}' length does not match geom list".format(k))      
 
-        elif( isinstance(fieldDef, dict) ): # Assume fieldDef is a dict mapping fields to inappropriate                                             
-                                            #   datatypes. Fix these to ogr indicators!
-            for k in fieldVals.columns:
-                try:
-                    fieldDef[k] = ogrType(fieldDef[k])
-                except KeyError as e:
-                    print("\"%s\" not in attribute definition table"%k)
-                    raise e
+        # Create features
+        for gi in range(len(geoms)):
+            # Create a blank feature
+            feature = ogr.Feature(layer.GetLayerDefn())
+            
+            # Fill the attributes, if required
+            if( not fieldVals is None ):
+                for fieldName, value in fieldVals.items():
+                    _type = fieldDef[fieldName]
 
-        else: # Assume a single data type was given. Apply to all fields
-            _type = ogrType(fieldDef)
-            fieldDef = {}
-            for k in fieldVals.keys():
-                fieldDef[k] = _type
+                    # cast to basic type
+                    if( _type == "OFTString" ): 
+                        val = str(value.iloc[gi])
+                    elif( _type == "OFTInteger" or _type == "OFTInteger64" ): val = int(value.iloc[gi])
+                    else: val = float(value.iloc[gi]) 
+                    
+                    # Write to feature                
+                    feature.SetField(fieldName, val)
 
-        # Write field definitions to layer
-        for fieldName, dtype in fieldDef.items():
-            layer.CreateField(ogr.FieldDefn(fieldName, getattr(ogr,dtype)))
+            # Set the Geometry
+            feature.SetGeometry( geoms[gi] )
 
-        # Ensure list lengths match geom length
-        for k,v in fieldVals.items():
-            if( len(v) != len(geoms) ): raise RuntimeError("'{}' length does not match geom list".format(k))      
+            # Create the feature
+            layer.CreateFeature( feature )
+            feature.Destroy() # Free resources (probably not necessary here)
 
-    # Create features
-    for gi in range(len(geoms)):
-        # Create a blank feature
-        feature = ogr.Feature(layer.GetLayerDefn())
-        
-        # Fill the attributes, if required
-        if( not fieldVals is None ):
-            for fieldName, value in fieldVals.items():
-                _type = fieldDef[fieldName]
+        # Finish
+        if( output ): return
+        else: return dataSource
+    
+    ##### Delete the datasource in case it failed
+    except Exception as e:
+        dataSource is None
+        raise e
 
-                # cast to basic type
-                if( _type == "OFTString" ): 
-                    val = str(value.iloc[gi])
-                elif( _type == "OFTInteger" or _type == "OFTInteger64" ): val = int(value.iloc[gi])
-                else: val = float(value.iloc[gi]) 
-                
-                # Write to feature                
-                feature.SetField(fieldName, val)
-
-        # Set the Geometry
-        feature.SetGeometry( geoms[gi] )
-
-        # Create the feature
-        layer.CreateFeature( feature )
-        feature.Destroy() # Free resources (probably not necessary here)
-
-    # Finish
-    if( output ): return
-    else: return dataSource
 
 
 ####################################################################
