@@ -1,11 +1,11 @@
 ﻿<a href="http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html"><img src="http://www.fz-juelich.de/SharedDocs/Bilder/IBG/IBG-3/DE/Plant-soil-atmosphere%20exchange%20processes/INPLAMINT%20(BONARES)/Bild3.jpg?__blob=poster" alt="Forschungszentrum Juelich Logo" width="230px"></a> 
 
-# GeoKit - Geospatial tools for Python
-GeoKit communicates directly with functions and objects within the GDAL Library and exposes them in such a way that is particularly useful for general purpose geospatial operations with as little overhead as possible. It gives fundamental control over fundamental operations, such as reading, writing, and manipulating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more. Via the RegionMask object, GeoKit allows for seamless integration of information expressed across multiple geospatial datasets in any format and reference system into the context of a single region. 
+# GeoKit - *Geo*spatial tool*kit* for Python
+GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial operations with as little overhead as possible. It gives fundamental control over fundamental operations, such as reading, writing, and manipulating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more. Via the RegionMask object, GeoKit allows for seamless integration of information expressed across multiple geospatial datasets in any format and reference system into the context of a single region. 
 
 GeoKit is not intended to replace the GDAL library, as only very small subset of GDAL's capabilities are exposed. Nor is it intended to compete with over libraries with similar functionalities.
 Instead it evolved in an ad hoc manner in order to realize the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model which is intended for rapid land eligibility analyses of renewable energy systems and is also available on GitHub.
-Nevertheless, GeoKit quickly emerged as a general purpose GIS toolset with capabilities far beyond computing land eligibility.
+Nevertheless, GeoKit quickly emerged as a general purpose GIS tool set with capabilities far beyond computing land eligibility.
 Therefore, it is our pleasure to offer it to anyone who is interested in its use.
 
 ## Features
@@ -32,7 +32,7 @@ Or install directly via python as
 	
 ## Examples
 
-More detailed examples of GeoKit's capabilites will be added soon. 
+More detailed examples of GeoKit's capabilities will be added soon. 
 
 ## License
 
@@ -55,7 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 We are the [Process and Systems Analysis](http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html) department at the [Institute of Energy and Climate Research: Electrochemical Process Engineering (IEK-3)](http://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html) belonging to the Forschungszentrum Jülich. Our interdisciplinary department's research is focusing on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
 
 
-## Acknowledgement
+## Acknowledgment
 
 This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050 – A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
 
