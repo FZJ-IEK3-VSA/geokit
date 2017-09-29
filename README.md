@@ -34,7 +34,7 @@ Or install directly via python as
 	
 ## Examples
 
-More detailed examples of GeoKit's capabilities will be added soon. 
+Detailed examples of GeoKit's capabilities will be added soon. 
 
 ## License
 
