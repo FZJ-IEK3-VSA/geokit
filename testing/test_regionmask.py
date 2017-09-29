@@ -293,7 +293,7 @@ def test_warp():
     warped_2 = rm.warp(CLC_RASTER_PATH)
     if not (warped_2.dtype==np.uint8): error("warp 2 - dtype")
     if not (warped_2.shape==rm.mask.shape): error("warp 2 - shape")
-    if not (isclose(warped_2.sum(),449935) and isclose(warped_2.std(),9.23575848858)):
+    if not (isclose(warped_2.sum(),449627) and isclose(warped_2.std(),9.07520801659)):
         error("warp 2 - result")
     #rm.createRaster(data=warped_2, output=result("regionMask_warp_2.tif"), overwrite=True)
 
@@ -355,17 +355,18 @@ def test_indicateValues():
 
     # Testing valueMin (with srs change)
     res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20,None))
-    if not (isclose(res1.sum(),30980.074218750) and isclose(res1.std(),0.350906521)): 
+
+    if not (isclose(res1.sum(),30969.68554688, 1e-6) and isclose(res1.std(),0.34896237, 1e-6)): 
         error("indicateValues - valueMin")
 
     # Testing valueMax (with srs change)
     res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None,24))
 
-    if not (isclose(res2.sum(),82845.085938) and isclose(res2.std(),0.487606108)): 
+    if not (isclose(res2.sum(),82857.44531250, 1e-6) and isclose(res2.std(),0.48679259, 1e-6)): 
         error("indicateValues - valueMax")
 
     # Testing valueEquals (with srs change)
-    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7)
+    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic")
 
     if not (isclose(res3.sum(),580.934937, 1e-4) and isclose(res3.std(),0.050088465, 1e-7)): 
         error("indicateValues - valueEquals")
@@ -379,10 +380,12 @@ def test_indicateValues():
 
     # Testing buffering
     res5 = rm.indicateValues(CLC_RASTER_PATH, value=(1,2), buffer=0.01, resolutionDiv=2, forceMaskShape=True)
-    if not isclose(res5.sum(), 65166.0, 1e-4):error("indicateValues - grown")
+
+    if not isclose(res5.sum(), 65030.75000000, 1e-4):error("indicateValues - grown")
 
     # make sure we get an empty mask when nothing is indicated
     res6 = rm.indicateValues(CLC_RASTER_PATH, value=2000, buffer=0.01, resolutionDiv=2, forceMaskShape=True, noDataValue=-1)
+
     if not isclose(res6.sum(), -113526.0, 1e-4):error("indicateValues - empty")
 
 def test_indicateFeatures():

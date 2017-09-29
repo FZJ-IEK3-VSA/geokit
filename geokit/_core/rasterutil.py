@@ -181,57 +181,114 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     if(raster is None):
         raise GeoKitRasterError("Failed to create raster")
 
-    raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
-    #raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, pixelHeight))
-    
-    # Set the SRS
-    if not srs is None:
-        rasterSRS = loadSRS(srs)
-        raster.SetProjection( rasterSRS.ExportToWkt() )
-
-    # Fill the raster will zeros, null values, or initial values (if given)
-    band = raster.GetRasterBand(1)
-
-    if( not noDataValue is None):
-        band.SetNoDataValue(noDataValue)
-        if fillValue is None and data is None:
-            band.Fill(noDataValue)
-
-    if( data is None ):
-        if fillValue is None:
-            band.Fill(0)
-        else:
-            band.Fill(fillValue)
-            #band.WriteArray( np.zeros((rows,cols))+fillValue )
-    else:
-        # make sure dimension size is good
-        if not (data.shape[0]==rows and data.shape[1]==cols):
-            raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
+    # Do the rest in a "try" statement so that a failure wont bind the source
+    try:
+        raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+        #raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, pixelHeight))
         
-        # See if data needs flipping
-        if pixelHeight<0:
-            data=data[::-1,:]
+        # Set the SRS
+        if not srs is None:
+            rasterSRS = loadSRS(srs)
+            raster.SetProjection( rasterSRS.ExportToWkt() )
 
-        # Write it!
-        band.WriteArray( data )
+        # Fill the raster will zeros, null values, or initial values (if given)
+        band = raster.GetRasterBand(1)
 
-    band.FlushCache()
-    raster.FlushCache()
+        if( not noDataValue is None):
+            band.SetNoDataValue(noDataValue)
+            if fillValue is None and data is None:
+                band.Fill(noDataValue)
 
-    # Write MetaData, maybe
-    if not meta is None:
-        for k,v in meta.items():
-            raster.SetMetadataItem(k,v)
+        if( data is None ):
+            if fillValue is None:
+                band.Fill(0)
+            else:
+                band.Fill(fillValue)
+                #band.WriteArray( np.zeros((rows,cols))+fillValue )
+        else:
+            # make sure dimension size is good
+            if not (data.shape[0]==rows and data.shape[1]==cols):
+                raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
+            
+            # See if data needs flipping
+            if pixelHeight<0:
+                data=data[::-1,:]
 
-    # Return raster if in memory
-    if ( output is None): 
-        return raster
+            # Write it!
+            band.WriteArray( data )
 
-    # Calculate stats if data was given
-    #if(not data is None): 
-    #    calculateStats(raster)
-    
-    return
+        band.FlushCache()
+        raster.FlushCache()
+
+        # Write MetaData, maybe
+        if not meta is None:
+            for k,v in meta.items():
+                raster.SetMetadataItem(k,v)
+
+        # Return raster if in memory
+        if ( output is None): 
+            return raster
+
+        # Calculate stats if data was given
+        #if(not data is None): raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+        #raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, pixelHeight))
+        
+        # Set the SRS
+        if not srs is None:
+            rasterSRS = loadSRS(srs)
+            raster.SetProjection( rasterSRS.ExportToWkt() )
+
+        # Fill the raster will zeros, null values, or initial values (if given)
+        band = raster.GetRasterBand(1)
+
+        if( not noDataValue is None):
+            band.SetNoDataValue(noDataValue)
+            if fillValue is None and data is None:
+                band.Fill(noDataValue)
+
+        if( data is None ):
+            if fillValue is None:
+                band.Fill(0)
+            else:
+                band.Fill(fillValue)
+                #band.WriteArray( np.zeros((rows,cols))+fillValue )
+        else:
+            # make sure dimension size is good
+            if not (data.shape[0]==rows and data.shape[1]==cols):
+                raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
+            
+            # See if data needs flipping
+            if pixelHeight<0:
+                data=data[::-1,:]
+
+            # Write it!
+            band.WriteArray( data )
+
+        band.FlushCache()
+        raster.FlushCache()
+
+        # Write MetaData, maybe
+        if not meta is None:
+            for k,v in meta.items():
+                raster.SetMetadataItem(k,v)
+
+        # Return raster if in memory
+        if ( output is None): 
+            return raster
+
+        # Calculate stats if data was given
+        #if(not data is None): 
+        #    calculateStats(raster)
+        
+        return
+        #    calculateStats(raster)
+        
+        return
+
+    # Handle the fail case
+    except Exception as e:
+        raster = None
+        raise e
 
 ####################################################################
 # extract the raster as a matrix
@@ -984,7 +1041,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Image plotter (not really a raster thing, but it fits best here anyway)
-def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, **kwargs):
+def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, cbar=False, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Inputs:
@@ -1006,6 +1063,9 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
         yAtTop - True/False : Flag indicating that the data is in the typical y-index-starts-at-top orientation
             * If False, the data matrix will be flipped before plotting
 
+        cbar - True/False : Flag indicating whether or not to automatically add a colorbar
+            * Only operates when an axis has not been given
+
         **kwargs : Passed on to a call to matplotlib's imshow function
             * Determines the visual characteristics of the drawn image
 
@@ -1026,7 +1086,7 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
         except: # maybe bounds is an ExtentObject
             xMin,yMin,xMax,yMax = bounds.xyXY
 
-    # Set extent
+    # Set extentdraw
     extent = (xMin,xMax,yMin,yMax)
     
     # handle flipped data
@@ -1038,7 +1098,7 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, bar=False, 
 
     # Done!
     if showPlot:
-        if bar: plt.colorbar(h)
+        if cbar: plt.colorbar(h)
 
         ax.set_aspect('equal')
         ax.autoscale(enable=True)

@@ -77,21 +77,20 @@ def test_extractValues():
 
     # test simple case
     v1 = extractValues(CLC_RASTER_PATH, points)
-
-    for v, real in zip(v1, realValue): 
-        if not (v.data==real) : 
+    for v, real in zip(v1.itertuples(), realValue): 
+        if not (v.data == real) : 
             error("extractValues 1")
-    for v, real in zip(v1, realDiffs): 
+    for v, real in zip(v1.itertuples(), realDiffs): 
         if not ( isclose(v.xOffset,real[0]) or isclose(v.yOffset,real[1])): 
             error("extractValues 1")
 
     # test flipped 
     v2 = extractValues(CLC_FLIPCHECK_PATH, points)
 
-    for v, real in zip(v2, realValue): 
+    for v, real in zip(v2.itertuples(), realValue): 
         if not (v.data==real) : 
             error("extractValues 2")
-    for v, real in zip(v2, realDiffs): 
+    for v, real in zip(v2.itertuples(), realDiffs): 
         if not ( isclose(v.xOffset,real[0]) or isclose(v.yOffset,real[1])): 
             error("extractValues 2")
 
