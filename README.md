@@ -22,7 +22,7 @@ First clone a local copy of the repository to your computer
 	
 Then install GeoKit via pip as follow
 	
-	cd tsam
+	cd geokit
 	pip install .
 	
 Or install directly via python as 
