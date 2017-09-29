@@ -150,7 +150,7 @@ def vectorInfo(source):
 ####################################################################
 # Iterable to loop over vector items
 Feature = namedtuple("Feature", "geom attr")
-def extractFeatures(source, geom=None, where=None, outputSRS=None):
+def extractFeatures(source, geom=None, where=None, outputSRS=None, returnGeom=True, returnAttr=True):
     """Creates a generator which extracte the features contained within the source
     
     * Iteravely returns (feature-geometry, feature-fields)    
@@ -173,6 +173,10 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None):
         where - str : An SQL-style where statement
 
         outputSRS : An SRS which instructs the function to output the feature's geometries in a particular SRS
+        
+        returnGeom : True/False flag determining whether the feature geometry is returned or not
+
+        returnAttr : True/False flag determining whether the feature attributes are returned or not
     
     Examples:
         - If you wanted to iterate over features in a source which have an attribute called 'color' 
@@ -202,7 +206,14 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None):
         if ( not trx is None): oGeom.Transform(trx)
         oItems = ftr.items().copy()
 
-        yield Feature(oGeom, oItems)
+        if returnGeom and returnAttr:
+            yield Feature(oGeom, oItems)
+        elif returnGeom: 
+            yield oGeom
+        elif returnAttr: 
+            yield oItems
+        else:
+            raise GeoKitVectorError("Either returnGeom or returnAttr must be True")
 
 def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
     """convenience function to get a single geometry from a source using extractFeatures
