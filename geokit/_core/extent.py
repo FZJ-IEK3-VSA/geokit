@@ -188,7 +188,7 @@ class Extent(object):
             * Can also accept a negative padding
         """
         # Check for no input pads
-        if pad is None or pad == 0 or pad == (0,0): return s
+        if pad is None: return s
         
         # try breaking apart by x and y component
         try: 
