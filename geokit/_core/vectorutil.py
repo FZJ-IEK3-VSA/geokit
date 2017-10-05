@@ -229,7 +229,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
         getter = extractFeatures(source, geom, where, outputSRS)
 
         # Get first result
-        geom,attr = next(getter)
+        fGeom, fAttr = next(getter)
 
         # try to get a second result
         try:
@@ -243,16 +243,16 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
         lyr = ds.GetLayer()
         ftr = lyr.GetFeature(feature)
 
-        geom = ftr.GetGeometryRef().Clone()
-        attr = ftr.items().copy()
+        fGeom = ftr.GetGeometryRef().Clone()
+        fAttr = ftr.items().copy()
 
     if(not outputSRS is None):
         outputSRS = loadSRS(outputSRS)
-        if (not geom.GetGeometryRef().IsSame(outputSRS)):
-            geom.TransformTo( outputSRS )
+        if (not fGeom.GetSpatialReference().IsSame(outputSRS)):
+            fGeom.TransformTo( outputSRS )
 
     # Done!
-    return Feature(geom,attr)    
+    return Feature(fGeom,fAttr)    
 
 ####################################################################
 # Create a vector
