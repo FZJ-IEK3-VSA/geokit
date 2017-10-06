@@ -10,6 +10,7 @@ import geokit.raster
 import geokit.vector
 
 # import the main objects
+from geokit._core.location import Location, ensureLocation
 from geokit._core.extent import Extent
 from geokit._core.regionmask import RegionMask
 

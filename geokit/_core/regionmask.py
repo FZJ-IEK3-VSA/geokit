@@ -607,6 +607,41 @@ class RegionMask(object):
         return out
 
     ##############################################################################    
+    # Clip a vector file to the region
+    def clip(s, source, outputSRS='self', clipToExtent=False, **kwargs):
+        """Clip a vector file to only those which lie in the region
+        
+        Returns the same as geokit.vector.extractFeatures, based off the kwargs
+        
+        Inputs:
+            source : The vector source to extract from
+                - path : A path on the file system
+                - ogr Dataset
+
+            outputSRS : The outputSRS to use for the reported geometries
+                * If 'self', the RegionMask's SRS is used
+                * If None, the source's original SRS is used
+                * Otherwise, any normal SRS input applies
+
+            clipToExtent : T/F determining if the geometries which intersect just the RegionMask's geometry, or the RegionMask's extent
+
+            kwargs: 
+                * All kwargs are passed on to geokit.vector.extractFeatures
+        """
+        if outputSRS=='self': 
+            kwargs["outputSRS"]=s.srs
+        else:
+            kwargs["outputSRS"]=outputSRS
+        
+        if clipToExtent: 
+            kwargs["geom"] = s.extent.box
+        else: 
+            kwargs["geom"] = s.geometry
+
+        return extractFeatures(source, **kwargs)
+
+
+    ##############################################################################    
     # Warp raster onto region
     def warp(s, source, dtype=None, resampleAlg='bilinear', noDataValue=None, applyMask=True, resolutionDiv=1, **kwargs):
         """Warp a given raster source onto the RM's extent and resolution

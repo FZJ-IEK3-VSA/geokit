@@ -150,7 +150,7 @@ def vectorInfo(source):
 ####################################################################
 # Iterable to loop over vector items
 Feature = namedtuple("Feature", "geom attr")
-def extractFeatures(source, geom=None, where=None, outputSRS=None, returnGeom=True, returnAttr=True):
+def extractFeatures(source, geom=None, where=None, outputSRS=None, onlyGeom=False, onlyAttr=False):
     """Creates a generator which extracte the features contained within the source
     
     * Iteravely returns (feature-geometry, feature-fields)    
@@ -174,9 +174,9 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None, returnGeom=Tr
 
         outputSRS : An SRS which instructs the function to output the feature's geometries in a particular SRS
         
-        returnGeom : True/False flag determining whether the feature geometry is returned or not
-
-        returnAttr : True/False flag determining whether the feature attributes are returned or not
+        onlyGeom : True/False flag determining whether or not only the feature geometry is returned
+        onlyAttr : True/False flag determining whether or not only the feature attributes are returned
+            * If both onlyGeom and onlyAttr are false, a namedtuple is returned containing both
     
     Examples:
         - If you wanted to iterate over features in a source which have an attribute called 'color' 
@@ -206,16 +206,15 @@ def extractFeatures(source, geom=None, where=None, outputSRS=None, returnGeom=Tr
         if ( not trx is None): oGeom.Transform(trx)
         oItems = ftr.items().copy()
 
-        if returnGeom and returnAttr:
-            yield Feature(oGeom, oItems)
-        elif returnGeom: 
+        if onlyGeom:
             yield oGeom
-        elif returnAttr: 
+        elif onlyAttr: 
             yield oItems
         else:
-            raise GeoKitVectorError("Either returnGeom or returnAttr must be True")
+            yield Feature(oGeom, oItems)
+        
 
-def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
+def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None, onlyGeom=False, onlyAttr=False):
     """convenience function to get a single geometry from a source using extractFeatures
     
     Returns a tuple containing:
@@ -252,7 +251,12 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None):
             fGeom.TransformTo( outputSRS )
 
     # Done!
-    return Feature(fGeom,fAttr)    
+    if onlyGeom:
+        return fGeom
+    elif onlyAttr: 
+        return fItems
+    else:
+        return Feature(fGeom, fItems)
 
 ####################################################################
 # Create a vector

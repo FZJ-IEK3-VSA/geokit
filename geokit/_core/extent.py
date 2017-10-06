@@ -375,8 +375,12 @@ class Extent(object):
                 pts = pts.Clone()
                 pts.TransformTo(s.srs)
 
-            return s.box.Contains(pts)
-        
+            return box.Contains(pts)
+
+        # Handle a Location object
+        elif isinstance(pts, Location):
+            return box.Contains( pts.asGeom(srs=s.srs) )
+
         # handle an x,y tuple
         elif isinstance(pts, tuple):
             pts = makePoint(*pts,srs=pointSRS)
@@ -387,7 +391,10 @@ class Extent(object):
 
         # Handle something iterable
         else:
-            if not isinstance(pts[0], ogr.Geometry):
+            if isinstance(pts[0], Location):
+                pts = [pt.geom for pt in pts]
+
+            elif not isinstance(pts[0], ogr.Geometry):
                 pts = [makePoint(*pt, srs=pointSRS) for pt in pts]
 
             if not s.srs.IsSame(pts[0].GetSpatialReference()):

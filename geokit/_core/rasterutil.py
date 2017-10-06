@@ -1,6 +1,7 @@
 from .util import *
 from .srsutil import *
 from .geomutil import *
+from .location import *
 
 ####################################################################
 # INTERNAL FUNCTIONS
@@ -624,12 +625,14 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     # Ensure we have a list of point geometries
     def loadPoint(pt,s):
-        """GeoKit internal. Shortcut for making points"""
         if isinstance(pt,ogr.Geometry):
             if pt.GetGeometryName()!="POINT":
                 raise GeoKitGeomError("Invalid geometry given")
             return pt
 
+        if isinstance(pt, Location):
+            return pt.geom
+    
         tmpPt = ogr.Geometry(ogr.wkbPoint)
         tmpPt.AddPoint(*pt)
         tmpPt.AssignSpatialReference(s)
@@ -780,7 +783,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
         
         """
     # Determine what the user probably wants as an output
-    if isinstance(points, tuple) or isinstance(points, ogr.Geometry):
+    if isinstance(points, tuple) or isinstance(points, ogr.Geometry) or isinstance(points, Location):
         asSingle=True
         points = [points, ] # make points a list of length 1 so that the rest works (will be unpacked later)
     else: # Assume points is already an iterable of some sort
@@ -1209,3 +1212,4 @@ def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shr
     flatGeoms = np.array(flatGeoms)
 
     return PolygonizeResult(flatGeoms, flatValues)
+    

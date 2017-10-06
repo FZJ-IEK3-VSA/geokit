@@ -26,6 +26,7 @@ if(not res==0 ):
 class GeoKitError(Exception): pass
 class GeoKitSRSError(GeoKitError): pass
 class GeoKitGeomError(GeoKitError): pass
+class GeoKitLocationError(GeoKitError): pass
 class GeoKitRasterError(GeoKitError): pass
 class GeoKitVectorError(GeoKitError): pass
 class GeoKitExtentError(GeoKitError): pass
