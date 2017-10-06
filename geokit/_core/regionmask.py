@@ -5,6 +5,8 @@ from .rasterutil import *
 from .vectorutil import *
 from .extent import Extent
 
+from io import BytesIO
+
 MaskAndExtent = namedtuple("MaskAndExtent", "mask extent id")
 class RegionMask(object):
     """The RegionMask object represents a given region and exposes methods allowing for easy
@@ -502,6 +504,30 @@ class RegionMask(object):
         if(s._geometry is None): s.buildGeometry()
 
         return s._geometry.Clone()
+
+    def _repr_svg_(s):
+        if(not hasattr(s,"svg")):
+            f = BytesIO()
+
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(4,4))
+            ax = plt.subplot(111)
+
+            g = s.geometry
+            xMin,xMax,yMin,yMax = g.GetEnvelope()
+            spread = min( abs(xMax-xMin), abs(yMax-yMin) )
+            h=drawGeoms(g, simplification=spread/250, ax=ax)
+
+            ax.set_aspect('equal')
+            ax.autoscale(enable=True)
+            ax.axis('off')
+            plt.tight_layout()
+            plt.savefig(f, format="svg", dpi=100)
+
+            f.seek(0)
+            s.svg = f.read().decode('ascii')
+
+        return s.svg
 
     def drawMask( s, **kwargs):
         """Draw the region on a matplotlib figure
