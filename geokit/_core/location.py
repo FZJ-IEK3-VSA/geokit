@@ -6,7 +6,7 @@ import types
 
 LocationNT = namedtuple("Location", "lon lat")
 class Location(object):
-    _e = 1e-6
+    _e = 1e-5
     def __init__(s, lon, lat): 
         s.lat=lat
         s.lon=lon
@@ -28,7 +28,7 @@ class Location(object):
         return not(s==o)
 
     def __str__(s):
-        return "%8f,%8f"%(s.lon,s.lat)
+        return "Location(%.5f,%.5f)"%(s.lon,s.lat)
 
     def __repr__(s):
         return "lat: %8f    lon: %8f"%(s.lat,s.lon)

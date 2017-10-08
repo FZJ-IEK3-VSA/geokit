@@ -639,7 +639,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
         
         return tmpPt
     
-    if isinstance(points, tuple) or isinstance(points, ogr.Geometry): # check for an individual point input
+    if  isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry): # check for an individual point input
         asSingle = True
         points = [loadPoint( points, pointSRS), ]
     else: # assume points is iterable
