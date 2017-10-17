@@ -22,11 +22,21 @@ Therefore, it is our pleasure to offer it to anyone who is interested in its use
 First clone a local copy of the repository to your computer
 
 	git clone https://github.com/FZJ-IEK3-VSA/geokit.git
+
+Be sure GDAL and netCDF4 are previously installed
+	* If using Anaconda, this can be accomplished via:
+
+	conda install -c conda-forge gdal>=2.0.0 netCDF4
+
+!For Windows users! 
+	* A path variable will need to be set to tell the system where to find the GDAL dependancies
+	* Path variables name must be: "GDAL_DATA"
+	* When installed with Anaconda, path should be: "<anaconda-top-directory>\Library\share\gdal"
 	
 Then install GeoKit via pip as follow
 	
 	cd geokit
-	pip install .
+	pip install -e .
 	
 Or install directly via python as 
 
@@ -39,18 +49,12 @@ Detailed examples of GeoKit's capabilities will be added soon.
 
 ## License
 
-!!!!!!!!!!!!!!!!!!! I NEED TO DO THIS TOO !!!!!!!!!!!!!!!!!!!!!!!!!
+MIT License
 
+Copyright (c) 2017 David Severin Ryberg (FZJ IEK-3), Jochen Linßen (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
 
-Copyright (C) 2016-2017 Leander Kotzur (FZJ IEK-3), Peter Markewitz (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>
+You should have received a copy of the MIT License along with this program.  
+If not, see <https://opensource.org/licenses/MIT>
 
 ## About Us 
 <a href="http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html"><img src="http://fz-juelich.de/SharedDocs/Bilder/IEK/IEK-3/Abteilungen2015/VSA_DepartmentPicture_2017.jpg?__blob=normal" alt="Abteilung VSA"></a> 
