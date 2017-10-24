@@ -68,7 +68,7 @@ def box(*args, srs=None):
         ring.AddPoint(x,y)
 
     outBox.AddGeometry(ring)
-    if(srs): 
+    if(not srs is None): 
         srs = loadSRS(srs)
         outBox.AssignSpatialReference(srs)
     return outBox
@@ -115,14 +115,14 @@ def polygon(outerRing, *args, srs=None):
     # Make the outer ring
     otr = ogr.Geometry(ogr.wkbLinearRing)
     if not srs is None: otr.AssignSpatialReference(srs)
-    [otr.AddPoint(x,y) for x,y in outerRing]
+    [otr.AddPoint(float(x),float(y)) for x,y in outerRing]
     g.AddGeometry(otr)
 
     # Make the inner rings (maybe)
     for innerRing in args:
         tmp = ogr.Geometry(ogr.wkbLinearRing)
         if not srs is None: tmp.AssignSpatialReference(srs)
-        [tmp.AddPoint(x,y) for x,y in innerRing]
+        [tmp.AddPoint(float(x),float(y)) for x,y in innerRing]
 
         g.AddGeometry(tmp)
         
