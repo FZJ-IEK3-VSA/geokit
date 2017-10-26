@@ -228,7 +228,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None, 
         getter = extractFeatures(source, geom, where, outputSRS)
 
         # Get first result
-        fGeom, fAttr = next(getter)
+        fGeom, fItems = next(getter)
 
         # try to get a second result
         try:
@@ -243,7 +243,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None, 
         ftr = lyr.GetFeature(feature)
 
         fGeom = ftr.GetGeometryRef().Clone()
-        fAttr = ftr.items().copy()
+        fItems = ftr.items().copy()
 
     if(not outputSRS is None):
         outputSRS = loadSRS(outputSRS)
