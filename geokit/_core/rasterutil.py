@@ -582,7 +582,7 @@ def rasterInfo(sourceDS):
 
 ####################################################################
 # extract specific points in a raster
-ptValue = namedtuple('value',"data xOffset yOffset")
+ptValue = namedtuple('value',"data xOffset yOffset inBounds")
 def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True):
     """Extracts the value of a raster at a given point or collection of points. Can also extract a window of values if 
        desired
@@ -716,9 +716,9 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     # Done!
     if asSingle: # A single point was given, so return a single result
-        return ptValue(values[0], xOffset[0], yOffset[0])
+        return ptValue(values[0], xOffset[0], yOffset[0], inBounds[0])
     else:
-        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset))
+        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds))
 
 ####################################################################
 # Shortcut for getting just the raster value
