@@ -674,31 +674,40 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     yStarts = yIndexes-winRange
     window = 2*winRange+1
 
-    if xStarts.min()<0 or yStarts.min()<0 or (xStarts.max()+window)>info.xWinSize or (yStarts.max()+window)>info.yWinSize:
-        raise GeoKitRasterError("One of the given points (or extraction windows) exceeds the source's limits")
+    inBounds = xStarts>0
+    inBounds = inBounds & (yStarts>0)
+    inBounds = inBounds & (xStarts+window<info.xWinSize)
+    inBounds = inBounds & (yStarts+window<info.yWinSize)
+
+    if (~inBounds).any():
+        print("WARNING: One of the given points (or extraction windows) exceeds the source's limits")
 
     # Read values
     values = []
     band = source.GetRasterBand(1)
 
-    for xi,yi in zip(xStarts, yStarts):
-        # Open and read from raster
-        data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
+    for xi,yi,ib in zip(xStarts, yStarts, inBounds):
+        if not ib:
+            data = np.zeros((window,window))
+            data[:,:] = np.nan
+        else:
+            # Open and read from raster
+            data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
 
-        # Look for nodata
-        if not info.noData is None:
-            nodata = data == info.noData
-            if nodata.any():
-                if noDataOkay:
-                    # data will neaed to be a float type to represent a nodata value
-                    data = data.astype(np.float64)
-                    data[nodata] = np.nan
-                else:
-                    raise GeoKitRasterError("No data values found in extractValues with 'noDataOkay' set to False")
+            # Look for nodata
+            if not info.noData is None:
+                nodata = data == info.noData
+                if nodata.any():
+                    if noDataOkay:
+                        # data will neaed to be a float type to represent a nodata value
+                        data = data.astype(np.float64)
+                        data[nodata] = np.nan
+                    else:
+                        raise GeoKitRasterError("No data values found in extractValues with 'noDataOkay' set to False")
 
-        # flip if not in the 'flipped-y' orientation
-        if not info.yAtTop:
-            data=data[::-1,:]
+            # flip if not in the 'flipped-y' orientation
+            if not info.yAtTop:
+                data=data[::-1,:]
 
         if winRange==0: data=data[0][0] # If winRange is 0, theres no need to return a 2D matrix
 
