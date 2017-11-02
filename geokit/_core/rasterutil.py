@@ -299,21 +299,16 @@ def createRasterLike( rasterInfo, **kwargs):
           dtype, srs, noData, and meta. 
         * Any keyword argument which is given will override values found in the rasterInfo"""
 
-    bounds = kwargs.get("bounds", rasterInfo.bounds)
-    output = kwargs.get("output", None)
-    pixelWidth = kwargs.get("pixelWidth", rasterInfo.pixelWidth)
-    pixelHeight = kwargs.get("pixelHeight", rasterInfo.pixelHeight)
-    dtype = kwargs.get("dtype", rasterInfo.dtype)
-    srs = kwargs.get("srs", rasterInfo.srs)
-    compress = kwargs.get("compress", True)
-    noData = kwargs.get("noData", rasterInfo.noData)
-    overwrite = kwargs.get("overwrite", False)
-    fill = kwargs.get("fill", None)
-    data = kwargs.get("data", None)
-    meta = kwargs.get("meta", rasterInfo.meta)
+    bounds = kwargs.pop("bounds", rasterInfo.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", rasterInfo.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", rasterInfo.pixelHeight)
+    dtype = kwargs.pop("dtype", rasterInfo.dtype)
+    srs = kwargs.pop("srs", rasterInfo.srs)
+    noData = kwargs.pop("noData", rasterInfo.noData)
+    meta = kwargs.pop("meta", rasterInfo.meta)
 
-    return createRaster( bounds, output=output, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs, 
-                         compress=compress, noData=noData, overwrite=overwrite, fill=fill, data=data, meta=meta, **kwargs):
+    return createRaster( bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs, 
+                         noData=noData, meta=meta, **kwargs)
 
 
 
