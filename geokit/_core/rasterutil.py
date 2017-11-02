@@ -291,6 +291,32 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         raster = None
         raise e
 
+
+def createRasterLike( rasterInfo, **kwargs):
+    """Create a raster described by the given raster info (as returned from a call to rasterInfo() ). 
+
+        * This copies all characteristics of the given raster, including: bounds, pixelWidth, pixelHeight, 
+          dtype, srs, noData, and meta. 
+        * Any keyword argument which is given will override values found in the rasterInfo"""
+
+    bounds = kwargs.get("bounds", rasterInfo.bounds)
+    output = kwargs.get("output", None)
+    pixelWidth = kwargs.get("pixelWidth", rasterInfo.pixelWidth)
+    pixelHeight = kwargs.get("pixelHeight", rasterInfo.pixelHeight)
+    dtype = kwargs.get("dtype", rasterInfo.dtype)
+    srs = kwargs.get("srs", rasterInfo.srs)
+    compress = kwargs.get("compress", None)
+    noData = kwargs.get("noData", rasterInfo.noData)
+    overwrite = kwargs.get("overwrite", False)
+    fill = kwargs.get("fill", None)
+    data = kwargs.get("data", None)
+    meta = kwargs.get("meta", rasterInfo.meta)
+
+    return createRaster( bounds, output=output, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs, 
+                         compress=compress, noData=noData, overwrite=overwrite, fill=fill, data=data, meta=meta, **kwargs):
+
+
+
 ####################################################################
 # extract the raster as a matrix
 def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
