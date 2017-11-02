@@ -305,7 +305,7 @@ def createRasterLike( rasterInfo, **kwargs):
     pixelHeight = kwargs.get("pixelHeight", rasterInfo.pixelHeight)
     dtype = kwargs.get("dtype", rasterInfo.dtype)
     srs = kwargs.get("srs", rasterInfo.srs)
-    compress = kwargs.get("compress", None)
+    compress = kwargs.get("compress", True)
     noData = kwargs.get("noData", rasterInfo.noData)
     overwrite = kwargs.get("overwrite", False)
     fill = kwargs.get("fill", None)
