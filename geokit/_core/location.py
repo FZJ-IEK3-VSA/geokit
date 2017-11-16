@@ -2,9 +2,10 @@ from .util import *
 from .srsutil import *
 from .geomutil import *
 import types
+import re
 
+LocationMatcher = re.compile("Location\((?P<lon>[0-9.]{1,}),(?P<lat>[0-9.]{1,})\)")
 
-LocationNT = namedtuple("Location", "lon lat")
 class Location(object):
     _e = 1e-5
     def __init__(s, lon, lat): 
@@ -32,6 +33,15 @@ class Location(object):
 
     def __repr__(s):
         return "lat: %8f    lon: %8f"%(s.lat,s.lon)
+
+    @staticmethod
+    def fromString(s):
+        m = LocationMatcher.search(s)
+        if m is None: raise GeoKitLocationError("string does not match Location specification")
+
+        lon,lat = m.groups()
+        return Location(lon=float(lon),lat=float(lat))
+
 
     @staticmethod
     def fromPointGeom(g):
@@ -69,11 +79,19 @@ class Location(object):
         if isinstance(locations, Location): output = locations
         elif isinstance(locations, ogr.Geometry): # Check if loc is a single point
             output = Location.fromPointGeom(locations)
-        elif isinstance(locations, tuple) and len(locations)==2:
+        elif (isinstance(locations, tuple) or isinstance(locations, list)) and len(locations)==2:
             if srs is None:
                 output = Location(lon=locations[0], lat=locations[1])
             else:
-                output = Location.fromXY(locations[0], locations[1], srs=srs)
+                output = Location.fromXY(lon=locations[0], lat=locations[1], srs=srs)
+
+        elif isinstance(locations, np.ndarray) and locations.shape[1]==2:
+            if srs is None:
+                output = np.array([Location(lon=loc[0], lat=loc[1]) for loc in locations])
+            else:
+                output = np.array([Location.fromXY(lon=loc[0], lat=loc[1], srs=srs) for loc in locations])
+
+            if output.shape[0]==1: output = output[0]
 
         elif isinstance(locations, list) or isinstance(locations, np.ndarray):
             if isinstance(locations[0], Location): output = locations
@@ -83,7 +101,7 @@ class Location(object):
             output = Location.ensureLocation(list(locations))
 
         else:
-            raise GeoKitLocationError("Cannot understand location input. Use either a Location or an ogr.Geometry object")
+            raise GeoKitLocationError("Cannot understand location input. Use either a Location, tuple, list, or an ogr.Geometry object")
 
         # Done!
         if forceAsArray:
