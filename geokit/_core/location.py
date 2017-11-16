@@ -4,7 +4,7 @@ from .geomutil import *
 import types
 import re
 
-LocationMatcher = re.compile("Location\((?P<lon>[0-9.]{1,}),(?P<lat>[0-9.]{1,})\)")
+LocationMatcher = re.compile("\((?P<lon>[0-9.-]{1,}),(?P<lat>[0-9.-]{1,})\)")
 
 class Location(object):
     _e = 1e-5
@@ -32,18 +32,21 @@ class Location(object):
         return not(s==o)
 
     def __str__(s):
-        return "Location(%.5f,%.5f)"%(s.lon,s.lat)
+        return "(%.5f,%.5f)"%(s.lon,s.lat)
 
     def __repr__(s):
-        return "lat: %8f    lon: %8f"%(s.lat,s.lon)
+        return s.__str__()
 
     @staticmethod
-    def fromString(s):
+    def fromString(s, srs=None):
         m = LocationMatcher.search(s)
         if m is None: raise GeoKitLocationError("string does not match Location specification")
 
         lon,lat = m.groups()
-        return Location(lon=float(lon),lat=float(lat))
+        if srs is None:
+            return Location(lon=float(lon),lat=float(lat))
+        else:
+            return Location.fromXY(lon=float(lon),lat=float(lat),srs=srs)
 
 
     @staticmethod
@@ -87,44 +90,31 @@ class Location(object):
     @staticmethod
     def ensureLocation(locations, srs=None, forceAsArray=False):
         if isinstance(locations, Location): output = locations
+
         elif isinstance(locations, ogr.Geometry): # Check if loc is a single point
             output = Location.fromPointGeom(locations)
+        
+        elif isinstance(locations, str):
+            output = Location.fromString(locations.geom)
+        
         elif isinstance(locations, Feature):
             output = Location.ensureLocation(locations.geom)
-        elif (isinstance(locations, tuple) or isinstance(locations, list)) and len(locations)==2:
+        
+        elif (isinstance(locations, tuple) or isinstance(locations, list) or isinstance(locations, np.ndarray)) and len(locations)==2:
             if srs is None:
                 output = Location(lon=locations[0], lat=locations[1])
             else:
                 output = Location.fromXY(lon=locations[0], lat=locations[1], srs=srs)
 
-        elif isinstance(locations, list) or ( isinstance(locations, np.ndarray) and len(locations.shape)==1):
-            if isinstance(locations[0], Location): output = locations # if the first item is a Location, assume they all are
-            else: output = np.array([Location.ensureLocation(l) for l in locations])
-
-        elif isinstance(locations, np.ndarray) and locations.shape[1]==2:
-            if srs is None:
-                output = np.array([Location(lon=loc[0], lat=loc[1]) for loc in locations])
-            else:
-                output = np.array([Location.fromXY(lon=loc[0], lat=loc[1], srs=srs) for loc in locations])
-
-            if output.shape[0]==1: output = output[0]
-
-        elif isinstance(locations, types.GeneratorType):
-            output = np.array([Location.ensureLocation(loc) for loc in locations])
-            if output.shape[0]==1: output = output[0]
-        else:
-            print(locations)
-            raise GeoKitLocationError("Cannot understand location input. Use either a Location, tuple, list, or an ogr.Geometry object")
+        else: # Assume iteratable
+            try:
+                output = np.array([Location.ensureLocation(l, srs=srs) for l in locations])
+            except:
+                raise GeoKitLocationError("Could not understand location input")
 
         # Done!
         if forceAsArray:
-            if isinstance(output, np.ndarray): return output
-            
-            if not isinstance(output, list): output = [output,]
-
-            finalOut = np.ndarray(shape=len(output),dtype=np.object)
-            for i,l in enumerate(output): finalOut[i]=l
-
-            return finalOut
-        else:
-            return output
+            if isinstance(output, np.ndarray): pass
+            else:
+                output = np.array([output, ])
+        return output
