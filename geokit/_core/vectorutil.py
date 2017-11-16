@@ -149,7 +149,6 @@ def vectorInfo(source):
 
 ####################################################################
 # Iterable to loop over vector items
-Feature = namedtuple("Feature", "geom attr")
 def extractFeatures(source, geom=None, where=None, outputSRS=None, onlyGeom=False, onlyAttr=False):
     """Creates a generator which extracte the features contained within the source
     

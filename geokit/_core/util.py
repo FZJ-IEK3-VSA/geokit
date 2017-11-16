@@ -219,3 +219,7 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     del band
     raster.FlushCache()
     return raster
+
+
+### Helpful classes
+Feature = namedtuple("Feature", "geom attr")
