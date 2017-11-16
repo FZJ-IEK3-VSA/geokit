@@ -9,8 +9,11 @@ LocationMatcher = re.compile("Location\((?P<lon>[0-9.]{1,}),(?P<lat>[0-9.]{1,})\
 class Location(object):
     _e = 1e-5
     def __init__(s, lon, lat): 
+        if not isinstance(lat,float): raise GeoKitLocationError("lat input is not a float")
+        if not isinstance(lon,float): raise GeoKitLocationError("lon input is not a float")
         s.lat=lat
         s.lon=lon
+        s._geom=None
 
     def __hash__(s): # I need this to make pandas indexing work when location objects are used as columns and indexes
         return hash((int(s.lon/s._e), int(s.lat/s._e)))
@@ -61,7 +64,8 @@ class Location(object):
     def latlon(s): return s.lat,s.lon
 
     def asGeom(s,srs='latlon'):
-        return transform(s.geom.Clone(), toSRS=srs)
+        g = s.geom
+        return transform(g, toSRS=srs)
 
     def asXY(s,srs=3035): 
         g = s.asGeom(srs=srs)
@@ -69,21 +73,33 @@ class Location(object):
 
     @property
     def geom(s):
-        try: return s._geom
-        except:
+        if s._geom is None: 
             s._geom = point(s.lon,s.lat,srs=EPSG4326)
-            return s._geom
+        return s._geom
+            
+    @staticmethod
+    def makePickleable(loc):
+        if isinstance(loc,Location):
+            loc._geom = None
+        else: 
+            [Location.makePickleable(l) for l in loc]
 
     @staticmethod
     def ensureLocation(locations, srs=None, forceAsArray=False):
         if isinstance(locations, Location): output = locations
         elif isinstance(locations, ogr.Geometry): # Check if loc is a single point
             output = Location.fromPointGeom(locations)
+        elif isinstance(locations, Feature):
+            output = Location.ensureLocation(locations.geom)
         elif (isinstance(locations, tuple) or isinstance(locations, list)) and len(locations)==2:
             if srs is None:
                 output = Location(lon=locations[0], lat=locations[1])
             else:
                 output = Location.fromXY(lon=locations[0], lat=locations[1], srs=srs)
+
+        elif isinstance(locations, list) or ( isinstance(locations, np.ndarray) and len(locations.shape)==1):
+            if isinstance(locations[0], Location): output = locations # if the first item is a Location, assume they all are
+            else: output = np.array([Location.ensureLocation(l) for l in locations])
 
         elif isinstance(locations, np.ndarray) and locations.shape[1]==2:
             if srs is None:
@@ -93,14 +109,11 @@ class Location(object):
 
             if output.shape[0]==1: output = output[0]
 
-        elif isinstance(locations, list) or isinstance(locations, np.ndarray):
-            if isinstance(locations[0], Location): output = locations
-            else: output = [Location.ensureLocation(l) for l in locations]
-
         elif isinstance(locations, types.GeneratorType):
-            output = Location.ensureLocation(list(locations))
-
+            output = np.array([Location.ensureLocation(loc) for loc in locations])
+            if output.shape[0]==1: output = output[0]
         else:
+            print(locations)
             raise GeoKitLocationError("Cannot understand location input. Use either a Location, tuple, list, or an ogr.Geometry object")
 
         # Done!
