@@ -95,7 +95,7 @@ class Location(object):
             output = Location.fromPointGeom(locations)
         
         elif isinstance(locations, str):
-            output = Location.fromString(locations.geom)
+            output = Location.fromString(locations)
         
         elif isinstance(locations, Feature):
             output = Location.ensureLocation(locations.geom)

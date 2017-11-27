@@ -1070,7 +1070,7 @@ class RegionMask(object):
             geom = list(geom)
 
         # Make a vector dataset
-        ds = createVector(geoms)
+        ds = createVector(geom)
 
         # Indicate features
         return s.indicateFeatures(ds, **kwargs)
