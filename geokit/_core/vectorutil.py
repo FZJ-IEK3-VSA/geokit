@@ -257,6 +257,24 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None, 
     else:
         return Feature(fGeom, fItems)
 
+def extractAsDataFrame(source, **kwargs):
+    """Extracts a vector source and formats it as a Pandas DataFrame
+
+    * All kwargs are passes on to extractFeatures
+        - Useful for filtering or to set the outputSRS
+        - Do not use 'onlyGeoms' or 'onlyAttr'!
+    """
+    fields = defaultdict(list)
+    fields["geom"] = []
+    for g,a in extractFeatures(source, **kwargs):
+        fields["geom"].append(g.Clone())
+        for k,v in a.items():
+            fields[k].append(v)
+
+    df = pd.DataFrame(fields)
+    return df
+
+
 ####################################################################
 # Create a vector
 def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, overwrite=False):
