@@ -465,7 +465,7 @@ def flatten( geoms ):
         geoms = newGeoms
     return geoms[0]
 
-def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
+def drawGeoms(geoms, ax=None, srs=None, simplification=None, autoScale=True, **mplargs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -498,6 +498,8 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
             * float
             - Units are the same as the 'srs' input
             - Using this will make plotting easier and use less resources
+
+        autoScale - T/F : Flags whether or not to autoscale the resulting plot
 
         **mplargs : matplotlib keyword arguments to apply to each geometry
             * Specified keyword arguments for each geometry inherit from mplargs 
@@ -645,12 +647,14 @@ def drawGeoms(geoms, ax=None, srs=None, simplification=None, **mplargs):
     handels.extend([ax.plot( *xy, **kwargs) for xy, kwargs in zip(points, pointParams) ])
 
     # done!
-    if showPlot: 
+    if autoScale:
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
-        plt.show()
 
-    else: return handels
+    if showPlot: 
+        plt.show()
+    else: 
+        return handels
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
     """Partition a Polygon into some number of pieces whose areas should be close to the targetArea
