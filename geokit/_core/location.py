@@ -88,7 +88,7 @@ class Location(object):
             [Location.makePickleable(l) for l in loc]
 
     @staticmethod
-    def ensureLocation(locations, srs=None, forceAsArray=False):
+    def ensureLocation(locations, srs=None, forceAsArray=False, isiterable=False):
         if isinstance(locations, Location): output = locations
 
         elif isinstance(locations, ogr.Geometry): # Check if loc is a single point
@@ -100,12 +100,14 @@ class Location(object):
         elif isinstance(locations, Feature):
             output = Location.ensureLocation(locations.geom)
         
-        elif (isinstance(locations, tuple) or isinstance(locations, list) or isinstance(locations, np.ndarray)) and len(locations)==2:
-            if srs is None:
-                output = Location(lon=locations[0], lat=locations[1])
-            else:
-                output = Location.fromXY(lon=locations[0], lat=locations[1], srs=srs)
-
+        elif not isiterable and ((isinstance(locations, tuple) or isinstance(locations, list) or isinstance(locations, np.ndarray))) and len(locations)==2:
+            try:
+                if srs is None:
+                    output = Location(lon=locations[0], lat=locations[1])
+                else:
+                    output = Location.fromXY(lon=locations[0], lat=locations[1], srs=srs)
+            except:
+                output = Location.ensureLocation(locations, srs=srs, forceAsArray=forceAsArray, isiterable=True)
         else: # Assume iteratable
             try:
                 output = np.array([Location.ensureLocation(l, srs=srs) for l in locations])
