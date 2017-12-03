@@ -726,7 +726,9 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     start = makePoint(xStart, yStart, srs=geom.GetSpatialReference())
 
     # start searching
-    searchGeom = start.Buffer(growStep).Intersection(geom)
+    tmp = start.Buffer(growStep)
+    tmp.Simplify(growStep)
+    searchGeom = tmp.Intersection(geom)
     sgArea = searchGeom.Area()
 
     if gArea < 2*targetArea: # use a slightly smalled target area when the whole geometry
@@ -736,13 +738,19 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     else: workingTarget = targetArea
 
     while sgArea<workingTarget:
-        newGeom = searchGeom.Buffer(growStep).Intersection(geom)
+        tmp = searchGeom.Buffer(growStep)
+        tmp.Simplify(growStep)
+        newGeom = tmp.Intersection(geom)
         newArea = newGeom.Area()
+
         if newArea > workingTarget*1.1:
-            #print("special")
+            print("special")
             dA = (newArea-sgArea)/growStep
             weightedGrowStep = (workingTarget-sgArea)/dA
-            searchGeom = searchGeom.Buffer( weightedGrowStep ).Intersection(geom)
+
+            tmp = start.Buffer(weightedGrowStep)
+            tmp.Simplify(growStep)
+            searchGeom = tmp.Intersection(geom)
             break
 
         searchGeom = newGeom

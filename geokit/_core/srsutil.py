@@ -75,7 +75,7 @@ EPSG4326 = loadSRS(4326)
 
 ####################################################################
 # point transformer
-def xyTransform( xy, fromSRS='latlon', toSRS='europe_m'):
+def xyTransform( *args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Inputs:
@@ -104,12 +104,38 @@ def xyTransform( xy, fromSRS='latlon', toSRS='europe_m'):
     trx = osr.CoordinateTransformation(fromSRS, toSRS)
 
     # Do transformation
-    if isinstance( xy, tuple):
-        x, y = xy
-        out = trx.TransformPoint(x,y)
-    else:
+    if len(args)==0: raise GeoKitSRSError("no positional inputs given")
+    elif len(args)==1:
+        xy = args[0]
+        if isinstance( xy, tuple):
+            x, y = xy
+            out = [trx.TransformPoint(x,y), ]
+        else:
+            out = trx.TransformPoints(xy)
+    elif len(args)==2:
+        x = np.array(args[0])
+        y = np.array(args[1])
+        xy = np.column_stack( [x,y] )
+
         out = trx.TransformPoints(xy)
-        
+
+    else: 
+        raise GeoKitSRSError("Too many positional inputs")
     # Done!
-    return out
+    if outputFormat=="raw":
+        return out
+    elif outputFormat=="xy":
+        x = np.array([o[0] for o in out])
+        y = np.array([o[1] for o in out])
+
+        TransformedPoints = namedtuple("TransformedPoints", "x y")
+        return TransformedPoints(x, y)
+    
+    elif outputFormat=="xyz":
+        x = out[:,0]
+        y = out[:,1]
+        z = out[:,2]
+
+        TransformedPoints = namedtuple("TransformedPoints", "x y z")
+        return TransformedPoints(x, y, z)
 
