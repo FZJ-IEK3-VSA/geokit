@@ -9,8 +9,8 @@ LocationMatcher = re.compile("\((?P<lon>[0-9.-]{1,}),(?P<lat>[0-9.-]{1,})\)")
 class Location(object):
     _e = 1e-5
     def __init__(s, lon, lat): 
-        if not isinstance(lat,float): raise GeoKitLocationError("lat input is not a float")
-        if not isinstance(lon,float): raise GeoKitLocationError("lon input is not a float")
+        if not (isinstance(lat,float) or isinstance(lat,int)): raise GeoKitLocationError("lat input is not a float")
+        if not (isinstance(lon,float) or isinstance(lon,int)): raise GeoKitLocationError("lon input is not a float")
         s.lat=lat
         s.lon=lon
         s._geom=None
