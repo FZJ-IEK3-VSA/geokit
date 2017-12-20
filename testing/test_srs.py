@@ -4,8 +4,9 @@ from geokit.srs import *
 def test_xyTransform():
 
     # test single point
-    p1 = xyTransform( pointInAachen3035, fromSRS='europe_m', toSRS='latlon')
+    p1 = xyTransform( pointInAachen3035, fromSRS='europe_m', toSRS='latlon')[0]
     real = (6.313298792067333, 50.905105969570265)
+    print(p1)
     if not (isclose(p1[0],real[0], 1e-6) and isclose(p1[1],real[1], 1e-6)):
         error("xyTransform 1")
 

@@ -874,7 +874,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
         values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         result = []
         for v in values.itertuples(index=False):
-            result.append( func(*v) )
+            result.append( func(v.data, v.xOffset, v.yOffset) )
 
     else:
         raise GeoKitRasterError("Interpolation mode not understood: ", mode)

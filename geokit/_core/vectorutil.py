@@ -399,7 +399,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
         t.cleanup()
         del tmp_dataSource, tmp_driver, t
-
+    
     #### Wrap the whole writing function in a 'try' statement in case it fails
     try:
         # Create the layer

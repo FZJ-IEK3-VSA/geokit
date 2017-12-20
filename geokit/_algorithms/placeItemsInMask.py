@@ -1,161 +1,108 @@
 from geokit._core.regionmask import *
 
-def placeItemsInMask( mask, separation, extent=None, placementDiv=4, itemsAtEdge=True, asPoints=False, yAtTop=True):
-    """Places items in a matrix mask with a minimal separation distance between 
-    items
-
-    * A maximum of one item can be placed somewhere in each mask pixel
-    * Items are alwys placed in the middle of each pixel/sub-pixel
-
-    Inputs:
-        mask - 2d numpy array : The mask which determines where items can and cannot be placed
-            * must be boolean type 
-
-        separation - float : The minimal separation between any two items
-            * If an extent is not given, separation expects a value in 'index' units. Otherwise it expects a value
-              in units corresponding to the extent's srs
-
-        extent - geokit.Extent : An optional extent detailing the spatial context of the mask
-            * If an 'extent' is not given, the function will return the index 
-              locations within the mask where an item can be placed
-            * If an 'extent' is given, the function will compute the item locations 
-              in relation to the given extent
-
-        placementDiv - int : The resolution interal to each pixel of possible item placements
-            * Must be >- 1
-            * Higher placementDiv means higher computation times
-            * Ex.
-                - a placementdiv of 3 means there are 3x3 sub-pixels where placements are possible within each pixel
-
-        itemsAtEdge - True/False : Determines whether or not items are allowed at the edge of acceptable regions
-            * If False, its is assumed that there should be a buffer (separation/2) between each item and the an edge
-            * Searching for the edge takes extra computation and is slower than when not searching for the edge
-
-        asPoints - True/False : Determines if returned value is Point geometries or simply a list of coordinates
-
-        yAtTop - True/False : Indicates that the given mask is intended to be in the y-starts-at-top orientation
-            * Only factors in when and extent has been given
-            * If True, the mask indexes are assumed to start at the top of the extent's y-dimension
-    """
-
-    # Get the useful sizes
-    ySize = mask.shape[0]
-    xSize = mask.shape[1]
-    divXSize = (xSize*placementDiv)
-    divYSize = (ySize*placementDiv)
-    
-    # compute index distance
-    if extent is None:
-        distance = separation
-    else:
-        yAtTop=False
-        dx = (extent.xMax-extent.xMin)/mask.shape[1]
-        dy = (extent.yMax-extent.yMin)/mask.shape[0]
-
-        if not isclose(dx,dy):
-            raise GeoKitError("Computed pixelWidth does not match pixelHeight. Try a different Extent")
-
-        distance = separation/dx
-
-    width = int(np.round(placementDiv*distance))
-
-    # Make stamp
-    xx = np.arange(-width,width+1)
-    yy = np.arange(-width,width+1)
-    xx,yy = np.meshgrid(xx,yy)
-    if itemsAtEdge:
-        stamp = (xx*xx+yy*yy)>(width*width) # in this case, we want an 'inverse' stamp
-    else:
-        stamp = (xx*xx+yy*yy)<=(width/2*width/2)
-
-    # Initialize a placement exclusion matrix
-    itemExclusion = np.zeros((mask.shape[0]*placementDiv+2*width,mask.shape[1]*placementDiv+2*width), dtype='bool')
-    itemExclusion[width:-width,width:-width] = scaleMatrix(mask, placementDiv)
-
-    # Get the indexes which are in the suitability range
-    yIndexes, xIndexes = np.where(mask > 0.5)
-
-    # Cast indexes to divided indicies
-    yDivStartIndexes = yIndexes*placementDiv+width
-    xDivStartIndexes = xIndexes*placementDiv+width
-    yDivEndIndexes = yDivStartIndexes + placementDiv + 1
-    xDivEndIndexes = xDivStartIndexes + placementDiv + 1
-
-    # Loop over potential placements
-    divLocations = []
-    for i in range(len(yIndexes)):
-        # Get the extent of the current pixel in the DIVIDED matrix
-        yDivStart = yDivStartIndexes[i]
-        yDivEnd = yDivEndIndexes[i]
-        xDivStart = xDivStartIndexes[i]
-        xDivEnd = xDivEndIndexes[i]
-
-        # Search for available locations
-        yTmp, xTmp = np.where(itemExclusion[yDivStart:yDivEnd, xDivStart:xDivEnd]) # finds any points which are "True"
-        if yTmp.size==0:continue
+def placeItemsInMask(mask, separation, extent=None, pixelDivision=5, maxItems=10000000, outputSRS=None):
+        """Distribute the maximal number of minimally separated items within the available areas
         
-        # cast back to divided indicies
-        potentialYDivLocs = yTmp+yDivStart
-        potentialXDivLocs = xTmp+xDivStart
+        Returns a list of x/y coordinates (in the ExclusionCalculator's srs) of each placed item
 
-        # Try to locate a free spot
-        yDivLoc = None
-        xDivLoc = None
+        Inputs:
+            separation - float : The minimal distance between two items
 
-        if itemsAtEdge: # take the first free pixel, then stamp exclusion matrix
-            yDivLoc = potentialYDivLocs[0]
-            xDivLoc = potentialXDivLocs[0]
+            pixelDivision - int : The inter-pixel fidelity to use when deciding where items can be placed
 
-            currentArea = itemExclusion[yDivLoc-width:yDivLoc+width+1,xDivLoc-width:xDivLoc+width+1]
-            itemExclusion[yDivLoc-width:yDivLoc+width+1,xDivLoc-width:xDivLoc+width+1] = np.logical_and(currentArea, stamp) # only keep those areas which remain after inverse stamping
+            preprocessor : A preprocessing function to convert the accessibility matrix to boolean values
+                - lambda function
+                - function handle
+
+            maxItems - int : The maximal number of items to place in the area
+                * Used to initialize a placement list and prevent using too much memory when the number of placements gets absurd
+        """
+        # Preprocess availability
+        if isinstance(mask,str):
+            mask = extractMatrix(mask)
+        if not mask.dtype == "bool":
+            raise RuntimeError("Mask must be a bool type")
+        workingAvailability = preprocessor(s.availability)
+        if not workingAvailability.dtype == 'bool':
+            raise s.GlaesError("Working availability must be boolean type")
+        workingAvailability[~s.region.mask] = False
+        # Turn separation into pixel distances
+        separation = separation / s.region.pixelSize
+        sep2 = separation**2
+        sepFloor = max(separation-1,0)
+        sepFloor2 = sepFloor**2
+        sepCeil = separation+1
+
+        # Make geom list
+        x = np.zeros((maxItems))
+        y = np.zeros((maxItems))
+
+        bot = 0
+        cnt = 0
+
+        # start searching
+        yN, xN = workingAvailability.shape
+        substeps = np.linspace(-0.5, 0.5, pixelDivision)
+        substeps[0]+=0.0001 # add a tiny bit to the left/top edge (so that the point is definitely in the right pixel)
+        substeps[-1]-=0.0001 # subtract a tiny bit to the right/bottom edge for the same reason
         
-        else: # Search for the first spot where the full stamp area is free, then set the item's location to False
-            for yy, xx in zip(potentialYDivLocs, potentialXDivLocs):
-                currentArea = itemExclusion[yy-width:yy+width+1,xx-width:xx+width+1]
-                if not currentArea[stamp].all(): continue # skip if any point in the stamp is False
+        for yi in range(yN):
+            # update the "bottom" value
+            tooFarBehind = yi-y[bot:cnt] > sepCeil # find only those values which have a y-component greater than the separation distance
+            if tooFarBehind.size>0: 
+                bot += np.argmin(tooFarBehind) # since tooFarBehind is boolean, argmin should get the first index where it is false
 
-                # we should only get here if a suitable location was found
-                yDivLoc = yy
-                xDivLoc = xx
-                itemExclusion[yDivLoc-width:yDivLoc+width+1,xDivLoc-width:xDivLoc+width+1][stamp] = False
-                break
+            #print("yi:", yi, "   BOT:", bot, "   COUNT:",cnt)
 
-        # Save the found location
-        if yDivLoc is None: continue
+            for xi in np.argwhere(workingAvailability[yi,:]):
+                # Clip the total placement arrays
+                xClip = x[bot:cnt]
+                yClip = y[bot:cnt]
 
-        divLocations.append( (xDivLoc, yDivLoc) )
+                # calculate distances
+                xDist = np.abs(xClip-xi)
+                yDist = np.abs(yClip-yi)
 
-    # Compute index locations
-    if len(divLocations) == 0: return None
-    indexLocations = (np.array(divLocations)-width)/placementDiv
+                # Get the indicies in the possible range
+                possiblyInRange = np.argwhere( xDist <= sepCeil ) # all y values should already be within the sepCeil 
 
-    # Shift the locations so that they fall in the middle of identified pixels/divided-pixels
-    indexLocations[:,0] += 0.5/placementDiv
-    if yAtTop:
-        indexLocations[:,1] -= 0.5/placementDiv
-    else:
-        indexLocations[:,1] += 0.5/placementDiv
+                # only continue if there are no points in the immediate range of the whole pixel
+                immidiateRange = (xDist[possiblyInRange]*xDist[possiblyInRange]) + (yDist[possiblyInRange]*yDist[possiblyInRange]) <= sepFloor2
+                if immidiateRange.any(): continue
 
-    # Translate to extent domain, maybe
-    if extent is None:
-        finalLocations = indexLocations
-    else:
-        finalLocations = np.zeros(indexLocations.shape)
+                # Start searching in the 'sub pixel'
+                found = False
+                for xsp in substeps+xi:
+                    xSubDist = np.abs(xClip[possiblyInRange]-xsp)
+                    for ysp in substeps+yi:
+                        ySubDist = np.abs(yClip[possiblyInRange]-ysp)
 
-        finalLocations[:,0] = indexLocations[:,0]*dx + extent.xMin
-        if yAtTop:
-            finalLocations[:,1] = extent.yMax - indexLocations[:,1]*dy
+                        # Test if any points in the range are overlapping
+                        overlapping = (xSubDist*xSubDist + ySubDist*ySubDist) <= sep2
+                        if not overlapping.any():
+                            found = True
+                            break
+
+                    if found: break
+
+                # Add if found
+                if found:
+                    x[cnt] = xsp
+                    y[cnt] = ysp
+                    cnt += 1
+                 
+        # Convert identified points back into the region's coordinates
+        coords = np.zeros((cnt,2))
+        coords[:,0] = s.region.extent.xMin + (x[:cnt]+0.5)*s.region.pixelWidth # shifted by 0.5 so that index corresponds to the center of the pixel
+        coords[:,1] = s.region.extent.yMax - (y[:cnt]+0.5)*s.region.pixelHeight # shifted by 0.5 so that index corresponds to the center of the pixel
+
+        # Done!
+        s.itemCoords = coords
+
+        if outputSRS is None:
+            return coords
         else:
-            finalLocations[:,1] = extent.yMin + indexLocations[:,1]*dy
-
-    # Transform into points, maybe
-    if asPoints:
-        srs = None if extent is None else extent.srs
-
-        points = [makePoint( x,y, srs=srs ).Buffer(separation/2) for x,y in finalLocations]
-        #points = [makePoint( x,y, srs=srs ) for x,y in finalLocations]
-
-        return points
-    else:
-        return finalLocations
+            newCoords = gk.srs.xyTransform(coords, fromSRS=s.region.srs, toSRS=outputSRS)
+            newCoords = np.column_stack( [ [v[0] for v in newCoords], [v[1] for v in newCoords]] )
+            return newCoords
 
