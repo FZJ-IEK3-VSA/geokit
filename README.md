@@ -11,6 +11,8 @@ Instead GeoKit evolved in an ad hoc manner in order to realize the Geospatial La
 Nevertheless, GeoKit quickly emerged as a general purpose GIS toolkit with capabilities far beyond computing land eligibility.
 Therefore, it is our pleasure to offer it to anyone who is interested in its use.
 
+[![DOI](https://zenodo.org/badge/114900977.svg)](https://zenodo.org/badge/latestdoi/114900977)
+
 ## Features
 * Direct exposure of functions and objects in the GDAL library
 * Reading, writing, and manipulating raster and vector datasets
