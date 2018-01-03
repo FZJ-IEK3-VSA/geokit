@@ -327,8 +327,19 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
     # make geom or wkt list into a list of ogr.Geometry objects
     finalGeoms = []
+    geomIndex = None
     if ( isinstance(geoms, str) or isinstance(geoms, ogr.Geometry)): # geoms is a single geometry
         geoms = [geoms,]
+    elif isinstance(geoms, pd.Series):
+        geomIndex = geoms.index
+        geoms = geoms.values()
+    elif isinstance(geoms, pd.DataFrame):
+        if not fieldVals is None:
+            raise GeoKitVectorError("fieldVals must be None when geoms input is a DataFrame")
+
+        fieldVals = geoms.copy()
+        geoms = geoms.geom.values
+        fieldVals.drop("geom", inplace=True, axis=1)
 
     if( isinstance(geoms[0], ogr.Geometry) ): # Test if the first geometry is an ogr-Geometry type
                                               #  (Assume all geometries in the array have the same type)
@@ -413,6 +424,8 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
             # Ensure fieldVals is a dataframe
             if( not isinstance(fieldVals, pd.DataFrame)):
                 fieldVals = pd.DataFrame(fieldVals) # If not, try converting it
+            if not geomIndex is None:
+                fieldVals = fieldVals.loc[geomIndex]
             
             # check if length is good
             if(fieldVals.shape[0]!=len(geoms)):
@@ -441,7 +454,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
             # Write field definitions to layer
             for fieldName, dtype in fieldDef.items():
-                layer.CreateField(ogr.FieldDefn(fieldName, getattr(ogr,dtype)))
+                layer.CreateField(ogr.FieldDefn(str(fieldName), getattr(ogr,dtype)))
 
             # Ensure list lengths match geom length
             for k,v in fieldVals.items():
@@ -464,7 +477,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
                     else: val = float(value.iloc[gi]) 
                     
                     # Write to feature                
-                    feature.SetField(fieldName, val)
+                    feature.SetField(str(fieldName), val)
 
             # Set the Geometry
             feature.SetGeometry( geoms[gi] )
