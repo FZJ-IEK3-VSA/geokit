@@ -669,7 +669,7 @@ class RegionMask(object):
 
     ##############################################################################    
     # Warp raster onto region
-    def warp(s, source, dtype=None, resampleAlg='bilinear', noDataValue=None, applyMask=True, resolutionDiv=1, **kwargs):
+    def warp(s, source, dtype=None, resampleAlg='bilinear', noDataValue=None, applyMask=True, resolutionDiv=1, returnAsSource=False, **kwargs):
         """Warp a given raster source onto the RM's extent and resolution
 
         * The source is not clipped around the RM's extent before the warping procedure. This isn't necessary, but if it 
@@ -714,6 +714,7 @@ class RegionMask(object):
 
         # Test is the extents already match, and a projection is not necessary
         if ( workingExtent == s.extent and isclose(dsInfo.dx, s.pixelWidth/resolutionDiv) and isclose(dsInfo.dy, s.pixelHeight/resolutionDiv)):
+            if returnAsSource: return source
 
             # Read the array
             final = source.GetRasterBand(1).ReadAsArray()
@@ -733,6 +734,8 @@ class RegionMask(object):
             mt = kwargs.pop("multithread", True)
             r = gdal.Warp(targetDS, source, multithread=mt, resampleAlg=resampleAlg, **kwargs)
             targetDS.FlushCache()
+
+            if returnAsSource: return targetDS
 
             # Get resulting array
             final = targetDS.GetRasterBand(1).ReadAsArray()
