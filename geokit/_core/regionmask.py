@@ -541,6 +541,92 @@ class RegionMask(object):
         * All kwargs passed on to geom.drawPolygons()"""
         return drawGeoms( s.geometry, srs=s.srs, **kwargs )
 
+    def drawImage(s, matrix, ax=None, hideExternal=True, cbar=False, output=None, noBorder=True, geomArgs={}, **imageArgs):
+        """Draw the region geometry on top of a matrix image
+
+        - The image data is assumed to match the boundaries of the RegionMask object
+
+        Inputs:
+            matrix - np.ndarray : The 2-dimensional image data to plot
+
+            ax - matplotlib axis object : The axis to draw the figure onto
+                * If given as 'None', then a fresh axis will be produced and displayed or saved immediately
+                * When not 'None', then this function returns a handle to the drawn image which can be used however you see fit
+
+            hideExternal - T/F : If true, hide values found outside the region
+
+            cbar - True/False : Flag indicating whether or not to automatically add a colorbar
+                * Only operates when an axis has not been given
+
+            output - str : A path to save the output figure to
+                * Only applies when 'ax' is None
+                * If this is None and 'ax' is None, the figure is displayed immediately
+
+            noBorder - T/F : A flag determining whether or not to show the borders of the plot's axis
+                * Only useful when 'ax' is None
+
+            geomArgs - dict : keyword arguments to pass on to the bourder drawing
+                * All are passed on to a call to RegionMask.drawGeometry(...)
+
+            **imageArgs : All other keyword arguements are passed on to the image plotting
+                * Performed by geokit.raster.drawImage(...)
+        
+        """
+        from matplotlib.colors import LinearSegmentedColormap
+
+        # Do we make our own figure?
+        if ax is None:
+            doShow = True
+            # import some things
+            import matplotlib.pyplot as plt
+
+            # make a figure and axis
+            plt.figure(figsize=(12,12))
+            ax = plt.subplot(111)
+        else: 
+            doShow=False
+
+        # Draw matrix
+        if not "cmap" in imageArgs:
+            cmap = LinearSegmentedColormap.from_list('red_green_blue',[(0,91/255,130/255),(171/255,221/255,164/255),(180/255,20/255,20/255)])
+        else:
+            cmap = imageArgs.pop("cmap")
+
+        vmin = imageArgs.pop("vmin", matrix[s.mask].min())
+        vmax = imageArgs.pop("vmax", matrix[s.mask].max())
+
+        _imageArgs = dict(bounds=s.extent)
+        _imageArgs.update(imageArgs)
+        h=drawImage(matrix, ax=ax, cmap=cmap, vmin=vmin, vmax=vmax, **_imageArgs)
+
+        # Draw region
+        if hideExternal:
+            cmap2 = LinearSegmentedColormap.from_list('alpha_to_white',[(1,1,1,0),(1,1,1)])
+            drawImage(~s.mask, ax=ax, bounds=s.extent, cmap=cmap2)
+
+        _geomArgs = dict(simplification=None, fc='None', ec='k', linewidth=3)
+        _geomArgs.update(geomArgs)
+        s.drawGeometry(ax=ax, **_geomArgs)
+
+        # Done!
+        if doShow:
+            ax.set_aspect('equal')
+            ax.autoscale(enable=True)
+
+            if noBorder: plt.axis('off')
+            if cbar: 
+                cb = plt.colorbar(h)
+                cb.ax.tick_params(labelsize=18) 
+
+            if output: 
+                plt.savefig(output, dpi=200)
+                plt.close()
+            else: 
+                plt.show()
+        else:
+            return ax
+
+
     def _tempFile(s, head="tmp", ext=".tif"):
         """***RM INTERNAL***
 
