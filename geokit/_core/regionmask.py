@@ -328,7 +328,7 @@ class RegionMask(object):
         return RegionMask(extent=extent, pixel=pixelSize, mask=array, geom=geom, mask_plus_geom_is_okay=True, attributes=attributes)
 
     @staticmethod
-    def fromVectorFeature(source, select=0, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None):
+    def fromVectorFeature(source, select=0, pixelSize=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None, where=None):
         """
         Make a RegionMask from a specific feature in a given vector source
 
@@ -372,16 +372,17 @@ class RegionMask(object):
 
             attributes - dict : Keyword attributes and values to carry along with the RegionMask
                 * Will be used to update the attributes dictionary of the source's identified feature
-
+            
+            where : Passed directly to the 'select' argument
         """
+        if not where is None: select = where
         # Get DS, Layer, and Feature
         vecDS = loadVector(source)
         vecLyr = vecDS.GetLayer()
 
         if( isinstance(select, str) ):
-            where = select
-            t = vecLyr.SetAttributeFilter(where)
-            if( t!=0 ): raise GeoKitRegionMaskError("Error in select statement: \""+where+"\"")
+            t = vecLyr.SetAttributeFilter(select)
+            if( t!=0 ): raise GeoKitRegionMaskError("Error in select statement: \""+select+"\"")
             
             if  vecLyr.GetFeatureCount() > 1: raise GeoKitRegionMaskError("Multiple fetures found")
             if vecLyr.GetFeatureCount() == 0: raise GeoKitRegionMaskError("Zero features found")
@@ -421,7 +422,7 @@ class RegionMask(object):
         if isinstance(region, RegionMask): return region
         elif isinstance( region, str):
             if os.path.isfile(region):
-                if 'select' in kwargs:
+                if 'select' in kwargs or 'where' in kwargs:
                     return RegionMask.fromVectorFeature(region, **kwargs)
                 else:
                     return RegionMask.fromVector(region, **kwargs)

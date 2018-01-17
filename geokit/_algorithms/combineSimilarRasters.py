@@ -89,6 +89,7 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
 
         # Get master data
         mMatrix = masterBand.ReadAsArray(xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin)
+        if mMatrix is None: raise GeoKitError("mMatrix is None")
 
         # create selector
         if not combiningFunc is None:
