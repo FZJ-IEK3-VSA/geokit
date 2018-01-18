@@ -1101,7 +1101,7 @@ class RegionMask(object):
         # Do we need to buffer?
         if not buffer is None and bufferMethod == 'geom':
             def doBuffer(geom,attr): return geom.Buffer(buffer)
-            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.geometry, where=where, processor=doBuffer)
+            dataSet = mutateFeatures(dataSet, srs=s.srs, geom=s.extent.box, where=where, processor=doBuffer)
 
             where=None # Set where to None since the filtering has already been done
 
