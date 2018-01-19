@@ -277,7 +277,7 @@ def extractAsDataFrame(source, **kwargs):
 
 ####################################################################
 # Create a vector
-def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, overwrite=False):
+def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, overwrite=True):
     """
     Create a vector file from a list of geometries, optionally including field values 
 
@@ -324,6 +324,8 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         exists = os.path.isfile(output)
         if ( exists and overwrite ): 
             os.remove(output)
+        elif( exists and not overwrite):
+            raise GeoKitVectorError("%s exists but 'overwrite' is not True"%output)
 
     # make geom or wkt list into a list of ogr.Geometry objects
     finalGeoms = []

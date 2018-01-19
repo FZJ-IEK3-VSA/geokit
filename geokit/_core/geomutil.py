@@ -238,12 +238,14 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     
     # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
-        raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
-    if(mask.dtype != "bool" and mask.dtype != "uint8" ): 
-        raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
-    if(mask.dtype == "uint8"):
-        mask = mask.astype("bool")
-
+        mask = np.array(mask)
+    if mask.dtype == "bool":
+        dtype = "GDT_Byte"
+    elif np.issubdtype(mask.dtype, int):
+        dtype = "GDT_Int32"
+    else: 
+        raise GeoKitGeomError("Mask must be a 2D boolean or integer numpy ndarray")
+    
     # Make boundaries if not given
     if bounds is None:
         bounds = (0,0,mask.shape[1], mask.shape[0]) # bounds in xMin, yMin, xMax, yMax
@@ -270,9 +272,6 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     rows = int(round((yMax-yMin)/abs(pixelHeight)))
     originX = xMin
     originY = yMax # Always use the "Y-at-Top" orientation
-    
-    # Get DataType
-    dtype = "GDT_Byte"
         
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory
@@ -333,9 +332,11 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
     # If only one feature created, set it
     geoms = []
+    rid = []
     for i in range(ftrN):
         ftr = vecLyr.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
+        rid.append(ftr.items()["DN"])
 
     # Do shrink, maybe
     if shrink: 
@@ -345,9 +346,17 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
     # Do flatten, maybe
     if flat:
-        final = flatten(geoms) if len(geoms)>1 else geoms[0]
+
+        geoms = np.array(geoms)
+        rid = np.array(rid)
+
+        finalGeoms = []
+        finalRID = []
+        for _rid in set(rid):
+            smallGeomSet = geoms[rid==_rid]
+            finalGeoms.append(flatten( smallGeomSet ) if len(smallGeomSet)>1 else smallGeomSet[0])
     else:
-        final = geoms
+        finalGeoms = geoms
         
     # Cleanup
     vecLyr = None
@@ -356,7 +365,8 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     rasBand = None
     raster = None
 
-    return final
+    # Done!
+    return finalGeoms
 
 # geometry transformer
 def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
