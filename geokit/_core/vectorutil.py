@@ -332,7 +332,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         geoms = [geoms,]
     elif isinstance(geoms, pd.Series):
         geomIndex = geoms.index
-        geoms = geoms.values()
+        geoms = geoms.values
     elif isinstance(geoms, pd.DataFrame):
         if not fieldVals is None:
             raise GeoKitVectorError("fieldVals must be None when geoms input is a DataFrame")
