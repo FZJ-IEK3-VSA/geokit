@@ -341,6 +341,8 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         geoms = geoms.geom.values
         fieldVals.drop("geom", inplace=True, axis=1)
 
+    if len(geoms)==0: raise GeoKitVectorError("Empty geometry list given")
+
     if( isinstance(geoms[0], ogr.Geometry) ): # Test if the first geometry is an ogr-Geometry type
                                               #  (Assume all geometries in the array have the same type)
         geomSRS = geoms[0].GetSpatialReference()
