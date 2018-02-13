@@ -340,9 +340,33 @@ class Extent(object):
         return Extent(min(X), min(Y), max(X), max(Y), srs=targetSRS)
 
     def inSourceExtent(s, source):
-        """Tests if the extent box is at least partially contained in the extent-box of the given vector source"""
-        sourceExtent = Extent.fromVector(source).castTo(s.srs)
-        return s._box.Intersects(sourceExtent.box)
+        """Tests if the extent box is at least partially contained in the extent-box of the given vector or raster source"""
+        if isinstance(source, str): 
+            trash, extension = os.path.splitext(source)
+
+            ###############################################
+            ## TODO: THESE EXTENSIONS NEED TO BE EXPANDED!!
+            ###############################################
+            if extension==".tif": isVector = False
+            elif extension==".shp": isVector = True
+            else: raise GeoKitExtentError("Extension not known: '%s'"%extension)
+        elif isinstance(source, gdal.Dataset):
+            if source.GetLayer() is None: isVector = False
+            else: isVector = True
+        elif isinstance( source, ogr.DataSource): isVector = True
+        else:
+            raise GeoKitExtentError("Source type could not be determined")
+
+        # Check extent for inclusion
+        if isVector: sourceExtent = Extent.fromVector(source).castTo(s.srs)
+        else: sourceExtent = Extent.fromRaster(source).castTo(s.srs)
+        
+        for p in sourceExtent.corners(asPoints=True): # Are the source's corners in the main object's extent?
+            if s._box.Contains(p): return True
+        for p in s.corners(asPoints=True): # Are the main object's corners in the sources's extent?
+            if sourceExtent._box.Contains(p): return True
+
+        return False
 
     def filterSources(s, sources):
         """Filter a list of sources by those whose's envelope overlaps the Extent.
