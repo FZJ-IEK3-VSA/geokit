@@ -95,6 +95,10 @@ def xyTransform( *args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
             - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
             - a WKT string
 
+        outputFOrmat - str : Use this to control how the return value is given
+            * if 'raw', the raw output from osr.TransformPoints is given
+            * if 'xy', or 'xyz' the points are given as named tuples
+
     """
     # load srs's
     fromSRS = loadSRS(fromSRS)
