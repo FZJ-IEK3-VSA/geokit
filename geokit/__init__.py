@@ -21,5 +21,6 @@ from geokit._core.geomutil import drawGeoms
 # import the special algorithms
 import geokit.algorithms
 
-# Import the CLI
-import __main__
+# Add useful paths for testing and stuff
+from os.path import join, dirname
+_test_data_ = join(dirname(dirname(__file__)), "testing", "data")

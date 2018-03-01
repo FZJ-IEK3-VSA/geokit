@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='geokit',
-    version='1.0.1',
+    version='1.0.2',
     author='Severin Ryberg',
     url='http://www.fz-juelich.de/iek/iek-3/EN/Home/home_node.html',
     packages = ["geokit"],
