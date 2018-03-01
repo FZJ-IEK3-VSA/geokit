@@ -33,6 +33,43 @@ def test_convertWKT():
     if not isclose(g1.Area(),7.8149999999999995): error("convertWKT - area")
     if not g1.GetSpatialReference().IsSame(EPSG4326): error("convertWKT - setting srs")
 
+def test_vectorize():
+    # test a simple box
+    boxmatrix = np.array([[0,0,0,0,0],
+                          [0,1,1,1,0],
+                          [0,1,0,1,0],
+                          [0,1,1,1,0],
+                          [0,0,0,0,0]], dtype=np.int)
+
+    g1 = vectorize(boxmatrix, shrink=None)
+    if not isclose(g1[0].Area(),8.0): error("vectorize: simple area")
+    if not g1[0].GetSpatialReference() is None: error("vectorize: empty srs")
+
+    # test shrink
+    g1b = vectorize(boxmatrix, shrink=0.0001)
+    if not isclose(g1b[0].Area(), 7.98400085984): error("vectorize: shrunk area")
+
+    # test a more complex area
+    complexmatrix = np.array([[0,2,0,0,0],
+                              [2,2,0,1,0],
+                              [0,0,0,1,1],
+                              [1,1,0,1,0],
+                              [3,1,0,0,0]], dtype=np.int)
+
+    g2 = vectorize(complexmatrix, shrink=None)
+    if not len(g2)==4: error("vectorize: geometry count")
+    if not isclose(sum([g.Area() for g in g2]),11.0): error("vectorize: area")
+
+    # flatten the complex area
+    g3 = vectorize(complexmatrix, flat=True, shrink=None)
+    if not len(g3)==3: error("vectorize: geometry count")
+    if not isclose(g3[0].Area(),7.0): error("vectorize: flattened area")
+    
+    # set a boundary and srs context
+    g4 = vectorize(complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
+    if not isclose(g4[0].Area(),175.0): error("vectorize: contexted area")
+    if not g4[0].GetSpatialReference().IsSame(EPSG3035): error("vectorize: contexted srs")
+
 def test_convertMask():
     # test a simple box
     boxmask = np.array([[0,0,0,0,0],
@@ -116,5 +153,6 @@ if __name__ == '__main__':
     test_makeEmptyGeom()
     test_convertWKT()
     test_flatten()
+    test_vectorize()
     test_convertMask()
     test_transform()

@@ -207,13 +207,13 @@ def convertWKT( wkt, srs=None):
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
-    """Create a geometry set from a matrix mask
+def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
+    """Create a geometry set from a matrix of integer values
 
     Inputs:
-        mask : The matrix which will be turned into a geometry
-            - a 2D boolean matrix
-            * True values are interpreted as 'in the geometry'
+        matrix : The matrix which will be turned into a geometry
+            - a 2D integer matrix
+            * Each unique-valued group of pixels will be converted to a geometry
 
         bounds : Determines the boundary context for the given mask and will scale the geometry's coordinates accordingly
             - (xMin, yMin, xMax, yMax)
@@ -237,18 +237,18 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     """
     
     # Make sure we have a boolean numpy matrix
-    if not isinstance(mask, np.ndarray):
-        mask = np.array(mask)
-    if mask.dtype == "bool":
+    if not isinstance(matrix, np.ndarray):
+        matrix = np.array(matrix)
+    if matrix.dtype == "bool":
         dtype = "GDT_Byte"
-    elif np.issubdtype(mask.dtype, int):
+    elif np.issubdtype(matrix.dtype, int):
         dtype = "GDT_Int32"
     else: 
-        raise GeoKitGeomError("Mask must be a 2D boolean or integer numpy ndarray")
+        raise GeoKitGeomError("matrix must be a 2D boolean or integer numpy ndarray")
     
     # Make boundaries if not given
     if bounds is None:
-        bounds = (0,0,mask.shape[1], mask.shape[0]) # bounds in xMin, yMin, xMax, yMax
+        bounds = (0,0,matrix.shape[1], matrix.shape[0]) # bounds in xMin, yMin, xMax, yMax
         pixelHeight = 1
         pixelWidth  = 1
 
@@ -261,8 +261,8 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
         except:
             raise GeoKitGeomError("Could not understand 'bounds' input")
 
-    pixelHeight = (yMax-yMin)/mask.shape[0]
-    pixelWidth  = (xMax-xMin)/mask.shape[1]
+    pixelHeight = (yMax-yMin)/matrix.shape[0]
+    pixelWidth  = (xMax-xMin)/matrix.shape[1]
 
     if not srs is None: srs=loadSRS(srs)
 
@@ -290,12 +290,12 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     # Set data into band
     band = raster.GetRasterBand(1)
     band.SetNoDataValue(0)
-    band.WriteArray( mask )
+    band.WriteArray( matrix )
 
     band.FlushCache()
     raster.FlushCache()
 
-    #rasDS = createRaster(bounds=bounds, data=mask, noDataValue=0, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=srs)
+    #rasDS = createRaster(bounds=bounds, data=matrix, noDataValue=0, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=srs)
 
     # Do a polygonize
     rasBand = raster.GetRasterBand(1)
@@ -341,12 +341,11 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     # Do shrink, maybe
     if shrink: 
         # Compute shrink factor
-        shrinkFactor = -0.001*(xMax-xMin)/mask.shape[1]
+        shrinkFactor = -0.001*(xMax-xMin)/matrix.shape[1]
         geoms = [g.Buffer(shrinkFactor) for g in geoms]
 
     # Do flatten, maybe
     if flat:
-
         geoms = np.array(geoms)
         rid = np.array(rid)
 
@@ -367,6 +366,50 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
     # Done!
     return finalGeoms
+
+def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
+    """Create a geometry set from a matrix mask
+
+    Inputs:
+        mask : The matrix which will be turned into a geometry
+            - a 2D boolean matrix
+            * True values are interpreted as 'in the geometry'
+
+        bounds : Determines the boundary context for the given mask and will scale the geometry's coordinates accordingly
+            - (xMin, yMin, xMax, yMax)
+            - geokit.Extent object
+            * If a boundary is not given, the geometry coordinates will correspond to the mask's indicies
+            * If the boundary is given as an Extent object, an srs input is not required
+
+        srs : The Spatial reference system to apply to the created geometries
+            - osr.SpatialReference object
+            - an EPSG integer ID
+            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+            - a WKT string
+            * This input is ignored if bounds is a geokit.Extent object
+
+        flat : If True, flattens the resulting geometries into a single geometry object
+            - True/False
+
+        shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
+            * The total amount shrunk should be very small
+            * Generally this should be left as True unless it is ABSOLUTELY neccessary to maintain the same area
+    """
+    
+    # Make sure we have a boolean numpy matrix
+    if not isinstance(mask, np.ndarray):
+        mask = np.array(mask)
+    if mask.dtype == "bool":
+        dtype = "GDT_Byte"
+    else: 
+        raise GeoKitGeomError("Mask must be a 2D boolean or integer numpy ndarray")
+
+    # Do vectorization
+    result = vectorize( matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, cornerConnected=cornerConnected)
+    if flat: result = result[0] 
+
+    # Done!
+    return result
 
 # geometry transformer
 def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):

@@ -23,4 +23,4 @@ import geokit.algorithms
 
 # Add useful paths for testing and stuff
 from os.path import join, dirname
-_test_data_ = join(dirname(dirname(__file__)), "testing", "data")
+_test_data_ = join(dirname(__file__), "testing", "data")
