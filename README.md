@@ -1,6 +1,6 @@
 ﻿<a href="http://www.fz-juelich.de/iek/iek-3/EN/Forschung/_Process-and-System-Analysis/_node.html"><img src="http://www.fz-juelich.de/SharedDocs/Bilder/IBG/IBG-3/DE/Plant-soil-atmosphere%20exchange%20processes/INPLAMINT%20(BONARES)/Bild3.jpg?__blob=poster" alt="Forschungszentrum Juelich Logo" width="230px"></a> 
 
-# GeoKit - *Geo*spatial tool*kit* for Python
+# GeoKit - **Geo**spatial tool**kit** for Python
 
 GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses. 
 It gives low overhead control of fundamental operations; such as reading, writing, and mutating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more. 
@@ -47,7 +47,7 @@ Or install directly via python as
 	
 ## Examples
 
-Detailed examples of GeoKit's capabilities will be added soon. 
+See the [Examples page](Examples/)
 
 ## License
 
