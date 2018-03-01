@@ -1,4 +1,4 @@
-"""The GeoKit library!"""
+"""The GeoKit library! Woohoo :)"""
 
 #__version__ = 0.0.2
 

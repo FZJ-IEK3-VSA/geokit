@@ -1,3 +1,5 @@
+'''The Util sub-module contains a number of generally helpful utillity functions, classes, and constants. It is also used for common imports across all GeoKit functionality'''
+
 import os, sys, re
 import numpy as np
 import gdal, ogr, osr
