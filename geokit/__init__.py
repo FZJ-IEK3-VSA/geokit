@@ -2,6 +2,19 @@
 
 #__version__ = 0.0.2
 
+# maybe set GDAL_DATA variable
+from os import environ as _environ
+
+if not "GDAL_DATA" in _environ:
+	from os.path import join as _join, isdir as _isdir
+	from sys import executable as _executable
+	
+	testDir = _join(_executable,"..","Library","share","gdal")
+
+	if not _isdir(testDir):
+		raise RuntimeError("Could not locate GDAL data folder at :", testDir)
+	_environ["GDAL_DATA"] = testDir
+
 # import the utilities
 import geokit.util
 import geokit.srs
