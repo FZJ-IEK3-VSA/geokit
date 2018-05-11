@@ -178,6 +178,8 @@ class LocationSet(object):
             geomsSRS = transform(geoms4326, fromSRS=EPSG4326, toSRS=srs)
             return np.array([(g.GetX(), g.GetY()) for g in geomsSRS])
 
+    def asHash(s): return [l.__hash__() for l in s._locations]
+
     def splitKMeans(s, groups=2, **kwargs):
         from sklearn.cluster import KMeans
 
