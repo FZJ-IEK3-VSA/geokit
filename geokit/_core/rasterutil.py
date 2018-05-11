@@ -645,32 +645,44 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     pointSRS = loadSRS(pointSRS)
 
     # Ensure we have a list of point geometries
-    def loadPoint(pt,s):
-        if isinstance(pt,ogr.Geometry):
-            if pt.GetGeometryName()!="POINT":
-                raise GeoKitGeomError("Invalid geometry given")
-            return pt
+    try:
+        if points._TYPE_KEY_ == "Location": 
+            asSingle=True
+            pointsKey=None
+            points = [points.asGeom(info.srs), ]
+        elif points._TYPE_KEY_ == "LocationSet": 
+            asSingle=False
+            pointsKey = points
+            points = points.asGeom(info.srs)
+    except AttributeError:
+        pointsKey=None
 
-        if isinstance(pt, Location):
-            return pt.geom
-    
-        tmpPt = ogr.Geometry(ogr.wkbPoint)
-        tmpPt.AddPoint(*pt)
-        tmpPt.AssignSpatialReference(s)
+        def loadPoint(pt,s):
+            if isinstance(pt,ogr.Geometry):
+                if pt.GetGeometryName()!="POINT":
+                    raise GeoKitGeomError("Invalid geometry given")
+                return pt
+
+            if isinstance(pt, Location):
+                return pt.geom
         
-        return tmpPt
-    
-    if  isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry): # check for an individual point input
-        asSingle = True
-        points = [loadPoint( points, pointSRS), ]
-    else: # assume points is iterable
-        asSingle = False
-        points = [loadPoint( pt, pointSRS) for pt in points]
-    
-    # Cast to source srs
-    pointSRS = points[0].GetSpatialReference() # make sure we're using the pointSRS for the points in the list
-    if not pointSRS.IsSame(info.srs): 
-        points=transform(points, fromSRS=pointSRS, toSRS=info.srs)
+            tmpPt = ogr.Geometry(ogr.wkbPoint)
+            tmpPt.AddPoint(*pt)
+            tmpPt.AssignSpatialReference(s)
+            
+            return tmpPt
+        
+        if isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry): # check for an individual point input
+            asSingle = True
+            points = [loadPoint( points, pointSRS), ]
+        else: # assume points is iterable
+            asSingle = False
+            points = [loadPoint( pt, pointSRS) for pt in points]
+        
+        # Cast to source srs
+        pointSRS = points[0].GetSpatialReference() # make sure we're using the pointSRS for the points in the list
+        if not pointSRS.IsSame(info.srs): 
+            points=transform(points, fromSRS=pointSRS, toSRS=info.srs)
     
     # Get x/y values as numpy arrays
     x = np.array([pt.GetX() for pt in points])
@@ -739,7 +751,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     if asSingle: # A single point was given, so return a single result
         return ptValue(values[0], xOffset[0], yOffset[0], inBounds[0])
     else:
-        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds))
+        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds), index=pointsKey)
 
 ####################################################################
 # Shortcut for getting just the raster value

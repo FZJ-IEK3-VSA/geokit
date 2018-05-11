@@ -7,6 +7,7 @@ import re
 LocationMatcher = re.compile("\((?P<lon>[0-9.-]{1,}),(?P<lat>[0-9.-]{1,})\)")
 
 class Location(object):
+    _TYPE_KEY_="Location"
     _e = 1e-5
     def __init__(s, lon, lat): 
         if not (isinstance(lat,float) or isinstance(lat,int)): raise GeoKitLocationError("lat input is not a float")
@@ -102,6 +103,7 @@ class Location(object):
         return output
 
 class LocationSet(object):
+    _TYPE_KEY_="LocationSet"
     def __init__(s, locations, srs=4326, _skip_check=False):
         if not _skip_check:
             try: # Try loading all locations one at a time
@@ -139,7 +141,7 @@ class LocationSet(object):
             s._bounds4326 = (s.lons.min(), s.lats.min(), s.lons.max(), s.lats.max())
             return s._bounds4326
         else:
-            geoms = transform( [l.geom for l in s._locations], fromSrs=gk.srs.EPSG4326, toSRS=srs )
+            geoms = transform( [l.geom for l in s._locations], fromSrs=EPSG4326, toSRS=srs )
 
             yVals = np.array([g.GetY() for g in geoms])
             xVals = np.array([g.GetX() for g in geoms])
@@ -161,6 +163,20 @@ class LocationSet(object):
 
     def makePickleable(loc):
         for l in s._locations: l.makePickleable()
+
+    def asGeom(s, srs=4326):
+        srs=loadSRS(srs)
+        geoms4326 = [l.geom for l in s._locations]
+        if EPSG4326.IsSame(srs): return geoms4326
+        else: return transform(geoms4326, fromSRS=EPSG4326, toSRS=srs)
+
+    def asXY(s, srs=3035):
+        srs=loadSRS(srs)
+        if EPSG4326.IsSame(srs): return np.column_stack([s.lons, s.lats])
+        else: 
+            geoms4326 = [l.geom for l in s._locations]
+            geomsSRS = transform(geoms4326, fromSRS=EPSG4326, toSRS=srs)
+            return np.array([(g.GetX(), g.GetY()) for g in geomsSRS])
 
     def splitKMeans(s, groups=2, **kwargs):
         from sklearn.cluster import KMeans
