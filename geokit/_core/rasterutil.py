@@ -1233,7 +1233,7 @@ def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shr
     # shrink geoms by a timy amount to avoid self intersections
     if shrink: 
         # Compute shrink factor
-        geoms = [g.Buffer(0.000001) for g in geoms]
+        geoms = np.array([g.Buffer(0.000001) for g in geoms])
 
     # Unless we want to flatten the geometries, we're done!
     if not flat: return PolygonizeResult(geoms, values)
@@ -1243,7 +1243,7 @@ def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shr
     flatGeoms = []
     for val in set(values):
         flatValues.append(val)
-
+        
         geomList = geoms[values==val]
         if geomList.size==1:
             flatGeoms.append(geomList[0])

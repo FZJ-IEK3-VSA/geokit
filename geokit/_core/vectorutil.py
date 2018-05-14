@@ -257,7 +257,7 @@ def extractFeature(source, feature=None, geom=None, where=None, outputSRS=None, 
     else:
         return Feature(fGeom, fItems)
 
-def extractAsDataFrame(source, **kwargs):
+def extractAsDataFrame(source, indexCol=None, **kwargs):
     """Extracts a vector source and formats it as a Pandas DataFrame
 
     * All kwargs are passes on to extractFeatures
@@ -272,6 +272,9 @@ def extractAsDataFrame(source, **kwargs):
             fields[k].append(v)
 
     df = pd.DataFrame(fields)
+    if not indexCol is None:
+        df.set_index(indexCol, inplace=True)
+
     return df
 
 

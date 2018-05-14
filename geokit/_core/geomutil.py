@@ -133,6 +133,27 @@ def polygon(outerRing, *args, srs=None):
     # Done!
     return g
 
+def getPointsArray(geom):
+    isMulti = "MULTI" in geom.GetGeometryName()
+    # Check geometry type
+    if "LINE" in geom.GetGeometryName():
+        if isMulti:
+            pts = []
+            for gi in range(geom.GetGeometryCount()): pts.append( geom.GetGeometryRef(gi).GetPoints() )
+        else:
+            pts = geom.GetPoints()
+    elif "POLYGON" in geom.GetGeometryName():
+        newGeom = geom.GetBoundary()
+        return getPointsArray(newGeom)
+    elif "POINT" in geom.GetGeometryName():
+        pts = geom.GetPoints()
+    else: 
+        raise GeoKitGeomError("Cannot extract points from grometry ")
+
+    if isMulti: return np.concatenate(pts)
+    else: return np.array(pts)
+     
+
 def makePolygon(*args, **kwargs):
     """alias for geokit.geom.polygon(...)"""
     return polygon(*args, **kwargs)
