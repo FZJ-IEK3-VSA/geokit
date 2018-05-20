@@ -161,7 +161,7 @@ class LocationSet(object):
     def asString(s):
         return [str(l) for l in s._locations]
 
-    def makePickleable(loc):
+    def makePickleable(s):
         for l in s._locations: l.makePickleable()
 
     def asGeom(s, srs=4326):
