@@ -153,7 +153,6 @@ def scaleMatrix(mat, scale, strict=True):
 
     return out
 
-
 def quickVector(geom, output=None):
     """GeoKit internal for quickly creating a vector datasource"""
     ######## Create a quick vector source

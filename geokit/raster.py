@@ -1,5 +1,6 @@
 
 from geokit._core.rasterutil import (GeoKitRasterError,
+                                     isRaster,
                                      loadRaster,
                                      gdalType,
                                      createRaster,

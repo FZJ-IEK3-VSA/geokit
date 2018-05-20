@@ -137,6 +137,30 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=dsInfo.srs)
 
     @staticmethod
+    def fromLocationSet( locs ):
+        """Create extent around the contents of a LocationSet object"""
+
+        lonMin, latMin, lonMax, latMax = locs.getBounds()
+        return Extent(lonMin, latMin, lonMax, latMax, srs=EPSG4326)
+
+
+    @staticmethod
+    def load( source, **kwargs ):
+        """Attempt to load a variety of source types. (Slow compared to when the source type is known)"""
+        if isinstance(source, LocationSet): return Extent.fromLocationSet(source)
+        elif isinstance(source, ogr.Geometry): return Extent.fromGeom(source)
+
+        if not isinstance(source, str): # Maybe the source is an iterable giving xyXY 
+            try:
+                vals = list(source)
+                ext = Extent(*vals, **kwargs)
+            except: pass
+        elif isVector(source): return Extent.fromVector(source)
+        elif isRaster(source): return Extent.fromRaster(source)
+
+        raise GeoKitExtentError("Could not load the source")
+
+    @staticmethod
     def _fromInfo(info):
         """GeoKit internal
 
@@ -170,7 +194,7 @@ class Extent(object):
         if not isclose(s.yMin, o.yMin): return False
         return True
 
-    def __str__(s):
+    def __repr__(s):
         out = ""
         out += "xMin: %f\n"%s.xMin
         out += "xMax: %f\n"%s.xMax
@@ -179,6 +203,10 @@ class Extent(object):
         out += "srs: %s\n"%s.srs.ExportToWkt()
 
         return out
+
+    def __str__(s):
+        return "(%.5f,%.5f,%.5f,%.5f)"%s.xyXY
+
 
     def pad(s, pad): 
         """Creates a new extent which has been padded in all directions compared to the original extent

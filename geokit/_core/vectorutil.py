@@ -6,6 +6,14 @@ from .rasterutil import *
 ####################################################################
 # INTERNAL FUNCTIONS
 
+def isVector(source): 
+    try: 
+        ds = ogr.Open(source)
+        return True
+    except: 
+        return False
+
+
 # Loaders Functions
 def loadVector(x, stringOnly=False):
     """

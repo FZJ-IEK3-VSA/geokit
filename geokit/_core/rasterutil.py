@@ -6,6 +6,14 @@ from .location import *
 ####################################################################
 # INTERNAL FUNCTIONS
 
+
+def isRaster(source): 
+    try: 
+        ds = gdal.Open(source)
+        return True
+    except: 
+        return False
+
 # Basic Loader
 def loadRaster(x):
     """
@@ -604,7 +612,7 @@ def rasterInfo(sourceDS):
 ####################################################################
 # extract specific points in a raster
 ptValue = namedtuple('value',"data xOffset yOffset inBounds")
-def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True):
+def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True, onlyValues=False):
     """Extracts the value of a raster at a given point or collection of points. Can also extract a window of values if 
        desired
 
@@ -749,9 +757,11 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     # Done!
     if asSingle: # A single point was given, so return a single result
-        return ptValue(values[0], xOffset[0], yOffset[0], inBounds[0])
+        if onlyValues: return values[0]
+        else: return ptValue(values[0], xOffset[0], yOffset[0], inBounds[0])
     else:
-        return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds), index=pointsKey)
+        if onlyValues: return np.array(values)
+        else: return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds), index=pointsKey)
 
 ####################################################################
 # Shortcut for getting just the raster value
@@ -834,12 +844,8 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     # Do interpolation
     if mode=='near':
         # Simple get the nearest value
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=0)
-        if not isinstance(values, ptValue):
-            result = values.data.tolist()
-        else:
-            result = [values.data, ]
-
+        result = extractValues(source, points, pointSRS=pointSRS, winRange=0, onlyValues=True)
+        
     elif mode=="linear-spline": # use a spline interpolation scheme
         # setup inputs
         win = 2 if winRange is None else winRange
@@ -893,7 +899,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
 
     # Done!
     if asSingle: return result[0]
-    else: return np.array([r for r in result])
+    else: return np.array(result)
     
 ####################################################################
 # General raster mutator
