@@ -18,7 +18,7 @@ def point(*args, srs='latlon'):
     *args : numeric, numeric or (numeric, numeric)
         The X and Y coordinate of the point to create
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * srs MUST be given as a keyword argument
@@ -61,7 +61,7 @@ def box(*args, srs=4326):
     *args : 4 numeric argument, or one tuple argument with 4 numerics
         The X_Min, Y_Min, X_Max and Y_Max bounds of the box to create
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * srs MUST be given as a keyword argument
@@ -122,7 +122,7 @@ def polygon(outerRing, *args, srs=4326):
             the opposite orientation as the outer ring (clockwise vs 
             counterclockwise)
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the polygon to create
           * If not given, longitude/latitude is assumed
     
@@ -179,7 +179,7 @@ def line(points, srs=4326):
     Points : [(x,y), ] or Nx2 numpy.ndarray
         The point defining the line
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the line to create
     
     Returns:
@@ -219,7 +219,7 @@ def empty(gtype, srs=None):
         The geometry type to make
           * Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the geometry to create
     
     Returns:
@@ -285,7 +285,7 @@ def convertWKT( wkt, srs=None):
     wkt : str
         The WKT string to convert
 
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the geometry to create
     """
     geom = ogr.CreateGeometryFromWkt( wkt ) # Create new geometry from string 
@@ -318,7 +318,7 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
             required
 
     
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the geometries to create
 
 
@@ -491,7 +491,7 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
           * If the boundary is given as an Extent object, an srs input is not 
             required
     
-    srs : Anything acceptable to gk.srs.loadSRS, optional
+    srs : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the geometries to create
 
     flat : bool
@@ -536,16 +536,16 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
         The geometry or geometries to transform
           * All geometries must have the same spatial reference
 
-    toSRS : Anything acceptable to gk.srs.loadSRS, optional
+    toSRS : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the output geometries
           * If no given, a Europe-centered relational system (EPSG3035) is chosen
 
-    fromSRS : Anything acceptable to gk.srs.loadSRS, optional
+    fromSRS : Anything acceptable to gk.srs.loadSRS; optional
         The srs of the input geometries
           * Only needed if an SRS cannot be inferred from the geometry inputs or
             is, for whatever reason, the geometry's SRS is wrong
 
-    segment : float, optional
+    segment : float; optional
         An optional segmentation length to apply to the input geometries BEFORE
         transformation occurs. The input geometries will be segmented such that 
         no line segment is longer than the given segment size
@@ -627,19 +627,20 @@ def flatten( geoms ):
             raise ValueError("argument must be a list of geometries")
 
     if len(geoms) == 0: return None
-    
 
-    
-    ## I had to do this because unioning one by one was much too slow since it would create
-    ## a single large geometry which had to be manipulated for EACH new addition
-
-    while( len(geoms)>1):
+    ## Begin flattening
+    while( len(geoms)>1 ):
         newGeoms = []
         for gi in range(0,len(geoms),2):
+
             try:
+                if not geoms[gi].IsValid(): print("WARNING: Invalid Geometry encountered")
+                if not geoms[gi+1].IsValid(): print("WARNING: Invalid Geometry encountered")
+
                 newGeoms.append(geoms[gi].Union(geoms[gi+1]))
             except IndexError: # should only occur when length of geoms is odd
                 newGeoms.append(geoms[gi])
+
         geoms = newGeoms
     return geoms[0]
 
@@ -693,17 +694,19 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
     from descartes import PolygonPatch
     from json import loads
 
-    if g.GetGeometryCount() == 0: # Geometry was small and was eliminated by the simplification
+    if g.GetGeometryCount() == 0: # Geometry doesn't actually exist. skip it
         return None
 
     # Get main and hole edges
     boundaries = g.GetBoundary()
     if boundaries.GetGeometryName()=="LINESTRING":
-        main = boundaries.GetPoints()
+        try: main = boundaries.GetPoints()
+        except AttributeError: return # Geometry doesn't actually exist. skip it
         holes = []
     else:
         mainG = boundaries.GetGeometryRef(0)
-        main = mainG.GetPoints()
+        try: main = mainG.GetPoints()
+        except AttributeError: return # Geometry doesn't actually exist. skip it
         holes = [boundaries.GetGeometryRef(i).GetPoints() for i in range(1, boundaries.GetGeometryCount())]
     
     patchData = dict(type='Polygon', coordinates=[])
@@ -734,7 +737,7 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
 
 
 AxHands = namedtuple("AxHands", "ax handles cbar")
-def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=True, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, **mplArgs):
+def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -744,38 +747,117 @@ def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None
            library
     * Each geometry can be given its own set of matplotlib plotting parameters
 
+    Notes:
+    ------
+    This function does not call plt.show() for the final display of the figure.
+    This must be done manually after calling this function. Otherwise 
+    plt.savefig(...) can be called to save the output somewhere.
+
+    Sometimes geometries will disappear because of the simplification procedure.
+    If this happens, the procedure can be avoided by setting simplificationFactor
+    to None. This will take much more memory and will take longer to plot, however
+
     Parameters:
     -----------
-    geoms : The geometry/geometries to draw
-        - a single ogr Geometry object
-        - a tuple -- (ogr Geometry, dict of plotting parameters for this geometry)
-        - a dict containing at least one 'geom' key pointing to an ogr Geometry object
-            * other kwargs are treated as plotting parameters for the geometry
-        - An iterable of any the above
-        * All geometries must have the same native SRS
+    geoms : ogr.Geometry or [ogr.Geometry, ] or pd.DataFrame
+        The geometries to be drawn
+          * If a DataFrame is given, the function looks for geometries under a
+            columns named 'geom'
+          * plotting arguments can be given by adding a column named 'MPL:****'
+            where '****' stands in for the argument to be added
+              - For geometries that should ignore this argument, set it as None
+
+    srs : Anything acceptable to gk.srs.loadSRS; optional
+        The srs in which to draw each geometry
+          * If not given, longitude/latitude is assumed
+          * Although geometries can be given in any SRS, it is very helpful if
+            they are already provided in the correct SRS
+
+    ax : matplotlib axis; optional
+        The axis to draw the geometries on
+          * If not given, a new axis is generated and returned
+
+    simplificationFactor : float; optional
+        The level to which geometries should be simplified. It can be thought of
+        as the number of verticies allowed in either the X or Y dimension across
+        the figure
+          * A higher value means a more detailed plot, but may take longer to draw
+
+    colorBy : str; optional
+        The column in the geoms DataFrame to color by
+          * Only useful when geoms is given as a DataFrame
+
+    figsize : (int, int); optional
+        The figure size to create when generating a new axis
+          * If resultign figure looks wierd, altering the figure size is your best
+            bet to make it look nicer
+
+    xlim : (float, float); optional
+        The x-axis limits
+
+    ylim : (float, float); optional
+        The y-axis limits
+
+    fontsize : int; optional
+        A base font size to apply to tick marks which appear
+          * Titles and labels are given a size of 'fontsize' + 2
+
+    hideAxis : bool; optional
+        Instructs the created axis to hide its boundary
+          * Only useful when generating a new axis
+
+    margin : (float, float, float, float, ); optional
+        Additional margins to add around a generated axis
+          * Useful if, for whatever reason, the plot isn't fitting right in the 
+            final figure
+          * Before using this, try adjusting the 'figsize'
+
+    cbarPadding : float; optional
+        The spacing padding to add between the generated axis and the generated
+        colorbar axis
+          * Only useful when generting a new axis
+          * Only useful when 'colorBy' is given
+
+    cbarTitle : str; optional
+        The title to give to the generated colorbar
+          * If not given, but 'colorBy' is given, the same string for 'colorBy'
+            is used
+            * Only useful when 'colorBy' is given
+
+    vmin : float; optional
+        The minimum value to color
+          * Only useful when 'colorBy' is given
+
+    vmax : float; optional
+        The maximum value to color
+          * Only useful when 'colorBy' is given
+
+    cmap : str or matplotlib ColorMap; optional
+        The colormap to use when coloring
+          * Only useful when 'colorBy' is given
+
+    cbax : matplotlib axis; optional
+        An explicitly given axis to use for drawing the colorbar
+          * If not given, but 'colorBy' is given, an axis for the colorbar is 
+            automatically generated
     
-    ax  : a matplotlib axeis object to plot on
-        * if ax is None, the function will create its own axis and automatically show it
+    cbargs : dict; optional
+        keyword arguments to pass on when creating the colorbar 
 
-    srs : The SRS to draw the geometries in
-        - osr.SpatialReference object
-        - an EPSG integer ID
-        - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-        - a WKT string
-        * if srs is None, the geometries' native SRS will be used
+    **mplArgs
+        All other keyword arguments are passed on to the plotting functions called
+        for each geometry
+          * Will be applied to ALL geometries. Be careful since this can cause 
+            errors when plotting geometries of different types
+    
+    Returns:
+    --------
+    A namedtuple containing:
+       'ax' -> The map axis
+       'handles' -> All geometry handles which were created in the order they were 
+                    drawn
+       'cbar' -> The colorbar handle if it was drawn
 
-    simplification : A simplification factor to apply onto each geometry whichs ensure no line segment is shorter
-                     than the given value
-        * float
-        - Units are the same as the 'srs' input
-        - Using this will make plotting easier and use less resources
-
-    autoScale - T/F : Flags whether or not to autoscale the resulting plot
-
-    **mplargs : matplotlib keyword arguments to apply to each geometry
-        * Specified keyword arguments for each geometry inherit from mplargs 
-
-    Retuns: A list of matplotlib handles to the created items
     """
     if isinstance(ax, AxHands):ax = ax.ax
 
@@ -798,6 +880,7 @@ def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None
                              cbarWidth, 
                              1-margin[3]-margin[1]-2*cbarExtraPad])
         if hideAxis: ax.axis("off")
+        else: ax.tick_params(labelsize=fontsize)
     else:
         newAxis=False
 
@@ -828,22 +911,50 @@ def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None
         for gi,g in enumerate(geoms):
             gsrs = g.GetSpatialReference()
             if gsrs is None: continue # Skip it if we don't know it...
-            if not gsrs.IsSame(srs): geoms[gi].TransformTo(srs)
+            if not gsrs.IsSame(srs): geoms[gi] = transform(geoms[gi], srs)
 
     # Apply simplifications if required
     if not simplificationFactor is None:
-        xMin, yMin, xMax, yMax = 1e100, 1e100, -1e100, -1e100
-        for g in geoms:
-            _xMin, _xMax, _yMin, _yMax = g.GetEnvelope()
+        if xlim is None or ylim is None:
+            xMin, yMin, xMax, yMax = 1e100, 1e100, -1e100, -1e100
+            for g in geoms:
+                _xMin, _xMax, _yMin, _yMax = g.GetEnvelope()
 
-            xMin=min(_xMin, xMin)
-            xMax=max(_xMax, xMax)
-            yMin=min(_yMin, yMin)
-            yMax=max(_yMax, yMax)
+                xMin=min(_xMin, xMin)
+                xMax=max(_xMax, xMax)
+                yMin=min(_yMin, yMin)
+                yMax=max(_yMax, yMax)
+
+        if not xlim is None: xMin, xMax = xlim
+        if not ylim is None: yMin, yMax = ylim
 
         simplificationValue = max( xMax-xMin, yMax-yMin )/simplificationFactor
+        #print("SIMPV:", simplificationValue)
+        
+        oGeoms = geoms
+        geoms=[]
 
-        geoms = [g.Simplify(simplificationValue) for g in geoms]
+        def doSimplify(g):
+            ng = g.Simplify(simplificationValue)
+            if ng.GetEnvelope()==(0.0, 0.0, 0.0, 0.0): # Something bad happened, try the more robust simplification
+                #print("I get here....")
+                #ng = g.SimplifyPreserveTopology(simplificationValue)
+                pass
+            return ng
+
+        for g in oGeoms:
+            #carefulSimplification=False
+            #if carefulSimplification and "MULTI" in g.GetGeometryName():
+            if False and "MULTI" in g.GetGeometryName(): # This doesn't seem to help...
+                subgeoms = []
+                for gi in range(g.GetGeometryCount()):
+                    ng = doSimplify(g.GetGeometryRef(gi))
+                    subgeoms.append(ng)
+
+                geoms.append( flatten(subgeoms) )
+            else:
+                geoms.append(doSimplify(g))
+
 
     ### Handle color value
     if not colorBy is None:
@@ -915,7 +1026,10 @@ def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None
         return AxHands(ax, h, cbar)
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
-    """Partition a Polygon into some number of pieces whose areas should be close to the targetArea
+    """Partition a Polygon into some number of pieces whose areas should be close 
+    to the targetArea
+
+    WARNING: Not tested for several version. Will probably be removed later
     
     Inputs:
         geom : The geometry to partition
