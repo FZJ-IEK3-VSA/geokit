@@ -722,7 +722,7 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
     mainPatch = PolygonPatch(patchData, **kwargs)
     return ax.add_patch(mainPatch)
     
-def drawMultiPolygon(g, plotargs, ax, colorVal=None, cmap=None):
+def drawMultiPolygon(g, plotargs, ax, colorVal=None):
     kwargs = dict(fc="#D9E9FF", ec="k", linestyle='-')
     if not colorVal is None: kwargs["fc"] = colorVal
     kwargs.update(plotargs)
@@ -733,7 +733,8 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None, cmap=None):
     return h
 
 
-def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, autoScale=True, colorBy=None, cmap="viridis", output=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=True, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, showPlot=False, **mplArgs):
+AxHands = namedtuple("AxHands", "ax handles cbar")
+def drawGeoms(geoms=, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=True, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -776,7 +777,10 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, autoScale=Tru
 
     Retuns: A list of matplotlib handles to the created items
     """
+    if isinstance(ax, AxHands):ax = ax.ax
+
     if ax is None:
+        newAxis=True
         import matplotlib.pyplot as plt
 
         if colorBy is None:
@@ -793,8 +797,9 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, autoScale=Tru
                              margin[1]+cbarExtraPad, 
                              cbarWidth, 
                              1-margin[3]-margin[1]-2*cbarExtraPad])
-        
         if hideAxis: ax.axis("off")
+    else:
+        newAxis=False
 
     # Be sure we have a list
     pargs=None
@@ -887,36 +892,27 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, autoScale=Tru
         from matplotlib.colors import Normalize
 
         norm = Normalize(vmin=cValMin, vmax=cValMax)
-        cbar = ColorbarBase(cbax, cmap=cmap, norm=norm, orientation='vertical')
+        tmp = dict(cmap=cmap, norm=norm, orientation='vertical')
+        if not cbargs is None: tmp.update( cbargs )
+        cbar = ColorbarBase(cbax, )
         cbar.ax.tick_params(labelsize=fontsize)
         cbar.set_label( colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize+2 )
-        h.append( cbar )
-
-    # done!
-    if autoScale:
+    else:
+        cbar = None
+        
+    # Do some formatting
+    if newAxis:
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
 
-    # Do more formatting
     if not xlim is None: ax.set_xlim(*xlim)
     if not ylim is None: ax.set_ylim(*ylim)
 
-    if showPlot: 
-        if output is None:
-            plt.show()
-        else:
-            plt.savefig(output, dpi=300)
-            plt.close()
-
-    else: # return the individual handles 
-        if isFrame:
-            idx = list(data.index)
-            if not colorBy is None:
-                idx.append("colorbar")
-            
-            return ax, pd.Series(h, index=idx)
-        else:
-            return ax, h
+    # Organize return
+    if isFrame:
+        return AxHands(ax, pd.Series(h, index=data.index), cbar)
+    else:
+        return AxHands(ax, h, cbar)
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
     """Partition a Polygon into some number of pieces whose areas should be close to the targetArea
