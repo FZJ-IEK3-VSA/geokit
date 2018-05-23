@@ -3,11 +3,20 @@ from .srsutil import *
 from .geomutil import *
 from .location import *
 
-####################################################################
-# INTERNAL FUNCTIONS
-
-
 def isRaster(source): 
+    """
+    Test if loadRaster fails for the given input
+
+    Parameters:
+    -----------
+    source : str
+        The path to the raster file to load
+
+    Returns:
+    --------
+    bool -> True if the given input is a raster
+
+    """
     try: 
         ds = gdal.Open(source)
         return True
@@ -15,18 +24,27 @@ def isRaster(source):
         return False
 
 # Basic Loader
-def loadRaster(x):
+def loadRaster(source):
     """
-    ***GeoKit INTERNAL***
-    Load a raster dataset from various sources.
+    Load a raster dataset from a path to a file on disc
+
+    Parameters:
+    -----------
+    source : str
+        The path to the raster file to load
+
+    Returns:
+    --------
+    osr.SpatialReference
+
     """
-    if(isinstance(x,str)):
-        ds = gdal.Open(x)
+    if(isinstance(source,str)):
+        ds = gdal.Open(source)
     else:
-        ds = x
+        ds = source
 
     if(ds is None):
-        raise GeoKitRasterError("Could not load input dataSource: ", str(x))
+        raise GeoKitRasterError("Could not load input dataSource: ", str(source))
     return ds
 
 
@@ -37,7 +55,7 @@ _gdalType={bool:"GDT_Byte", int:"GDT_Int32", float:"GDT_Float64","bool":"GDT_Byt
            "int64":"GDT_Int32", "uint8":"GDT_Byte", "uint16":"GDT_UInt16", 
            "uint32":"GDT_UInt32", "float32":"GDT_Float32", "float64":"GDT_Float64"}
 def gdalType(s):
-    """Try to determine gdal datatype from the given input type"""
+    """Tries to determine gdal datatype from the given input type"""
     if( isinstance(s,str) ):
         if( hasattr(gdal, s)): return s
         elif( s.lower() in _gdalType): return _gdalType[s.lower()]
@@ -73,67 +91,84 @@ def calculateStats( source ):
 ####################################################################
 # Raster writer
 def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=False, fill=None, data=None, meta=None, **kwargs):
-    """
-    Create a raster file
+    """Create a raster file
+    
+    NOTE:
+    -----
+    Raster datasets are always written in the 'yAtTop' orientation. Meaning that 
+    the first row of data values (either written to or read from the dataset) will 
+    refer to the TOP of the defined boundary, and will then move downward from 
+    there
 
-    !NOTE! Raster datasets are always written in the 'yAtTop' orientation. Meaning that the first row of data values 
-           (either written to or read from the dataset) will refer to the TOP of the defined boundary, and will then 
-           move downward from there
+    If a data matrix is given, and a negative pixelWidth is defined, the data 
+    will be flipped automatically
 
-    * If a data matrix is given, and a negative pixelWidth is defined, the data will be flipped automatically
+    Parameters:
+    -----------
+    bounds : (xMin, yMix, xMax, yMax) or Extent
+        The geographic extents spanned by the raster
+    
+    pixelWidth : numeric
+        The pixel width of the raster in units of the input srs
+        * The keyword 'dx' can be used as well and will override anything given 
+        assigned to 'pixelWidth'
+    
+    pixelHeight : numeric
+        The pixel height of the raster in units of the input srs
+        * The keyword 'dy' can be used as well and will override anything given 
+          assigned to 'pixelHeight'
+    
+    output : str; optional
+        A path to an output file 
+        * If output is None, the raster will be created in memory and a dataset 
+          handel will be returned
+        * If output is given, the raster will be written to disk and nothing will
+          be returned
 
-    Return: None or gdal raster dataset (depending on whether an output path is given)
+    dtype : str; optional
+        The datatype of the represented by the created raster's band
+        * Options are: Byte, Int16, Int32, Int64, Float32, Float64
+        * If dtype is None and data is None, the assumed datatype is a 'Byte'
+        * If dtype is None and data is not None, the datatype will be inferred 
+          from the given data
 
-    Keyword inputs:
-        bounds : The geographic extents spanned by the raster
-            - (xMin, yMix, xMax, yMax)
-            - geokit.Extent object
-        
-        output : A path to an output file 
-            - string
-            * If output is None, the raster will be created in memory and a dataset handel will be returned
-            * If output is given, the raster will be written to disk and nothing will be returned
-        
-        pixelWidth : The pixel width of the raster in units of the input srs
-            - float
-            * The keyword 'dx' can be used as well and will override anything given assigned to 'pixelWidth'
-        
-        pixelHeight : The pixel height of the raster in units of the input srs
-            - float
-            * The keyword 'dy' can be used as well and will override anything given assigned to 'pixelHeight'
+    srs : Anything acceptable to gk.srs.loadSRS; optional
+        The srs of the point to create
+          * If not given, longitude/latitude is assumed
+          * srs MUST be given as a keyword argument
+        * If 'bounds' is an Extent object, the bounds' internal srs will override
+          this input
 
-        dtype : The datatype of the represented by the created raster's band
-            - string
-            * Options are: Byte, Int16, Int32, Int64, Float32, Float64
-            * If dtype is None and data is None, the assumed datatype is a 'Byte'
-            * If dtype is None and data is not None, the datatype will be inferred from the given data
-        
-        srs : The Spatial reference system to apply to the created raster
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * If 'bounds' is an Extent object, the bounds' internal srs will override the 'srs' input
+    compress : bool
+        A flag instructing the output raster to use a compression algorithm
+        * only useful if 'output' has been defined
+        * "DEFLATE" used for Linux/Mac, "LZW" used for Windows
+    
+    noData : numeric; optional
+        Specifies which value should be considered as 'no data' in the created 
+        raster
+        * Must be the same datatye as the 'dtype' input (or that which is derived)
 
-        compress :  A flag instructing the output raster to use a compression algorithm
-            - True/False
-            * only useful if 'output' has been defined
-            * "DEFLATE" used for Linux/Mac, "LZW" used for windows
-        
-        noData : Specifies which value should be considered as 'no data' in the created raster
-            - numeric
-            * Must be the same datatye as the 'dtype' input (or that which is derived)
+    fill : numeric; optional
+        The initial value given to all pixels in the created raster band
+        - numeric
+        * Must be the same datatye as the 'dtype' input (or that which is derived)
 
-        fill : The initial value given to all pixels in the created raster band
-            - numeric
-            * Must be the same datatye as the 'dtype' input (or that which is derived)
+    overwrite : bool
+        A flag to overwrite a pre-existing output file
+        * If set to False and an 'output' is specified which already exists,
+          an error will be raised
 
-        overwrite : A flag to overwrite a pre-existing output file
-            - True/False
+    data : matrix_like
+        A 2D matrix to write into the resulting raster
+        * array dimensions must fit raster dimensions as calculated by the bounds
+          and the pixel resolution
 
-        data : A 2D matrix to write into the resulting raster
-            - np.ndarray
-            * array dimensions must fit raster dimensions!!
+    Returns:
+    --------
+    * If 'output' is None: gdal.Dataset
+    * If 'output' is a string: None
+
     """
 
     # Fix some inputs for backwards compatibility
@@ -301,11 +336,15 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
 
 
 def createRasterLike( rasterInfo, **kwargs):
-    """Create a raster described by the given raster info (as returned from a call to rasterInfo() ). 
+    """Create a raster described by the given raster info (as returned from a 
+    call to rasterInfo() ). 
 
-        * This copies all characteristics of the given raster, including: bounds, pixelWidth, pixelHeight, 
-          dtype, srs, noData, and meta. 
-        * Any keyword argument which is given will override values found in the rasterInfo"""
+    * This copies all characteristics of the given raster, including: bounds, 
+      pixelWidth, pixelHeight, dtype, srs, noData, and meta. 
+    * Any keyword argument which is given will override values found in the 
+      rasterInfo
+
+    """
 
     bounds = kwargs.pop("bounds", rasterInfo.bounds)
     pixelWidth = kwargs.pop("pixelWidth", rasterInfo.pixelWidth)
@@ -325,21 +364,33 @@ def createRasterLike( rasterInfo, **kwargs):
 def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
     """extract all or part of a raster's band as a numpy matrix
     
-    * Unless one is trying to get the entire matrix from the raster dataset, usage of this function requires 
-      intimate knowledge of the raster's characteristics. In this case it probably easier to use Extent.extractMatrix
+    Note:
+    -----
+    Unless one is trying to get the entire matrix from the raster dataset, usage
+    of this function requires intimate knowledge of the raster's characteristics. 
+    In such a case it is probably easier to use Extent.extractMatrix
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
+        
+    xOff : int 
+        The index offset in the x-dimension
 
-        xOff - int : The index offset in the x-dimension
+    yOff : int
+        The index offset in the y-dimension
 
-        yOff - int : The index offset in the y-dimension
+    xWin: int
+        The window size in the x-dimension
 
-        xWin - int : The window size in the x-dimension
+    yWin : int
+        The window size in the y-dimension
 
-        yWin - int : The window size in the y-dimension
+    Returns:
+    --------
+    numpy.ndarray -> Two dimensional matrix
+
     """
 
     sourceDS = loadRaster(source) # BE sure we have a raster
@@ -358,28 +409,31 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
 # Cutline extracter
 cutlineInfo = namedtuple("cutlineInfo","data info")
 def extractCutline(source, geom, cropToCutline=True, **kwargs):
-    """extract a cutout of a raster source's data which is within a given geometry 
+    """Extracts a cutout of a raster source's data which is within a geometry 
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
 
-        geom : The geometry overwhich to cut out the raster's data
-            - ogr Geometry object
-            * Must be a Polygon or MultiPolygon
+    geom : ogr.Geometry
+        The geometry over which to cut out the raster's data
+        * Must be a Polygon or MultiPolygon
 
-        cropToCutline : A flag which restricts the bounds of the returned matrix to that which most closely matches 
-                        the geometry
-            - True/False
+    cropToCutline : bool
+        A flag which restricts the bounds of the returned matrix to that which 
+        most closely matches the geometry
 
-        **kwargs
-            * All kwargs are passes on to a call to gdal.Warp
-            * See gdal.WarpOptions for more details
-            * For example, 'allTouched' may be useful
+    **kwargs
+        * All kwargs are passed on to a call to gdal.Warp
+        * See gdal.WarpOptions for more details
+        * For example, 'allTouched' may be useful
 
     Returns:
-        ( matrix-data, a rasterInfo output in the context of the created matrix )
+    --------
+    namedtuple -> ( "data":numpy.ndarray, 
+                    "info":rasterInfo for the context of the created matrix )
+
     """
     # make sure we have a polygon or multipolygon geometry
     if not isinstance(geom, ogr.Geometry):
@@ -416,13 +470,38 @@ def extractCutline(source, geom, cropToCutline=True, **kwargs):
     return returnVal
 
 def stats( source, geom=None, ignoreValue=None, **kwargs):
-    """Compute basic statistics of the values contained in a raster dataset.
+    """Compute basic statistics of the values contained in a raster dataset. 
 
-    * Can clip the raster with a geometry
-    * Can ignore certain values if the raster doesnt have a no-data-value
-    * All kwargs are passed on to 'extractCutline' when a 'geom' input is given
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
+
+    geom : ogr.Geometry; optional
+        The geometry over which to cut out the raster's data
+        * Must be a Polygon or MultiPolygon
+
+    ignoreValue : numeric
+        A value to ignore when computing the statistics
+        * If the raster source has a 'no Data' value, it is automatically 
+          ignored
+
+    cropToCutline : bool
+        A flag which restricts the bounds of the returned matrix to that which 
+        most closely matches the geometry
+
+    **kwargs
+        * All kwargs are passed on to extractCutline() when 'geom' is given
+        * See gdal.WarpOptions for more details
+        * For example, 'allTouched' may be useful
+
+    Returns:
+    --------
+    Results from a call to scipy.stats.describe
+
     """
 
+    from scipy.stats import describe
     source = loadRaster(source)
 
     # Get the matrix to calculate over
@@ -452,39 +531,50 @@ def stats( source, geom=None, ignoreValue=None, **kwargs):
 def gradient( source, mode ="total", factor=1, asMatrix=False, **kwargs):
     """Calculate a raster's gradient and return as a new dataset or simply a matrix
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
 
-        mode : Determines the type of gradient to compute
-            - str
-            * Options are....
-                - "total" : Calculates the absolute gradient as a ratio
-                    * use arctan(...) to compute the gradient in degrees/radians
-                - "slope" : Same as 'total'
-                - "north-south" : Calculates the "north-facing" gradient (negative numbers indicate a south facing 
-                                gradient) as a ratio (use arctan to convert to degrees/radians)
-                - "ns" : Same as 'north-south'
-                - "east-west" : Calculates the "east-facing" gradient (negative numbers indicate a west facing gradient) 
-                              as a ratio (use arctan to convert to degrees/radians)
-                - "ew" : Same as 'east-west'
-                - "aspect" : calculates the gradient's direction in radians (0 is east)
-                - "dir" : same as 'aspect'
+    mode : str; optional
+        Determines the type of gradient to compute
+        * Options are....
+          "total" : Calculates the absolute gradient as a ratio
+          
+          "slope" : Same as 'total'
 
-        factor : The scaling factor relating the units of the x & y dimensions to the z dimension
-            - float
-            - str
-            * If factor is 'latlonToM', the x & y units are assumed to be degrees (lat & lon) and the z units are 
-              assumed to be meters. A factor is then computed for coordinates at the source's center.
-            * Example: 
-                - If x,y units are meters and z units are feet, factor should be 0.3048
+          "north-south" : Calculates the "north-facing" gradient as a ratio where
+                          negative numbers indicate a south facing gradient 
 
-        asMatrix : Flag which makes the returned value a matrix (as opposed to a raster dataset)
-            - True/False
+          "east-west" : Calculates the "east-facing" gradient as a ratio where 
+                        negative numbers indicate a west facing gradient
 
-        **kwargs : All extra key word arguments are passed on to a final call to 'createRaster'
-            * These have no effect when asMatrix is True
+          "aspect" : calculates the gradient's direction in radians (0 is east)
+
+          "dir" : same as 'aspect'
+
+    factor : numeric or 'latlonToM'
+        The scaling factor relating the units of the x & y dimensions to the z 
+        dimension
+        * If factor is 'latlonToM', the x & y units are assumed to be degrees 
+          (lat & lon) and the z units are assumed to be meters. A factor is then 
+          computed for coordinates at the source's center.
+        * Example: If x,y units are meters and z units are feet, factor should 
+          be 0.3048
+
+    asMatrix : bool
+        If True, makes the returned value a matrix 
+        If False, makes the returned value a raster dataset
+
+    **kwargs : All extra key word arguments are passed on to a final call to 
+        'createRaster'
+        * Only useful when 'asMatrix' is True
+
+    Returns:
+    --------
+    * If 'asMatrix' is True: numpy.ndarray
+    * If 'asMatrix' is False: gdal.Dataset
+
     """
     # Make sure source is a source
     source = loadRaster(source)
@@ -544,18 +634,25 @@ RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xM
 def rasterInfo(sourceDS):
     """Returns a named tuple containing information relating to the input raster
 
-    Includes:
-        srs - The spatial reference system (as an OGR object)
-        dtype - The datatype (as an ????)
-        flipY - A flag which indicates that the raster starts at the 'bottom' as opposed to at the 'top'
-        bounds - The xMin, yMin, xMax, and yMax values as a tuple
-        xMin, yMin, xMax, yMax - The individual boundary values
-        pixelWidth, pixelHeight - The raster's pixelWidth and pixelHeight
-        dx, dy - Shorthand names for pixelWidth (dx) and pixelHeight (dy)
-        noData - The noData value used by the raster
-        xWinSize - The width of the raster is pixels
-        yWinSize - The height of the raster is pixels
-        meta - The raster's meta data
+    Returns:
+    --------
+    namedtuple -> ( srs: The spatial reference system (as an OGR object)
+                    dtype: The datatype 
+                    flipY: A flag which indicates that the raster starts at the 
+                             'bottom' as opposed to at the 'top'
+                    bounds: The (xMin, yMin, xMax, and yMax) values as a tuple
+                    xMin: The minimal X boundary
+                    yMin:The minimal Y boundary
+                    xMax:The maximal X boundary
+                    yMax: The maximal Y boundary
+                    pixelWidth: The raster's pixelWidth 
+                    pixelHeight: The raster's pixelHeight
+                    dx:The raster's pixelWidth
+                    dy: The raster's pixelHeight
+                    noData: The noData value used by the raster
+                    xWinSize: The width of the raster is pixels
+                    yWinSize: The height of the raster is pixels
+                    meta: The raster's meta data )
     """
     output = {}
     sourceDS = loadRaster(sourceDS)
@@ -612,40 +709,62 @@ def rasterInfo(sourceDS):
 ####################################################################
 # extract specific points in a raster
 ptValue = namedtuple('value',"data xOffset yOffset inBounds")
-def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True, onlyValues=False):
-    """Extracts the value of a raster at a given point or collection of points. Can also extract a window of values if 
-       desired
+def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True, _onlyValues=False):
+    """Extracts the value of a raster at a given point or collection of points. 
+       Can also extract a window of values if desired
 
-    * If the given raster is not in the 'flipped-y' orientation, the result will be automatically flipped
+    * If the given raster is not in the 'flipped-y' orientation, the result will 
+      be automatically flipped
+    
+    Notes:
+    ------
+    Generally speaking, interpolateValues() should be used instead of this function
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
 
-        points : Coordinates for the points to extract
-            - ogr-Point -- A single OGR point-geometry object
-            - (x, y) -- A single pair of coordinates
-            - An iterable containing either of the above (must be one or the other)
-            * All points must be in the same SRS
-            * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
-              (opposite of what you may think...)
+    points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
+        Coordinates for the points to extract
+        * All points must be in the same SRS
+        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
+          (opposite of what you may think...)
 
-        pointSRS : The SRS to use when points are input as x & y coordinates
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
+    pointSRS : Anything acceptable to gk.srs.loadSRS; optional
+        The srs of the point to create
+          * If not given, longitude/latitude is assumed
+          * Only useful when 'points' is not a LocationSet
 
-        winRange - int : The window range (in pixels) to extract around each located point
-            * A winRange of 0 will only extract the closest raster value
-            * A winRange of 1 will extract a window of shape (3,3) centered around the closest raster value.
-            * A winRange of 3 will extract a window of shape (7,7) centered around the closest raster value.
+    winRange : int 
+        The window range (in pixels) to extract the values centered around the 
+        closest raster index to the indicated locations.
+        * A winRange of 0 will only extract the closest raster value
+        * A winRange of 1 will extract a window of shape (3,3) 
+        * A winRange of 3 will extract a window of shape (7,7)
+    
+    noDataOkay: bool
+        If True, an error is raised if a 'noData' value is extracted
+        If False, numpy.nan is inserted whenever a 'noData' value is extracted
+    
+    Returns: 
+    --------
+    * If only a single location is given: 
+        namedtuple -> (data : The extracted data at the location
+                       xOffset : The X index distance from the location to the 
+                                 center of the closest raster pixel
+                       yOffset : The Y index distance from the location to the 
+                                 center of the closest raster pixel
+                       inBounds: Flag for whether or not the location is within
+                                 The raster's bounds    
+                        ) 
+    * If Multiple locations are given:
+        pandas.DataFrame 
+            * Columns are (data, xOffset, yOffset, inBounds)
+                - See above for column descriptions
+            * Index is 0...N if 'points' input is not a LocationSet
+            * Index is the LocationSet is if 'points' input is a LocationSet
 
-    Returns: A list of namedtuples consisting of (the point data, the x-offset, the y-offset )
-        * If only a single point is given, a single tuple will be returned
-        * If a winRange of 0 is given, the point data will just be a single value. Otherwise it will be a 2D matrix 
-        * Offsets are in 'index' units
     """
     # Be sure we have a raster and srs
     source = loadRaster(source)
@@ -757,83 +876,96 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     # Done!
     if asSingle: # A single point was given, so return a single result
-        if onlyValues: return values[0]
+        if _onlyValues: return values[0]
         else: return ptValue(values[0], xOffset[0], yOffset[0], inBounds[0])
     else:
-        if onlyValues: return np.array(values)
+        if _onlyValues: return np.array(values)
         else: return pd.DataFrame(dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds), index=pointsKey)
 
 ####################################################################
 # Shortcut for getting just the raster value
 def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None, winRange=None, **kwargs):
-    """interpolates a single value from a raster at each point
+    """Interpolates the value of a raster at a given point or collection of points.
 
-    * Supports various interpolation schemes
-        - 'near'
-        - 'linear-spline'
-        - 'cubic-spline'
-        - 'average'
-        - user-defined
+    Supports various interpolation schemes: 
+        'near', 'linear-spline', 'cubic-spline', 'average', or user-defined
+    
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
 
-        points : Coordinates for the points to extract
-            - ogr-Point -- A single OGR point-geometry object
-            - (x, y) -- A single pair of coordinates
-            - An iterable containing either of the above (must be one or the other)
-            * All points must be in the same SRS
-            * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
-              (opposite of what you may think...)
+    points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
+        Coordinates for the points to extract
+        * All points must be in the same SRS
+        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
+          (opposite of what you may think...)
 
-        pointSRS : The SRS to use when points are input as x & y coordinates
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-        
-        mode - str : The interpolation scheme to use
-            * options are...
-                - "near" - Just gets the nearest value (this is default)
-                - "linear-spline" - calculates a linear spline in between points
-                - "cubic-spline" - calculates a cubic spline in between points
-                - "average" - calculates average across a window
-                - "func" - uses user-provided calculator
-        
-        func - function : A user defined interpolation function 
-            * Only utilized when 'mode' equals "func"
-            * The function must take three arguments in this order...
-                - A 2 dimensional data matrix
-                - A x-index-offset
-                - A y-index-offset
-            * See the example for more information
+    pointSRS : Anything acceptable to gk.srs.loadSRS; optional
+        The srs of the point to create
+          * If not given, longitude/latitude is assumed
+          * Only useful when 'points' is not a LocationSet
 
-        winRange - int : Enforces a window range to extract before interpolating
-            * All interpolation schemes have a predefined window range which is appropriate to their use
-                - near -> 0
-                - linear-spline -> 2
-                - cubic-spline -> 4
-                - average -> 3
-                - func -> 3                
-            * Useful when using "average" or "func" mode to control the window size
-            * Doesn't have much (if any) effect on the other schemes
-        
-        Returns:
-            - If a single point was given, returns a single interpolated value
-            - If multiple points (or at least a list containing a single point) was given, returns an array of
-              interpolated values corresponding to each of the specified points
+    mode : str; optional
+        The interpolation scheme to use
+        * options are...
+          "near" - Just gets the nearest value (this is default)
+          "linear-spline" - calculates a linear spline in between points
+          "cubic-spline" - calculates a cubic spline in between points
+          "average" - calculates average across a window
+          "func" - uses user-provided calculator
+    
+    func - function 
+        A user defined interpolation function 
+        * Only utilized when 'mode' equals "func"
+        * The function must take three arguments in this order...
+          - A 2 dimensional data matrix
+          - A x-index-offset
+          - A y-index-offset
+        * See the example below for more information
 
-        Example:
-            - "Interpolate" according to the median value in a window or range 2
+    winRange : int 
+        The window range (in pixels) to extract the values centered around the 
+        closest raster index to the indicated locations.
+        * A winRange of 0 will only extract the closest raster value
+        * A winRange of 1 will extract a window of shape (3,3) 
+        * A winRange of 3 will extract a window of shape (7,7)
+        * Only utilized when 'mode' equals "func"
+        * All interpolation schemes have a predefined window range which is 
+          appropriate to their use
+            - near -> 0
+            - linear-spline -> 2
+            - cubic-spline -> 4
+            - average -> 3
+            - func -> 3    
+    
+    
+    Returns: 
+    --------
+    * If only a single location is given: numeric 
+        namedtuple -> (data : The extracted data at the location
+                       xOffset : The X index distance from the location to the 
+                                 center of the closest raster pixel
+                       yOffset : The Y index distance from the location to the 
+                                 center of the closest raster pixel
+                       inBounds: Flag for whether or not the location is within
+                                 The raster's bounds    
+                        ) 
+    * If Multiple locations are given: numpy.ndrray -> (N,)
+        - where N is the number of locations
 
-            >>> def medianFinder( data, xOff, yOff ):
-            >>>     return numpy.median(data)
-            >>>
-            >>> result = interpolateValues( <source>, <points>, mode='func', func=medianFinder, winRange=2)
-        
-        """
+    Example: 
+    --------
+    "Interpolate" according to the median value in a 5x5 window
+
+    >>> def medianFinder( data, xOff, yOff ):
+    >>>     return numpy.median(data)
+    >>>
+    >>> result = interpolateValues( <source>, <points>, mode='func', 
+    >>>                             func=medianFinder, winRange=2)
+
+    """
     # Determine what the user probably wants as an output
     if isinstance(points, tuple) or isinstance(points, ogr.Geometry) or isinstance(points, Location):
         asSingle=True
@@ -904,54 +1036,62 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
 ####################################################################
 # General raster mutator
 def mutateValues(source, processor, output=None, dtype=None, **kwargs):
-    """
-    Process a raster according to a given function
+    """Process all pixels in a raster according to a given function
 
     * Creates a gdal dataset with the resulting data
-    * If the user wishes to generate an output file (by giving an 'output' input), then nothing will be returned to 
-      help avoid dependance issues. If no output is provided, however, the function will return a gdal dataset for 
-      immediate use
+    * If the user wishes to generate an output file (by giving an 'output' input),
+      then nothing will be returned to help avoid dependency issues. If no output 
+      is provided, the function will return a gdal dataset for immediate use
 
-    Inputs:
-        source : The raster datasource
-            - str -- A path on the filesystem 
-            - gdal Dataset
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource
 
-        processor - function : The function performing the mutation of the raster's data 
-            * The function will take single argument (a 2D numpy.ndarray) 
-            * The function must return a numpy.ndarray of the same size as the input
-            * The return type must also be containable within a Float32 (int and boolean is okay)
-            * See example below for more info
+    processor - function
+        The function performing the mutation of the raster's data 
+        * The function will take single argument (a 2D numpy.ndarray) 
+        * The function must return a numpy.ndarray of the same size as the input
+        * The return type must also be containable within a Float32 (int and 
+          boolean is okay)
+        * See example below for more info
 
-        output - str : An optional output path for the new raster
-            * Using None implies results are contained in memory
-            * Not giving an output will cause the function to return a gdal dataset, otherwise it will return nothing
-        
-        dtype : An optional argument which forces the processed data to be a particular datatype
-            - A python nnumeric type (bool, int, float)
-            - A Numpy datatype
+    output : str; optional
+        A path to an output file 
+        * If output is None, the raster will be created in memory and a dataset 
+          handel will be returned
+        * If output is given, the raster will be written to disk and nothing will
+          be returned
+    
+    dtype : Type, str, or numpy-dtype; optional
+        If given, forces the processed data to be a particular datatype
+        * Example
+          - A python numeric type  such as bool, int, or float
+          - A Numpy datatype such as numpy.uint8 or numpy.float64
+          - a String such as "Byte", "UInt16", or "Double"
 
-        **kwargs: 
-            * All kwargs are passed on to a call to createRaster, which is generating the resulting dataset
+    **kwargs: 
+        * All kwargs are passed on to a call to createRaster()
 
     Example:
-        If you wanted to assign suitability factors based on a raster containing integer identifiers (like in the 
-        CLC dataset!)
+    --------
+    If you wanted to assign suitability factors based on a raster containing 
+    integer identifiers
 
-        >>> def calcSuitability( data ):
-        >>>     # create an ouptut matrix
-        >>>     outputMatrix = numpy.zeros( data.shape )
-        >>> 
-        >>>     # do the processing
-        >>>     outputMatrix[ data == 1 ] = 0.1
-        >>>     outputMatrix[ data == 2 ] = 0.2 
-        >>>     outputMatrix[ data == 10] = 0.4
-        >>>     outputMatrix[ np.logical_and(data > 15, data < 20)  ] = 0.5
-        >>> 
-        >>>     # return the output matrix
-        >>>     return outputMatrix
-        >>> 
-        >>> result = processRaster( <source-path>, processor=calcSuitability )
+    >>> def calcSuitability( data ):
+    >>>     # create an ouptut matrix
+    >>>     outputMatrix = numpy.zeros( data.shape )
+    >>> 
+    >>>     # do the processing
+    >>>     outputMatrix[ data == 1 ] = 0.1
+    >>>     outputMatrix[ data == 2 ] = 0.2 
+    >>>     outputMatrix[ data == 10] = 0.4
+    >>>     outputMatrix[ np.logical_and(data > 15, data < 20)  ] = 0.5
+    >>> 
+    >>>     # return the output matrix
+    >>>     return outputMatrix
+    >>> 
+    >>> result = processRaster( <source-path>, processor=calcSuitability )
     """
     # open the dataset and get SRS
     workingDS = loadRaster(source)
@@ -994,26 +1134,31 @@ def mutateValues(source, processor, output=None, dtype=None, **kwargs):
 
 # A predefined kernel processor for use in mutateValues
 def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
-    """A decorator which automates the production of kernel processors for use in mutateValues (although it could 
-    really used for processing any matrix)
+    """A decorator which automates the production of kernel processors for use 
+    in mutateValues (although it could really used for processing any matrix)
     
-    Inputs:
-        size - int - The number of pixels to expand around a center pixel
-            * A 'size' of 0 would make a processing matrix with size 1x1. As in, just the value at each point. 
-              This would be silly to call...
-            * A 'size' of 1 would make a processing matrix of size 3x3. As in, one pixel around the center pixel 
-              in all directions
-            * Processed matrix size is equal to 2*size+1 
+    Parameters:
+    -----------
+    size : int
+        The number of pixels to expand around a center pixel
+        * A 'size' of 0 would make a processing matrix with size 1x1. As in, 
+          just the value at each point. This would be silly to call...
+        * A 'size' of 1 would make a processing matrix of size 3x3. As in, one 
+          pixel around the center pixel in all directions
+        * Processed matrix size is equal to 2*size+1 
 
-        edgeValue - numeric - The value to apply to the edges of the matrix before applying the kernel
-            * Will be factored into the kernelling when processing near the edges
+    edgeValue : numeric; optional
+        The value to apply to the edges of the matrix before applying the kernel
+        * Will be factored into the kernelling when processing near the edges
 
-        outputType - np.dtype - The datatype of the processed values
-            * if 'None' is given, assume output type is the same as the matrix input type
+    outputType : np.dtype; optional
+        The datatype of the processed values 
+        * Only useful if the output type of the kerneling step is different from
+          the matrix input type
 
-        passIndex - bool - Decides whether or not to pass the x and y index to the processing function
-            * if True, the decorated function must accept an input called 'xi' and 'yi' in addition to the matrix
-            * the xi and yi correspond to the index of the center pixel in the original matrix
+    passIndex - bool - Decides whether or not to pass the x and y index to the processing function
+        * if True, the decorated function must accept an input called 'xi' and 'yi' in addition to the matrix
+        * the xi and yi correspond to the index of the center pixel in the original matrix
 
     USAGE:
         * Say we want to make a processor which calculates the average of pixels which are within a distance of

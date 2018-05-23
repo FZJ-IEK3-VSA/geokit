@@ -51,7 +51,6 @@ def loadSRS(source):
 
     Parameters:
     -----------
-
     source : Many things....
         The SRS to load
 
@@ -63,7 +62,6 @@ def loadSRS(source):
 
     Returns:
     --------
-
     osr.SpatialReference
 
     """

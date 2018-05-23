@@ -242,6 +242,8 @@ class LocationSet(object):
     def __init__(s, locations, srs=4326, _skip_check=False):
         """Initialize a LocationSet Object
 
+        * If only a single location is given, a set is still created
+
         Parameters
         ----------
         locations : iterable
