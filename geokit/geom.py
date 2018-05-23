@@ -16,5 +16,5 @@ from geokit._core.geomutil import (GeoKitGeomError,
 								  flatten,
 								  drawGeoms,
 								  partition,
-								  getPointsArray,
+								  extractVerticies,
 								  )

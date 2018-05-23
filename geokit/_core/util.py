@@ -38,41 +38,57 @@ class GeoKitRegionMaskError(GeoKitError): pass
 # General funcs
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     """***GIS INTERNAL***
-    Convenience function for checking if two float vlaues a 'close-enough'
+    Convenience function for checking if two float values a 'close-enough'
     """
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 # matrix scaler
 def scaleMatrix(mat, scale, strict=True):
-    """Scale a 2-dimensional matrix. For example, a 2x2 matrix, with a scale of 2, will become a 4x4 matrix. Or
-    scaling a 24x24 matrix with a scale of -3 will produce an 8x8 matrix.
+    """Scale a 2-dimensional matrix. For example, a 2x2 matrix, with a scale of 2, 
+    will become a 4x4 matrix. Or scaling a 24x24 matrix with a scale of -3 will 
+    produce an 8x8 matrix.
 
-    * Scaling UP (positive) results in a dimensionally larger matrix where each value is repeated scale^2 times
-    * scaling DOWN (negative) results in a dimensionally smaller matrix where each value is the average of the 
-        associated 'up-scaled' block
+    * Scaling UP (positive) results in a dimensionally larger matrix where each 
+      value is repeated scale^2 times
+    * scaling DOWN (negative) results in a dimensionally smaller matrix where each 
+      value is the average of the associated 'up-scaled' block
 
-    Inputs:
-        mat - numpy.ndarray : A two-dimensional numpy nd array
-            - [[numeric,],] : A Two dimensional matrix of numerical values
+    Parameters:
+    -----------
+        mat : numpy.ndarray or [[numeric,],] 
+            The data to be scaled
+              * Must be two dimensional
         
-        scale - int : A dimensional scaling factor for both the x and y dimension
-              - (int, int) : y-scaling demnsion, x-scaling dimension
-              
-              * If scaling down, the scaling factors must be a factor of the their associated dimension 
-                in the input matrix (unless 'strict' is set fo False)
+        scale : int or (int, int)
+            The dimensional scaling factor for either both, or independently for
+            the Y and X dimensions
+              * If scaling down, the scaling factors must be a factor of the their 
+                associated dimension in the input matrix (unless 'strict' is set 
+                to False)
         
-        strict - bool : Flags whether or not to force a fail when scaling-down by a scaling factor which is not a
-                        dimensional factor
-               * When scaling down by a non-dimensional factor, the matrix will be padded with zeros such that the new 
-                 matrix has dimensional sizes which are divisible by the scaling factor. The points which are not at 
-                 the right or bottom boundary are averaged, same as before. The points which lie on the edge however, 
-                 are also averaged across all the values which lie in those pixels, but they are corrected so that the 
-                 averaging does NOT take into account the padded zeros.
+        strict : bool 
+            Whether or not to force a fail when scaling-down by a scaling factor 
+            which is not a dimensional factor
+              * Really intended for internal use...
+              * When scaling down by a non-dimensional factor, the matrix will be 
+                padded with zeros such that the new matrix has dimensional sizes 
+                which are divisible by the scaling factor. The points which are 
+                not at the right or bottom boundary are averaged, same as before. 
+                The points which lie on the edge however, are also averaged across 
+                all the values which lie in those pixels, but they are corrected 
+                so that the averaging does NOT take into account the padded zeros.
 
-    EXAMPLES:
+    Returns:
+    --------
 
-    INPUT       Scaleing Factor      Output
-    -----       ---------------      ------
+    numpy.ndarray
+    
+
+    Examples:
+    ---------
+
+    INPUT       Scaling Factor      Output
+    -----       --------------      ------
 
     | 1 2 |             2           | 1 1 2 2 |
     | 3 4 |                         | 1 1 2 2 |

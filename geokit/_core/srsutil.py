@@ -11,7 +11,7 @@ class _SRSCOMMON:
         1: SRSCOMMON.<srs>
         2: SRSCOMMON["<srs>"]
     """
-    # basic lattitude and longitude
+    # basic latitude and longitude
     _latlon = osr.SpatialReference()
     _latlon.ImportFromEPSG(4326)
 
@@ -21,7 +21,7 @@ class _SRSCOMMON:
 
         Units: Degrees"""
         return s._latlon
-    # basic lattitude and longitude
+    # basic latitude and longitude
     _europe_m = osr.SpatialReference()
     _europe_m.ImportFromEPSG(3035)
 
@@ -47,7 +47,25 @@ SRSCOMMON = _SRSCOMMON()
 # Basic loader
 def loadSRS(source):
     """
-    Load a spatial reference system from various sources.
+    Load a spatial reference system (SRS) from various sources.
+
+    Parameters:
+    -----------
+
+    source : Many things....
+        The SRS to load
+
+        Example of acceptable objects are...
+          * osr.SpatialReference object
+          * An EPSG integer ID
+          * a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+          * a WKT string
+
+    Returns:
+    --------
+
+    osr.SpatialReference
+
     """
     # Do initial check of source
     if(isinstance(source, osr.SpatialReference)):
@@ -78,26 +96,27 @@ EPSG4326 = loadSRS(4326)
 def xyTransform( *args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
     """Transform xy points between coordinate systems
 
-    Inputs:
-        xy  : The coordinates to transform
-            - (float,float) -- X and Y coordinates
-            - [ (x1,y1), (x2,y2), ] -- A list of XY coordinates
+    Parameters:
+    -----------
+        xy : A single, or an iterable of (x,y) tuples
+            The coordinates to transform
+            
+        toSRS : Anything acceptable by geokit.srs.loadSRS
+            The srs of the output points
 
-        toSRS : The srs of the output points
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-
-        fromSRS : The srs of the input points
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-
-        outputFOrmat - str : Use this to control how the return value is given
+        fromSRS : Anything acceptable by geokit.srs.loadSRS
+            The srs of the input points
+            
+        outputFormat : str
+            Determine return value format
             * if 'raw', the raw output from osr.TransformPoints is given
             * if 'xy', or 'xyz' the points are given as named tuples
+
+    Returns:
+    --------
+
+    list of tuples, or namedtuple
+      * See the point for the 'outputFormat' argument
 
     """
     # load srs's

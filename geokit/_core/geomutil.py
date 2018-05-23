@@ -13,11 +13,25 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 def point(*args, srs='latlon'):
     """Make a simple point geometry
     
-    Usage:
-        point(x, y [,srs])
-        point( (x, y) [,srs] )
+    Parameters:
+    -----------
+    *args : numeric, numeric or (numeric, numeric)
+        The X and Y coordinate of the point to create
+
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the point to create
+          * If not given, longitude/latitude is assumed
+          * srs MUST be given as a keyword argument
     
-    * srs must be given as a keyword argument
+    Returns:
+    --------
+    ogr.Geometry
+
+    Example:
+    ------
+    point(x, y [,srs])
+    point( (x, y) [,srs] )
+
     """
     if len(args)==1:
         x,y = args[0]
@@ -36,16 +50,30 @@ def point(*args, srs='latlon'):
 
 def makePoint(*args, **kwargs):
     """alias for geokit.geom.point(...)"""
+    print("makePoint will be removed soon. Switch to 'point'")
     return point(*args, **kwargs)
 
-def box(*args, srs=None):
+def box(*args, srs=4326):
     """Make an ogr polygon object from extents
+    
+    Parameters:
+    -----------
+    *args : 4 numeric argument, or one tuple argument with 4 numerics
+        The X_Min, Y_Min, X_Max and Y_Max bounds of the box to create
 
-    Usage:
-        box(xMin, yMin, xMax, yMax [, srs])
-        box( (xMin, yMin, xMax, yMax) [, srs])
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the point to create
+          * If not given, longitude/latitude is assumed
+          * srs MUST be given as a keyword argument
+    
+    Returns:
+    --------
+    ogr.Geometry
 
-    * srs must be given as a keyword argument
+    Example:
+    ------
+    box(xMin, yMin, xMax, yMax [, srs])
+    box( (xMin, yMin, xMax, yMax) [, srs])
     """
     if (len(args)==1):
         xMin,yMin,xMax,yMax = args[0]
@@ -75,36 +103,41 @@ def box(*args, srs=None):
 
 def makeBox(*args, **kwargs):
     """alias for geokit.geom.box(...)"""
+    print("makeBox will be removed soon. Switch to 'box'")
     return box(*args, **kwargs)
 
-def polygon(outerRing, *args, srs=None):
+def polygon(outerRing, *args, srs=4326):
     """Creates an OGR Polygon obect from a given set of points
-
-    Inputs:
-        outerRing : The polygon's outer edge
-            - an iterable of (x,y) coordinates
-            - an Nx2 numpy array also works
-
-        *args : The inner edges of the polygon
-            - iterable (x,y) coordinate sets
-            * Each input forms a single edge
-            * Inner rings cannot interset the outer ring or one another 
-            * NOTE! For proper drawing in matplotlib, inner rings must be given in the opposite orientation as 
-              the outer ring (clockwise vs counterclockwise)
-
-        srs : The Spatial reference system to apply to the created geometry
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * srs must be given as a keyword argument
     
-    Example: Make a diamond cut out of a box
+    Parameters:
+    -----------
+    outerRing : [(x,y), ] or Nx2 numpy.ndarray
+        The polygon's outer edge
 
-        box = [(-2,-2), (-2,2), (2,2), (2,-2), (-2,-2)]
-        diamond = [(0,1), (-0.5,0), (0,-1), (0.5,0), (0,1)]
+    *args : [(x,y), ] or Nx2 numpy.ndarray
+        The inner edges of the polygon
+          * Each input forms a single edge
+          * Inner rings cannot interset the outer ring or one another 
+          * NOTE! For proper drawing in matplotlib, inner rings must be given in 
+            the opposite orientation as the outer ring (clockwise vs 
+            counterclockwise)
 
-        geom = polygon( box, diamond )
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the polygon to create
+          * If not given, longitude/latitude is assumed
+    
+    Returns:
+    --------
+    ogr.Geometry
+
+    Example:
+    ------
+    Make a diamond cut out of a box...
+
+      box = [(-2,-2), (-2,2), (2,2), (2,-2), (-2,-2)]
+      diamond = [(0,1), (-0.5,0), (0,-1), (0.5,0), (0,1)]
+  
+      geom = polygon( box, diamond )
     """
     if not srs is None: srs = loadSRS(srs)
 
@@ -133,46 +166,25 @@ def polygon(outerRing, *args, srs=None):
     # Done!
     return g
 
-def getPointsArray(geom):
-    isMulti = "MULTI" in geom.GetGeometryName()
-    # Check geometry type
-    if "LINE" in geom.GetGeometryName():
-        if isMulti:
-            pts = []
-            for gi in range(geom.GetGeometryCount()): pts.append( geom.GetGeometryRef(gi).GetPoints() )
-        else:
-            pts = geom.GetPoints()
-    elif "POLYGON" in geom.GetGeometryName():
-        newGeom = geom.GetBoundary()
-        return getPointsArray(newGeom)
-    elif "POINT" in geom.GetGeometryName():
-        pts = geom.GetPoints()
-    else: 
-        raise GeoKitGeomError("Cannot extract points from grometry ")
-
-    if isMulti: return np.concatenate(pts)
-    else: return np.array(pts)
-     
-
 def makePolygon(*args, **kwargs):
     """alias for geokit.geom.polygon(...)"""
+    print("makePolygon will be removed soon. Switch to 'polygon'")
     return polygon(*args, **kwargs)
 
-def line(points, srs=None):
-    """Creates an OGR Polygon obect from a given set of points
+def line(points, srs=4326):
+    """Creates an OGR Line obect from a given set of points
+    
+    Parameters:
+    -----------
+    Points : [(x,y), ] or Nx2 numpy.ndarray
+        The point defining the line
 
-    Inputs:
-        points : The line's point coordinates
-            - an iterable of (x,y) coordinates
-            - Also works for an Nx2 numpy array
-            * Forms the outermost edge of the polygon
-
-        srs : The Spatial reference system to apply to the created geometry
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * srs must be given as a keyword argument
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the line to create
+    
+    Returns:
+    --------
+    ogr.Geometry
     """
 
     # Make the complete geometry
@@ -192,15 +204,27 @@ def line(points, srs=None):
 
 def makeLine(*args, **kwargs):
     """alias for geokit.geom.line(...)"""
+    print("makeLine will be removed soon. Switch to 'line'")
     return line(*args, **kwargs)
 
 def empty(gtype, srs=None):
     """
-    Make a generic OGR geometry of type [gtype]
-
-    gtype options: Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
+    Make a generic OGR geometry of a desired type
 
     *Not for the feint of heart*
+
+    Parameters:
+    -----------
+    gtpe : str
+        The geometry type to make
+          * Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
+
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the geometry to create
+    
+    Returns:
+    --------
+    ogr.Geometry
     """
     if not hasattr(ogr,"wkb"+gtype):
         raise GeoKitGeomError("Could not find geometry type: "+gtype)
@@ -213,12 +237,57 @@ def empty(gtype, srs=None):
 
 def makeEmpty(*args, **kwargs):
     """alias for geokit.geom.empty(...)"""
+    print("makeEmpty will be removed soon. Switch to 'empty'")
     return empty(*args, **kwargs)
+
+
+def extractVerticies(geom):
+    """Get all verticies found on the geometry as a Nx2 numpy.ndarray"""
+    isMulti = "MULTI" in geom.GetGeometryName()
+    # Check geometry type
+    if "LINE" in geom.GetGeometryName():
+        if isMulti:
+            pts = []
+            for gi in range(geom.GetGeometryCount()): 
+                pts.append( geom.GetGeometryRef(gi).GetPoints() )
+        else:
+            pts = geom.GetPoints()
+    elif "POLYGON" in geom.GetGeometryName():
+        if isMulti:
+            pts = []
+            for gi in range(geom.GetGeometryCount()): 
+                newGeom = geom.GetGeometryRef(gi).GetBoundary()
+                pts.append( extractVerticies(newGeom) )
+        else:
+            newGeom = geom.GetBoundary()
+            pts = extractVerticies(newGeom)
+
+    elif "POINT" in geom.GetGeometryName():
+        if isMulti:
+            pts = []
+            for gi in range(geom.GetGeometryCount()): pts.append( geom.GetGeometryRef(gi).GetPoints() )
+        else:
+            pts = geom.GetPoints()
+        
+    else: 
+        raise GeoKitGeomError("Cannot extract points from geometry ")
+
+    if isMulti: return np.concatenate(pts)
+    else: return np.array(pts)
 
 #################################################################################3
 # Make a geometry from a WKT string
 def convertWKT( wkt, srs=None):
-    """Make a geometry from a WKT string"""
+    """Make a geometry from a well known text (WKT) string
+
+    Parameters:
+    -----------
+    wkt : str
+        The WKT string to convert
+
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the geometry to create
+    """
     geom = ogr.CreateGeometryFromWkt( wkt ) # Create new geometry from string 
     if geom is None: # test for success
         raise GeoKitGeomError("Failed to create geometry")
@@ -230,31 +299,44 @@ def convertWKT( wkt, srs=None):
 # Make a geometry from a matrix mask
 def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
     """Create a geometry set from a matrix of integer values
+    
+    Each unique-valued group of pixels will be converted to a geometry
 
-    Inputs:
-        matrix : The matrix which will be turned into a geometry
-            - a 2D integer matrix
-            * Each unique-valued group of pixels will be converted to a geometry
+    Parameters:
+    -----------
+    matrix : matrix_like
+        The matrix which will be turned into a geometry set
+          * Must be 2 dimensional
+          * Must be integer or boolean type
 
-        bounds : Determines the boundary context for the given mask and will scale the geometry's coordinates accordingly
-            - (xMin, yMin, xMax, yMax)
-            - geokit.Extent object
-            * If a boundary is not given, the geometry coordinates will correspond to the mask's indicies
-            * If the boundary is given as an Extent object, an srs input is not required
+    bounds : (xMin, yMin, xMax, yMax) or geokit.Extent
+        Determines the boundary context for the given mask and will scale
+        the resulting geometry's coordinates accordingly
+          * If a boundary is not given, the geometry coordinates will 
+            correspond to the mask's indicies
+          * If the boundary is given as an Extent object, an srs input is not 
+            required
 
-        srs : The Spatial reference system to apply to the created geometries
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * This input is ignored if bounds is a geokit.Extent object
+    
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the geometries to create
 
-        flat : If True, flattens the resulting geometries into a single geometry object
-            - True/False
 
-        shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
-            * The total amount shrunk should be very small
-            * Generally this should be left as True unless it is ABSOLUTELY neccessary to maintain the same area
+    flat : bool
+        If True, flattens the resulting geometries which share a contiguous matrix
+        value into a single geometry object
+
+    shrink : bool
+        If True, shrink all geoms by a tiny amount in order to avoid geometry 
+        overlapping issues
+          * The total amount shrunk should be very very small
+          * Generally this should be left as True unless it is ABSOLUTELY 
+            necessary to maintain the same area
+
+    Returns:
+    --------
+    [ogr.Geometry,  ]
+
     """
     
     # Make sure we have a boolean numpy matrix
@@ -390,33 +472,45 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
 def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
     """Create a geometry set from a matrix mask
-
-    Inputs:
-        mask : The matrix which will be turned into a geometry
-            - a 2D boolean matrix
-            * True values are interpreted as 'in the geometry'
-
-        bounds : Determines the boundary context for the given mask and will scale the geometry's coordinates accordingly
-            - (xMin, yMin, xMax, yMax)
-            - geokit.Extent object
-            * If a boundary is not given, the geometry coordinates will correspond to the mask's indicies
-            * If the boundary is given as an Extent object, an srs input is not required
-
-        srs : The Spatial reference system to apply to the created geometries
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * This input is ignored if bounds is a geokit.Extent object
-
-        flat : If True, flattens the resulting geometries into a single geometry object
-            - True/False
-
-        shrink : If True, shrink all geoms by a tiny amount in order to avoid geometry overlapping issues
-            * The total amount shrunk should be very small
-            * Generally this should be left as True unless it is ABSOLUTELY neccessary to maintain the same area
-    """
     
+    Each True-valued group of pixels will be converted to a geometry
+
+    Parameters:
+    -----------
+    mask : matrix_like
+        The mask which will be turned into a geometry set
+          * Must be 2 dimensional
+          * Must be boolean type
+          * True values are interpreted as 'in the geometry'
+
+    bounds : (xMin, yMin, xMax, yMax) or geokit.Extent
+        Determines the boundary context for the given mask and will scale
+        the resulting geometry's coordinates accordingly
+          * If a boundary is not given, the geometry coordinates will 
+            correspond to the mask's indicies
+          * If the boundary is given as an Extent object, an srs input is not 
+            required
+    
+    srs : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the geometries to create
+
+    flat : bool
+        If True, flattens the resulting geometries which share a contiguous matrix
+        value into a single geometry object
+
+    shrink : bool
+        If True, shrink all geoms by a tiny amount in order to avoid geometry 
+        overlapping issues
+          * The total amount shrunk should be very very small
+          * Generally this should be left as True unless it is ABSOLUTELY 
+            neccessary to maintain the same area
+
+    Returns:
+    --------
+    If 'flat' is True: ogr.Geometry
+    else: [ogr.Geometry,  ]
+
+    """
     # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
@@ -434,35 +528,41 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
 # geometry transformer
 def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
-    """Transforms a geometry, or a list of geometries, from one SRS to another
+    """Transform a geometry, or a list of geometries, from one SRS to another
 
-    Inputs:
-        geoms : The geometry or geometries to transform
-            - ogr Geometry object
-            - and iterable of og Geometry objects
-            * All geometries must have the same spatial reference
+    Parameters:
+    -----------
+    geoms : ogr.Geometry or [ogr.Geometry, ]
+        The geometry or geometries to transform
+          * All geometries must have the same spatial reference
 
-        toSRS : The srs of the output geometries
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
+    toSRS : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the output geometries
+          * If no given, a Europe-centered relational system (EPSG3035) is chosen
 
-        fromSRS : The srs of the input geometries
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * If fromSRS is None, the geometry's internal srs will be used
-            * If fromSRS is given, it will override any geometry's SRS (will likely cause weird outputs)
+    fromSRS : Anything acceptable to gk.srs.loadSRS, optional
+        The srs of the input geometries
+          * Only needed if an SRS cannot be inferred from the geometry inputs or
+            is, for whatever reason, the geometry's SRS is wrong
 
-        segment : An optional segmentation length of the input geometries
-            - float
-            * Units are in the input geometry's native unit
-            * If given, the input geometries will be segmented such that no line segment is longer than the given 
-              segment size
-              - use this for a more detailed transformation!
-        """
+    segment : float, optional
+        An optional segmentation length to apply to the input geometries BEFORE
+        transformation occurs. The input geometries will be segmented such that 
+        no line segment is longer than the given segment size
+          * Units are in the input geometry's native unit
+          * Use this for a more detailed transformation!
+
+    Returns:
+    --------
+    ogr.Geometry or [ogr.Geometry, ]
+
+
+    Note:
+    -----
+    When inferring the SRS from the given geometries, only the FIRST geometry
+    is checked for an existing SRS
+
+    """
     # make sure geoms is a list
     if isinstance(geoms, ogr.Geometry):
         returnSingle = True
@@ -504,10 +604,21 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
 # Flatten a list of geometries
 def flatten( geoms ):
     """Flatten a list of geometries into a single geometry object
+    
+    Combine geometries by iteratively union-ing neighbors (according to index)
+     * example, given a list of geometries (A,B,C,D,E,F,G,H,I,J):
+          [ A  B  C  D  E  F  G  H  I  J ]
+          [  AB    CD    EF    GH    IJ  ]
+          [    ABCD        EFGH      IJ  ]
+          [        ABCDEFGH          IJ  ]
+          [               ABCDEFGHIJ     ]  <- This becomes the resulting geometry  
 
     Example:
-        - A list of Polygons/Multipolygons will become a single Multipolygon
-        - A list of Linestrings/MultiLinestrings will become a single MultiLinestring"""
+    --------
+        * A list of Polygons/Multipolygons will become a single Multipolygon
+        * A list of Linestrings/MultiLinestrings will become a single MultiLinestring
+
+    """
     if not isinstance(geoms,list):
         geoms = list(geoms)
         try: # geoms is not a list, but it might be iterable
@@ -517,17 +628,10 @@ def flatten( geoms ):
 
     if len(geoms) == 0: return None
     
-    ## Combine geometries by iteratively union-ing nearby (according to index) geometries
-    ##  * example, given a list of geometries (A,B,C,D,E,F,G,H,I,J):
-    ##       [ A  B  C  D  E  F  G  H  I  J ]
-    ##       [  AB    CD    EF    GH    IJ  ]
-    ##       [    ABCD        EFGH      IJ  ]
-    ##       [        ABCDEFGH          IJ  ]
-    ##       [               ABCDEFGHIJ     ]  <- Result is a list with only one geometry. 
-    ##                                            This becomes the resulting geometry  
-    ##
-    ##  * I had to do this because unioning one by one was much too slow since it would create
-    ##    a single large geometry which had to be manipulated for EACH new addition
+
+    
+    ## I had to do this because unioning one by one was much too slow since it would create
+    ## a single large geometry which had to be manipulated for EACH new addition
 
     while( len(geoms)>1):
         newGeoms = []
@@ -539,196 +643,280 @@ def flatten( geoms ):
         geoms = newGeoms
     return geoms[0]
 
-def drawGeoms(geoms, ax=None, srs=None, simplification=None, autoScale=True, **mplargs):
+
+
+
+##########################################################################
+## Drawing functions
+def drawPoint(g, plotargs, ax, colorVal=None):
+    kwargs = dict(marker='o', color='#C32148', linestyle='None')
+    if not colorVal is None: kwargs["color"] = colorVal
+
+    kwargs.update(plotargs)
+    return ax.plot(g.GetX(), g.GetY(), **kwargs)
+
+def drawMultiPoint(g, plotargs, ax, colorVal=None, skip=False):
+    kwargs = dict(marker='.', color='#C32148', linestyle='None')
+    if not colorVal is None: kwargs["color"] = colorVal
+    kwargs.update(plotargs)
+    
+    points = extractVerticies(g)
+    return ax.plot(points[:,0], points[:,1], **kwargs)
+
+
+def drawLine(g, plotargs, ax, colorVal=None, skip=False):
+    if skip:
+        kwargs=plotargs.copy()
+    else:
+        kwargs = dict(marker='None', color='k', linestyle='-')
+        if not colorVal is None: kwargs["color"] = colorVal
+        kwargs.update(plotargs)
+    
+    points = extractVerticies(g)
+    return ax.plot(points[:,0], points[:,1], **kwargs)
+
+def drawMultiLine(g, plotargs, ax, colorVal=None):
+    kwargs = dict(marker='None', color="#007959", linestyle='-')
+    if not colorVal is None: kwargs["color"] = colorVal
+    kwargs.update(plotargs)
+
+    h = []
+    for gi in range(g.GetGeometryCount()): 
+        h.append(drawLine(g.GetGeometryRef(gi), kwargs, ax, colorVal, True))
+    return h
+
+def drawLinearRing(g, plotargs, ax, colorVal=None):
+    g.CloseRings()
+    return drawLine(g, plotargs, ax)
+
+def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
+    from descartes import PolygonPatch
+    from json import loads
+
+    if g.GetGeometryCount() == 0: # Geometry was small and was eliminated by the simplification
+        return None
+
+    # Get main and hole edges
+    boundaries = g.GetBoundary()
+    if boundaries.GetGeometryName()=="LINESTRING":
+        main = boundaries.GetPoints()
+        holes = []
+    else:
+        mainG = boundaries.GetGeometryRef(0)
+        main = mainG.GetPoints()
+        holes = [boundaries.GetGeometryRef(i).GetPoints() for i in range(1, boundaries.GetGeometryCount())]
+    
+    patchData = dict(type='Polygon', coordinates=[])
+    patchData["coordinates"].append(main)
+    for hole in holes: patchData["coordinates"].append(hole)
+
+    # Setup args
+    if skip:
+        kwargs = plotargs.copy()
+    else:
+        kwargs = dict(fc="#D9E9FF", ec="k", linestyle='-')
+        if not colorVal is None: kwargs["fc"] = colorVal
+        kwargs.update(plotargs)
+
+    # Make patches
+    mainPatch = PolygonPatch(patchData, **kwargs)
+    return ax.add_patch(mainPatch)
+    
+def drawMultiPolygon(g, plotargs, ax, colorVal=None, cmap=None):
+    kwargs = dict(fc="#D9E9FF", ec="k", linestyle='-')
+    if not colorVal is None: kwargs["fc"] = colorVal
+    kwargs.update(plotargs)
+
+    h = []
+    for gi in range(g.GetGeometryCount()): 
+        h.append(drawPolygon(g.GetGeometryRef(gi), kwargs, ax, colorVal, True))
+    return h
+
+
+def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, autoScale=True, colorBy=None, cmap="viridis", output=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=True, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, showPlot=False, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
         -> Points/ Multipoints are displayed as points using plt.plot(...)
         -> Lines/ MultiLines are displayed as lines using plt.plot(...)
-        -> Polygons/ MultiPolygons are displayed as patches using the descartes library
+        -> Polygons/ MultiPolygons are displayed as patches using the descartes 
+           library
     * Each geometry can be given its own set of matplotlib plotting parameters
 
-    Inputs:
-        geoms : The geometry/geometries to draw
-            - a single ogr Geometry object
-            - a tuple -- (ogr Geometry, dict of plotting parameters for this geometry)
-            - a dict containing at least one 'geom' key pointing to an ogr Geometry object
-                * other kwargs are treated as plotting parameters for the geometry
-            - An iterable of any the above
-            * All geometries must have the same native SRS
-        
-        ax  : a matplotlib axeis object to plot on
-            * if ax is None, the function will create its own axis and automatically show it
-
-        srs : The SRS to draw the geometries in
-            - osr.SpatialReference object
-            - an EPSG integer ID
-            - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-            - a WKT string
-            * if srs is None, the geometries' native SRS will be used
-
-        simplification : A simplification factor to apply onto each geometry whichs ensure no line segment is shorter
-                         than the given value
-            * float
-            - Units are the same as the 'srs' input
-            - Using this will make plotting easier and use less resources
-
-        autoScale - T/F : Flags whether or not to autoscale the resulting plot
-
-        **mplargs : matplotlib keyword arguments to apply to each geometry
-            * Specified keyword arguments for each geometry inherit from mplargs 
+    Parameters:
+    -----------
+    geoms : The geometry/geometries to draw
+        - a single ogr Geometry object
+        - a tuple -- (ogr Geometry, dict of plotting parameters for this geometry)
+        - a dict containing at least one 'geom' key pointing to an ogr Geometry object
+            * other kwargs are treated as plotting parameters for the geometry
+        - An iterable of any the above
+        * All geometries must have the same native SRS
     
-    Retuns: A list of matplotlib handels to the created items
-    """
-    # do some imports
-    from descartes import PolygonPatch
-    from json import loads
+    ax  : a matplotlib axeis object to plot on
+        * if ax is None, the function will create its own axis and automatically show it
 
-    showPlot = False
+    srs : The SRS to draw the geometries in
+        - osr.SpatialReference object
+        - an EPSG integer ID
+        - a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
+        - a WKT string
+        * if srs is None, the geometries' native SRS will be used
+
+    simplification : A simplification factor to apply onto each geometry whichs ensure no line segment is shorter
+                     than the given value
+        * float
+        - Units are the same as the 'srs' input
+        - Using this will make plotting easier and use less resources
+
+    autoScale - T/F : Flags whether or not to autoscale the resulting plot
+
+    **mplargs : matplotlib keyword arguments to apply to each geometry
+        * Specified keyword arguments for each geometry inherit from mplargs 
+
+    Retuns: A list of matplotlib handles to the created items
+    """
     if ax is None:
-        showPlot = True
         import matplotlib.pyplot as plt
-        plt.figure(figsize=(12,12))
-        ax = plt.subplot(111)
+
+        if colorBy is None:
+            plt.figure(figsize=figsize)
+            ax = plt.subplot(111)
+        else:
+            plt.figure(figsize=figsize)
+            margin = margin[0],margin[1],margin[2]+0.08,margin[3]
+            cbarExtraPad = 0.05
+            cbarWidth = 0.04
+            
+            ax = plt.axes([margin[0], margin[1], 1-margin[2]-cbarWidth-cbarPadding, 1-margin[3]-margin[1]])
+            cbax = plt.axes([1-margin[2]-cbarWidth, 
+                             margin[1]+cbarExtraPad, 
+                             cbarWidth, 
+                             1-margin[3]-margin[1]-2*cbarExtraPad])
+        
+        if hideAxis: ax.axis("off")
 
     # Be sure we have a list
-    if isinstance(geoms,ogr.Geometry) or isinstance(geoms, dict) or isinstance(geoms, tuple):
+    pargs=None
+    isFrame=False
+    if isinstance(geoms,ogr.Geometry):
         geoms = [geoms,]
+
+    elif isinstance(geoms, pd.DataFrame): # We have a DataFrame with plotting arguments
+        isFrame=True
+        data = geoms.drop("geom", axis=1)
+        geoms = geoms["geom"].values
+
+        pargs = pd.DataFrame(index=data.index)
+        for c in data.columns:
+            if not c[:4]=="MPL:": continue
+            pargs[c[4:]] = data[c]
+
+        if pargs.size==0: pargs=None
+
     else: #Assume its an iterable
         geoms = list(geoms)
 
-    # Separate geoms into geometries and mpl-parameters
-    mplParams = []
-    tmpGeoms = []
-    for g in geoms:
-        params = mplargs.copy()
-        if isinstance(g, ogr.Geometry): 
-            tmpGeoms.append(g)
-            mplParams.append(params)
-        
-        elif isinstance(g,tuple):
-            tmpGeoms.append(g[0])
-
-            params.update(g[1])
-            mplParams.append(params)
-
-        elif isinstance(g,dict):
-            tmpGeoms.append(g.pop('geom'))
-
-            params.update(g)
-            mplParams.append(params)
-
-    geoms = tmpGeoms
-    # Test the first geometry to see if the srs needs transforming
+    # Check Geometry SRS
     if not srs is None:
-        srs = loadSRS(srs   )
-        gSRS = geoms[0].GetSpatialReference()
-        
-        if not gSRS.IsSame(srs):
-            geoms = transform(geoms, toSRS=srs, fromSRS=gSRS)
-
+        srs = loadSRS(srs)
+        for gi,g in enumerate(geoms):
+            gsrs = g.GetSpatialReference()
+            if gsrs is None: continue # Skip it if we don't know it...
+            if not gsrs.IsSame(srs): geoms[gi].TransformTo(srs)
 
     # Apply simplifications if required
-    if not simplification is None:
-        geoms = [g.Simplify(simplification) for g in geoms]
+    if not simplificationFactor is None:
+        xMin, yMin, xMax, yMax = 1e100, 1e100, -1e100, -1e100
+        for g in geoms:
+            _xMin, _xMax, _yMin, _yMax = g.GetEnvelope()
 
-    # Consider matplotlib parameters
-    if isinstance(mplParams, dict):
-        mplForEachGeom = False
-    else:
-        mplForEachGeom = True
-        mplParams = list(mplParams) # make sure mplParams is a list
+            xMin=min(_xMin, xMin)
+            xMax=max(_xMax, xMax)
+            yMin=min(_yMin, yMin)
+            yMax=max(_yMax, yMax)
 
-    # unpack multigeomsgons and make into shapey objects
-    polys = []
-    polyParams = []
-    lines = []
-    lineParams = []
-    points = []
-    pointParams = []
+        simplificationValue = max( xMax-xMin, yMax-yMin )/simplificationFactor
 
-    for gi in range(len(geoms)):
-        g = geoms[gi]
-        if g.GetGeometryName()=="POLYGON":
-            polys.append( loads(g.ExportToJson()))
-            if mplForEachGeom: polyParams.append(mplParams[gi])
-            else: polyParams.append(mplParams)
+        geoms = [g.Simplify(simplificationValue) for g in geoms]
 
-        elif g.GetGeometryName()=="MULTIPOLYGON":
-            for sgi in range(g.GetGeometryCount()):
-                gg = g.GetGeometryRef(sgi)
-                polys.append( loads(gg.ExportToJson()))
-                if mplForEachGeom: polyParams.append(mplParams[gi])
-                else: polyParams.append(mplParams)
+    ### Handle color value
+    if not colorBy is None:
+        colorVals = data[colorBy].values
 
-        elif g.GetGeometryName()=="LINESTRING":
-            pts = np.array(g.GetPoints())
-            lines.append( (pts[:,0], pts[:,1]) )
-            if mplForEachGeom: lineParams.append(mplParams[gi])
-            else: lineParams.append(mplParams)
+        if isinstance(cmap, str):
+            from matplotlib import cm
+            cmap = getattr(cm, cmap)
 
-        elif g.GetGeometryName()=="LINEARRING":
-            g.CloseRings()
-            pts = np.array(g.GetPoints())
-            lines.append( (pts[:,0], pts[:,1]) )
-            if mplForEachGeom: lineParams.append(mplParams[gi])
-            else: lineParams.append(mplParams)
+        cValMax = colorVals.max() if vmax is None else vmax 
+        cValMin = colorVals.min() if vmin is None else vmin
 
-        elif g.GetGeometryName()=="MULTILINESTRING":
-            for sgi in range(g.GetGeometryCount()):
-                gg = g.GetGeometryRef(sgi)
-                pts = np.array(gg.GetPoints())
-                lines.append( (pts[:,0], pts[:,1]) )
-                if mplForEachGeom: lineParams.append(mplParams[gi])
-                else: lineParams.append(mplParams)
+        _colorVals = [cmap(v) for v in (colorVals-cValMin)/(cValMax-cValMin)]
 
-        elif g.GetGeometryName()=="POINT":
-            points.append( ([g.GetX(),], [g.GetY()] ) )
-            
-            tmp = mplParams[gi].copy() if mplForEachGeom else mplParams.copy()
-            tmp["linestyle"] = tmp.get('linestyle','None')
-            tmp["marker"] = tmp.get('marker','o')
-            pointParams.append(tmp)
-
-        elif g.GetGeometryName()=="MULTIPOINT":
-            x = []
-            y = []
-            for sgi in range(g.GetGeometryCount()):
-                gg = g.GetGeometryRef(sgi)
-                pts = np.array(gg.GetPoints())
-                x.append( gg.GetX() )
-                y.append( gg.GetY() )
-            points.append((x,y))
-            
-            tmp = mplParams[gi].copy() if mplForEachGeom else mplParams.copy()
-            tmp["linestyle"] = tmp.get('linestyle','None')
-            tmp["marker"] = tmp.get('marker','o')
-            pointParams.append(tmp)
-
-        else:
-            raise GeoKitGeomError("Function can't understand geometry: "+g.GetGeometryName())
+        ## TODO: Make a colorbar
 
     ### Do Plotting
     # make patches
-    handels = []
-    patches = [PolygonPatch(sp, **kwargs) for sp, kwargs in zip(polys, polyParams)]
-    handels.extend([ax.add_patch(p) for p in patches])
+    h = []
 
-    # make lines
-    handels.extend([ax.plot( *xy, **kwargs) for xy, kwargs in zip(lines, lineParams) ])
+    for gi,g in enumerate(geoms):
+        if not pargs is None:
+            s = [ not v is None for v in pargs.iloc[gi] ]
+            plotargs = pargs.iloc[gi,s].to_dict()
+        else:
+            plotargs = dict()
+        plotargs.update(mplArgs)
 
-    # make points
-    handels.extend([ax.plot( *xy, **kwargs) for xy, kwargs in zip(points, pointParams) ])
+        if not colorBy is None: colorVal = _colorVals[gi]
+        else: colorVal = None
+
+        # Determine type
+        if g.GetGeometryName()  =="POINT": h.append(drawPoint(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="MULTIPOINT": h.append(drawMultiPoint(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="LINESTRING": h.append(drawLine(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="MULTILINESTRING": h.append(drawMultiLine(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="LINEARRING": h.append(drawLinearRing(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="POLYGON": h.append(drawPolygon(g, plotargs, ax, colorVal))
+        elif g.GetGeometryName()=="MULTIPOLYGON": h.append(drawMultiPolygon(g, plotargs, ax, colorVal))
+        else:
+            print( "Could not draw geometry of type:", pargs.index[gi], "->", g.GetGeometryName())
+
+    # Add the colorbar, maybe
+    if not colorBy is None:
+        from matplotlib.colorbar import ColorbarBase
+        from matplotlib.colors import Normalize
+
+        norm = Normalize(vmin=cValMin, vmax=cValMax)
+        cbar = ColorbarBase(cbax, cmap=cmap, norm=norm, orientation='vertical')
+        cbar.ax.tick_params(labelsize=fontsize)
+        cbar.set_label( colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize+2 )
+        h.append( cbar )
 
     # done!
     if autoScale:
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
 
+    # Do more formatting
+    if not xlim is None: ax.set_xlim(*xlim)
+    if not ylim is None: ax.set_ylim(*ylim)
+
     if showPlot: 
-        plt.show()
-    else: 
-        return handels
+        if output is None:
+            plt.show()
+        else:
+            plt.savefig(output, dpi=300)
+            plt.close()
+
+    else: # return the individual handles 
+        if isFrame:
+            idx = list(data.index)
+            if not colorBy is None:
+                idx.append("colorbar")
+            
+            return ax, pd.Series(h, index=idx)
+        else:
+            return ax, h
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
     """Partition a Polygon into some number of pieces whose areas should be close to the targetArea
