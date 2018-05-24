@@ -34,5 +34,17 @@ def test_scaleMatrix():
   scaledMatrix5 = scaleMatrix(MASK_DATA,-3, strict=False)
   #print(scaledMatrix1.sum()*3, sumCheck)
 
+  print("scaleMatrix passed all tests")
+
+def test_quickVector():
+  print( "quickVector is not tested..." )
+def test_quickRaster():
+  print( "quickRaster is not tested..." )
+def test_drawImage():
+  print( "drawImage is not tested..." )
+
 if __name__=="__main__":
   test_scaleMatrix()
+  test_quickVector()
+  test_quickRaster()
+  test_drawImage()

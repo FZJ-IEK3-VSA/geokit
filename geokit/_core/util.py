@@ -36,12 +36,6 @@ class GeoKitRegionMaskError(GeoKitError): pass
 
 ##################################################################
 # General funcs
-def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    """***GIS INTERNAL***
-    Convenience function for checking if two float values a 'close-enough'
-    """
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-
 # matrix scaler
 def scaleMatrix(mat, scale, strict=True):
     """Scale a 2-dimensional matrix. For example, a 2x2 matrix, with a scale of 2, 

@@ -18,7 +18,7 @@ def point(*args, srs='latlon'):
     *args : numeric, numeric or (numeric, numeric)
         The X and Y coordinate of the point to create
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * srs MUST be given as a keyword argument
@@ -61,7 +61,7 @@ def box(*args, srs=4326):
     *args : 4 numeric argument, or one tuple argument with 4 numerics
         The X_Min, Y_Min, X_Max and Y_Max bounds of the box to create
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * srs MUST be given as a keyword argument
@@ -122,7 +122,7 @@ def polygon(outerRing, *args, srs=4326):
             the opposite orientation as the outer ring (clockwise vs 
             counterclockwise)
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the polygon to create
           * If not given, longitude/latitude is assumed
     
@@ -179,7 +179,7 @@ def line(points, srs=4326):
     Points : [(x,y), ] or Nx2 numpy.ndarray
         The point defining the line
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the line to create
     
     Returns:
@@ -219,7 +219,7 @@ def empty(gtype, srs=None):
         The geometry type to make
           * Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometry to create
     
     Returns:
@@ -285,7 +285,7 @@ def convertWKT( wkt, srs=None):
     wkt : str
         The WKT string to convert
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometry to create
     """
     geom = ogr.CreateGeometryFromWkt( wkt ) # Create new geometry from string 
@@ -318,7 +318,7 @@ def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _
             required
 
     
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs context for the given matrix and of the geometries to create
 
     flat : bool
@@ -470,9 +470,9 @@ def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _
     raster = None
 
     # Done!
-    if _raw: return finalGeoms, rinalRID
+    if _raw: return finalGeoms, finalRID
     else:
-        return pd.DataFrame(dict(geom=finalGeoms, value=rinalRID))
+        return pd.DataFrame(dict(geom=finalGeoms, value=finalRID))
 
 def polygonizeMask( mask, bounds=None, srs=None, flat=True, shrink=True):
     """Create a geometry set from a matrix mask
@@ -495,7 +495,7 @@ def polygonizeMask( mask, bounds=None, srs=None, flat=True, shrink=True):
           * If the boundary is given as an Extent object, an srs input is not 
             required
     
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometries to create
 
     flat : bool
@@ -539,11 +539,11 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
         The geometry or geometries to transform
           * All geometries must have the same spatial reference
 
-    toSRS : Anything acceptable to gk.srs.loadSRS; optional
+    toSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the output geometries
           * If no given, a Europe-centered relational system (EPSG3035) is chosen
 
-    fromSRS : Anything acceptable to gk.srs.loadSRS; optional
+    fromSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the input geometries
           * Only needed if an SRS cannot be inferred from the geometry inputs or
             is, for whatever reason, the geometry's SRS is wrong
@@ -770,7 +770,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
             where '****' stands in for the argument to be added
               - For geometries that should ignore this argument, set it as None
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs in which to draw each geometry
           * If not given, longitude/latitude is assumed
           * Although geometries can be given in any SRS, it is very helpful if
@@ -818,7 +818,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     cbarPadding : float; optional
         The spacing padding to add between the generated axis and the generated
         colorbar axis
-          * Only useful when generting a new axis
+          * Only useful when generating a new axis
           * Only useful when 'colorBy' is given
 
     cbarTitle : str; optional

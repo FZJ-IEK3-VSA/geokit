@@ -3,6 +3,9 @@ from .srsutil import *
 from .geomutil import *
 from .location import *
 
+if( "win" in sys.platform):COMPRESSION_OPTION = ["COMPRESS=LZW"]
+else: COMPRESSION_OPTION = ["COMPRESS=DEFLATE"]
+
 def isRaster(source): 
     """
     Test if loadRaster fails for the given input
@@ -30,12 +33,14 @@ def loadRaster(source):
 
     Parameters:
     -----------
-    source : str
-        The path to the raster file to load
+    source : str or gdal.Dataset
+        * If a string is given, it is assumed as a path to a raster file on disc
+        * If a gdal.Dataset is given, it is assumed to already be an open raster
+          and is returned immediately
 
     Returns:
     --------
-    osr.SpatialReference
+    gdal.Dataset
 
     """
     if(isinstance(source,str)):
@@ -132,7 +137,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         * If dtype is None and data is not None, the datatype will be inferred 
           from the given data
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * srs MUST be given as a keyword argument
@@ -206,12 +211,9 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         driver = gdal.GetDriverByName('Mem') # create a raster in memory
         raster = driver.Create('', cols, rows, 1, getattr(gdal,dtype))
     else:
-        opts = []
-        if (compress):
-            if( "win" in sys.platform):
-                opts = ["COMPRESS=LZW"]
-            else:   
-                opts = ["COMPRESS=DEFLATE"]
+        if (compress): opts = COMPRESSION_OPTION
+        else: opts = []
+            
         driver = gdal.GetDriverByName('GTiff') # Create a raster in storage
         raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
 
@@ -379,7 +381,6 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False )
     numpy.ndarray -> Two dimensional matrix
 
     """
-
     sourceDS = loadRaster(source) # BE sure we have a raster
     sourceBand = sourceDS.GetRasterBand(1) # get band
     if maskBand: mb = sourceBand.GetMaskBand()
@@ -391,9 +392,13 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False )
     if not xWin is None: kwargs["win_xsize"] = xWin
     if not yWin is None: kwargs["win_ysize"] = yWin
 
-    # get Data
-    if maskBand: return mb.ReadAsArray(**kwargs)
-    else: return sourceBand.ReadAsArray(**kwargs)
+    # get Data and check for flip
+    if maskBand: data = mb.ReadAsArray(**kwargs)
+    else: data = sourceBand.ReadAsArray(**kwargs)
+
+    # make sure we are returing data in the 'flipped-y' orientation
+    if not isFlipped(source): data = data[::-1,:]
+    return data
 
 # Cutline extracter
 cutlineInfo = namedtuple("cutlineInfo","data info")
@@ -424,6 +429,7 @@ def extractCutline(source, geom, cropToCutline=True, **kwargs):
                     "info":rasterInfo for the context of the created matrix )
 
     """
+    #### TODO: Update this function to use warp()
     # make sure we have a polygon or multipolygon geometry
     if not isinstance(geom, ogr.Geometry):
         raise GeoKitGeomError("Geom must be an OGR Geometry object")
@@ -619,6 +625,14 @@ def gradient( source, mode ="total", factor=1, asMatrix=False, **kwargs):
 
 ####################################################################
 # Get Raster information
+
+def isFlipped(source):
+    source = loadRaster(source)
+    xOrigin, dx, trash, yOrigin, trash, dy = source.GetGeoTransform()
+
+    if( dy<0 ): return True
+    else: return False
+
 RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta")
 def rasterInfo(sourceDS):
     """Returns a named tuple containing information relating to the input raster
@@ -720,7 +734,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
         * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
           (opposite of what you may think...)
 
-    pointSRS : Anything acceptable to gk.srs.loadSRS; optional
+    pointSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * Only useful when 'points' is not a LocationSet
@@ -891,7 +905,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
         * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
           (opposite of what you may think...)
 
-    pointSRS : Anything acceptable to gk.srs.loadSRS; optional
+    pointSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
           * If not given, longitude/latitude is assumed
           * Only useful when 'points' is not a LocationSet
@@ -1024,7 +1038,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     
 ####################################################################
 # General raster mutator
-def mutateValues(source, processor, output=None, dtype=None, **kwargs):
+def mutateRaster(source, processor, output=None, dtype=None, **kwargs):
     """Process all pixels in a raster according to a given function
 
     * Creates a gdal dataset with the resulting data
@@ -1121,10 +1135,10 @@ def mutateValues(source, processor, output=None, dtype=None, **kwargs):
         calculateStats(output)
         return
 
-# A predefined kernel processor for use in mutateValues
+# A predefined kernel processor for use in mutateRaster
 def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     """A decorator which automates the production of kernel processors for use 
-    in mutateValues (although it could really used for processing any matrix)
+    in mutateRaster (although it could really used for processing any matrix)
     
     Parameters:
     -----------
@@ -1246,30 +1260,106 @@ def indexToCoord( yi, xi, source, asPoint=False):
 def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999,**kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
-    Inputs:
-        data : The data to plot as a 2D matrix
-            - numpy.ndarray
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource to draw
 
-        bounds : The spatial context of the matrix's boundaries
-            - (xMin, yMin, xMax, yMax)
-            - geokit.Extent object
-            * If bounds is None, the plotted matrix will be bounded by the matrix's dimension sizes
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the drawn raster data
+          * If not given, the raster's internal srs is assumed
+          * If the drawing resolution does not match the source's inherent 
+            resolution, the source will be warped to the correct format
 
-        ax : An optional matplotlib axes to plot on
-            * If ax is None, the function will draw and create its own axis
+    ax : matplotlib axis; optional
+        The axis to draw the geometries on
+          * If not given, a new axis is generated and returned
+    
+    resolution : numeric or tuple; optional
+        The resolution of the plotted raster data 
+        * Lower resolution means more pixels to draw and can be a burden on 
+          memory
+        * If a tuple is given, resolutions in the X and Y direction are expected
+        * Changing the resolution fron the inherent resolution requires a warp
+        
+    cutline : str or ogr.Geometry; optional
+        The cutline to limit the drawn data too
+        * If a string is given, it must be a path to a vector file
+        * Values outside of the cutline are given the value 'cutlineFillValue'
+        * Requires a warp
 
-        scaling - int : An optional scaling factor used to scale down the data matrix
-            * Used to decrease strain on the system's resources for visualing the data
-            * make sure to use a NEGATIVE integer to scale down (positive will scale up and make a larger matrix)
+    cutlineFillValue : numeric; optional
+        The value to give to values outside a cutline
+        * Has no effect when cutline is not given
 
-        yAtTop - True/False : Flag indicating that the data is in the typical y-index-starts-at-top orientation
-            * If False, the data matrix will be flipped before plotting
+    figsize : (int, int); optional
+        The figure size to create when generating a new axis
+          * If resultign figure looks wierd, altering the figure size is your best
+            bet to make it look nicer
+    
+    xlim : (float, float); optional
+        The x-axis limits
 
-        cbar - True/False : Flag indicating whether or not to automatically add a colorbar
-            * Only operates when an axis has not been given
+    ylim : (float, float); optional
+        The y-axis limits
 
-        **kwargs : Passed on to a call to matplotlib's imshow function
-            * Determines the visual characteristics of the drawn image
+    fontsize : int; optional
+        A base font size to apply to tick marks which appear
+          * Titles and labels are given a size of 'fontsize' + 2
+
+    hideAxis : bool; optional
+        Instructs the created axis to hide its boundary
+          * Only useful when generating a new axis
+
+    margin : (float, float, float, float, ); optional
+        Additional margins to add around a generated axis
+          * Useful if, for whatever reason, the plot isn't fitting right in the 
+            final figure
+          * Before using this, try adjusting the 'figsize'
+
+    cbarPadding : float; optional
+        The spacing padding to add between the generated axis and the generated
+        colorbar axis
+          * Only useful when generating a new axis
+          * Only useful when 'colorBy' is given
+
+    cbarTitle : str; optional
+        The title to give to the generated colorbar
+          * If not given, but 'colorBy' is given, the same string for 'colorBy'
+            is used
+            * Only useful when 'colorBy' is given
+
+    vmin : float; optional
+        The minimum value to color
+          * Only useful when 'colorBy' is given
+
+    vmax : float; optional
+        The maximum value to color
+          * Only useful when 'colorBy' is given
+
+    cmap : str or matplotlib ColorMap; optional
+        The colormap to use when coloring
+          * Only useful when 'colorBy' is given
+
+    cbax : matplotlib axis; optional
+        An explicitly given axis to use for drawing the colorbar
+          * If not given, but 'colorBy' is given, an axis for the colorbar is 
+            automatically generated
+    
+    cbargs : dict; optional
+
+    **kwargs : Passed on to a call to warp()
+        * Determines how the warping is carried out
+        * Consider using 'resampleAlg' or 'workingType' for finer control
+    
+
+    Returns:
+    --------
+    A namedtuple containing:
+       'ax' -> The map axis
+       'handles' -> All geometry handles which were created in the order they were 
+                    drawn
+       'cbar' -> The colorbar handle if it was drawn
 
     """
     # Create an axis, if needed
@@ -1366,7 +1456,7 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
         The raster datasource to polygonize
         * The Datatype MUST be of boolean of integer type
 
-    srs : Anything acceptable to gk.srs.loadSRS; optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the polygons to create
           * If not given, the raster's internal srs is assumed
     
@@ -1456,7 +1546,71 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
     # Done!
     return pd.DataFrame(dict(geom=finalGeoms, value=rinalRID))
     
-def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, method=None, dtype=None, noData=None, fill=None, **kwargs):
+def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, dtype=None, noData=None, fill=None, **kwargs):
+    """Warps a given raster source to another context
+
+    * Can be used to 'warp' a raster in memory to a raster on disk
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource to draw
+
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the resulting raster
+          * If not given, the raster's internal srs is assumed
+
+    resampleAlg : str; optional
+        The resampling algorithm to use when translating pixel values
+        * Knowing which option to use can have significant impacts!
+        * Options are: 'near', 'bilinear', 'cubic', 'average'
+
+    cutline : str or ogr.Geometry; optional
+        The cutline to limit the drawn data too
+        * If a string is given, it must be a path to a vector file
+        * Values outside of the cutline are given the value 'cutlineFillValue'
+        * Requires a warp
+    
+    output : str; optional
+        The path on disk where the new raster should be created
+
+    pixelHeight : numeric; optional
+        The pixel height (y-resolution) of the output raster
+        * Only required if this value should be changed
+    
+    pixelWidth : numeric; optional
+        The pixel width (x-resolution) of the output raster
+        * Only required if this value should be changed
+    
+    bounds : tuple; optional
+        The (xMin, yMin, xMax, yMax) limits of the output raster
+        * Only required if this value should be changed
+
+    dtype : Type, str, or numpy-dtype; optional
+        If given, forces the processed data to be a particular datatype
+        * Only required if this value should be changed
+        * Example
+          - A python numeric type  such as bool, int, or float
+          - A Numpy datatype such as numpy.uint8 or numpy.float64
+          - a String such as "Byte", "UInt16", or "Double"
+
+    noData : numeric; optional
+        The no-data value to apply to the output raster
+    
+    fill : numeric; optional
+        The fill data to place into the new raster before warping occurs
+        * Does not play a role when writing a file to disk
+
+    **kwargs:
+        * All keyword arguments are passed on to a call to gdal.WarpOptions
+        * Use these to fine-tune the warping procedure
+
+    Returns:
+    --------
+    * If 'output' is None: gdal.Dataset
+    * If 'output' is a string: None
+
+    """
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(source)
@@ -1497,11 +1651,10 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         elif not isinstance(cutline, str) and isRaster(cutline):
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
-    # Workflow depnds on whether or not we have an output
+    # Workflow depends on whether or not we have an output
     if not output is None: # Simply do a translate
-        if( "win" in sys.platform): co = kwargs.pop("creationOptions", ["COMPRESS=LZW"])
-        else: co = kwargs.pop("creationOptions", ["COMPRESS=DEFLATE"])
-
+        co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
+        
         copyMeta = kwargs.pop("copyMetadata", True)
         aligned = kwargs.pop("targetAlignedPixels", True)
 

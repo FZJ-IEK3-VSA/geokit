@@ -4,7 +4,7 @@ from .geomutil import *
 import types
 import re
 
-LocationMatcher = re.compile("\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
+LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 
 class Location(object):
     """Represents a single location using lat/lon as a base coordinate system

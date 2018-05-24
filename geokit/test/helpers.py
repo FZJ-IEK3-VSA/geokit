@@ -104,5 +104,8 @@ def vis(mat, points=None):
 
     plt.show()
 
-def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    return abs(a-b) <= max(rel_tol * max( abs(a), abs(b) ), abs_tol)
+isclose = np.isclose
+
+def compare(v, expected, header):
+    if not isclose(v, expected):
+        raise error("%s:   Expected:%.8f   Got:%.8f"%(header, expected, v))
