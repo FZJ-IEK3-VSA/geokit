@@ -1243,7 +1243,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Raster plotter
-def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, bgFillValue=-9999,**kwargs):
+def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999,**kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Inputs:
@@ -1312,19 +1312,18 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
             except: xres,yres = resolution,resolution
 
         source = warp(source, cutline=cutline, pixelHeight=yres, pixelWidth=xres, srs=srs, 
-                      bounds=bounds, fill=bgFillValue, **kwargs)
+                      bounds=bounds, fill=cutlineFillValue, noData=cutlineFillValue, **kwargs)
 
     info = rasterInfo(source)
 
     # Read the Data
-    data = extractMatrix(source)
-    if not bgFillValue is None: 
-        data[data==bgFillValue] = np.nan
+    data = extractMatrix(source).astype(float)
+    if not cutlineFillValue is None: 
+        data[data==info.noData] = np.nan
 
     # Draw image
     ext=(info.xMin,info.xMax,info.yMin,info.yMax,)
     h = ax.imshow( data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap)
-    #h2 = ax.imshow( mask, extent=ext,)
 
     # Draw Colorbar
     tmp = dict(cmap=cmap, orientation='vertical')
@@ -1520,11 +1519,11 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         destRas = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
 
         # Do a warp
-        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutlineGeom, **kwargs)
+        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
         #print(result)
         #if( result != 0): raise GeoKitRasterError("Failed to warp raster")
         destRas.FlushCache()
 
     # Done!
-    if not cutlineGeom is None: del tempdir
+    if not cutline is None: del tempdir
     return destRas

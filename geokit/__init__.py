@@ -29,8 +29,9 @@ from geokit._core.extent import Extent
 from geokit._core.regionmask import RegionMask
 
 # import vidualizing functions to top level since they are 
-from geokit._core.rasterutil import drawImage
+from geokit._core.util import drawImage
 from geokit._core.geomutil import drawGeoms
+from geokit._core.rasterutil import drawRaster
 
 # import the special algorithms
 import geokit.algorithms
