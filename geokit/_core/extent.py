@@ -57,7 +57,7 @@ class Extent(object):
         s.yMax = yMax
         s.srs  = loadSRS(srs)
 
-        s._box = makeBox(s.xMin, s.yMin, s.xMax, s.yMax, srs=s.srs)
+        s._box = box(s.xMin, s.yMin, s.xMax, s.yMax, srs=s.srs)
 
     @staticmethod
     def from_xXyY(bounds, srs='latlon'):
@@ -179,6 +179,18 @@ class Extent(object):
         """Returns a tuple of the extent boundaries in order:
             xMin, xMax, yMin, yMax"""
         return (s.xMin, s.xMax, s.yMin, s.yMax)
+
+    @property
+    def ylim(s): 
+        """Returns a tuple of the extent boundaries in order:
+            xMin, xMax, yMin, yMax"""
+        return (s.yMin, s.yMax)
+
+    @property
+    def xlim(s): 
+        """Returns a tuple of the extent boundaries in order:
+            xMin, xMax, yMin, yMax"""
+        return (s.xMin, s.xMax)
 
     @property
     def box(s): 
@@ -315,10 +327,10 @@ class Extent(object):
 
         if (asPoints):
             # Make corner points
-            bl = makePoint( s.xMin, s.yMin )
-            br = makePoint( s.xMax, s.yMin )
-            tl = makePoint( s.xMin, s.yMax )
-            tr = makePoint( s.xMax, s.yMax )
+            bl = point( s.xMin, s.yMin, srs=s.srs )
+            br = point( s.xMax, s.yMin, srs=s.srs )
+            tl = point( s.xMin, s.yMax, srs=s.srs )
+            tr = point( s.xMax, s.yMax, srs=s.srs )
 
         else:
             # Make corner points
@@ -353,16 +365,16 @@ class Extent(object):
         X = []
         Y = []
 
-        for point in s.corners(True):
+        for pt in s.corners(True):
             try:
-                point.Transform( transformer )
+                pt.Transform( transformer )
             except Exception as e:
                 print("Could not transform between the following SRS:\n\nSOURCE:\n%s\n\nTARGET:\n%s\n\n"%(s.srs.ExportToWkt(), targetSRS.ExportToWkt()))
                 raise e
 
             
-            X.append(point.GetX())
-            Y.append(point.GetY())
+            X.append(pt.GetX())
+            Y.append(pt.GetY())
 
         # return new extent
         return Extent(min(X), min(Y), max(X), max(Y), srs=targetSRS)
@@ -420,26 +432,26 @@ class Extent(object):
     def containsPoint(s, pts, pointSRS=None):
         """Test if the extendtcontains a point or an iterable of points"""
         #### Do tests
-        box = s.box # initialize the box
+        boxG = s.box # initialize the box
         # handle a geometry object 
         if isinstance(pts,ogr.Geometry):
             if not s.srs.IsSame(pts.GetSpatialReference()):
                 pts = pts.Clone()
                 pts.TransformTo(s.srs)
 
-            return box.Contains(pts)
+            return boxG.Contains(pts)
 
         # Handle a Location object
         elif isinstance(pts, Location):
-            return box.Contains( pts.asGeom(srs=s.srs) )
+            return boxG.Contains( pts.asGeom(srs=s.srs) )
 
         # handle an x,y tuple
         elif isinstance(pts, tuple):
-            pts = makePoint(*pts,srs=pointSRS)
+            pts = point(*pts,srs=pointSRS)
             if not pointSRS is None and not s.srs.IsSame(pts.GetSpatialReference()):
                 pts.TransformTo(s.srs)
 
-            return box.Contains(pts)
+            return boxG.Contains(pts)
 
         # Handle something iterable
         else:
@@ -447,12 +459,12 @@ class Extent(object):
                 pts = [pt.geom for pt in pts]
 
             elif not isinstance(pts[0], ogr.Geometry):
-                pts = [makePoint(*pt, srs=pointSRS) for pt in pts]
+                pts = [point(*pt, srs=pointSRS) for pt in pts]
 
             if not s.srs.IsSame(pts[0].GetSpatialReference()):
                 pts = transform(pts, toSRS=s.srs)
 
-            result = np.array([box.Contains(pt) for pt in pts])
+            result = np.array([boxG.Contains(pt) for pt in pts])
 
             return result
     

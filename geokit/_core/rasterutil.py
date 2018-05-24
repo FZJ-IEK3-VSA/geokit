@@ -170,13 +170,6 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     * If 'output' is a string: None
 
     """
-
-    # Fix some inputs for backwards compatibility
-    pixelWidth = kwargs.pop("dx",pixelWidth)
-    pixelHeight = kwargs.pop("dy",pixelHeight)
-    fillValue = kwargs.pop("fillValue",fill)
-    noDataValue = kwargs.pop("noDataValue",noData)
-
     # Check for existing file
     if(not output is None):
         if( os.path.isfile(output) ):
@@ -320,13 +313,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         if ( output is None): 
             return raster
 
-        # Calculate stats if data was given
-        #if(not data is None): 
-        #    calculateStats(raster)
-        
-        return
-        #    calculateStats(raster)
-        
+        # Done
         return
 
     # Handle the fail case
@@ -361,7 +348,7 @@ def createRasterLike( rasterInfo, **kwargs):
 
 ####################################################################
 # extract the raster as a matrix
-def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
+def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False ):
     """extract all or part of a raster's band as a numpy matrix
     
     Note:
@@ -395,6 +382,7 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
 
     sourceDS = loadRaster(source) # BE sure we have a raster
     sourceBand = sourceDS.GetRasterBand(1) # get band
+    if maskBand: mb = sourceBand.GetMaskBand()
 
     # set kwargs
     kwargs={}
@@ -404,7 +392,8 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None ):
     if not yWin is None: kwargs["win_ysize"] = yWin
 
     # get Data
-    return sourceBand.ReadAsArray(**kwargs)
+    if maskBand: return mb.ReadAsArray(**kwargs)
+    else: return sourceBand.ReadAsArray(**kwargs)
 
 # Cutline extracter
 cutlineInfo = namedtuple("cutlineInfo","data info")
@@ -1156,22 +1145,32 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
         * Only useful if the output type of the kerneling step is different from
           the matrix input type
 
-    passIndex - bool - Decides whether or not to pass the x and y index to the processing function
-        * if True, the decorated function must accept an input called 'xi' and 'yi' in addition to the matrix
-        * the xi and yi correspond to the index of the center pixel in the original matrix
+    passIndex : bool
+        Whether or not to pass the x and y index to the processing function
+        * If True, the decorated function must accept an input called 'xi' and 
+          'yi' in addition to the matrix
+        * The xi and yi correspond to the index of the center pixel in the 
+          original matrix
+    
+    Returns:
+    --------
+    function
 
-    USAGE:
-        * Say we want to make a processor which calculates the average of pixels which are within a distance of
-          2 indcies. In other words, we want the average of a 5x5 matrix centered around each pixel.
-        * Assume that we can use the value -9999 as a no data value
+    Example:
+    --------
+    * Say we want to make a processor which calculates the average of pixels 
+      which are within a distance of 2 indcies. In other words, we want the 
+      average of a 5x5 matrix centered around each pixel.
+    * Assume that we can use the value -9999 as a no data value
 
-            >>>  @KernelProcessor(2, edgeValue=-9999)
-            >>>  def getMean( mat ):
-            >>>      # Get only good values
-            >>>      goodValues = mat[mat!=-9999]
-            >>>      
-            >>>      # Return the mean
-            >>>      return goodValues.mean()
+    >>>  @KernelProcessor(2, edgeValue=-9999)
+    >>>  def getMean( mat ):
+    >>>      # Get only good values
+    >>>      goodValues = mat[mat!=-9999]
+    >>>      
+    >>>      # Return the mean
+    >>>      return goodValues.mean()
+
     """
     def wrapper1(kernel):
         def wrapper2(matrix):
@@ -1198,21 +1197,28 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 
 def indexToCoord( yi, xi, source, asPoint=False):
     """Convert the index of a raster to coordinate values.
+    
+    Parameters:
+    -----------
+    xi : int
+        The x index
+        * a numpy array of ints is also acceptable
 
-    Inputs:
-        xi - int - The x index
-            * a numpy array of ints is also acceptable
+    yi : int
+        The y index
+        * a numpy array of ints is also acceptable
+    
+    source : Anything acceptable by loadRaster()
+        The contentual raster datasource 
+        
+    asPoint : bool
+        Instruct program to return point geometries instead of x,y coordinates
 
-        yi - int - The y index
-            * a numpy array of ints is also acceptable
+    Returns:
+    --------
+    * If 'asPoint' is True: ogr.Geometry
+    * If 'asPoint' is False: tuple -> (x,y) coordinates
 
-        source - The raster source to fit the index to 
-            - str : A path to a raster file
-            - gdal.Dataset : A previously opened raster datasource
-            - RasterInfo : The raster source's information
-                * Can be generated by calling 'rasterInfo'
-
-        asPoint - bool - Instructs the program to return point geometries instead of x,y coordinates
     """
     # Get source info
     if not isinstance(source, RasterInfo): source = rasterInfo(source)
@@ -1236,8 +1242,8 @@ def indexToCoord( yi, xi, source, asPoint=False):
     # Done!
     return output
 
-### Image plotter (not really a raster thing, but it fits best here anyway)
-def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, cbar=False, **kwargs):
+### Raster plotter
+def drawRaster(source, srs=None, ax=None, resolution=None, cutlineGeom=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, bgFillValue=-9999,**kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Inputs:
@@ -1266,85 +1272,129 @@ def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, cbar=False,
             * Determines the visual characteristics of the drawn image
 
     """
-    showPlot = False
+    # Create an axis, if needed
+    if isinstance(ax, AxHands):ax = ax.ax
+
     if ax is None:
-        showPlot = True
+        newAxis=True
         import matplotlib.pyplot as plt
-        plt.figure(figsize=(12,12))
-        ax = plt.subplot(111)
 
-    # If bounds is none, make a boundary
-    if bounds is None:
-        xMin,yMin,xMax,yMax = 0,0,data.shape[1],data.shape[0] # bounds = xMin,yMin,xMax,yMax
+        plt.figure(figsize=figsize)
+        margin = margin[0],margin[1],margin[2]+0.08,margin[3]
+        cbarExtraPad = 0.05
+        cbarWidth = 0.04
+        
+        ax = plt.axes([margin[0], margin[1], 1-margin[2]-cbarWidth-cbarPadding, 1-margin[3]-margin[1]])
+        cbax = plt.axes([1-margin[2]-cbarWidth, 
+                         margin[1]+cbarExtraPad, 
+                         cbarWidth, 
+                         1-margin[3]-margin[1]-2*cbarExtraPad])
+
+        if hideAxis: ax.axis("off")
+        else: ax.tick_params(labelsize=fontsize)
     else:
-        try:
-            xMin,yMin,xMax,yMax = bounds
-        except: # maybe bounds is an ExtentObject
-            xMin,yMin,xMax,yMax = bounds.xyXY
+        newAxis=False
 
-    # Set extentdraw
-    extent = (xMin,xMax,yMin,yMax)
-    
-    # handle flipped data
-    if not yAtTop: data=data[::-1,:]
+    # Load the raster datasource and check for transformation
+    source = loadRaster(source)
+    info = rasterInfo(source)
+
+    if not (srs is None and resolution is None and cutlineGeom is None and xlim is None and ylim is None):
+        
+        if xlim is None: xlim=info.xMin, info.xMax
+        if ylim is None: ylim=info.yMin, info.yMax
+        
+        bounds = (xlim[0], ylim[0], xlim[1], ylim[1])
+
+        if resolution is None: xres,yres = None,None
+        else:
+            try:    xres,yres = resolution
+            except: xres,yres = resolution,resolution
+
+        source = warp(source, cutlineGeom=cutlineGeom, pixelHeight=yres, pixelWidth=xres, srs=srs, 
+                      bounds=bounds, fill=bgFillValue, **kwargs)
+
+    info = rasterInfo(source)
+
+    # Read the Data
+    data = extractMatrix(source)
+    if not bgFillValue is None: 
+        data[data==bgFillValue] = np.nan
 
     # Draw image
-    if scaling: data=scaleMatrix(data,scaling,strict=False)
-    h = ax.imshow( data, extent=extent, **kwargs)
+    ext=(info.xMin,info.xMax,info.yMin,info.yMax,)
+    h = ax.imshow( data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap)
+    #h2 = ax.imshow( mask, extent=ext,)
 
-    # Done!
-    if showPlot:
-        if cbar: plt.colorbar(h)
+    # Draw Colorbar
+    tmp = dict(cmap=cmap, orientation='vertical')
+    if not cbargs is None: tmp.update( cbargs )
+    
+    # if cbax is None: cbar = ax.colorbar(h)
+    # else: cbar = cbax.colorbar(h)
 
+    if cbax is None:  cbar = plt.colorbar( h, ax=ax )
+    else: cbar = plt.colorbar( h, cax=cbax )
+
+    cbar.ax.tick_params(labelsize=fontsize)
+    if not cbarTitle is None:
+        cbar.set_label( cbarTitle , fontsize=fontsize+2 )
+
+    # Do some formatting
+    if newAxis:
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
-        
-        plt.show()
-    else:
-        return h
+
+    if not xlim is None: ax.set_xlim(*xlim)
+    if not ylim is None: ax.set_ylim(*ylim)
+
+    # Done!
+    return AxHands( ax, h, cbar)
 
 #################################################################################3
 # Make a geometry from a matrix mask
-PolygonizeResult = namedtuple('PolygonizeResult', "geoms values")
-def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shrink=True):
-    """polygonize a raster/integer data matrix"""
+# 
+# NOTE TO ME
+# This function is VERRYYYYYYY similar to polygonizeMatrix, but since it does not
+# not actually have to deal with the matrix data (which is all done by GDAL), this should be
+# kept along side polygonizeMatrix
+def polygonizeRaster( source, srs=None, flat=False, shrink=True):
+    """Polygonize a raster or an integer-valued data matrix
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+        The raster datasource to polygonize
+        * The Datatype MUST be of boolean of integer type
+
+    srs : Anything acceptable to gk.srs.loadSRS; optional
+        The srs of the polygons to create
+          * If not given, the raster's internal srs is assumed
     
-    # Get the working band
-    if isinstance(source, np.ndarray):
-        # Make boundaries if not given
-        if bounds is None:  bounds = (0,0,source.shape[1], source.shape[0]) # bounds in xMin, yMin, xMax, yMax
+    flat : bool
+        If True, flattens the resulting geometries which share a contiguous 
+        value into a single geometry object
 
-        try: # first try for a tuple
-            xMin, yMin, xMax, yMax = bounds
-        except: # next assume the user gave an extent object
-            try:
-                xMin, yMin, xMax, yMax = bounds.xyXY
-                srs = bounds.srs
-            except:
-                raise GeoKitGeomError("Could not understand 'bounds' input")
+    shrink : bool
+        If True, shrink all geoms by a tiny amount in order to avoid geometry 
+        overlapping issues
+          * The total amount shrunk should be very very small
+          * Generally this should be left as True unless it is ABSOLUTELY 
+            necessary to maintain the same area
 
-        pixelHeight = (yMax-yMin)/source.shape[0]
-        pixelWidth  = (xMax-xMin)/source.shape[1]
+    Returns:
+    --------
+    pandas.DataFrame -> With columns:
+                            'geom' -> The contiguous-valued geometries
+                            'value' -> The value for each geometry
 
-        if srs is None: srs=EPSG3035
-        else: srs=loadSRS(srs)
-
-        # Get DataType
-        dtype = gdalType(source.dtype)
-
-        # Make a raster dataset and pull the band/maskBand objects
-        raster = quickRaster(bounds, srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noDataValue)
-        band = raster.GetRasterBand(1)
-
-        band.WriteArray(source)
-
-        band.FlushCache()
-        raster.FlushCache()
-    else:
-        ds = loadRaster(source)
-        band = ds.GetRasterBand(1)
-
+    """
+    
+    # Load the information we will need
+    source = loadRaster(source)
+    band = source.GetRasterBand(1)
     maskBand = band.GetMaskBand()
+    if srs is None: srs = source.GetProjectionRef()
 
     # Do polygonize
     vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
@@ -1363,46 +1413,111 @@ def polygonize( source, bounds=None, srs=None, noDataValue=None, flat=False, shr
 
     # Check the geoms
     ftrN = vecLyr.GetFeatureCount()
-
     if( ftrN == 0):
         #raise GlaesError("No features in created in temporary layer")
         print("No features in created in temporary layer")
-        if flat: return None
-        else: return []
+        return 
 
-    # Read the geoms
+    # Extract geometries and values
     geoms = []
-    values = []
+    rid = []
     for i in range(ftrN):
         ftr = vecLyr.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
-        values.append(ftr.items()["DN"])
+        rid.append(ftr.items()["DN"])
 
-    values = np.array(values)
-    geoms = np.array(geoms)
-
-    # shrink geoms by a timy amount to avoid self intersections
+    # Do shrink, maybe
     if shrink: 
         # Compute shrink factor
-        geoms = np.array([g.Buffer(0.000001) for g in geoms])
+        shrinkFactor = -0.00001*(xMax-xMin)/matrix.shape[1]
+        geoms = [g.Buffer(shrinkFactor) for g in geoms]
 
-    # Unless we want to flatten the geometries, we're done!
-    if not flat: return PolygonizeResult(geoms, values)
+    # Do flatten, maybe
+    if flat:
+        geoms = np.array(geoms)
+        rid = np.array(rid)
 
-    # Flatten the geometries
-    flatValues = []
-    flatGeoms = []
-    for val in set(values):
-        flatValues.append(val)
+        finalGeoms = []
+        finalRID = []
+        for _rid in set(rid):
+            smallGeomSet = geoms[rid==_rid]
+            finalGeoms.append(flatten( smallGeomSet ) if len(smallGeomSet)>1 else smallGeomSet[0])
+            finalRID.append(_rid)
+    else:
+        finalGeoms = geoms
+        finalRID = rid
         
-        geomList = geoms[values==val]
-        if geomList.size==1:
-            flatGeoms.append(geomList[0])
-        else:
-            flatGeoms.append(flatten(geomList))
+    # Cleanup
+    vecLyr = None
+    vecDS = None
+    maskBand = None
+    rasBand = None
+    raster = None
 
-    flatValues = np.array(flatValues)
-    flatGeoms = np.array(flatGeoms)
-
-    return PolygonizeResult(flatGeoms, flatValues)
+    # Done!
+    return pd.DataFrame(dict(geom=finalGeoms, value=rinalRID))
     
+def warp(source, resampleAlg='bilinear', cutlineGeom=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, method=None, dtype=None, noData=None, fill=None, **kwargs):
+    # open source and get info
+    source = loadRaster(source)
+    dsInfo = rasterInfo(source)
+
+    # Handle arguments
+    if pixelHeight is None: pixelHeight=dsInfo.dy
+    if pixelWidth is None: pixelWidth=dsInfo.dx
+    if srs is None: srs=dsInfo.srs
+    if bounds is None: bounds=dsInfo.bounds
+    if dtype is None: dtype=dsInfo.dtype
+    if noData is None: noData=dsInfo.noData
+
+    srs = loadSRS(srs)
+    dtype = gdalType(dtype)
+
+    # Test if warping is even really needed
+    if ( output is None and 
+         np.isclose(dsInfo.bounds[0], bounds[0]) and 
+         np.isclose(dsInfo.bounds[1], bounds[1]) and 
+         np.isclose(dsInfo.bounds[2], bounds[2]) and 
+         np.isclose(dsInfo.bounds[3], bounds[3]) and  
+         np.isclose(dsInfo.dx, pixelWidth) and 
+         np.isclose(dsInfo.dy, pixelHeight) and
+         dtype == dsInfo.dtype and
+         noData == dsInfo.noData and 
+         srs.IsSame(dsInfo.srs)):
+            return source
+    
+    # If a cutline is given, create the output
+    if not cutlineGeom is None:
+        tempdir = TemporaryDirectory()
+        cutlineGeom = quickVector(cutlineGeom, output=os.path.join(tempdir.name,"tmp.shp"))
+
+    # Workflow depnds on whether or not we have an output
+    if not output is None: # Simply do a translate
+        if( "win" in sys.platform): co = kwargs.pop("creationOptions", ["COMPRESS=LZW"])
+        else: co = kwargs.pop("creationOptions", ["COMPRESS=DEFLATE"])
+
+        copyMeta = kwargs.pop("copyMetadata", True)
+        aligned = kwargs.pop("targetAlignedPixels", True)
+
+        opts = gdal.WarpOptions( outputType=dtype, xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 
+                                 outputBounds=bounds, outputSRS=srs, noData=noData, resampleAlg=resampleAlg, 
+                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutlineGeom, 
+                                 **kwargs)
+
+        result = gdal.Warp( output, source, options=opts )
+        if( result != 0): raise GeoKitRasterError("Failed to translate raster")
+
+        destRas = None
+    else:
+        # Warp to a raster in memory
+        destRas = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
+
+        # Do a warp
+        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutlineGeom, **kwargs)
+        #print(result)
+        #if( result != 0): raise GeoKitRasterError("Failed to warp raster")
+        destRas.FlushCache()
+
+    # Done!
+    if not cutlineGeom is None: del tempdir
+    return destRas

@@ -297,7 +297,7 @@ def convertWKT( wkt, srs=None):
 
 #################################################################################3
 # Make a geometry from a matrix mask
-def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
+def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _raw=False):
     """Create a geometry set from a matrix of integer values
     
     Each unique-valued group of pixels will be converted to a geometry
@@ -310,7 +310,7 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
           * Must be integer or boolean type
 
     bounds : (xMin, yMin, xMax, yMax) or geokit.Extent
-        Determines the boundary context for the given mask and will scale
+        Determines the boundary context for the given matrix and will scale
         the resulting geometry's coordinates accordingly
           * If a boundary is not given, the geometry coordinates will 
             correspond to the mask's indicies
@@ -319,8 +319,7 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
     
     srs : Anything acceptable to gk.srs.loadSRS; optional
-        The srs of the geometries to create
-
+        The srs context for the given matrix and of the geometries to create
 
     flat : bool
         If True, flattens the resulting geometries which share a contiguous matrix
@@ -335,7 +334,9 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
 
     Returns:
     --------
-    [ogr.Geometry,  ]
+    pandas.DataFrame -> With columns:
+                            'geom' -> The contiguous-valued geometries
+                            'value' -> The value for each geometry
 
     """
     
@@ -430,10 +431,9 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     if( ftrN == 0):
         #raise GlaesError("No features in created in temporary layer")
         print("No features in created in temporary layer")
-        if flat: return None
-        else: return []
+        return 
 
-    # If only one feature created, set it
+    # Extract geometries and values
     geoms = []
     rid = []
     for i in range(ftrN):
@@ -444,7 +444,7 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     # Do shrink, maybe
     if shrink: 
         # Compute shrink factor
-        shrinkFactor = -0.001*(xMax-xMin)/matrix.shape[1]
+        shrinkFactor = -0.00001*(xMax-xMin)/matrix.shape[1]
         geoms = [g.Buffer(shrinkFactor) for g in geoms]
 
     # Do flatten, maybe
@@ -457,8 +457,10 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
         for _rid in set(rid):
             smallGeomSet = geoms[rid==_rid]
             finalGeoms.append(flatten( smallGeomSet ) if len(smallGeomSet)>1 else smallGeomSet[0])
+            finalRID.append(_rid)
     else:
         finalGeoms = geoms
+        finalRID = rid
         
     # Cleanup
     vecLyr = None
@@ -468,9 +470,11 @@ def vectorize( matrix, bounds=None, srs=None, flat=False, shrink=True, cornerCon
     raster = None
 
     # Done!
-    return finalGeoms
+    if _raw: return finalGeoms, rinalRID
+    else:
+        return pd.DataFrame(dict(geom=finalGeoms, value=rinalRID))
 
-def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerConnected=False):
+def polygonizeMask( mask, bounds=None, srs=None, flat=True, shrink=True):
     """Create a geometry set from a matrix mask
     
     Each True-valued group of pixels will be converted to a geometry
@@ -495,8 +499,7 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
         The srs of the geometries to create
 
     flat : bool
-        If True, flattens the resulting geometries which share a contiguous matrix
-        value into a single geometry object
+        If True, flattens the resulting geometries into a single geometry
 
     shrink : bool
         If True, shrink all geoms by a tiny amount in order to avoid geometry 
@@ -520,9 +523,9 @@ def convertMask( mask, bounds=None, srs=None, flat=False, shrink=True, cornerCon
         raise GeoKitGeomError("Mask must be a 2D boolean or integer numpy ndarray")
 
     # Do vectorization
-    result = vectorize( matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, cornerConnected=cornerConnected)
-    if flat: result = result[0] 
-
+    result = polygonizeMatrix( matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, _raw=True)[0]
+    if flat: result = result[0]
+    
     # Done!
     return result
 

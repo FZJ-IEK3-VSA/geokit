@@ -4,9 +4,10 @@
 
 # maybe set GDAL_DATA variable
 from os import environ as _environ
+from os.path import join as _join, dirname as _dirname, basename as _basename
 
 if not "GDAL_DATA" in _environ:
-	from os.path import join as _join, isdir as _isdir
+	from os.path import isdir as _isdir
 	from sys import executable as _executable
 	
 	testDir = _join(_executable,"..","Library","share","gdal")
@@ -35,5 +36,10 @@ from geokit._core.geomutil import drawGeoms
 import geokit.algorithms
 
 # Add useful paths for testing and stuff
-from os.path import join, dirname
-_test_data_ = join(dirname(__file__), "test", "data")
+
+from collections import OrderedDict as _OrderedDict
+from glob import glob as _glob
+_test_data_ = _OrderedDict()
+
+for f in _glob(_join(_dirname(__file__), "test", "data", "*")):
+    _test_data_[_basename(f)] = f

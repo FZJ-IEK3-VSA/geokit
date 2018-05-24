@@ -226,13 +226,14 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     if not noData is None: band.SetNoDataValue(noData)
 
     # do fill
-    if not fill is None: band.Fill(fillValue)
+    if not fill is None: band.Fill(fill)
 
     # add data
-    if not data is None: band.WriteArray(data)
-
+    if not data is None: 
+        band.WriteArray(data)
+        band.FlushCache()
+    
     # Done!
-    band.FlushCache()
     del band
     raster.FlushCache()
     return raster
@@ -240,3 +241,70 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
 
 ### Helpful classes
 Feature = namedtuple("Feature", "geom attr")
+
+### Image plotter
+def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, cbar=False, **kwargs):
+    """Draw a matrix as an image on a matplotlib canvas
+
+    Inputs:
+        data : The data to plot as a 2D matrix
+            - numpy.ndarray
+
+        bounds : The spatial context of the matrix's boundaries
+            - (xMin, yMin, xMax, yMax)
+            - geokit.Extent object
+            * If bounds is None, the plotted matrix will be bounded by the matrix's dimension sizes
+
+        ax : An optional matplotlib axes to plot on
+            * If ax is None, the function will draw and create its own axis
+
+        scaling - int : An optional scaling factor used to scale down the data matrix
+            * Used to decrease strain on the system's resources for visualing the data
+            * make sure to use a NEGATIVE integer to scale down (positive will scale up and make a larger matrix)
+
+        yAtTop - True/False : Flag indicating that the data is in the typical y-index-starts-at-top orientation
+            * If False, the data matrix will be flipped before plotting
+
+        cbar - True/False : Flag indicating whether or not to automatically add a colorbar
+            * Only operates when an axis has not been given
+
+        **kwargs : Passed on to a call to matplotlib's imshow function
+            * Determines the visual characteristics of the drawn image
+
+    """
+    showPlot = False
+    if ax is None:
+        showPlot = True
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(12,12))
+        ax = plt.subplot(111)
+
+    # If bounds is none, make a boundary
+    if bounds is None:
+        xMin,yMin,xMax,yMax = 0,0,data.shape[1],data.shape[0] # bounds = xMin,yMin,xMax,yMax
+    else:
+        try:
+            xMin,yMin,xMax,yMax = bounds
+        except: # maybe bounds is an ExtentObject
+            xMin,yMin,xMax,yMax = bounds.xyXY
+
+    # Set extentdraw
+    extent = (xMin,xMax,yMin,yMax)
+    
+    # handle flipped data
+    if not yAtTop: data=data[::-1,:]
+
+    # Draw image
+    if scaling: data=scaleMatrix(data,scaling,strict=False)
+    h = ax.imshow( data, extent=extent, **kwargs)
+
+    # Done!
+    if showPlot:
+        if cbar: plt.colorbar(h)
+
+        ax.set_aspect('equal')
+        ax.autoscale(enable=True)
+        
+        plt.show()
+    else:
+        return h
