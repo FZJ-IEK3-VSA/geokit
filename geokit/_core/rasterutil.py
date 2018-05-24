@@ -1243,7 +1243,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Raster plotter
-def drawRaster(source, srs=None, ax=None, resolution=None, cutlineGeom=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, bgFillValue=-9999,**kwargs):
+def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, bgFillValue=-9999,**kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Inputs:
@@ -1299,7 +1299,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutlineGeom=None, fig
     source = loadRaster(source)
     info = rasterInfo(source)
 
-    if not (srs is None and resolution is None and cutlineGeom is None and xlim is None and ylim is None):
+    if not (srs is None and resolution is None and cutline is None and xlim is None and ylim is None):
         
         if xlim is None: xlim=info.xMin, info.xMax
         if ylim is None: ylim=info.yMin, info.yMax
@@ -1311,7 +1311,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutlineGeom=None, fig
             try:    xres,yres = resolution
             except: xres,yres = resolution,resolution
 
-        source = warp(source, cutlineGeom=cutlineGeom, pixelHeight=yres, pixelWidth=xres, srs=srs, 
+        source = warp(source, cutline=cutline, pixelHeight=yres, pixelWidth=xres, srs=srs, 
                       bounds=bounds, fill=bgFillValue, **kwargs)
 
     info = rasterInfo(source)
@@ -1457,7 +1457,7 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
     # Done!
     return pd.DataFrame(dict(geom=finalGeoms, value=rinalRID))
     
-def warp(source, resampleAlg='bilinear', cutlineGeom=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, method=None, dtype=None, noData=None, fill=None, **kwargs):
+def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, method=None, dtype=None, noData=None, fill=None, **kwargs):
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(source)
@@ -1473,6 +1473,10 @@ def warp(source, resampleAlg='bilinear', cutlineGeom=None, output=None, pixelHei
     srs = loadSRS(srs)
     dtype = gdalType(dtype)
 
+    # Check some inputs in case they are bad (since GDAL does not give good error reports)
+    if pixelHeight > (bounds[2]-bounds[0]): raise GeoKitRasterError("pixelHeight is too large compare to boundary")
+    if pixelWidth > (bounds[3]-bounds[1]): raise GeoKitRasterError("pixelWidth is too large compare to boundary")
+
     # Test if warping is even really needed
     if ( output is None and 
          np.isclose(dsInfo.bounds[0], bounds[0]) and 
@@ -1487,9 +1491,12 @@ def warp(source, resampleAlg='bilinear', cutlineGeom=None, output=None, pixelHei
             return source
     
     # If a cutline is given, create the output
-    if not cutlineGeom is None:
-        tempdir = TemporaryDirectory()
-        cutlineGeom = quickVector(cutlineGeom, output=os.path.join(tempdir.name,"tmp.shp"))
+    if not cutline is None:
+        if isinstance(cutline, ogr.Geometry):
+            tempdir = TemporaryDirectory()
+            cutline = quickVector(cutline, output=os.path.join(tempdir.name,"tmp.shp"))
+        elif not isinstance(cutline, str) and isRaster(cutline):
+            raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
     # Workflow depnds on whether or not we have an output
     if not output is None: # Simply do a translate
@@ -1501,7 +1508,7 @@ def warp(source, resampleAlg='bilinear', cutlineGeom=None, output=None, pixelHei
 
         opts = gdal.WarpOptions( outputType=dtype, xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 
                                  outputBounds=bounds, outputSRS=srs, noData=noData, resampleAlg=resampleAlg, 
-                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutlineGeom, 
+                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutline, 
                                  **kwargs)
 
         result = gdal.Warp( output, source, options=opts )
