@@ -33,6 +33,7 @@ POINT_SET = [ "POINT (7 49.7)", "POINT (7 49.9)", "POINT (7.4 49.75)", "POINT (7
               "POINT (8 49.9)", "POINT (8.4 49.75)", "POINT (8 49.7)","POINT (9 49.7)", "POINT (9 49.9)", 
               "POINT (9.4 49.75)", "POINT (9 49.7)"]
 
+
 GEOM = ogr.CreateGeometryFromWkt(POLY)
 GEOM.AssignSpatialReference(EPSG4326)
 
@@ -106,6 +107,6 @@ def vis(mat, points=None):
 
 isclose = np.isclose
 
-def compare(v, expected, header):
+def compare(v, expected, header=""):
     if not isclose(v, expected):
-        raise error("%s:   Expected:%.8f   Got:%.8f"%(header, expected, v))
+        raise error("%s   Expected:%.8f   Got:%.8f"%(header, expected, v))

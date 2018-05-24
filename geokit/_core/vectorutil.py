@@ -6,27 +6,6 @@ from .rasterutil import *
 ####################################################################
 # INTERNAL FUNCTIONS
 
-def isVector(source): 
-    """
-    Test if loadVector fails for the given input
-
-    Parameters:
-    -----------
-    source : str
-        The path to the vector file to load
-
-    Returns:
-    --------
-    bool -> True if the given input is a vector
-
-    """
-    try: 
-        ds = ogr.Open(source)
-        return True
-    except: 
-        return False
-
-
 # Loaders Functions
 def loadVector(x):
     """

@@ -151,38 +151,57 @@ def test_transform():
                             [1,1,0,1,0],
                             [0,1,0,0,0]], dtype=np.bool)
 
-    polygons = polygonizeMask( complexmask, bounds=(6, 45, 11, 50), srs=EPSG4326, shrink=None)
+    polygons = polygonizeMask( complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
 
     t2 = transform(polygons, toSRS='europe_m', segment=0.1)
     if not ( len(t2)==3): error("Transform Count")
     if not t2[0].GetSpatialReference().IsSame(EPSG3035): error("Transform srs")
     if not isclose( sum([t.Area() for t in t2]), 83747886418.48529 ): error("Transform Area")
 
-    def test_extractVerticies():
-        print(extractVerticies(GEOM), "\n")
-        print(extractVerticies(SUB_GEOM), "\n")
-        print(extractVerticies(SUB_GEOM2), "\n")
-        print(extractVerticies(SUB_GEOM3), "\n")
-        print(extractVerticies(SUB_GEOMS), "\n")
-        print(extractVerticies(GEOM_3035), "\n")
-    def test_drawPoint():
-        print( "drawPoint not tested...")
-    def test_drawMultiPoint():
-        print( "drawMultiPoint not tested...")
-    def test_drawLine():
-        print( "drawLine not tested...")
-    def test_drawMultiLine():
-        print( "drawMultiLine not tested...")
-    def test_drawLinearRing():
-        print( "drawLinearRing not tested...")
-    def test_drawPolygon():
-        print( "drawPolygon not tested...")
-    def test_drawMultiPolygon():
-        print( "drawMultiPolygon not tested...")
-    def test_drawGeoms():
-        print( "drawGeoms not tested...")
-    def test_partition():
-        print( "partition not tested...")
+def test_extractVerticies():
+    # Test polygon
+    pts1 = extractVerticies(GEOM)
+    compare(pts1[5,1], 35.1, "extractVecticies")
+    if not pts1.shape==(10,2): error( "extractVecticies")
+
+    # Test multipolygon
+    pts2 = extractVerticies(flatten(SUB_GEOMS))
+    if not pts2.shape==(12,2): error( "extractVecticies")
+
+    # Test linestring
+    pts3 = extractVerticies(GEOM.Boundary())
+    compare(pts3[5,1], 35.1, "extractVecticies")
+    if not pts3.shape==(10,2): error( "extractVecticies")
+
+    # Test multilinestring
+    compare(pts3[5,1], 35.1, "extractVecticies")
+    if not pts3.shape==(10,2): error( "extractVecticies")
+
+    # Test Point
+    pts5 = extractVerticies(point(5,20))
+    compare(pts5[0,0], 5, "extractVecticies - value")
+    if not pts5.shape==(1,2): error( "extractVecticies - shape")    
+    
+    print( "extractVerticies passed" )
+
+def test_drawPoint():
+    print( "drawPoint not tested...")
+def test_drawMultiPoint():
+    print( "drawMultiPoint not tested...")
+def test_drawLine():
+    print( "drawLine not tested...")
+def test_drawMultiLine():
+    print( "drawMultiLine not tested...")
+def test_drawLinearRing():
+    print( "drawLinearRing not tested...")
+def test_drawPolygon():
+    print( "drawPolygon not tested...")
+def test_drawMultiPolygon():
+    print( "drawMultiPolygon not tested...")
+def test_drawGeoms():
+    print( "drawGeoms not tested...")
+def test_partition():
+    print( "partition not tested...")
 
 if __name__ == '__main__':
     test_box()

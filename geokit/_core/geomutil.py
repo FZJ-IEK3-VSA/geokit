@@ -272,8 +272,12 @@ def extractVerticies(geom):
     else: 
         raise GeoKitGeomError("Cannot extract points from geometry ")
 
-    if isMulti: return np.concatenate(pts)
-    else: return np.array(pts)
+    if isMulti: out = np.concatenate(pts)
+    else: out = np.array(pts)
+
+    if out.shape[1] == 3:  # This can happen when POINTs are extracted
+        out = out[:,:2]
+    return out
 
 #################################################################################3
 # Make a geometry from a WKT string
@@ -404,15 +408,6 @@ def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _
     # Do a polygonize
     rasBand = raster.GetRasterBand(1)
     maskBand = rasBand.GetMaskBand()
-
-    # Open an empty vector dataset, layer, and field
-    #driver = gdal.GetDriverByName("Memory")
-    #tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
-    #t = TemporaryDirectory()
-    #tmp_dataSource = tmp_driver.Create( t.name+"tmp.shp", 0, 0 )
-
-    #vecDS = driver.CreateCopy("MEMORY", tmp_dataSource)
-    #t.cleanup()
 
     vecDS = gdal.GetDriverByName("Memory").Create( '', 0, 0, 0, gdal.GDT_Unknown )
     vecLyr = vecDS.CreateLayer("mem",srs=srs)

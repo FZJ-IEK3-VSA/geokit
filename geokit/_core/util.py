@@ -34,6 +34,69 @@ class GeoKitVectorError(GeoKitError): pass
 class GeoKitExtentError(GeoKitError): pass
 class GeoKitRegionMaskError(GeoKitError): pass
 
+#####################################################################
+# Testers
+
+def isVector(source): 
+    """
+    Test if loadVector fails for the given input
+
+    Parameters:
+    -----------
+    source : str
+        The path to the vector file to load
+
+    Returns:
+    --------
+    bool -> True if the given input is a vector
+
+    """
+    
+    if isinstance(source, gdal.Dataset): 
+        try:
+            source.RasterCount # Should fail if we have a vector
+            return False
+        except:
+            return True
+    elif isinstance(source, str):
+        d = gdal.IdentifyDriver(source)
+
+        meta = d.GetMetadata()
+        if meta.get("DCAP_VECTOR", False)=="YES": return True
+        else: return False
+    else:
+        return False
+
+def isRaster(source): 
+    """
+    Test if loadRaster fails for the given input
+
+    Parameters:
+    -----------
+    source : str
+        The path to the raster file to load
+
+    Returns:
+    --------
+    bool -> True if the given input is a raster
+
+    """
+    if isinstance(source, gdal.Dataset): 
+        try:
+            source.RasterCount # Should fail if we have a vector
+            return True
+        except:
+            return False
+    elif isinstance(source, str):
+        d = gdal.IdentifyDriver(source)
+
+        meta = d.GetMetadata()
+        if meta.get("DCAP_RASTER", False)=="YES": return True
+        else: return False
+    else:
+        return False
+
+
 ##################################################################
 # General funcs
 # matrix scaler
@@ -195,11 +258,13 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
         xMin, yMin, xMax, yMax = bounds.xyXY
         srs = bounds.srs
     
-    # Make a raster dataset and pull the band/maskBand objects
-    cols = int(round((xMax-xMin)/dx)) # used 'round' instead of 'int' because this matched GDAL behavior better
-    rows = int(round((yMax-yMin)/abs(dy)))
-    originX = xMin
-    originY = yMax # Always use the "Y-at-Top" orientation
+    ## Make a raster dataset and pull the band/maskBand objects
+    # fix origins to multiples of the resolutions
+    originX = float(np.round(xMin/dx)*dx)
+    originY = float(np.round(yMax/dx)*dy) # Always use the "Y-at-Top" orientation
+
+    cols = int(round((xMax-originX)/dx)) # used 'round' instead of 'int' because this matched GDAL behavior better
+    rows = int(round((originY-yMin)/abs(dy)))
     
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory
@@ -217,7 +282,10 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     band = raster.GetRasterBand(1)
 
     # set nodata
-    if not noData is None: band.SetNoDataValue(noData)
+    if not noData is None: 
+        band.SetNoDataValue(noData)
+        if fill is None and data is None: 
+            band.Fill(noData)
 
     # do fill
     if not fill is None: band.Fill(fill)
@@ -225,7 +293,7 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     # add data
     if not data is None: 
         band.WriteArray(data)
-        band.FlushCache()
+    band.FlushCache()
     
     # Done!
     del band

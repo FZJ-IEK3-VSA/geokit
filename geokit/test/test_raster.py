@@ -1,4 +1,6 @@
 from helpers import *
+from geokit.util import *
+from geokit.geom import *
 from geokit.raster import *
 
 ## gdalType
@@ -8,6 +10,8 @@ def test_gdalType():
     if( gdalType("float32") != "GDT_Float32" ): error("gdal type")
     if( gdalType(NUMPY_FLOAT_ARRAY) != "GDT_Float64" ): error("gdal type")
     if( gdalType(NUMPY_FLOAT_ARRAY.dtype) != "GDT_Float64" ): error("gdal type")
+
+    print( "gdalType passed" )
 
 ## Describe Raster
 def test_rasterInfo():
@@ -21,6 +25,9 @@ def test_rasterInfo():
     if not (info.srs.IsSame(EPSG3035)) : error("decribeRaster - srs")
     if not (info.noData == 0) : error("decribeRaster - noData")
     if not (info.flipY == True) : error("decribeRaster - flipY")
+
+
+    print( "rasterInfo passed" )
 
 ## createRaster
 def test_createRaster():
@@ -37,7 +44,7 @@ def test_createRaster():
     inputFillValue = 12.34
 
     memRas = createRaster( bounds=inputBounds, pixelHeight=inputPixelHeight, pixelWidth=inputPixelWidth, srs=inputSRS, 
-                           dtype=inputDataType, noDataValue=inputNoData, fillValue=inputFillValue)
+                           dtype=inputDataType, noData=inputNoData, fillValue=inputFillValue)
 
     if(memRas is None): error("creating raster in memory")
     mri = rasterInfo(memRas)
@@ -66,6 +73,9 @@ def test_createRaster():
     meta = ds.GetMetadata_Dict()
     if not meta["bob"] == "bob" or not meta["TIM"] == "TIMMY":
         error("saving meta data")
+
+
+    print( "createRaster passed" )
 
 ## Get values directly from a raster
 def test_extractValues():
@@ -115,21 +125,28 @@ def test_extractValues():
     v4 = extractValues(CLC_RASTER_PATH, pt, winRange=2)
     if not isclose(np.abs(v4.data-real).sum(),0.0): error("extractValues 4")
 
+    print( "extractValues passed" )
 
 # A nicer way to get a single value
 def test_interpolateValues():
     point = (4061794.7,3094718.4)
+    
+    v = interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="near")
+    compare( v, 3, "interpolateValues - ")
+    
+    v = interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="linear-spline")
+    compare( v, 4.572732, "interpolateValues - linear-spline")
+    
+    v = interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="cubic-spline")
+    compare( v, 2.4197586642, "interpolateValues - cubic-spline")
+    
+    v = interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="average")
+    compare( v, 9.0612244898, "interpolateValues - average")
+    
+    v = interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="func", func = lambda d,xo,yo: d.max())
+    compare( v,12, "interpolateValues - func")
 
-    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="near"), 3): 
-        error("interpolateValues - ")
-    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="linear-spline"), 4.572732): 
-        error("interpolateValues - linear-spline")
-    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="cubic-spline"), 2.4197586642): 
-        error("interpolateValues - cubic-spline")
-    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="average"), 9.0612244898): 
-        error("interpolateValues - average")
-    if not isclose(interpolateValues(CLC_RASTER_PATH, point, pointSRS='europe_m', mode="func", func = lambda d,xo,yo: d.max()),12): 
-        error("interpolateValues - func")
+    print("interpolateValues passed")
 
 def test_gradient():
     # create a sloping surface dataset
@@ -173,7 +190,9 @@ def test_gradient():
 
     if not isclose(slopeMat.mean(),0.0663805622803): error("gradient - elevation slope")
 
-def test_mutateValues():
+    print("gradient passed")
+
+def test_mutateRaster():
     # Setup
     def isOdd(mat): return np.mod(mat,2)
     
@@ -181,53 +200,136 @@ def test_mutateValues():
     sourceInfo = rasterInfo(source)
 
     ## Process Raster with no processor or extent
-    res1 = mutateValues(source, processor=None)#, overwrite=True, output=result("algorithms_mutateValues_1.tif"))
+    res1 = mutateRaster(source, processor=None)#, overwrite=True, output=result("algorithms_mutateRaster_1.tif"))
 
     info1 = rasterInfo(res1)
-    if not info1.srs.IsSame(sourceInfo.srs): error("mutateValues 1 - srs")
-    if not info1.bounds == sourceInfo.bounds: error("mutateValues 1 - bounds")
+    if not info1.srs.IsSame(sourceInfo.srs): error("mutateRaster 1 - srs")
+    if not info1.bounds == sourceInfo.bounds: error("mutateRaster 1 - bounds")
 
-    ## mutateValues with a simple processor
-    output2 = result("algorithms_mutateValues_2.tif")
-    mutateValues(source, processor=isOdd, overwrite=True, output=output2)
+    ## mutateRaster with a simple processor
+    output2 = result("algorithms_mutateRaster_2.tif")
+    mutateRaster(source, processor=isOdd, overwrite=True, output=output2)
     res2 = gdal.Open(output2)
 
     info2 = rasterInfo(res2)
-    if not info2.srs.IsSame(sourceInfo.srs): error("mutateValues 2 - srs")
-    if not isclose(info2.xMin, sourceInfo.xMin): error("mutateValues 2 - bounds")
-    if not isclose(info2.xMax, sourceInfo.xMax): error("mutateValues 2 - bounds")
-    if not isclose(info2.yMin, sourceInfo.yMin): error("mutateValues 2 - bounds")
-    if not isclose(info2.yMax, sourceInfo.yMax): error("mutateValues 2 - bounds")
+    if not info2.srs.IsSame(sourceInfo.srs): error("mutateRaster 2 - srs")
+    if not isclose(info2.xMin, sourceInfo.xMin): error("mutateRaster 2 - bounds")
+    if not isclose(info2.xMax, sourceInfo.xMax): error("mutateRaster 2 - bounds")
+    if not isclose(info2.yMin, sourceInfo.yMin): error("mutateRaster 2 - bounds")
+    if not isclose(info2.yMax, sourceInfo.yMax): error("mutateRaster 2 - bounds")
 
     band2 = res2.GetRasterBand(1)
     arr2 = band2.ReadAsArray()
 
-    if not (arr2.sum()==156515): error("mutateValues 2 - data")
+    if not (arr2.sum()==156515): error("mutateRaster 2 - data")
 
     ## Process Raster with a simple processor (flip check)
-    output2f = output=result("algorithms_mutateValues_2f.tif")
-    mutateValues(CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f)
+    output2f = output=result("algorithms_mutateRaster_2f.tif")
+    mutateRaster(CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f)
     res2f = gdal.Open(output2f)
 
     info2f = rasterInfo(res2f)
-    if not info2f.srs.IsSame(sourceInfo.srs): error("mutateValues 2f - srs")
-    if not isclose(info2f.xMin, sourceInfo.xMin): error("mutateValues 2f - bounds")
-    if not isclose(info2f.xMax, sourceInfo.xMax): error("mutateValues 2f - bounds")
-    if not isclose(info2f.yMin, sourceInfo.yMin): error("mutateValues 2f - bounds")
-    if not isclose(info2f.yMax, sourceInfo.yMax): error("mutateValues 2f - bounds")
+    if not info2f.srs.IsSame(sourceInfo.srs): error("mutateRaster 2f - srs")
+    if not isclose(info2f.xMin, sourceInfo.xMin): error("mutateRaster 2f - bounds")
+    if not isclose(info2f.xMax, sourceInfo.xMax): error("mutateRaster 2f - bounds")
+    if not isclose(info2f.yMin, sourceInfo.yMin): error("mutateRaster 2f - bounds")
+    if not isclose(info2f.yMax, sourceInfo.yMax): error("mutateRaster 2f - bounds")
 
     arr2f = extractMatrix(res2f)
 
-    if not (arr2f.sum()==156515): error("mutateValues 2f - data")
+    if not (arr2f.sum()==156515): error("mutateRaster 2f - data")
 
     ## Check flipped data
-    if not (arr2f==arr2).all(): error("mutateValues 2f - flipping error!")
+    if not (arr2f==arr2).all(): error("mutateRaster 2f - flipping error!")
+
+    print( "mutateRaster passed")
+
+def test_isRaster(): 
+    s1 = isRaster(CLC_RASTER_PATH)
+    compare(s1,True,"isRaster")
+
+
+    s2 = isRaster(AACHEN_SHAPE_PATH)
+    compare(s2,False,"isRaster")
+
+    s3 = isRaster(loadRaster(CLC_RASTER_PATH))
+    compare(s3, True, "isRaster")
+
+
+    print("isRaster passed")
+
+def test_loadRaster(): print( "loadRaster is trivial")
+def test_createRasterLike(): print( "createRasterLike not tested...")
+def test_extractMatrix(): print( "extractMatrix not tested...")
+def test_extractCutline(): print( "extractCutline not tested...")
+
+def test_rasterStats(): 
+    result = rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
+    compare(result.mean, 15.711518944519621)
+
+    print("rasterStats passed")
+
+def test_KernelProcessor(): print( "KernelProcessor not tested...")
+def test_indexToCoord(): print( "indexToCoord not tested...")
+def test_drawRaster(): print( "drawRaster not tested...")
+def test_polygonizeRaster():
+    print("EXPAND MEEEEEEEEEEEEEEEEEE!!!!!")
+    geoms = polygonizeRaster(AACHEN_ELIGIBILITY_RASTER)
+    print(geoms)
+
+def test_warp(): 
+    # Change resolution to disk
+    d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif") )
+    if not d is None: error("warp - return")
+    v1 = extractMatrix(result("warp1.tif"))
+    compare( v1.mean(), 16.3141463057, "warp - value" )
+
+    # change resolution to memory
+    d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200 )
+    if not isRaster(d): error("warp - return")
+    v2 = extractMatrix(d)
+    compare( (v1-v2).mean(), 0)
+
+    # Do a cutline from disk
+    d = warp( CLC_RASTER_PATH, cutline=AACHEN_SHAPE_PATH, output=result("warp3.tif"), noData=99 )
+    v3 = extractMatrix(result("warp3.tif"))
+    compare(v3.mean(), 89.9568135904) 
+    compare(v3[0,0], 99, "warp -noData")
+    
+    # Do a cutline from memory
+    d = warp( CLC_RASTER_PATH, cutline=box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035), noData=99 )
+    v4 = extractMatrix(d)
+    compare(v4[0,0], 99, "warp -noData")
+    compare(v4.mean(), 76.72702479) 
+
+    # Do a flipped-source check
+    d = warp( CLC_RASTER_PATH, cutline=box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035), noData=99 )
+    v5 = extractMatrix(d)
+    compare( (v4-v5).mean(), 0)
+
+
+    d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp3.tif") )
+    v6 = extractMatrix(result("warp3.tif"))
+    compare( (v1-v6).mean(), 0)
+
+    print( "warp passed")
 
 if __name__=="__main__":
+    test_isRaster()
+    test_loadRaster()
     test_gdalType()
-    test_rasterInfo()
     test_createRaster()
+    test_createRasterLike()
+    test_extractMatrix()
+    test_extractCutline()
+    test_rasterStats()
+    test_gradient()
+    test_rasterInfo()
     test_extractValues()
     test_interpolateValues()
-    test_gradient()
-    test_mutateValues()
+    test_mutateRaster()
+    test_KernelProcessor()
+    test_indexToCoord()
+    test_drawRaster()
+    test_polygonizeRaster()
+    test_warp()
