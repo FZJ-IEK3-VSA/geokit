@@ -272,7 +272,7 @@ def createRasterLike( rasterInfo, **kwargs):
 
 ####################################################################
 # extract the raster as a matrix
-def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False ):
+def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False, autocorrect=False ):
     """extract all or part of a raster's band as a numpy matrix
     
     Note:
@@ -286,17 +286,23 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False )
     source : Anything acceptable by loadRaster()
         The raster datasource
         
-    xOff : int 
+    xOff : int; optional
         The index offset in the x-dimension
 
-    yOff : int
+    yOff : int; optional
         The index offset in the y-dimension
 
-    xWin: int
+    xWin: int; optional
         The window size in the x-dimension
 
-    yWin : int
+    yWin : int; optional
         The window size in the y-dimension
+
+    autocorrect : bool; optional
+        If True, the matrix will search for no data values and change them to 
+        numpy.nan
+        * Data type will always result in a float, so be careful with large
+          matricies
 
     Returns:
     --------
@@ -314,9 +320,15 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False )
     if not xWin is None: kwargs["win_xsize"] = xWin
     if not yWin is None: kwargs["win_ysize"] = yWin
 
-    # get Data and check for flip
+    # get Data
     if maskBand: data = mb.ReadAsArray(**kwargs)
     else: data = sourceBand.ReadAsArray(**kwargs)
+
+    # Correct 'nodata' values
+    if autocorrect:
+        noData = sourceBand.GetNoDataValue()
+        data = data.astype(np.float)
+        data[ data==noData ] = np.nan
 
     # make sure we are returing data in the 'flipped-y' orientation
     if not isFlipped(source): data = data[::-1,:]
@@ -1281,11 +1293,8 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     # Draw Colorbar
     tmp = dict(cmap=cmap, orientation='vertical')
     if not cbargs is None: tmp.update( cbargs )
-    
-    # if cbax is None: cbar = ax.colorbar(h)
-    # else: cbar = cbax.colorbar(h)
 
-    if cbax is None:  cbar = plt.colorbar( h, ax=ax )
+    if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
     else: cbar = plt.colorbar( h, cax=cbax )
 
     cbar.ax.tick_params(labelsize=fontsize)

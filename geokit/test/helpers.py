@@ -3,6 +3,7 @@ from os.path import join, dirname
 import ogr, gdal, osr
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 
 def error(msg=""): raise RuntimeError("test failed: "+msg)
 

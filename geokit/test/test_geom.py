@@ -184,42 +184,53 @@ def test_extractVerticies():
     
     print( "extractVerticies passed" )
 
-def test_drawPoint():
-    print( "drawPoint not tested...")
-def test_drawMultiPoint():
-    print( "drawMultiPoint not tested...")
-def test_drawLine():
-    print( "drawLine not tested...")
-def test_drawMultiLine():
-    print( "drawMultiLine not tested...")
-def test_drawLinearRing():
-    print( "drawLinearRing not tested...")
-def test_drawPolygon():
-    print( "drawPolygon not tested...")
-def test_drawMultiPolygon():
-    print( "drawMultiPolygon not tested...")
 def test_drawGeoms():
-    print( "drawGeoms not tested...")
-def test_partition():
-    print( "partition not tested...")
+    #Draw single polygon
+    r = drawGeoms(SUB_GEOM)
+    plt.savefig(result("drawGeoms-1.png"), dpi=100)
+
+    #Draw single linestring
+    r = drawGeoms(SUB_GEOM.Boundary())
+    plt.savefig(result("drawGeoms-2.png"), dpi=100)
+
+    #Draw a multipolygon
+    r = drawGeoms(flatten(SUB_GEOMS))
+    plt.savefig(result("drawGeoms-3.png"), dpi=100)
+
+    #Draw a list of polygons and set an MPL argument
+    r = drawGeoms(SUB_GEOMS, fc='b')
+    plt.savefig(result("drawGeoms-4.png"), dpi=100)
+
+    # Change projection systems
+    r = drawGeoms(SUB_GEOMS, fc='r', srs=3035)
+    plt.savefig(result("drawGeoms-5.png"), dpi=100)
+
+    # Draw from a dataframe
+    df = pd.DataFrame(dict(geom=SUB_GEOMS, hats=[1,2,3]))
+    
+    r = drawGeoms(df, srs=3035)
+    plt.savefig(result("drawGeoms-6.png"), dpi=100)
+
+    # Set individual mpl args
+    df["MPL:hatch"] = ["//","+",None]
+    r = drawGeoms(df, srs=3035)
+    plt.savefig(result("drawGeoms-7.png"), dpi=100)
+
+    # Test colorby
+    r = drawGeoms(df, srs=3035, colorBy="hats")
+    plt.savefig(result("drawGeoms-8.png"), dpi=100)
+
+    print("No errors in drawGeoms, but they should be checked manually!")
 
 if __name__ == '__main__':
-    test_box()
-    test_point()
-    test_empty()
-    test_convertWKT()
-    test_flatten()
-    test_polygonizeMatrix()
-    test_polygonizeMask()
-    test_transform()
-
-    test_extractVerticies()
-    test_drawPoint()
-    test_drawMultiPoint()
-    test_drawLine()
-    test_drawMultiLine()
-    test_drawLinearRing()
-    test_drawPolygon()
-    test_drawMultiPolygon()
+    # test_box()
+    # test_point()
+    # test_empty()
+    # test_convertWKT()
+    # test_flatten()
+    # test_polygonizeMatrix()
+    # test_polygonizeMask()
+    # test_transform()
+    # test_extractVerticies()
     test_drawGeoms()
-    test_partition()
+ 

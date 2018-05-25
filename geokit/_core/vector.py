@@ -779,7 +779,7 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
         return createVector( geoms, srs=srs, output=output, **kwargs )
     
 
-def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None, burn=1, output=None, dtype=None, compress=True, noData=None, overwrite=True, fill=None, **kwargs):
+def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None, value=1, output=None, dtype=None, compress=True, noData=None, overwrite=True, fill=None, **kwargs):
     """Rasterize a vector datasource onto a raster context
 
     Parameters:
@@ -809,12 +809,10 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
     where : str; optional
         An SQL-like where statement to use to filter the vector before rasterizing
 
-    burn : numeric, str
+    value : numeric, str
         The values to burn into the raster
-        * If a numeric is given, then all features are burned with the specified 
-          value
-        * If a string is given, then features are burned according to their value
-          for an attribute name given by 'burn'
+        * If a numeric is given, all pixels are burned with the specified value
+        * If a string is given, then one the feature attribute names is expected
     
     output : str; optional
         A path to an output file 
@@ -882,24 +880,24 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
 
     # Determine DataType is not given
     if dtype is None:
-        if burn==1: # Assume we want a bool matrix
+        if value==1: # Assume we want a bool matrix
             dtype="GDT_Byte"
         else: # assume float
-            dType = "GDT_Float32"
+            dtype = "GDT_Float32"
     else:
         dtype=gdalType(dtype)
-
+        
     # Collect rasterization options
     if output is None and not 'bands' in kwargs: 
         kwargs["bands"]=[1]
 
-    if isinstance(burn, str):
-        kwargs["attribute"] = burn
+    if isinstance(value, str):
+        kwargs["attribute"] = value
     else:
-        kwargs["burnValues"] = [burn,]
+        kwargs["burnValues"] = [value,]
     
     # Do 'in memory' rasterization
-    if output is None:
+    if output is None or not srsOkay: # We need to follow this path in both cases since the below fails when simultaneously rasterizing and writing to disk (I couldn't figure out why...)
         # Create temporary output file
         outputDS = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
 
@@ -908,7 +906,11 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         if(tmp==0): raise GeoKitRegionMaskError("Rasterization failed!")
         outputDS.FlushCache()
 
-        return outputDS
+        if output is None: return outputDS
+        else: 
+            ri = rasterInfo(outputDS)
+            createRasterLike(ri, output=output, data=extractMatrix(outputDS))
+            return output
 
     # Do a rasterization to a file on disk
     else:
@@ -929,12 +931,12 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
             else: co = []
         else:
             co = kwargs.pop("creationOptions")
-        print(bounds)
 
         tmp = gdal.Rasterize( output, source, outputBounds=bounds, xRes=pixelWidth, yRes=pixelHeight,
                               outputSRS=srs, outputType=getattr(gdal, dtype), noData=noData, where=where, 
                               creationOptions=co, targetAlignedPixels=aligned, **kwargs)
-        if(tmp==0): raise GeoKitRegionMaskError("Rasterization failed!")
         
+        if not isRaster(tmp): raise GeoKitRegionMaskError("Rasterization failed!")
+
         return output
 

@@ -753,7 +753,7 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
 
 
 AxHands = namedtuple("AxHands", "ax handles cbar")
-def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **mplArgs):
+def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0.01, rightMargin=0.01, topMargin=0.01, bottomMargin=0.01, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -889,26 +889,37 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
     if ax is None:
         newAxis=True
+
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
-        rightMargin+= 0.08 # Add area on the right for colorbar text
-        if not hideAxis: 
-            leftMargin += 0.08
+        if colorBy is None: # We don't need a colorbar
+            if not hideAxis: leftMargin += 0.07
 
-        cbarExtraPad = 0.05
-        cbarWidth = 0.04
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin), 
+                           1-(topMargin+bottomMargin)])
+            cbax=None
 
-        ax = plt.axes([leftMargin, 
-                       bottomMargin, 
-                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
-                       1-(topMargin+bottomMargin)])
+        else: # We need a colorbar
+            rightMargin+= 0.08 # Add area on the right for colorbar text
+            if not hideAxis: 
+                leftMargin += 0.07
 
-        cbax = plt.axes([1-(rightMargin+cbarWidth), 
-                         bottomMargin+cbarExtraPad, 
-                         cbarWidth, 
-                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
+            cbarExtraPad = 0.05
+            cbarWidth = 0.04
+
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                           1-(topMargin+bottomMargin)])
+
+            cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                             bottomMargin+cbarExtraPad, 
+                             cbarWidth, 
+                             1-(topMargin+bottomMargin+2*cbarExtraPad)])
 
         if hideAxis: ax.axis("off")
         else: ax.tick_params(labelsize=fontsize)
@@ -995,7 +1006,6 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
         _colorVals = [cmap(v) for v in (colorVals-cValMin)/(cValMax-cValMin)]
 
-        ## TODO: Make a colorbar
 
     ### Do Plotting
     # make patches
@@ -1032,7 +1042,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         norm = Normalize(vmin=cValMin, vmax=cValMax)
         tmp = dict(cmap=cmap, norm=norm, orientation='vertical')
         if not cbargs is None: tmp.update( cbargs )
-        cbar = ColorbarBase(cbax, )
+        cbar = ColorbarBase(cbax, **tmp )
         cbar.ax.tick_params(labelsize=fontsize)
         cbar.set_label( colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize+2 )
     else:

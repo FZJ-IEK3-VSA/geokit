@@ -228,45 +228,43 @@ def test_mutateVector():
 def test_loadVector(): print("loadVector is trivial")
 def test_vectorInfo(): print("vectorInfo is trivial")
 def test_rasterize(): 
-    # source
-    # pixelWidth
-    # pixelHeight
-    # bounds
-    # where
-    # burn
-    # output
-    # dtype
-    # srs
-    # compress
-    # noData
-    # overwrite
-    # fill
 
     # Simple vectorization to file
-    # r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, output=result("rasterized1.tif"))
-    # mat1 = gk.raster.extractMatrix(r)
-    # compare(mat1.mean(), 0.13731291, "rasterization - simple")
+    r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, output=result("rasterized1.tif"))
+    mat1 = gk.raster.extractMatrix(r)
+    compare(mat1.mean(), 0.13731291, "rasterization - simple")
 
-    # print(gk.raster.rasterInfo(gk.raster.loadRaster(r)).bounds)
+    # Simple vectorization to mem
+    r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )
+    mat2 = gk.raster.extractMatrix(r)
+    compare( (mat2-mat1).mean(), 0, "rasterization - memory")
 
-    # # Simple vectorization to mem
-    # r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )
-    # print(gk.raster.rasterInfo(gk.raster.loadRaster(r)).bounds)
-    # mat2 = gk.raster.extractMatrix(r)
-    # compare( (mat2-mat1).mean(), 0, "rasterization - memory")
-
-    # Change srs
+    # Change srs to disc
     r = rasterize(source=AACHEN_ZONES, srs=4326, pixelWidth=0.01, pixelHeight=0.01, output=result("rasterized2.tif"))
     mat = gk.raster.extractMatrix(r)
-    compare(mat.mean(), 0.13731291, "rasterization - simple")
+    compare(mat.mean(), 0.12456277, "rasterization - simple")
+
+    # Write attribute values to disc
+    r = rasterize(source=AACHEN_ZONES, value="YEAR", pixelWidth=250, pixelHeight=250, output=result("rasterized3.tif"), noData=-1)
+    mat = gk.raster.extractMatrix(r, autocorrect=True)
+    compare(np.isnan(mat).sum(), 49570, "rasterization - nan values")
+    compare(np.nanmean(mat), 1995.84283904, "rasterization - simple")
+
+    # Write attribute values to mem, and use where clause
+    r = rasterize(source=AACHEN_ZONES, value="YEAR", pixelWidth=250, pixelHeight=250, noData=-1, where="YEAR>2000")
+    mat = gk.raster.extractMatrix(r, autocorrect=True)
+    compare(np.isnan(mat).sum(), 54445, "rasterization - nan values")
+    compare(np.nanmean(mat), 2004.96384743, "rasterization - simple") 
+
+    print( "rasterize passed")   
 
 if __name__=="__main__":
-    # test_loadVector()
-    # test_ogrType()
-    # test_countFeatures()
-    # test_vectorInfo()
-    # test_extractFeatures()
-    # test_extractFeature()
-    # test_createVector()
-    # test_mutateVector()
+    test_loadVector()
+    test_ogrType()
+    test_countFeatures()
+    test_vectorInfo()
+    test_extractFeatures()
+    test_extractFeature()
+    test_createVector()
+    test_mutateVector()
     test_rasterize()
