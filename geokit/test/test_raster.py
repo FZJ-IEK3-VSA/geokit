@@ -269,6 +269,7 @@ def test_rasterStats():
 
 def test_KernelProcessor(): print( "KernelProcessor not tested...")
 def test_indexToCoord(): print( "indexToCoord not tested...")
+
 def test_drawRaster(): 
     r = drawRaster(AACHEN_URBAN_LC)
     plt.savefig(result("drawRaster-1.png"), dpi=100)

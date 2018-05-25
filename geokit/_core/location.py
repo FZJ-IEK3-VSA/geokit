@@ -77,6 +77,7 @@ class Location(object):
 
         * Must be formated like such: "(5.12243,52,11342)"
         * Whitespace is okay
+        * Will only take the FIRST match it finds
 
         Parameters
         ----------
@@ -92,7 +93,6 @@ class Location(object):
         """
         m = LocationMatcher.search(s)
         if m is None: raise GeoKitLocationError("string does not match Location specification")
-
         lon,lat = m.groups()
         if srs is None:
             return Location(lon=float(lon),lat=float(lat))
@@ -213,10 +213,10 @@ class Location(object):
         if   isinstance(loc, Location): output = loc
         elif isinstance(loc, ogr.Geometry): output = Location.fromPointGeom(loc)
         elif isinstance(loc, str): output = Location.fromString(loc)
-        elif isinstance(loc, Feature): output = Location.ensureLocation(loc.geom)
+        elif isinstance(loc, Feature): output = Location.fromPointGeom(loc.geom)
         
         elif ((isinstance(loc, tuple) or isinstance(loc, list) or isinstance(loc, np.ndarray))) and len(loc)==2:
-            if srs is None or srs == 4326 or srs=='latlon' or EPSG4326.IsSame(srs):
+            if srs is None or srs == 4326 or srs=='latlon':
                 output = Location(lon=loc[0], lat=loc[1])
             else:
                 output = Location.fromXY(x=loc[0], y=loc[1], srs=srs)
@@ -256,14 +256,17 @@ class LocationSet(object):
             
         """
         if not _skip_check:
-            try: # Try loading all locations one at a time
-                s._locations = np.array([Location.load(l, srs=srs) for l in locations])
-            except GeoKitLocationError as err:
-                try:
-                    # Try loading the input as as single Location
-                    s._locations = np.array([Location.load(locations, srs=srs), ])
-                except GeoKitLocationError:
-                    raise err
+            if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
+                s._locations = np.array([Location.load(locations, srs=srs), ])
+            else:
+                try: # Try loading all locations one at a time
+                    s._locations = np.array([Location.load(l, srs=srs) for l in locations])
+                except GeoKitLocationError as err:
+                    try:
+                        # Try loading the input as as single Location
+                        s._locations = np.array([Location.load(locations, srs=srs), ])
+                    except GeoKitLocationError:
+                        raise err
         else: 
             s._locations = locations
 
@@ -305,7 +308,7 @@ class LocationSet(object):
             s._bounds4326 = (s.lons.min(), s.lats.min(), s.lons.max(), s.lats.max())
             return s._bounds4326
         else:
-            geoms = transform( [l.geom for l in s._locations], fromSrs=EPSG4326, toSRS=srs )
+            geoms = transform( [l.geom for l in s._locations], fromSRS=EPSG4326, toSRS=srs )
 
             yVals = np.array([g.GetY() for g in geoms])
             xVals = np.array([g.GetX() for g in geoms])
@@ -379,7 +382,7 @@ class LocationSet(object):
             geomsSRS = transform(geoms4326, fromSRS=EPSG4326, toSRS=srs)
             return np.array([(g.GetX(), g.GetY()) for g in geomsSRS])
 
-    def asHash(s): return [l.__hash__() for l in s._locations]
+    def asHash(s): return [hash(l) for l in s._locations]
 
     def splitKMeans(s, groups=2, **kwargs):
         """Split the locations into groups according to KMEans clustering

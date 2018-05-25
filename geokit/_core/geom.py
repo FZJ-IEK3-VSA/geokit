@@ -43,7 +43,7 @@ def point(*args, srs='latlon'):
 
     """make a point geometry from given coordinates (x,y) and srs"""
     pt = ogr.Geometry(ogr.wkbPoint)
-    pt.AddPoint(x,y)
+    pt.AddPoint(float(x),float(y))
     if not srs is None:
         pt.AssignSpatialReference(loadSRS(srs))
     return pt
