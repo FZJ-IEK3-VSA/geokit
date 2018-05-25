@@ -159,10 +159,18 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         srs = bounds.srs
 
     # fix origins to multiples of the resolutions
+    ## This first way behaves more like gdalwarp/rasterize, but it adds pixel when they shouldn't be
+    # originX = float(np.floor(xMin/pixelWidth)*pixelWidth)
+    # originY = float(np.ceil(yMax/pixelHeight)*pixelHeight) # Always use the "Y-at-Top" orientation
+
+    # cols = int(np.ceil((xMax-originX)/pixelWidth)) 
+    # rows = int(np.ceil((originY-yMin)/abs(pixelHeight)))
+
+    # Old way, which doesn't seem to agree with gdal warping behavior, but doesn't cause so many issues
     originX = float(np.round(xMin/pixelWidth)*pixelWidth)
     originY = float(np.round(yMax/pixelHeight)*pixelHeight) # Always use the "Y-at-Top" orientation
 
-    cols = int(round((xMax-originX)/pixelWidth)) # used 'round' instead of 'int' because this matched GDAL behavior better
+    cols = int(round((xMax-originX)/pixelWidth)) 
     rows = int(round((originY-yMin)/abs(pixelHeight)))
 
     
@@ -1035,9 +1043,9 @@ def indexToCoord( yi, xi, source, asPoint=False):
     # make the output
     if asPoint: 
         try: # maybe x and y are iterable
-            output = [makePoint((xx,yy),srs=source.srs) for xx,yy in zip(x,y)]
+            output = [point((xx,yy),srs=source.srs) for xx,yy in zip(x,y)]
         except TypeError: # x and y should be a single point
-            output = makePoint((x,y),srs=source.srs)
+            output = point((x,y),srs=source.srs)
     else: output = x,y
 
     # Done!
@@ -1353,7 +1361,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     
     Note:
     -----
-    Unless maually altered as keyword arguments, the gdal.Warp options 
+    Unless manually altered as keyword arguments, the gdal.Warp options 
     'targetAlignedPixels' and 'copyMetadata' are both set to True
 
     Parameters:

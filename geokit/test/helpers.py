@@ -1,5 +1,5 @@
 import numpy as np
-from os.path import join, dirname
+from os.path import join, dirname, isfile, isdir
 import ogr, gdal, osr
 import matplotlib.pyplot as plt
 import os

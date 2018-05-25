@@ -53,11 +53,8 @@ def isVector(source):
     """
     
     if isinstance(source, gdal.Dataset): 
-        try:
-            source.RasterCount # Should fail if we have a vector
-            return False
-        except:
-            return True
+        if source.GetLayerCount() > 0: return True
+        else: return False
     elif isinstance(source, str):
         d = gdal.IdentifyDriver(source)
 
@@ -83,8 +80,8 @@ def isRaster(source):
     """
     if isinstance(source, gdal.Dataset): 
         try:
-            source.RasterCount # Should fail if we have a vector
-            return True
+            if source.GetLayerCount() == 0: return True # This should always be true?
+            else: return False
         except:
             return False
     elif isinstance(source, str):
@@ -338,11 +335,19 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     
     ## Make a raster dataset and pull the band/maskBand objects
     # fix origins to multiples of the resolutions
-    originX = float(np.floor(xMin/dx)*dx)
-    originY = float(np.ceil(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
+    ## This first way behaves more like gdalwarp/rasterize, but it adds pixel when they shouldn't be
+    # originX = float(np.floor(xMin/dx)*dx)
+    # originY = float(np.ceil(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
 
-    cols = int(np.ceil((xMax-originX)/dx)) 
-    rows = int(np.ceil((originY-yMin)/abs(dy)))
+    # cols = int(np.ceil((xMax-originX)/dx)) 
+    # rows = int(np.ceil((originY-yMin)/abs(dy)))
+
+    # Old way, which doesn't seem to agree with gdal warping behavior, but doesn't cause so many issues
+    originX = float(np.round(xMin/dx)*dx)
+    originY = float(np.round(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
+
+    cols = int(round((xMax-originX)/dx)) 
+    rows = int(round((originY-yMin)/abs(dy)))
     
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory

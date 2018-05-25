@@ -774,7 +774,7 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
             for c in result.columns: geoms[c] = result[c].values
         else:
             geoms = result
-
+            
         if not "geom" in geoms: raise GeoKitVectorError("There is no 'geom' field in the resulting vector table")
 
         # make sure the geometries have an srs
@@ -784,7 +784,7 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
 
     # Create a new shapefile from the results 
     if _slim:
-        return quickVector( geoms.geom )
+        return createVector( geoms.geom )
     else:
         return createVector( geoms, srs=srs, output=output, **kwargs )
     
@@ -908,9 +908,9 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
     
     # Do 'in memory' rasterization
     if output is None or not srsOkay: # We need to follow this path in both cases since the below fails when simultaneously rasterizing and writing to disk (I couldn't figure out why...)
-        # Create temporary output file
+        # Create temporary output file    
         outputDS = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
-
+    
         # Do rasterize
         tmp = gdal.Rasterize( outputDS, source, where=where, **kwargs)
         if(tmp==0): raise GeoKitRegionMaskError("Rasterization failed!")

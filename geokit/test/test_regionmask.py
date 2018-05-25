@@ -1,11 +1,12 @@
 from helpers import *
 from geokit import RegionMask, Extent
-from geokit.geom import makePoint, convertWKT
-from geokit.util import GeoKitRegionMaskError, scaleMatrix
+from geokit.geom import *
+from geokit.vector import *
+from geokit.util import *
 from geokit.raster import rasterInfo
 
 
-def test_init():
+def test_RegionMask___init__():
     ext = Extent(0,0,100,100, srs=EPSG3035)
     # test succeed
     rm = RegionMask(ext, 1, mask=MASK_DATA)
@@ -27,7 +28,7 @@ def test_init():
         rm = RegionMask(ext, (1,3), geom=GEOM)
         error("RegionMask bad pixel")
     except GeoKitRegionMaskError as e:
-        if not str(e)=='The given extent does not fit the given pixelSize':
+        if not str(e)=='The given extent does not fit the given pixelRes':
             error("RegionMask bad pixel")
     else:
         error("RegionMask bad pixel")
@@ -65,18 +66,20 @@ def test_init():
     else:
         error("RegionMask bad geom srs")
 
-def test_fromMask():
+    print( "RegionMask___init__ passed")
+
+def test_RegionMask_fromMask():
     ext = Extent(0,0,100,100, srs=EPSG3035)
     rm = RegionMask.fromMask(mask=MASK_DATA, extent=ext, attributes={"hats":5})
 
     if not rm.mask.sum()==MASK_DATA.sum(): error("fromSource - mask")
     if not rm.extent==ext: error("fromSource - extent")
     if not rm.srs.IsSame(ext.srs): error("fromSource - srs")
+    print( "RegionMask_fromMask passed")
 
-
-def test_fromGeom():
+def test_RegionMask_fromGeom():
     # fromGeom with wkt
-    rm1 = RegionMask.fromGeom( convertWKT(POLY, srs='latlon'), pixelSize=1000)
+    rm1 = RegionMask.fromGeom( convertWKT(POLY, srs='latlon'), pixelRes=1000)
     if( rm1.extent.xXyY != (4329000.0, 4771000.0, 835000.0, 1682000.0)):
         error("fromGeom - extent bounds")
     if not ( rm1.extent.srs.IsSame(EPSG3035) ): error("fromGeom - extent srs")
@@ -84,9 +87,9 @@ def test_fromGeom():
 
     # fromGeom with geometry
     dxy = 0.05
-    rm2 = RegionMask.fromGeom(GEOM, pixelSize=dxy, srs=EPSG4326, padExtent=0.2)
+    rm2 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs=EPSG4326, padExtent=0.2)
     
-    if( not rm2.extent == Extent(9.85,30.25,14.80,38.35)):
+    if( not rm2.extent == Extent(9.90,30.30,14.80,38.30)):
         error("fromGeom - extent bounds")
     if not ( rm2.extent.srs.IsSame(EPSG4326) ): error("fromGeom - extent srs")
     
@@ -98,7 +101,7 @@ def test_fromGeom():
     # fromGeom with geometry and extent
     dxy = 0.05
     definedExtent = Extent(9.50,30.25,14.80,38.35)
-    rm3 = RegionMask.fromGeom(GEOM, pixelSize=dxy, srs=EPSG4326, extent=definedExtent)
+    rm3 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs=EPSG4326, extent=definedExtent)
     
     if( not rm3.extent == definedExtent):
         error("fromGeom - extent bounds")
@@ -109,15 +112,19 @@ def test_fromGeom():
     if not abs(rm3.mask.sum()*dxy*dxy-g.Area())/g.Area()<0.01: # check if total areas are close to one another
         error("fromGeom - mask")
 
+    print( "RegionMask_fromGeom passed")
 
-def test_fromVectorFeature():
-    #source, select=0, pixelSize=RegionMask.DEFAULT_RES, srs=RegionMask.DEFAULT_SRS, extent=None, padExtent=RegionMask.DEFAULT_PAD, **kwargs):
-    # fromFourceFeature - ID select
-    rm1 = RegionMask.fromVectorFeature(MULTI_FTR_SHAPE_PATH, select=1)
+def test_RegionMask_fromVector():
+    # fromVector with a padded extent and defined srs
+    rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)
+    if( rm0.mask.sum()!=90296 ): error("fromVector - mask")
 
-    if not (rm1.extent == Extent(4067700, 2866100, 4110200, 2954800, srs=EPSG3035)):
-        error("fromVectorFeature - extent bounds")
-    if not (rm1.attributes["name"]=="dog"): error("fromVectorFeature - attributes")
+    # fromVector - ID select
+    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1)
+    
+    if not (rm1.extent == Extent(4069100, 2867000, 4109400, 2954000, srs=EPSG3035)):
+        error("fromVector - extent bounds")
+    if not (rm1.attributes["name"]=="dog"): error("fromVector - attributes")
 
     ds = ogr.Open(MULTI_FTR_SHAPE_PATH)
     lyr = ds.GetLayer()
@@ -125,90 +132,231 @@ def test_fromVectorFeature():
     g = ftr.GetGeometryRef().Clone()
     g.TransformTo(EPSG3035)
     if not abs(rm1.mask.sum()*100*100-g.Area())/g.Area()<0.01: # check if total areas are close to one another
-        error("fromVectorFeature - mask area")
+        error("fromVector - mask area")
     
-    # fromVectorFeature - 'where' select
-    rm2 = RegionMask.fromVectorFeature(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelSize=0.01, select="name='monkey'")
-
+    # fromVector - 'where' select
+    rm2 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkey'")
+    
     if not (rm2.extent == Extent(6.83, 49.52, 7.53, 49.94)):
-        error("fromVectorFeature - extent bounds")
-    if not (rm2.attributes["id"]==3): error("fromVectorFeature - attributes")
+        error("fromVector - extent bounds")
+    if not (rm2.attributes["id"]==3): error("fromVector - attributes")
 
     ftr = lyr.GetFeature(3)
     g = ftr.GetGeometryRef().Clone()
     g.TransformTo(EPSG4326)
     if not isclose(rm2.mask.sum(),1948.0): 
-        error("fromVectorFeature - mask area")
+        error("fromVector - mask area")
 
-    # fromVectorFeature - 'where' select fail no features
+    # fromVector - 'where' select fail no features
     try:
-        rm3 = RegionMask.fromVectorFeature(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelSize=0.01, select="name='monkeyy'")
-        error("fromVectorFeature - fail no features")
+        rm3 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'")
+        error("fromVector - fail no features")
     except GeoKitRegionMaskError as e:
         if not str(e)=='Zero features found':
-            error("fromVectorFeature - fail no features")
+            error("fromVector - fail no features")
     else:
-        error("fromVectorFeature - fail no features")
+        error("fromVector - fail no features")
 
-    # fromVectorFeature - 'where' select fail too many features
+    # fromVector - 'where' finds many features
     try:
-        rm4 = RegionMask.fromVectorFeature(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelSize=0.01, select=r"name like 'mo%'")
-        error("fromVectorFeature - fail multi features")
+        rm4 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'")
+        error("fromVector - fail multi features")
     except GeoKitRegionMaskError as e:
-        if not str(e)=='Multiple fetures found':
-            error("fromVectorFeature - fail multi features")
+        if not 'Multiple fetures found' in str(e):
+            error("fromVector - fail multi features")
     else:
-        error("fromVectorFeature - fail multi features")
+        error("fromVector - fail multi features")
 
-def test_fromVector():
-    # fromVector with a padded extent and defined srs
-    rm1 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelSize=0.001, srs=EPSG4326, padExtent=0.1)
-    if( rm1.mask.sum()!=90296 ): error("fromVector - mask")
+    print( "RegionMask_fromVector passed")
 
-def test_pixelSize():
+def test_RegionMask_load():
+
+    print( "RegionMask_load not tested...")
+
+def test_RegionMask_pixelRes():
     # test succeed
     rm1 = RegionMask.fromMask(Extent(0,0,100,100,srs=EPSG3035), MASK_DATA)
-    ps = rm1.pixelSize
-    if not ps==1: error( "pixelSize")
+    ps = rm1.pixelRes
+    if not ps==1: error( "pixelRes")
 
     # test fail
     rm2 = RegionMask.fromMask(Extent(0,0,100,200,srs=EPSG3035), MASK_DATA)
     try:
-        ps = rm2.pixelSize
-        error("pixelSize - fail test")
+        ps = rm2.pixelRes
+        error("pixelRes - fail test")
     except GeoKitRegionMaskError as e:
-        if not str(e)=='pixelSize only accessable when pixelWidth equals pixelHeight':
-            error("pixelSize - fail test")
+        if not str(e)=='pixelRes only accessable when pixelWidth equals pixelHeight':
+            error("pixelRes - fail test")
     else:
-        error("pixelSize - fail test")
+        error("pixelRes - fail test")
+    print( "RegionMask_pixelRes passed")
 
-def test_mask():
-    # create a RegionMask without a mask
-    rm2 = RegionMask.fromVectorFeature(AACHEN_SHAPE_PATH,select=0)
-    if not (isclose(rm2.mask.sum(),70944) and isclose(rm2.mask.std(), 0.48968559141)):
-        error("mask creation")
+def test_RegionMask_buildMask():
+    # Build from another srs
+    rm = RegionMask.load(AACHEN_SHAPE_PATH, srs=EPSG3035, pixelRes=100)
+    compare( rm.mask.sum(), 70944  )
+    compare( rm.mask.std(), 0.498273451386  )
 
-def test_geometry():
-  # setup
-  rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    print( "RegionMask_buildMask passed")
 
-  ds = ogr.Open(AACHEN_SHAPE_PATH)
-  lyr = ds.GetLayer()
-  ftr = lyr.GetFeature(0)
-  realGeom = ftr.GetGeometryRef().Clone()
-  realGeom.TransformTo(EPSG3035)
+def test_RegionMask_area():
+    print( "RegionMask_area not tested...")
 
-  # check initial geom and real geom area
-  if not abs(rm2.geometry.Area()-realGeom.Area())/realGeom.Area() < 0.001:
-    error("geometry - reading from file")
+def test_RegionMask_buildGeometry():
 
-  # destroy and recreate
-  rm2.buildGeometry()
-  if not abs( (rm2.geometry.Area()-realGeom.Area())/realGeom.Area() ) < 0.001:
-    error("geometry - building geometry")
+    # setup
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2.buildMask() # Be sure the mask is in place
 
-def test_createRaster():
-    rm = RegionMask.fromGeom(makePoint(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelSize=0.001)
+    # Get the "real" geometry
+    ds = ogr.Open(AACHEN_SHAPE_PATH)
+    lyr = ds.GetLayer()
+    ftr = lyr.GetFeature(0)
+    realGeom = ftr.GetGeometryRef().Clone()
+    realGeom.TransformTo(EPSG3035)
+
+    # check initial geom and real geom area
+    if not abs(rm2.geometry.Area()-realGeom.Area())/realGeom.Area() < 0.001:
+        error("geometry - reading from file")
+
+    # destroy and recreate
+    rm2.buildGeometry()
+    if not abs( (rm2.geometry.Area()-realGeom.Area())/realGeom.Area() ) < 0.001:
+        error("geometry - building geometry")
+
+    
+    print( "RegionMask_buildGeometry passed")
+
+def test_RegionMask_vectorPath():
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    vec = rm2.vectorPath
+
+    if not isfile(vec): error("vector creation")
+
+    del rm2
+
+    if isfile(vec): error("vector deletion")
+
+    print( "RegionMask_vectorPath passed")
+
+def test_RegionMask_vector():
+
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    vec = rm2.vector
+    vec.GetLayer()
+
+    if not isVector(vec): error("vector creation")
+    del vec
+
+    if not isVector(rm2._vector): error("vector retention")
+
+    print( "RegionMask_vector passed")
+
+def test_RegionMask__repr_svg_():
+    print( "RegionMask__repr_svg_ not tested...")
+
+def test_RegionMask_drawMask():
+    print( "RegionMask_drawMask not tested...")
+
+def test_RegionMask_drawGeometry():
+    print( "RegionMask_drawGeometry not tested...")
+
+def test_RegionMask_applyMask():
+    ## setup
+    rm = RegionMask.fromGeom(point(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
+
+    data1 = np.arange(rm.mask.size).reshape(rm.mask.shape)
+    data2 = np.arange(rm.mask.shape[0]*3*rm.mask.shape[1]*3).reshape((rm.mask.shape[0]*3,rm.mask.shape[1]*3))
+
+    ## test applying
+    data1 = rm.applyMask(data1)
+    if not (data1.sum()==39296070 and abs(data1.std()-3020.0893432)<0.001):
+        error("applyMask 1 - data mismatch")
+
+    data2 = rm.applyMask(data2.astype('int64'))
+    if not (data2.sum()==3183264630 and abs(data2.std()-27182.1342973)<0.001):
+        error("applyMask 2 - data mismatch")
+
+    #rm.createRaster(output=result("regionMask_applyMask_1.tif"), data=data1, overwrite=True)
+    #rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
+
+    print( "RegionMask_applyMask passed")
+
+def test_RegionMask__returnBlank():
+    print( "RegionMask__returnBlank not tested...")
+
+def test_RegionMask_indicateValues():
+    ## Setup
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
+
+    # Testing valueMin (with srs change)
+    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20,None))
+    
+    if not (isclose(res1.sum(),30969.6796875, 1e-6) and isclose(res1.std(),0.3489773, 1e-6)): 
+        error("indicateValues - valueMin")
+
+    # Testing valueMax (with srs change)
+    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None,24))
+    if not (isclose(res2.sum(),82857.5078125, 1e-6) and isclose(res2.std(), 0.4867994, 1e-6)): 
+        error("indicateValues - valueMax")
+
+    # Testing valueEquals (with srs change)
+    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic")
+    if not (isclose(res3.sum(),580.9105835, 1e-4) and isclose(res3.std(),0.0500924, 1e-6)): 
+        error("indicateValues - valueEquals")
+
+    # Testing range
+    res4 = rm.indicateValues(CLC_RASTER_PATH, value=(20,24))
+    
+    combi = np.logical_and(res1>0.5, res2>0.5)
+    # Some pixels will not end up the same due to warping issues
+    if not ( (res4>0.5) !=combi).sum()<res4.size*0.001:error("indicateValues - range")
+
+    # Testing buffering
+    res5 = rm.indicateValues(CLC_RASTER_PATH, value=(1,2), buffer=0.01, resolutionDiv=2, forceMaskShape=True)
+    if not isclose(res5.sum(), 65030.75000000, 1e-4):error("indicateValues - grown")
+
+    # make sure we get an empty mask when nothing is indicated
+    res6 = rm.indicateValues(CLC_RASTER_PATH, value=2000, buffer=0.01, resolutionDiv=2, forceMaskShape=True, noData=-1)
+    if not isclose(res6.sum(), -113526.0, 1e-4):error("indicateValues - empty")
+
+    print( "RegionMask_indicateValues passed")
+
+def test_RegionMask_indicateFeatures():
+    # setup
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+
+    # Simple case
+    res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
+    #print("%.7f"%res.sum(), "%.7f"%res.std()) 
+    if not (isclose(res.sum(),649,1e-6) and isclose(res.std(),0.0646270,1e-6)): error("indicateFeatures - Simple indication")
+
+    # Buffered Cases
+    res2 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, resolutionDiv=3, forceMaskShape=True)
+    #print("%.7f"%res2.sum(), "%.7f"%res2.std())
+    if not isclose(res2.sum(),13670.5555556, 1e-6): error("indicateFeatures - grown indication - 1")
+
+    res3 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, bufferMethod='area', resolutionDiv=5, forceMaskShape=True)
+    #print("%.7f"%res3.sum(), "%.7f"%res3.std())
+    if not isclose(res3.sum(),13807.320000, 1e-6): error("indicateFeatures - grown indication - 2")
+
+    # No indication case
+    res4 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='D'", buffer=300, bufferMethod='area', resolutionDiv=2, forceMaskShape=True, noData=-1)
+    #print("%.7f"%res4.sum(), "%.7f"%res4.std())
+    
+    if not isclose(res4.sum(), -83792, 1e-6): error("indicateFeatures - empty case")
+
+    print( "RegionMask_indicateFeatures passed")
+
+def test_RegionMask_indicateGeoms():
+    print( "RegionMask_indicateGeoms not tested...")
+
+def test_RegionMask_subRegions():
+    print( "RegionMask_subRegions not tested...")
+
+def test_RegionMask_createRaster():
+
+    rm = RegionMask.fromGeom(point(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
 
     ## Create a raster like the mask
     ds = rm.createRaster()
@@ -244,30 +392,12 @@ def test_createRaster():
     band = ds.GetRasterBand(1)
     if (band.ReadAsArray()-scaledData).any(): error("createRaster 4 - data mismatch")  
 
-def test_applyMask():
+    print( "RegionMask_createRaster passed")
+
+def test_RegionMask_warp():
     ## setup
-    rm = RegionMask.fromGeom(makePoint(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelSize=0.001)
-
-    data1 = np.arange(rm.mask.size).reshape(rm.mask.shape)
-
-    data2 = np.arange(rm.mask.shape[0]*3*rm.mask.shape[1]*3).reshape((rm.mask.shape[0]*3,rm.mask.shape[1]*3))
-
-    ## test applying
-    data1 = rm.applyMask(data1)
-    if not (data1.sum()==39296070 and abs(data1.std()-3020.08934321)<0.001):
-        error("applyMask 1 - data mismatch")
-
-    data2 = rm.applyMask(data2.astype('int64'))
-    if not (data2.sum()==3183264630 and abs(data2.std()-27182.1342973)<0.001):
-        error("applyMask 2 - data mismatch")
-
-    #rm.createRaster(output=result("regionMask_applyMask_1.tif"), data=data1, overwrite=True)
-    #rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
-
-def test_warp():
-    ## setup
-    rm_3035 = RegionMask.fromGeom(makePoint(6.20,50.75).Buffer(0.05))
-    rm = RegionMask.fromGeom(makePoint(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelSize=0.0005)
+    rm_3035 = RegionMask.fromGeom(point(6.20,50.75).Buffer(0.05))
+    rm = RegionMask.fromGeom(point(6.20,50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
 
     ## basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
@@ -317,9 +447,11 @@ def test_warp():
 
     #rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noDataValue=0, overwrite=True)
 
-def test_rasterize():
+    print( "RegionMask_warp passed")
+
+def test_RegionMask_rasterize():
     ## setup
-    rm = RegionMask.fromVectorFeature(AACHEN_SHAPE_PATH, pixelSize=0.001, srs=EPSG4326)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
 
     ## simple rasterize
     rasterize_1 = rm.rasterize( AACHEN_ZONES )
@@ -349,79 +481,42 @@ def test_rasterize():
         error("rasterize 3 - result")
     #rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
-def test_indicateValues():
-    ## Setup
-    rm = RegionMask.fromVectorFeature(AACHEN_SHAPE_PATH, pixelSize=0.001, srs=EPSG4326)
+    print( "RegionMask_rasterize passed")
 
-    # Testing valueMin (with srs change)
-    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20,None))
+def test_RegionMask_extractFeatures():
+    print( "RegionMask_extractFeatures not tested...")
 
-    if not (isclose(res1.sum(),30969.68554688, 1e-6) and isclose(res1.std(),0.34896237, 1e-6)): 
-        error("indicateValues - valueMin")
+def test_RegionMask_mutateVector():
+    print( "RegionMask_mutateVector not tested...")
 
-    # Testing valueMax (with srs change)
-    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None,24))
-
-    if not (isclose(res2.sum(),82857.44531250, 1e-6) and isclose(res2.std(),0.48679259, 1e-6)): 
-        error("indicateValues - valueMax")
-
-    # Testing valueEquals (with srs change)
-    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic")
-
-    if not (isclose(res3.sum(),580.934937, 1e-4) and isclose(res3.std(),0.050088465, 1e-7)): 
-        error("indicateValues - valueEquals")
-
-    # Testing range
-    res4 = rm.indicateValues(CLC_RASTER_PATH, value=(20,24))
-
-    combi = np.logical_and(res1>0.5, res2>0.5)
-    # Some pixels will not end up the same due to warping issues
-    if not ( (res4>0.5) !=combi).sum()<res4.size*0.001:error("indicateValues - range")
-
-    # Testing buffering
-    res5 = rm.indicateValues(CLC_RASTER_PATH, value=(1,2), buffer=0.01, resolutionDiv=2, forceMaskShape=True)
-
-    if not isclose(res5.sum(), 65030.75000000, 1e-4):error("indicateValues - grown")
-
-    # make sure we get an empty mask when nothing is indicated
-    res6 = rm.indicateValues(CLC_RASTER_PATH, value=2000, buffer=0.01, resolutionDiv=2, forceMaskShape=True, noDataValue=-1)
-
-    if not isclose(res6.sum(), -113526.0, 1e-4):error("indicateValues - empty")
-
-def test_indicateFeatures():
-  # setup
-  rm = RegionMask.fromVectorFeature(AACHEN_SHAPE_PATH)
-
-  # Simple case
-  res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
-
-  if not (isclose(res.sum(),649,1e-6) and isclose(res.std(),0.0603028809232,1e-6)): error("indicateFeatures - Simple indication")
-
-  # Buffered Cases
-  res2 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, resolutionDiv=3, forceMaskShape=True)
-  if not isclose(res2.sum(),13670.5555556, 1e-6): error("indicateFeatures - grown indication - 1")
-
-  res3 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300, bufferMethod='area', resolutionDiv=5, forceMaskShape=True)
-  if not isclose(res3.sum(),13807.320000, 1e-6): error("indicateFeatures - grown indication - 2")
-
-  # No indication case
-  res4 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='D'", buffer=300, bufferMethod='area', resolutionDiv=2, forceMaskShape=True, noDataValue=-1)
-  if not isclose(res4.sum(), -106876.0, 1e-6): error("indicateFeatures - empty case")
+def test_RegionMask_mutateRaster():
+    print( "RegionMask_mutateRaster not tested...")
 
 
 if __name__=="__main__":
-    
-    test_init()
-    test_fromMask()
-    test_fromGeom()
-    test_fromVectorFeature()
-    test_fromVector()
-    test_pixelSize()
-    test_mask()
-    test_geometry()
-    test_createRaster()
-    test_applyMask()
-    test_warp()
-    test_rasterize()
-    test_indicateValues()
-    test_indicateFeatures()
+    # test_RegionMask___init__()
+    # test_RegionMask_fromMask()
+    # test_RegionMask_fromGeom()
+    # test_RegionMask_fromVector()
+    # test_RegionMask_load()
+    # test_RegionMask_pixelRes()
+    # test_RegionMask_buildMask()
+    # test_RegionMask_area()
+    # test_RegionMask_buildGeometry()
+    # test_RegionMask_vectorPath()
+    # test_RegionMask_vector()
+    # test_RegionMask__repr_svg_()
+    # test_RegionMask_drawMask()
+    # test_RegionMask_drawGeometry()
+    # test_RegionMask_applyMask()
+    # test_RegionMask__returnBlank()
+    # test_RegionMask_indicateValues()
+    test_RegionMask_indicateFeatures()
+    test_RegionMask_indicateGeoms()
+    test_RegionMask_subRegions()
+    test_RegionMask_createRaster()
+    test_RegionMask_warp()
+    test_RegionMask_rasterize()
+    test_RegionMask_extractFeatures()
+    test_RegionMask_mutateVector()
+    test_RegionMask_mutateRaster()

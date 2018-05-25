@@ -352,9 +352,9 @@ def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
         matrix = np.array(matrix)
-    if matrix.dtype == "bool":
+    if matrix.dtype == np.bool or matrix.dtype == np.uint8:
         dtype = "GDT_Byte"
-    elif np.issubdtype(matrix.dtype, int):
+    elif np.issubdtype(matrix.dtype, np.integer):
         dtype = "GDT_Int32"
     else: 
         raise GeoKitGeomError("matrix must be a 2D boolean or integer numpy ndarray")
@@ -518,10 +518,9 @@ def polygonizeMask( mask, bounds=None, srs=None, flat=True, shrink=True):
     # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
-    if mask.dtype == "bool":
-        dtype = "GDT_Byte"
-    else: 
-        raise GeoKitGeomError("Mask must be a 2D boolean or integer numpy ndarray")
+    
+    if not (mask.dtype == np.bool or matrix.dtype == np.uint8):
+        raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
 
     # Do vectorization
     result = polygonizeMatrix( matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, _raw=True)[0]
@@ -1132,7 +1131,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     else:
         raise GeoKitGeomError("Start point failure. There may be an infinite loop in one of the geometries")
 
-    start = makePoint(xStart, yStart, srs=geom.GetSpatialReference())
+    start = point(xStart, yStart, srs=geom.GetSpatialReference())
 
     # start searching
     tmp = start.Buffer(growStep)
