@@ -24,20 +24,19 @@ import geokit.raster
 import geokit.vector
 
 # import the main objects
-from geokit._core.location import Location, LocationSet
-from geokit._core.extent import Extent
-from geokit._core.regionmask import RegionMask
+from geokit.core.location import Location, LocationSet
+from geokit.core.extent import Extent
+from geokit.core.regionmask import RegionMask
 
 # import vidualizing functions to top level since they are 
-from geokit._core.util import drawImage
-from geokit._core.geom import drawGeoms
-from geokit._core.raster import drawRaster
+from geokit.core.util import drawImage
+from geokit.core.geom import drawGeoms
+from geokit.core.raster import drawRaster
 
 # import the special algorithms
-import geokit.algorithms
+#import geokit.algorithms
 
 # Add useful paths for testing and stuff
-
 from collections import OrderedDict as _OrderedDict
 from glob import glob as _glob
 _test_data_ = _OrderedDict()

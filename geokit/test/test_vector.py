@@ -232,7 +232,7 @@ def test_rasterize():
     # Simple vectorization to file
     r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, output=result("rasterized1.tif"))
     mat1 = gk.raster.extractMatrix(r)
-    compare(mat1.mean(), 0.13731291, "rasterization - simple")
+    compare(mat1.mean(), 0.13873289, "rasterization - simple")
 
     # Simple vectorization to mem
     r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )

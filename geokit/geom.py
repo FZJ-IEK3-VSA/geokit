@@ -1,4 +1,4 @@
-from geokit._core.geom import (GeoKitGeomError,
+from geokit.core.geom import (GeoKitGeomError,
 								  point,
 								  box,
 								  polygon,

@@ -727,6 +727,13 @@ class Extent(object):
     def warp(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.raster.warp() which automatically sets the 
         'srs' and 'bounds' input. 
+
+        Note:
+        -----
+        When creating an 'in memory' raster vs one which is saved to disk, a slightly
+        different algorithm is used which can sometimes add an extra row of pixels. Be
+        aware of this if you intend to compare value-matricies directly from rasters 
+        generated with this function.
         
         Parameters:
         -----------
@@ -762,6 +769,13 @@ class Extent(object):
     def rasterize(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.vector.rasterize() which automatically
         sets the 'srs' and 'bounds' input. 
+
+        Note:
+        -----
+        When creating an 'in memory' raster vs one which is saved to disk, a slightly
+        different algorithm is used which can sometimes add an extra row of pixels. Be
+        aware of this if you intend to compare value-matricies directly from rasters 
+        generated with this function.
         
         Parameters:
         -----------

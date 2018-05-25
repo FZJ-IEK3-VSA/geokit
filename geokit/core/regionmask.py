@@ -1040,6 +1040,13 @@ class RegionMask(object):
         """Convenience function for geokit.raster.warp() which automatically sets
         'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
         
+        Note:
+        -----
+        When creating an 'in memory' raster vs one which is saved to disk, a slightly
+        different algorithm is used which can sometimes add an extra row of pixels. Be
+        aware of this if you intend to compare value-matricies directly from rasters 
+        generated with this function.
+
         Parameters:
         -----------
         source : str
@@ -1110,6 +1117,13 @@ class RegionMask(object):
     def rasterize(s, source, output=None, resolutionDiv=1, returnMatrix=True, applyMask=True, **kwargs):
         """Convenience function for geokit.vector.rasterize() which automatically
         sets the 'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs 
+
+        Note:
+        -----
+        When creating an 'in memory' raster vs one which is saved to disk, a slightly
+        different algorithm is used which can sometimes add an extra row of pixels. Be
+        aware of this if you intend to compare value-matricies directly from rasters 
+        generated with this function.
         
         Parameters:
         -----------

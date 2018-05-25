@@ -792,6 +792,13 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
 def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None, value=1, output=None, dtype=None, compress=True, noData=None, overwrite=True, fill=None, **kwargs):
     """Rasterize a vector datasource onto a raster context
 
+    Note:
+    -----
+    When creating an 'in memory' raster vs one which is saved to disk, a slightly
+    different algorithm is used which can sometimes add an extra row of pixels. Be
+    aware of this if you intend to compare value-matricies directly from rasters 
+    generated with this function.
+
     Parameters:
     -----------
     source : str or ogr.Geometry

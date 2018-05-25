@@ -1,4 +1,4 @@
-from geokit._core.vector import (   loadVector, 
+from geokit.core.vector import (   loadVector, 
                                     ogrType, 
                                     countFeatures, 
                                     vectorInfo, 
