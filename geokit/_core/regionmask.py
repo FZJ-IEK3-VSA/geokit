@@ -1,8 +1,8 @@
 from .util import *
-from .srsutil import *
-from .geomutil import *
-from .rasterutil import *
-from .vectorutil import *
+from .srs import *
+from .geom import *
+from .raster import *
+from .vector import *
 from .extent import Extent
 
 from io import BytesIO

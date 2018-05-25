@@ -1,2 +1,2 @@
-from geokit._core.srsutil import GeoKitSRSError, SRSCOMMON, loadSRS, xyTransform, \
+from geokit._core.srs import GeoKitSRSError, SRSCOMMON, loadSRS, xyTransform, \
                                  EPSG4326, EPSG3035

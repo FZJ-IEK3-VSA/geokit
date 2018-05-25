@@ -68,6 +68,7 @@ def loadSRS(source):
     # Do initial check of source
     if(isinstance(source, osr.SpatialReference)):
         return source
+    elif source is None: return None
     
     # Create an empty SRS
     srs = osr.SpatialReference()

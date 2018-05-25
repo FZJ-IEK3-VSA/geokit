@@ -1,5 +1,5 @@
 from .util import *
-from .srsutil import *
+from .srs import *
 
 POINT = ogr.wkbPoint
 MULTIPOINT = ogr.wkbMultiPoint
@@ -604,6 +604,17 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
     # Done!
     if returnSingle: return geoms[0]
     else: return geoms
+
+def boundsToBounds(bounds, boundsSRS, outputSRS):
+    pts = flatten([point( bounds[0], bounds[1], srs=boundsSRS),
+                   point( bounds[0], bounds[3], srs=boundsSRS),
+                   point( bounds[2], bounds[1], srs=boundsSRS),
+                   point( bounds[2], bounds[3], srs=boundsSRS)])
+    pts.TransformTo(outputSRS)
+    pts = extractVerticies(pts)
+
+    bounds = (pts[:,0].min(), pts[:,1].min(), pts[:,0].max(), pts[:,1].max(), )
+    return bounds
 
 #################################################################################3
 # Flatten a list of geometries

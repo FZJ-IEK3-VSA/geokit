@@ -260,11 +260,11 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     
     ## Make a raster dataset and pull the band/maskBand objects
     # fix origins to multiples of the resolutions
-    originX = float(np.round(xMin/dx)*dx)
-    originY = float(np.round(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
+    originX = float(np.floor(xMin/dx)*dx)
+    originY = float(np.ceil(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
 
-    cols = int(round((xMax-originX)/dx)) # used 'round' instead of 'int' because this matched GDAL behavior better
-    rows = int(round((originY-yMin)/abs(dy)))
+    cols = int(np.ceil((xMax-originX)/dx)) 
+    rows = int(np.ceil((originY-yMin)/abs(dy)))
     
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory

@@ -1,6 +1,6 @@
 from .util import *
-from .srsutil import *
-from .geomutil import *
+from .srs import *
+from .geom import *
 from .location import *
 
 if( "win" in sys.platform):COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -61,7 +61,7 @@ def gdalType(s):
 
 ####################################################################
 # Raster writer
-def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=False, fill=None, data=None, meta=None, **kwargs):
+def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, **kwargs):
     """Create a raster file
     
     NOTE:
@@ -138,7 +138,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: None
+    * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
     # Check for existing file
@@ -238,7 +238,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
             return raster
 
         # Done
-        return
+        return output
 
     # Handle the fail case
     except Exception as e:
@@ -1411,7 +1411,7 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
     # Done!
     return pd.DataFrame(dict(geom=finalGeoms, value=finalRID))
     
-def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, dtype=None, noData=None, fill=None, **kwargs):
+def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, dtype=None, noData=None, fill=None, overwrite=True, **kwargs):
     """Warps a given raster source to another context
 
     * Can be used to 'warp' a raster in memory to a raster on disk
@@ -1492,7 +1492,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: None
+    * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
     if not srs is None: srs = loadSRS(srs)
@@ -1513,17 +1513,8 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             else: srsOkay = False 
 
         if bounds is None: 
-            if srsOkay:
-                bounds=dsInfo.bounds
-            else:
-                pts = flatten([point( dsInfo.xMin, dsInfo.yMin, srs=dsInfo.srs),
-                               point( dsInfo.xMin, dsInfo.yMax, srs=dsInfo.srs),
-                               point( dsInfo.xMax, dsInfo.yMin, srs=dsInfo.srs),
-                               point( dsInfo.xMax, dsInfo.yMax, srs=dsInfo.srs)])
-                pts.TransformTo(srs)
-                pts = extractVerticies(pts)
-
-                bounds = (pts[:,0].min(), pts[:,1].min(), pts[:,0].max(), pts[:,1].max(), )
+            if srsOkay: bounds=dsInfo.bounds
+            else: bounds = boundsToBounds(dsInfo.bounds, dsInfo.srs, srs)
 
         if pixelHeight is None: 
             if srsOkay: pixelHeight=dsInfo.dy
@@ -1564,6 +1555,13 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             
     # Workflow depends on whether or not we have an output
     if not output is None: # Simply do a translate
+        if( os.path.isfile(output) ):
+            if(overwrite==True):
+                os.remove(output)
+                if(os.path.isfile(output+".aux.xml")): # Because QGIS....
+                    os.remove(output+".aux.xml")
+            else:
+                raise GeoKitRasterError("Output file already exists: %s" %output)
 
         # Check some for bad input configurations
         if not srs is None:
@@ -1587,7 +1585,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         result = gdal.Warp( output, source, options=opts )
         if not isRaster(result): raise GeoKitRasterError("Failed to translate raster")
 
-        destRas = None
+        destRas = output
     else:
         if "cropToCutline" in kwargs: 
             msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"

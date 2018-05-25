@@ -306,19 +306,17 @@ def test_polygonizeRaster():
 def test_warp(): 
     # Change resolution to disk
     d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif") )
-    if not d is None: error("warp - return")
-    v1 = extractMatrix(result("warp1.tif"))
+    v1 = extractMatrix(d)
     compare( v1.mean(), 16.3141463057, "warp - value" )
 
     # change resolution to memory
     d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200 )
-    if not isRaster(d): error("warp - return")
     v2 = extractMatrix(d)
     compare( (v1-v2).mean(), 0)
 
     # Do a cutline from disk
     d = warp( CLC_RASTER_PATH, cutline=AACHEN_SHAPE_PATH, output=result("warp3.tif"), noData=99 )
-    v3 = extractMatrix(result("warp3.tif"))
+    v3 = extractMatrix(d)
     compare(v3.mean(), 89.9568135904) 
     compare(v3[0,0], 99, "warp -noData")
     
@@ -334,7 +332,7 @@ def test_warp():
     compare( (v4-v5).mean(), 0)
 
     d = warp( CLC_FLIPCHECK_PATH, pixelHeight=200, pixelWidth=200, output=result("warp6.tif") )
-    v6 = extractMatrix(result("warp6.tif"))
+    v6 = extractMatrix(d)
     compare( (v1-v6).mean(), 0)
 
     print( "warp passed")

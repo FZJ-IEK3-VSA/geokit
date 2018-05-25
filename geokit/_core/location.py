@@ -1,6 +1,6 @@
 from .util import *
-from .srsutil import *
-from .geomutil import *
+from .srs import *
+from .geom import *
 import types
 import re
 

@@ -1,3 +1,10 @@
-from geokit._core.vectorutil import ( loadVector, ogrType, countFeatures, 
-	                                  vectorInfo, extractFeatures, extractFeature, extractAsDataFrame,
-	                                  createVector, mutateVector )
+from geokit._core.vector import (   loadVector, 
+                                    ogrType, 
+                                    countFeatures, 
+                                    vectorInfo, 
+                                    extractFeatures, 
+                                    extractFeature, 
+                                    extractAsDataFrame,
+                                    createVector, 
+                                    mutateVector, 
+                                    rasterize )

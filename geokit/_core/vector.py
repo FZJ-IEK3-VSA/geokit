@@ -1,7 +1,7 @@
 from .util import *
-from .srsutil import *
-from .geomutil import *
-from .rasterutil import *
+from .srs import *
+from .geom import *
+from .raster import *
 
 ####################################################################
 # INTERNAL FUNCTIONS
@@ -198,7 +198,8 @@ def vectorInfo(source):
 # Iterable to loop over vector items
 def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
     # Do filtering
-    layer = ds.GetLayer()
+    source = loadVector(source)
+    layer = source.GetLayer()
     filterLayer(layer, geom, where)
 
     # Make a transformer
@@ -297,9 +298,9 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
         if not indexCol is None:
             df.set_index(indexCol, inplace=True, drop=False)
 
-        if onlyGeom: return ds["geom"]
-        elif onlyAttr: return ds.drop("geom", axis=1)
-        else: ds
+        if onlyGeom: return df["geom"]
+        elif onlyAttr: return df.drop("geom", axis=1)
+        else: return df
         
 
 def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, **kwargs):
@@ -355,7 +356,8 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
         fItems = ftr.items().copy()
     
     else:
-        getter = _extractFeatures(source, geom, where, srs,)
+        getter = _extractFeatures(source=source, geom=geom, where=where, srs=srs, 
+                                  onlyGeom=onlyGeom, onlyAttr=onlyAttr,)
 
         # Get first result
         fGeom, fItems = next(getter)
@@ -751,22 +753,33 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
 
     """
     # Extract filtered features
-    geoms = extractAsDataFrame(vecLyr, geom=geom, where=where, srs=srs)
+    geoms = extractFeatures(source, geom=geom, where=where, srs=srs)
     if geoms.size == 0: return None
 
+    # Hold on to the SRS in case we need it
+    if srs is None:
+        vecds = loadVector(source)
+        veclyr = vecds.GetLayer()
+        srs = veclyr.GetSpatialRef()
+    
     # Do processing
     if not processor is None:
-        result = geoms.apply( lambda x: pd.Series(processor), axis=1 )
+        result = geoms.apply( lambda x: pd.Series(processor(x)), axis=1 )
         for c in result.columns: geoms[c] = result[c].values
+
+        # make sure the geometries have an srs
+        if not geoms.geom[0].GetSpatialReference():
+            srs=loadSRS(srs)
+            geoms.geom.apply(lambda x: x.AssignSpatialReference(srs))
 
     # Create a new shapefile from the results 
     if _slim:
-        return quickVector(geoms.geom)
+        return quickVector( geoms.geom )
     else:
         return createVector( geoms, srs=srs, output=output, **kwargs )
     
 
-def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, output=None, dtype=None, srs=None, compress=True, noData=None, overwrite=False, fill=None, **kwargs):
+def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None, burn=1, output=None, dtype=None, compress=True, noData=None, overwrite=True, fill=None, **kwargs):
     """Rasterize a vector datasource onto a raster context
 
     Parameters:
@@ -776,19 +789,23 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
         If ogr.Geometry, an Polygon geometry
             - Will be immediately turned into a vector
 
-    bounds : (xMin, yMix, xMax, yMax) or Extent
-        The geographic extents spanned by the raster
-    
     pixelWidth : numeric
-        The pixel width of the raster in units of the input srs
-        * The keyword 'dx' can be used as well and will override anything given 
-        assigned to 'pixelWidth'
+        The pixel width of the raster in the working srs
+        * Is 'srs' is not given, these are the units of the source's inherent srs
     
     pixelHeight : numeric
-        The pixel height of the raster in units of the input srs
-        * The keyword 'dy' can be used as well and will override anything given 
-          assigned to 'pixelHeight'
+        The pixel height of the raster in the working srs
+        * Is 'srs' is not given, these are the units of the source's inherent srs
 
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the point to create
+        * If 'bounds' is an Extent object, the bounds' internal srs will override
+          this input
+
+    bounds : (xMin, yMix, xMax, yMax) or Extent; optional
+        The geographic extents spanned by the raster
+        * If not given, the whole bounds spanned by the input is used
+    
     where : str; optional
         An SQL-like where statement to use to filter the vector before rasterizing
 
@@ -813,13 +830,6 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
         * If dtype is None and data is not None, the datatype will be inferred 
           from the given data
 
-    srs : Anything acceptable to geokit.srs.loadSRS(); optional
-        The srs of the point to create
-          * If not given, longitude/latitude is assumed
-          * srs MUST be given as a keyword argument
-        * If 'bounds' is an Extent object, the bounds' internal srs will override
-          this input
-
     compress : bool
         A flag instructing the output raster to use a compression algorithm
         * only useful if 'output' has been defined
@@ -843,17 +853,32 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: None
+    * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
     # Normalize some inputs
     if isinstance(source, ogr.Geometry): source = createVector(source)
     else: source = loadVector(source)
 
-    try: bounds = bounds.xyXY # Get a tuple from an Extent object
-    except: pass
+    # Get the vector's info
+    vecinfo = vectorInfo(source)
 
-    srs = loadSRS(srs)
+    if srs is None: 
+        srs = vecinfo.srs
+        srsOkay = True
+    else:
+        srs = loadSRS(srs)
+        if srs.IsSame(vecinfo.srs): srsOkay=True
+        else: srsOkay =False
+
+    # Look for bounds input
+    if bounds is None:
+        bounds = vecinfo.bounds
+        if not srsOkay: 
+            bounds = boundsToBounds(bounds, vecinfo.srs, srs)   
+    else:
+        try: bounds = bounds.xyXY # Get a tuple from an Extent object
+        except: pass # Bounds should already be a tuple
 
     # Determine DataType is not given
     if dtype is None:
@@ -864,8 +889,9 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
     else:
         dtype=gdalType(dtype)
 
-    # Create rasterization options
-    if not 'bands' in kwargs: kwargs["bands"]=[1]
+    # Collect rasterization options
+    if output is None and not 'bands' in kwargs: 
+        kwargs["bands"]=[1]
 
     if isinstance(burn, str):
         kwargs["attribute"] = burn
@@ -882,7 +908,7 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
         if(tmp==0): raise GeoKitRegionMaskError("Rasterization failed!")
         outputDS.FlushCache()
 
-        return ouputDS
+        return outputDS
 
     # Do a rasterization to a file on disk
     else:
@@ -896,13 +922,19 @@ def rasterize(source, bounds, pixelWidth, pixelHeight, where=None, burn=1, outpu
                 raise GeoKitRasterError("Output file already exists: %s" %output)
 
         # Do rasterize
-        if compress: co=COMPRESSION_OPTION
-        else: co = []
+        aligned = kwargs.pop("targetAlignedPixels", True)
+        
+        if not "creationOptions" in kwargs:
+            if compress: co=COMPRESSION_OPTION
+            else: co = []
+        else:
+            co = kwargs.pop("creationOptions")
+        print(bounds)
 
         tmp = gdal.Rasterize( output, source, outputBounds=bounds, xRes=pixelWidth, yRes=pixelHeight,
-                              outputSRS=srs, outputType=dtype, noData=noData, where=where, creationOptions=co, 
-                              **kwargs)
+                              outputSRS=srs, outputType=getattr(gdal, dtype), noData=noData, where=where, 
+                              creationOptions=co, targetAlignedPixels=aligned, **kwargs)
         if(tmp==0): raise GeoKitRegionMaskError("Rasterization failed!")
         
-        return
+        return output
 

@@ -1,8 +1,8 @@
 from .util import *
-from .srsutil import *
-from .geomutil import *
-from .rasterutil import *
-from .vectorutil import *
+from .srs import *
+from .geom import *
+from .raster import *
+from .vector import *
 
 IndexSet = namedtuple("IndexSet","xStart yStart xWin yWin xEnd yEnd")
 
