@@ -226,6 +226,84 @@ def scaleMatrix(mat, scale, strict=True):
 
     return out
 
+# A predefined kernel processor for use in mutateRaster
+def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
+    """A decorator which automates the production of kernel processors for use 
+    in mutateRaster (although it could really used for processing any matrix)
+    
+    Parameters:
+    -----------
+    size : int
+        The number of pixels to expand around a center pixel
+        * A 'size' of 0 would make a processing matrix with size 1x1. As in, 
+          just the value at each point. This would be silly to call...
+        * A 'size' of 1 would make a processing matrix of size 3x3. As in, one 
+          pixel around the center pixel in all directions
+        * Processed matrix size is equal to 2*size+1 
+
+    edgeValue : numeric; optional
+        The value to apply to the edges of the matrix before applying the kernel
+        * Will be factored into the kernelling when processing near the edges
+
+    outputType : np.dtype; optional
+        The datatype of the processed values 
+        * Only useful if the output type of the kerneling step is different from
+          the matrix input type
+
+    passIndex : bool
+        Whether or not to pass the x and y index to the processing function
+        * If True, the decorated function must accept an input called 'xi' and 
+          'yi' in addition to the matrix
+        * The xi and yi correspond to the index of the center pixel in the 
+          original matrix
+    
+    Returns:
+    --------
+    function
+
+    Example:
+    --------
+    * Say we want to make a processor which calculates the average of pixels 
+      which are within a distance of 2 indcies. In other words, we want the 
+      average of a 5x5 matrix centered around each pixel.
+    * Assume that we can use the value -9999 as a no data value
+
+    >>>  @KernelProcessor(2, edgeValue=-9999)
+    >>>  def getMean( mat ):
+    >>>      # Get only good values
+    >>>      goodValues = mat[mat!=-9999]
+    >>>      
+    >>>      # Return the mean
+    >>>      return goodValues.mean()
+
+    """
+    def wrapper1(kernel):
+        def wrapper2(matrix):
+            # get the original matrix sizes
+            yN, xN = matrix.shape
+
+            # make a padded version of the matrix
+            paddedMatrix = np.ones((yN+2*size,xN+2*size), dtype=matrix.dtype)*edgeValue
+            paddedMatrix[size:-size,size:-size] = matrix
+
+            # apply kernel to each pixel
+            output = np.zeros((yN,xN), dtype = matrix.dtype if outputType is None else outputType)
+            for yi in range(yN):
+                for xi in range(xN):
+                    slicedMatrix = paddedMatrix[yi:2*size+yi+1, xi:2*size+xi+1]
+                    
+                    if passIndex: output[yi,xi] = kernel(slicedMatrix, xi=xi, yi=yi)
+                    else: output[yi,xi] = kernel(slicedMatrix)
+
+            # done!
+            return output
+        return wrapper2
+    return wrapper1
+
+#############################################################
+## internal use source generators
+
+
 def quickVector(geom, output=None):
     """GeoKit internal for quickly creating a vector datasource"""
     ######## Create a quick vector source

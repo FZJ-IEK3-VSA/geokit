@@ -994,81 +994,7 @@ def mutateRaster(source, processor, output=None, dtype=None, **kwargs):
         outDS = createRaster( pixelHeight=dsInfo.dy, pixelWidth=dsInfo.dx, bounds=workingExtent, 
                               srs=dsInfo.srs, data=processedData, output=output, **kwargs )
 
-        return
-
-# A predefined kernel processor for use in mutateRaster
-def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
-    """A decorator which automates the production of kernel processors for use 
-    in mutateRaster (although it could really used for processing any matrix)
-    
-    Parameters:
-    -----------
-    size : int
-        The number of pixels to expand around a center pixel
-        * A 'size' of 0 would make a processing matrix with size 1x1. As in, 
-          just the value at each point. This would be silly to call...
-        * A 'size' of 1 would make a processing matrix of size 3x3. As in, one 
-          pixel around the center pixel in all directions
-        * Processed matrix size is equal to 2*size+1 
-
-    edgeValue : numeric; optional
-        The value to apply to the edges of the matrix before applying the kernel
-        * Will be factored into the kernelling when processing near the edges
-
-    outputType : np.dtype; optional
-        The datatype of the processed values 
-        * Only useful if the output type of the kerneling step is different from
-          the matrix input type
-
-    passIndex : bool
-        Whether or not to pass the x and y index to the processing function
-        * If True, the decorated function must accept an input called 'xi' and 
-          'yi' in addition to the matrix
-        * The xi and yi correspond to the index of the center pixel in the 
-          original matrix
-    
-    Returns:
-    --------
-    function
-
-    Example:
-    --------
-    * Say we want to make a processor which calculates the average of pixels 
-      which are within a distance of 2 indcies. In other words, we want the 
-      average of a 5x5 matrix centered around each pixel.
-    * Assume that we can use the value -9999 as a no data value
-
-    >>>  @KernelProcessor(2, edgeValue=-9999)
-    >>>  def getMean( mat ):
-    >>>      # Get only good values
-    >>>      goodValues = mat[mat!=-9999]
-    >>>      
-    >>>      # Return the mean
-    >>>      return goodValues.mean()
-
-    """
-    def wrapper1(kernel):
-        def wrapper2(matrix):
-            # get the original matrix sizes
-            yN, xN = matrix.shape
-
-            # make a padded version of the matrix
-            paddedMatrix = np.ones((yN+2*size,xN+2*size), dtype=matrix.dtype)*edgeValue
-            paddedMatrix[size:-size,size:-size] = matrix
-
-            # apply kernel to each pixel
-            output = np.zeros((yN,xN), dtype = matrix.dtype if outputType is None else outputType)
-            for yi in range(yN):
-                for xi in range(xN):
-                    slicedMatrix = paddedMatrix[yi:2*size+yi+1, xi:2*size+xi+1]
-                    
-                    if passIndex: output[yi,xi] = kernel(slicedMatrix, xi=xi, yi=yi)
-                    else: output[yi,xi] = kernel(slicedMatrix)
-
-            # done!
-            return output
-        return wrapper2
-    return wrapper1
+        return output
 
 def indexToCoord( yi, xi, source, asPoint=False):
     """Convert the index of a raster to coordinate values.
@@ -1504,53 +1430,36 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
+    # open source and get info
+    source = loadRaster(source)
+    dsInfo = rasterInfo(source)
+
+    # Handle potentially missing arguments
     if not srs is None: srs = loadSRS(srs)
-    if not dtype is None: dtype = gdalType(dtype)
+    if srs is None: 
+        srs=dsInfo.srs
+        srsOkay = True
+    else:
+        if srs.IsSame(dsInfo.srs): srsOkay=True
+        else: srsOkay = False 
 
-    if output is None: # If an output isnt given, we need to do initializing which is 
-                       # normally done by gdalwarp
-        # open source and get info
-        source = loadRaster(source)
-        dsInfo = rasterInfo(source)
+    if bounds is None: 
+        if srsOkay: bounds=dsInfo.bounds
+        else: bounds = boundsToBounds(dsInfo.bounds, dsInfo.srs, srs)
 
-        # Handle arguments
-        if srs is None: 
-            srs=dsInfo.srs
-            srsOkay = True
-        else:
-            if srs.IsSame(dsInfo.srs): srsOkay=True
-            else: srsOkay = False 
+    if pixelHeight is None: 
+        if srsOkay: pixelHeight=dsInfo.dy
+        else: pixelHeight = (bounds[3]-bounds[1])/(dsInfo.yWinSize*1.1)
 
-        if bounds is None: 
-            if srsOkay: bounds=dsInfo.bounds
-            else: bounds = boundsToBounds(dsInfo.bounds, dsInfo.srs, srs)
-
-        if pixelHeight is None: 
-            if srsOkay: pixelHeight=dsInfo.dy
-            else: pixelHeight = (bounds[3]-bounds[1])/(dsInfo.yWinSize*1.1)
-
-        if pixelWidth is None: 
-            if srsOkay: pixelWidth=dsInfo.dx
-            else: pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
-        
-        if dtype is None: dtype=dsInfo.dtype
-        if noData is None: noData=dsInfo.noData
-
-        # Test if warping is even really needed
-        if ( cutline is None and 
-             np.isclose(dsInfo.bounds[0], bounds[0]) and 
-             np.isclose(dsInfo.bounds[1], bounds[1]) and 
-             np.isclose(dsInfo.bounds[2], bounds[2]) and 
-             np.isclose(dsInfo.bounds[3], bounds[3]) and  
-             np.isclose(dsInfo.dx, pixelWidth) and 
-             np.isclose(dsInfo.dy, pixelHeight) and
-             dtype == dsInfo.dtype and
-             noData == dsInfo.noData and 
-             srs.IsSame(dsInfo.srs)):
-                return source    
+    if pixelWidth is None: 
+        if srsOkay: pixelWidth=dsInfo.dx
+        else: pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
     
+    if dtype is None: dtype=dsInfo.dtype
     dtype = gdalType(dtype)
 
+    if noData is None: noData=dsInfo.noData
+    
     # If a cutline is given, create the output
     if not cutline is None:
         if isinstance(cutline, ogr.Geometry):
@@ -1561,7 +1470,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             tempdir = None
         else:
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
-            
+    
     # Workflow depends on whether or not we have an output
     if not output is None: # Simply do a translate
         if( os.path.isfile(output) ):
@@ -1572,20 +1481,16 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             else:
                 raise GeoKitRasterError("Output file already exists: %s" %output)
 
-        # Check some for bad input configurations
-        if not srs is None:
-            if (pixelHeight is None or pixelWidth is None):
-                raise GeoKitRasterError("When warping between srs's and writing to a file, pixelWidth and pixelHeight must be given")        
+        # # Check some for bad input configurations
+        # if not srs is None:
+        #     if (pixelHeight is None or pixelWidth is None):
+        #         raise GeoKitRasterError("When warping between srs's and writing to a file, pixelWidth and pixelHeight must be given")        
 
         # Arange inputs
         co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
         copyMeta = kwargs.pop("copyMetadata", True)
+        aligned = kwargs.pop("targetAlignedPixels", True)
         
-        if not (pixelWidth is None and pixelHeight is None):
-            aligned = kwargs.pop("targetAlignedPixels", True)
-        else:
-            aligned = False
-
         # Let gdalwarp do everything...
         opts = gdal.WarpOptions( outputType=getattr(gdal, dtype), xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 
                                  outputBounds=bounds, dstSRS=srs, dstNodata=noData, resampleAlg=resampleAlg, 

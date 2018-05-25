@@ -82,7 +82,7 @@ class Extent(object):
         Extent
 
         """
-        return Extent(bounds[0], bounds[2], bounds[1], bounds[3], srs)
+        return Extent(bounds[0], bounds[2], bounds[1], bounds[3], srs=srs)
 
     @staticmethod
     def fromGeom( geom ):
@@ -187,14 +187,13 @@ class Extent(object):
         """
         if isinstance(source, LocationSet): return Extent.fromLocationSet(source)
         elif isinstance(source, ogr.Geometry): return Extent.fromGeom(source)
-
-        if not isinstance(source, str): # Maybe the source is an iterable giving xyXY 
-            try:
-                vals = list(source)
-                ext = Extent(*vals, **kwargs)
-            except: pass
         elif isVector(source): return Extent.fromVector(source)
         elif isRaster(source): return Extent.fromRaster(source)
+        
+        try: # Maybe the source is an iterable giving xyXY 
+            vals = list(source)
+            if len(vals)==4: return Extent( vals, **kwargs)
+        except: pass
 
         raise GeoKitExtentError("Could not load the source")
 
@@ -240,10 +239,10 @@ class Extent(object):
     def __eq__(s,o):
         #if (s.xyXY != o.xyXY): return False
         if (not s.srs.IsSame(o.srs) ): return False
-        if not isclose(s.xMin, o.xMin): return False
-        if not isclose(s.xMax, o.xMax): return False
-        if not isclose(s.yMin, o.yMin): return False
-        if not isclose(s.yMin, o.yMin): return False
+        if not np.isclose(s.xMin, o.xMin): return False
+        if not np.isclose(s.xMax, o.xMax): return False
+        if not np.isclose(s.yMin, o.yMin): return False
+        if not np.isclose(s.yMin, o.yMin): return False
         return True
 
     def __repr__(s):
@@ -385,16 +384,10 @@ class Extent(object):
         if (unitY> s.yMax-s.yMin): raise GeoKitExtentError("Unit size is larger than extent width")
 
         # Calculate new extent
-        newXMin = s.xMin-s.xMin%unitX
-        newYMin = s.yMin-s.yMin%unitY
-
-        tmp = s.xMax%unitX
-        if(tmp == 0): newXMax = s.xMax
-        else: newXMax = (s.xMax+unitX)-tmp
-
-        tmp = s.yMax%unitY
-        if(tmp == 0): newYMax = s.yMax
-        else: newYMax = (s.yMax+unitY)-tmp
+        newXMin = np.floor(s.xMin/unitX)*unitX
+        newYMin = np.floor(s.yMin/unitY)*unitY
+        newXMax = np.ceil(s.xMax/unitX)*unitX
+        newYMax = np.ceil(s.yMax/unitY)*unitY
 
         # Done!
         if dtype is None or isinstance(unitX,dtype):
@@ -556,9 +549,9 @@ class Extent(object):
         # Do tests
         sel = np.ones(locs.shape[0], dtype=bool)
         sel *= locs[:,0] >= s.xMin 
-        sel *= locs[:,0] <= s.xMin
+        sel *= locs[:,0] <= s.xMax
         sel *= locs[:,1] >= s.yMin 
-        sel *= locs[:,1] <= s.yMin
+        sel *= locs[:,1] <= s.yMax
 
         # Done!
         if sel.size == 1: return sel[0] 
@@ -652,7 +645,7 @@ class Extent(object):
             tmpY = (extent.yMin - s.yMin)/dy
         yOff = int(np.round(tmpY))
 
-        if not (isclose(xOff, tmpX) and isclose(yOff, tmpY)):
+        if not (np.isclose(xOff, tmpX) and np.isclose(yOff, tmpY)):
             raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Get window sizes
@@ -662,7 +655,7 @@ class Extent(object):
         tmpY = (extent.yMax - extent.yMin)/dy
         yWin = int(np.round(tmpY))
 
-        if not (isclose(xWin, tmpX) and isclose(yWin, tmpY)):
+        if not (np.isclose(xWin, tmpX) and np.isclose(yWin, tmpY)):
             raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Done!
@@ -671,7 +664,7 @@ class Extent(object):
 
     #############################################################################
     ## CONVENIENCE FUNCTIONS
-    def createRaster(s, source, pixelWidth, pixelHeight, **kwargs):
+    def createRaster(s, pixelWidth, pixelHeight, **kwargs):
         """Convenience function for geokit.raster.createRaster which sets 'bounds'
         and 'srs' inputs
 
@@ -679,10 +672,6 @@ class Extent(object):
         
         Parameters:
         -----------
-        resolutionDiv : int
-            The factor by which to divide the RegionMask's native resolution
-            * This is useful if you need to represent very fine details
-        
         pixelWidth : numeric
             The pixel width of the raster in units of the input srs
             * The keyword 'dx' can be used as well and will override anything given 
@@ -843,7 +832,8 @@ class Extent(object):
         matchContext : bool; optional
             * If True, transforms all geometries to the Extent's srs before 
               mutating
-            * If False, only selects the geometries which touch the Extent
+            * If False, the Extent is cast to the source's srs, and all filtering
+              and mutating happens in that context 
 
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
@@ -856,16 +846,16 @@ class Extent(object):
         
         """
         # Get the working srs
-        if not transform:
+        if not matchContext:
             vinfo = vectorInfo( source )
             ext = s.castTo(vinfo.srs)
         else:
             ext = s
 
         # mutate the source
-        return mutateVector(source, srs=srs, geom=s._box, **kwargs)
+        return mutateVector(source, srs=ext.srs, geom=ext._box, **kwargs)
 
-    def mutateRaster(s, source, pixelWidth=None, pixelHeight=None, matchContext=False, warpArgs=None, processor=None, **mutateArgs):
+    def mutateRaster(s, source, pixelWidth=None, pixelHeight=None, matchContext=False, warpArgs=None, processor=None, resampleAlg='bilinear', **mutateArgs):
         """Convenience function for geokit.vector.mutateRaster which automatically
         warps the raster to the extent's area and srs before mutating
 
@@ -905,6 +895,11 @@ class Extent(object):
               boolean is okay)
             * See example in geokit.raster.mutateRaster for more info
 
+        resampleAlg : str; optional
+            The resampling algorithm to use while warping
+            * Knowing which option to use can have significant impacts!
+            * Options are: 'near', 'bilinear', 'cubic', 'average'
+
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
 
@@ -914,23 +909,27 @@ class Extent(object):
         * If 'output' is a string: None
 
         """
-        output = kwargs.pop("output", None)
         if warpArgs is None: warpArgs = {}
 
+        if processor is None: # We wont do a mutation without a processor, since everything else
+                              # can be handled by Warp. Therefore we pass on any 'output' that is 
+                              # given to the warping stage, unless one was already given
+            warpArgs["output"] = warpArgs.get("output", mutateArgs["output"])
+        
         # Warp the source
         if matchContext:
             if pixelWidth is None or pixelHeight is None:
                 raise GeoKitExtentError("pixelWidth and pixelHeight must be provided when matchContext is True")
 
-            source = s.warp( source, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=True, **warpArgs )
+            source = s.warp( source, resampleAlg=resampleAlg, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=True, **warpArgs )
         else:
-            if not "srs" in kwargs:
+            if not "srs" in mutateArgs:
                 source = loadRaster(source)
                 srs = source.GetProjectionRef()
 
             ext = s.castTo(srs)
-            source = ext.warp( source, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=False, **warpArgs )   
+            source = ext.warp( source, resampleAlg=resampleAlg, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=False, **warpArgs )   
 
         # mutate the source
-        if not processor is None: return mutateRaster(source, output=output, **mutateArgs)
+        if not processor is None: return mutateRaster(source, processor=processor, **mutateArgs)
         else: return source

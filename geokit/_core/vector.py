@@ -657,7 +657,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
             feature.Destroy() # Free resources (probably not necessary here)
 
         # Finish
-        if( output ): return
+        if( output ): return output
         else: return dataSource
     
     ##### Delete the datasource in case it failed
@@ -667,7 +667,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
 
 ####################################################################
 # mutuate a vector
-def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldDef=None, output=None, _slim=False, **kwargs):
+def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldDef=None, output=None, keepAttributes=True, _slim=False, **kwargs):
     """Process a vector dataset according to an arbitrary function
     
     Note:
@@ -726,6 +726,11 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
         * Assumed to be of "ESRI Shapefile" format
         * Will create a number of files with different extensions
 
+    keepAttributes : bool; optional
+        If True, the old attributes will be kept in the output vector
+            * Unless they are over written by the processor
+        If False, only the newly specified attributes are kept
+
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
@@ -765,7 +770,12 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
     # Do processing
     if not processor is None:
         result = geoms.apply( lambda x: pd.Series(processor(x)), axis=1 )
-        for c in result.columns: geoms[c] = result[c].values
+        if keepAttributes:
+            for c in result.columns: geoms[c] = result[c].values
+        else:
+            geoms = result
+
+        if not "geom" in geoms: raise GeoKitVectorError("There is no 'geom' field in the resulting vector table")
 
         # make sure the geometries have an srs
         if not geoms.geom[0].GetSpatialReference():
