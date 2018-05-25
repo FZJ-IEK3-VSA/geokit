@@ -50,7 +50,8 @@ def point(*args, srs='latlon'):
 
 def makePoint(*args, **kwargs):
     """alias for geokit.geom.point(...)"""
-    print("makePoint will be removed soon. Switch to 'point'")
+    msg = "makePoint will be removed soon. Switch to 'point'"
+    warnings.warn(msg, Warning)
     return point(*args, **kwargs)
 
 def box(*args, srs=4326):
@@ -103,7 +104,8 @@ def box(*args, srs=4326):
 
 def makeBox(*args, **kwargs):
     """alias for geokit.geom.box(...)"""
-    print("makeBox will be removed soon. Switch to 'box'")
+    msg = "makeBox will be removed soon. Switch to 'box'"
+    warnings.warn(msg, Warning)
     return box(*args, **kwargs)
 
 def polygon(outerRing, *args, srs=4326):
@@ -168,7 +170,8 @@ def polygon(outerRing, *args, srs=4326):
 
 def makePolygon(*args, **kwargs):
     """alias for geokit.geom.polygon(...)"""
-    print("makePolygon will be removed soon. Switch to 'polygon'")
+    msg = "makePolygon will be removed soon. Switch to 'polygon'"
+    warnings.warn(msg, Warning)
     return polygon(*args, **kwargs)
 
 def line(points, srs=4326):
@@ -204,7 +207,8 @@ def line(points, srs=4326):
 
 def makeLine(*args, **kwargs):
     """alias for geokit.geom.line(...)"""
-    print("makeLine will be removed soon. Switch to 'line'")
+    msg = "makeLine will be removed soon. Switch to 'line'"
+    warnings.warn(msg, Warning)
     return line(*args, **kwargs)
 
 def empty(gtype, srs=None):
@@ -237,7 +241,8 @@ def empty(gtype, srs=None):
 
 def makeEmpty(*args, **kwargs):
     """alias for geokit.geom.empty(...)"""
-    print("makeEmpty will be removed soon. Switch to 'empty'")
+    msg = "makeEmpty will be removed soon. Switch to 'empty'"
+    warnings.warn(msg, Warning)
     return empty(*args, **kwargs)
 
 
@@ -425,7 +430,8 @@ def polygonizeMatrix( matrix, bounds=None, srs=None, flat=False, shrink=True,  _
 
     if( ftrN == 0):
         #raise GlaesError("No features in created in temporary layer")
-        print("No features in created in temporary layer")
+        msg = "No features in created in temporary layer"
+        warnings.warn(msg, UserWarning)
         return 
 
     # Extract geometries and values
@@ -570,7 +576,8 @@ def transform( geoms, toSRS='europe_m', fromSRS=None, segment=None):
         try:
             geoms = list(geoms)
         except Exception as e:
-            print("Could not determine geometry SRS")
+            msg = "Could not determine geometry SRS"
+            warnings.warn(msg, UserWarning)
             raise e
 
     # make sure geoms is a list
@@ -632,8 +639,8 @@ def flatten( geoms ):
         for gi in range(0,len(geoms),2):
 
             try:
-                if not geoms[gi].IsValid(): print("WARNING: Invalid Geometry encountered")
-                if not geoms[gi+1].IsValid(): print("WARNING: Invalid Geometry encountered")
+                if not geoms[gi].IsValid(): warnings.warn("WARNING: Invalid Geometry encountered", UserWarning)
+                if not geoms[gi+1].IsValid(): warnings.warn("WARNING: Invalid Geometry encountered", UserWarning)
 
                 newGeoms.append(geoms[gi].Union(geoms[gi+1]))
             except IndexError: # should only occur when length of geoms is odd
@@ -735,7 +742,7 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
 
 
 AxHands = namedtuple("AxHands", "ax handles cbar")
-def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, **mplArgs):
+def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -804,12 +811,6 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         Instructs the created axis to hide its boundary
           * Only useful when generating a new axis
 
-    margin : (float, float, float, float, ); optional
-        Additional margins to add around a generated axis
-          * Useful if, for whatever reason, the plot isn't fitting right in the 
-            final figure
-          * Before using this, try adjusting the 'figsize'
-
     cbarPadding : float; optional
         The spacing padding to add between the generated axis and the generated
         colorbar axis
@@ -842,6 +843,22 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     cbargs : dict; optional
         keyword arguments to pass on when creating the colorbar 
 
+    leftMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    rightMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    topMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    bottomMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
     **mplArgs
         All other keyword arguments are passed on to the plotting functions called
         for each geometry
@@ -863,20 +880,25 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         newAxis=True
         import matplotlib.pyplot as plt
 
-        if colorBy is None:
-            plt.figure(figsize=figsize)
-            ax = plt.subplot(111)
-        else:
-            plt.figure(figsize=figsize)
-            margin = margin[0],margin[1],margin[2]+0.08,margin[3]
-            cbarExtraPad = 0.05
-            cbarWidth = 0.04
-            
-            ax = plt.axes([margin[0], margin[1], 1-margin[2]-cbarWidth-cbarPadding, 1-margin[3]-margin[1]])
-            cbax = plt.axes([1-margin[2]-cbarWidth, 
-                             margin[1]+cbarExtraPad, 
-                             cbarWidth, 
-                             1-margin[3]-margin[1]-2*cbarExtraPad])
+        plt.figure(figsize=figsize)
+
+        rightMargin+= 0.08 # Add area on the right for colorbar text
+        if not hideAxis: 
+            leftMargin += 0.08
+
+        cbarExtraPad = 0.05
+        cbarWidth = 0.04
+
+        ax = plt.axes([leftMargin, 
+                       bottomMargin, 
+                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                       1-(topMargin+bottomMargin)])
+
+        cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                         bottomMargin+cbarExtraPad, 
+                         cbarWidth, 
+                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
+
         if hideAxis: ax.axis("off")
         else: ax.tick_params(labelsize=fontsize)
     else:
@@ -927,17 +949,12 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         if not ylim is None: yMin, yMax = ylim
 
         simplificationValue = max( xMax-xMin, yMax-yMin )/simplificationFactor
-        #print("SIMPV:", simplificationValue)
         
         oGeoms = geoms
         geoms=[]
 
         def doSimplify(g):
             ng = g.Simplify(simplificationValue)
-            if ng.GetEnvelope()==(0.0, 0.0, 0.0, 0.0): # Something bad happened, try the more robust simplification
-                #print("I get here....")
-                #ng = g.SimplifyPreserveTopology(simplificationValue)
-                pass
             return ng
 
         for g in oGeoms:
@@ -993,7 +1010,8 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         elif g.GetGeometryName()=="POLYGON": h.append(drawPolygon(g, plotargs, ax, colorVal))
         elif g.GetGeometryName()=="MULTIPOLYGON": h.append(drawMultiPolygon(g, plotargs, ax, colorVal))
         else:
-            print( "Could not draw geometry of type:", pargs.index[gi], "->", g.GetGeometryName())
+            msg = "Could not draw geometry of type:", pargs.index[gi], "->", g.GetGeometryName()
+            warnings.warn(msg, UserWarning)
 
     # Add the colorbar, maybe
     if not colorBy is None:
@@ -1114,7 +1132,6 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
         newArea = newGeom.Area()
 
         if newArea > workingTarget*1.1:
-            print("special")
             dA = (newArea-sgArea)/growStep
             weightedGrowStep = (workingTarget-sgArea)/dA
 

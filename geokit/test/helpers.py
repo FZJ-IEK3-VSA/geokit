@@ -63,6 +63,7 @@ AACHEN_SHAPE_EXTENT_3035 = (4035500.0, 3048700.0, 4069500.0, 3101000.0)
 AACHEN_ELIGIBILITY_RASTER = source("aachen_eligibility.tif")
 AACHEN_ZONES = source("aachen_zones.shp")
 AACHEN_POINTS = source("aachen_points.shp")
+AACHEN_URBAN_LC = source("urban_land_cover_aachenClipped.tif")
 
 NUMPY_FLOAT_ARRAY = np.arange(10, dtype="float")
 
@@ -80,8 +81,6 @@ for x,y in zip(np.arange(100), 10*np.sin( np.pi*np.arange(100)/20 )):
     _x = np.round(x).astype("int")
     _y = np.round(y).astype("int")
     MASK_DATA[_y+75:_y+77,_x] = True
-
-
 
 EUR_STATS_FILE = source("Europe_with_H2MobilityData_GermanyClip.shp")
 

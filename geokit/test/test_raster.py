@@ -1,7 +1,5 @@
 from helpers import *
-from geokit.util import *
-from geokit.geom import *
-from geokit.raster import *
+from geokit.gk import *
 
 ## gdalType
 def test_gdalType():
@@ -271,11 +269,39 @@ def test_rasterStats():
 
 def test_KernelProcessor(): print( "KernelProcessor not tested...")
 def test_indexToCoord(): print( "indexToCoord not tested...")
-def test_drawRaster(): print( "drawRaster not tested...")
+def test_drawRaster(): 
+    r = drawRaster(AACHEN_URBAN_LC)
+    plt.savefig(result("drawRaster-1.png"), dpi=100)
+
+    # shift
+    r = drawRaster(AACHEN_URBAN_LC, rightMargin=0.2)
+    plt.savefig(result("drawRaster-2.png"), dpi=100)
+
+    # projection
+    r = drawRaster(AACHEN_URBAN_LC, srs=4326)
+    plt.savefig(result("drawRaster-3.png"), dpi=100)
+
+    # cutline
+    r = drawRaster(AACHEN_URBAN_LC, cutline=AACHEN_SHAPE_PATH, resolution=0.001, srs=4326)
+    plt.savefig(result("drawRaster-4.png"), dpi=100)
+
+
+    print("No errors in drawRaster, but they should be checked manually!")
+
 def test_polygonizeRaster():
-    print("EXPAND MEEEEEEEEEEEEEEEEEE!!!!!")
-    geoms = polygonizeRaster(AACHEN_ELIGIBILITY_RASTER)
-    print(geoms)
+    geoms = polygonizeRaster(AACHEN_URBAN_LC)
+    compare(geoms.shape[0], 423, "polygonizeRaster - geom count")
+    is3 = geoms.value==3
+    compare(is3.sum(), 2, "polygonizeRaster - value count")
+    compare(geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208, "polygonizeRaster - geom area")
+
+    geoms = polygonizeRaster(AACHEN_URBAN_LC, flat=True)
+    compare(geoms.shape[0], 3, "polygonizeRaster - geom count")
+    is3 = geoms.value==3
+    compare(is3.sum(), 1, "polygonizeRaster - value count")
+    compare(geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208, "polygonizeRaster - geom area")
+
+    print( "polygonizeRaster passed")
 
 def test_warp(): 
     # Change resolution to disk
@@ -303,13 +329,12 @@ def test_warp():
     compare(v4.mean(), 76.72702479) 
 
     # Do a flipped-source check
-    d = warp( CLC_RASTER_PATH, cutline=box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035), noData=99 )
+    d = warp( CLC_FLIPCHECK_PATH, cutline=box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035), noData=99 )
     v5 = extractMatrix(d)
     compare( (v4-v5).mean(), 0)
 
-
-    d = warp( CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp3.tif") )
-    v6 = extractMatrix(result("warp3.tif"))
+    d = warp( CLC_FLIPCHECK_PATH, pixelHeight=200, pixelWidth=200, output=result("warp6.tif") )
+    v6 = extractMatrix(result("warp6.tif"))
     compare( (v1-v6).mean(), 0)
 
     print( "warp passed")
@@ -330,6 +355,7 @@ if __name__=="__main__":
     test_mutateRaster()
     test_KernelProcessor()
     test_indexToCoord()
+    test_warp()
     test_drawRaster()
     test_polygonizeRaster()
-    test_warp()
+    

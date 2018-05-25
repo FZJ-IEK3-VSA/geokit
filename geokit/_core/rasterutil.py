@@ -41,7 +41,8 @@ _gdalType={bool:"GDT_Byte", int:"GDT_Int32", float:"GDT_Float64","bool":"GDT_Byt
            "uint32":"GDT_UInt32", "float32":"GDT_Float32", "float64":"GDT_Float64"}
 def gdalType(s):
     """Tries to determine gdal datatype from the given input type"""
-    if( isinstance(s,str) ):
+    if( s is None ): return "GDT_Unknown"
+    elif( isinstance(s,str) ):
         if( hasattr(gdal, s)): return s
         elif( s.lower() in _gdalType): return _gdalType[s.lower()]
         elif( hasattr(gdal, 'GDT_%s'%s)): return 'GDT_%s'%s
@@ -144,7 +145,6 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
     if(not output is None):
         if( os.path.isfile(output) ):
             if(overwrite==True):
-                #print( "Removing existing raster file - " + output )
                 os.remove(output)
                 if(os.path.isfile(output+".aux.xml")):
                     os.remove(output+".aux.xml")
@@ -321,70 +321,6 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False )
     # make sure we are returing data in the 'flipped-y' orientation
     if not isFlipped(source): data = data[::-1,:]
     return data
-
-# Cutline extracter
-cutlineInfo = namedtuple("cutlineInfo","data info")
-def extractCutline(source, geom, cropToCutline=True, **kwargs):
-    """Extracts a cutout of a raster source's data which is within a geometry 
-
-    Parameters:
-    -----------
-    source : Anything acceptable by loadRaster()
-        The raster datasource
-
-    geom : ogr.Geometry
-        The geometry over which to cut out the raster's data
-        * Must be a Polygon or MultiPolygon
-
-    cropToCutline : bool
-        A flag which restricts the bounds of the returned matrix to that which 
-        most closely matches the geometry
-
-    **kwargs
-        * All kwargs are passed on to a call to gdal.Warp
-        * See gdal.WarpOptions for more details
-        * For example, 'allTouched' may be useful
-
-    Returns:
-    --------
-    namedtuple -> ( "data":numpy.ndarray, 
-                    "info":rasterInfo for the context of the created matrix )
-
-    """
-    #### TODO: Update this function to use warp()
-    # make sure we have a polygon or multipolygon geometry
-    if not isinstance(geom, ogr.Geometry):
-        raise GeoKitGeomError("Geom must be an OGR Geometry object")
-    if not geom.GetGeometryName() in ["POLYGON","MULTIPOLYGON"]:
-        raise GeoKitGeomError("Geom must be a Polygon or MultiPolygon type")
-
-    # make geom into raster srs
-    source = loadRaster(source)
-    rInfo = rasterInfo(source)
-
-    if not geom.GetSpatialReference().IsSame(rInfo.srs):
-        geom.TransformTo(rInfo.srs)
-
-    # make a quick vector dataset
-    t = TemporaryDirectory()
-    vecName = quickVector(geom,output=os.path.join(t.name,"tmp.shp"))
-    
-    # Do cutline
-    cutName = os.path.join(t.name,"cut.tif")
-    
-    cutDS = gdal.Warp(cutName, source, cutlineDSName=vecName, cropToCutline=cropToCutline, **kwargs)
-    cutDS.FlushCache()
-
-    cutInfo = rasterInfo(cutDS)
-
-    # Almost Done!
-    returnVal = cutlineInfo(extractMatrix(cutDS), cutInfo)
-
-    # cleanup
-    t.cleanup()
-
-    # Now Done!
-    return returnVal
 
 def rasterStats( source, cutline=None, ignoreValue=None, **kwargs):
     """Compute basic statistics of the values contained in a raster dataset. 
@@ -585,7 +521,6 @@ def rasterInfo(sourceDS):
     output['dtype'] = sourceBand.DataType
     output['noData'] = sourceBand.GetNoDataValue()
     
-    
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
 
@@ -759,7 +694,8 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     inBounds = inBounds & (yStarts+window<info.yWinSize)
 
     if (~inBounds).any():
-        print("WARNING: One of the given points (or extraction windows) exceeds the source's limits")
+        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
+        warnings.warn(msg, UserWarning)
 
     # Read values
     values = []
@@ -1170,7 +1106,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Raster plotter
-def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, margin=(0,0,0,0), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999,**kwargs):
+def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Parameters:
@@ -1220,16 +1156,6 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
         A base font size to apply to tick marks which appear
           * Titles and labels are given a size of 'fontsize' + 2
 
-    hideAxis : bool; optional
-        Instructs the created axis to hide its boundary
-          * Only useful when generating a new axis
-
-    margin : (float, float, float, float, ); optional
-        Additional margins to add around a generated axis
-          * Useful if, for whatever reason, the plot isn't fitting right in the 
-            final figure
-          * Before using this, try adjusting the 'figsize'
-
     cbarPadding : float; optional
         The spacing padding to add between the generated axis and the generated
         colorbar axis
@@ -1261,6 +1187,22 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     
     cbargs : dict; optional
 
+    leftMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    rightMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    topMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    bottomMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
     **kwargs : Passed on to a call to warp()
         * Determines how the warping is carried out
         * Consider using 'resampleAlg' or 'workingType' for finer control
@@ -1283,15 +1225,23 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
-        margin = margin[0],margin[1],margin[2]+0.08,margin[3]
+
+        rightMargin+= 0.08 # Add area on the right for colorbar text
+        if not hideAxis: 
+            leftMargin += 0.08
+
         cbarExtraPad = 0.05
         cbarWidth = 0.04
-        
-        ax = plt.axes([margin[0], margin[1], 1-margin[2]-cbarWidth-cbarPadding, 1-margin[3]-margin[1]])
-        cbax = plt.axes([1-margin[2]-cbarWidth, 
-                         margin[1]+cbarExtraPad, 
+
+        ax = plt.axes([leftMargin, 
+                       bottomMargin, 
+                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                       1-(topMargin+bottomMargin)])
+
+        cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                         bottomMargin+cbarExtraPad, 
                          cbarWidth, 
-                         1-margin[3]-margin[1]-2*cbarExtraPad])
+                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
 
         if hideAxis: ax.axis("off")
         else: ax.tick_params(labelsize=fontsize)
@@ -1303,13 +1253,13 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     info = rasterInfo(source)
 
     if not (srs is None and resolution is None and cutline is None and xlim is None and ylim is None):
-        
-        if xlim is None: xlim=info.xMin, info.xMax
-        if ylim is None: ylim=info.yMin, info.yMax
-        
-        bounds = (xlim[0], ylim[0], xlim[1], ylim[1])
+        if not (xlim is None and ylim is None):
+            bounds = (xlim[0], ylim[0], xlim[1], ylim[1],)
+        else:
+            bounds = None
 
-        if resolution is None: xres,yres = None,None
+        if resolution is None: 
+            xres,yres = None,None
         else:
             try:    xres,yres = resolution
             except: xres,yres = resolution,resolution
@@ -1418,7 +1368,8 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
     ftrN = vecLyr.GetFeatureCount()
     if( ftrN == 0):
         #raise GlaesError("No features in created in temporary layer")
-        print("No features in created in temporary layer")
+        msg = "No features in created in temporary layer"
+        warnings.warn(msg, UserWarning)
         return 
 
     # Extract geometries and values
@@ -1464,6 +1415,11 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     """Warps a given raster source to another context
 
     * Can be used to 'warp' a raster in memory to a raster on disk
+    
+    Note:
+    -----
+    Unless maually altered as keyword arguments, the gdal.Warp options 
+    'targetAlignedPixels' and 'copyMetadata' are both set to True
 
     Parameters:
     -----------
@@ -1518,80 +1474,130 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     **kwargs:
         * All keyword arguments are passed on to a call to gdal.WarpOptions
         * Use these to fine-tune the warping procedure
-
+        * Key Options are (from gdal.WarpOptions):
+            format --- output format ("GTiff", etc...)
+            targetAlignedPixels --- whether to force output bounds to be multiple
+                                    of output resolution
+            workingType --- working type (gdal.GDT_Byte, etc...)
+            warpMemoryLimit --- size of working buffer in bytes
+            creationOptions --- list of creation options
+            srcNodata --- source nodata value(s)
+            dstNodata --- output nodata value(s)
+            multithread --- whether to multithread computation and I/O operations
+            cutlineWhere --- cutline WHERE clause
+            cropToCutline --- whether to use cutline extent for output bounds
+            setColorInterpretation --- whether to force color interpretation of 
+                                       input bands to output bands
+            
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: None
 
     """
-    # open source and get info
-    source = loadRaster(source)
-    dsInfo = rasterInfo(source)
+    if not srs is None: srs = loadSRS(srs)
+    if not dtype is None: dtype = gdalType(dtype)
 
-    # Handle arguments
-    if pixelHeight is None: pixelHeight=dsInfo.dy
-    if pixelWidth is None: pixelWidth=dsInfo.dx
-    if srs is None: srs=dsInfo.srs
-    if bounds is None: bounds=dsInfo.bounds
-    if dtype is None: dtype=dsInfo.dtype
-    if noData is None: noData=dsInfo.noData
+    if output is None: # If an output isnt given, we need to do initializing which is 
+                       # normally done by gdalwarp
+        # open source and get info
+        source = loadRaster(source)
+        dsInfo = rasterInfo(source)
 
-    srs = loadSRS(srs)
+        # Handle arguments
+        if srs is None: 
+            srs=dsInfo.srs
+            srsOkay = True
+        else:
+            if srs.IsSame(dsInfo.srs): srsOkay=True
+            else: srsOkay = False 
+
+        if bounds is None: 
+            if srsOkay:
+                bounds=dsInfo.bounds
+            else:
+                pts = flatten([point( dsInfo.xMin, dsInfo.yMin, srs=dsInfo.srs),
+                               point( dsInfo.xMin, dsInfo.yMax, srs=dsInfo.srs),
+                               point( dsInfo.xMax, dsInfo.yMin, srs=dsInfo.srs),
+                               point( dsInfo.xMax, dsInfo.yMax, srs=dsInfo.srs)])
+                pts.TransformTo(srs)
+                pts = extractVerticies(pts)
+
+                bounds = (pts[:,0].min(), pts[:,1].min(), pts[:,0].max(), pts[:,1].max(), )
+
+        if pixelHeight is None: 
+            if srsOkay: pixelHeight=dsInfo.dy
+            else: pixelHeight = (bounds[3]-bounds[1])/(dsInfo.yWinSize*1.1)
+
+        if pixelWidth is None: 
+            if srsOkay: pixelWidth=dsInfo.dx
+            else: pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
+        
+        if dtype is None: dtype=dsInfo.dtype
+        if noData is None: noData=dsInfo.noData
+
+        # Test if warping is even really needed
+        if ( cutline is None and 
+             np.isclose(dsInfo.bounds[0], bounds[0]) and 
+             np.isclose(dsInfo.bounds[1], bounds[1]) and 
+             np.isclose(dsInfo.bounds[2], bounds[2]) and 
+             np.isclose(dsInfo.bounds[3], bounds[3]) and  
+             np.isclose(dsInfo.dx, pixelWidth) and 
+             np.isclose(dsInfo.dy, pixelHeight) and
+             dtype == dsInfo.dtype and
+             noData == dsInfo.noData and 
+             srs.IsSame(dsInfo.srs)):
+                return source    
+    
     dtype = gdalType(dtype)
 
-    # Check some inputs in case they are bad (since GDAL does not give good error reports)
-    if pixelHeight > (bounds[2]-bounds[0]): raise GeoKitRasterError("pixelHeight is too large compare to boundary")
-    if pixelWidth > (bounds[3]-bounds[1]): raise GeoKitRasterError("pixelWidth is too large compare to boundary")
-
-    # Test if warping is even really needed
-    if ( output is None and 
-         np.isclose(dsInfo.bounds[0], bounds[0]) and 
-         np.isclose(dsInfo.bounds[1], bounds[1]) and 
-         np.isclose(dsInfo.bounds[2], bounds[2]) and 
-         np.isclose(dsInfo.bounds[3], bounds[3]) and  
-         np.isclose(dsInfo.dx, pixelWidth) and 
-         np.isclose(dsInfo.dy, pixelHeight) and
-         dtype == dsInfo.dtype and
-         noData == dsInfo.noData and 
-         srs.IsSame(dsInfo.srs)):
-            return source
-    
     # If a cutline is given, create the output
     if not cutline is None:
         if isinstance(cutline, ogr.Geometry):
             tempdir = TemporaryDirectory()
             cutline = quickVector(cutline, output=os.path.join(tempdir.name,"tmp.shp"))
-
-        elif not isinstance(cutline, str) and not isVector(cutline):
-            raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
-        else: # cutline is already a path to a vector
+        # cutline is already a path to a vector
+        elif isVector(cutline): 
             tempdir = None
-
+        else:
+            raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
+            
     # Workflow depends on whether or not we have an output
     if not output is None: # Simply do a translate
-        co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
-        
-        copyMeta = kwargs.pop("copyMetadata", True)
-        aligned = kwargs.pop("targetAlignedPixels", True)
 
-        opts = gdal.WarpOptions( outputType=getattr(gdal,dtype), xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 
+        # Check some for bad input configurations
+        if not srs is None:
+            if (pixelHeight is None or pixelWidth is None):
+                raise GeoKitRasterError("When warping between srs's and writing to a file, pixelWidth and pixelHeight must be given")        
+
+        # Arange inputs
+        co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
+        copyMeta = kwargs.pop("copyMetadata", True)
+        
+        if not (pixelWidth is None and pixelHeight is None):
+            aligned = kwargs.pop("targetAlignedPixels", True)
+        else:
+            aligned = False
+
+        # Let gdalwarp do everything...
+        opts = gdal.WarpOptions( outputType=getattr(gdal, dtype), xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 
                                  outputBounds=bounds, dstSRS=srs, dstNodata=noData, resampleAlg=resampleAlg, 
-                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutline, 
-                                 **kwargs)
+                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutline, **kwargs)
 
         result = gdal.Warp( output, source, options=opts )
         if not isRaster(result): raise GeoKitRasterError("Failed to translate raster")
 
         destRas = None
     else:
+        if "cropToCutline" in kwargs: 
+            msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
+            warnings.warn(msg, UserWarning)
+
         # Warp to a raster in memory
         destRas = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth, dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
-
+        
         # Do a warp
         result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
-        #print(result)
-        #if( result != 0): raise GeoKitRasterError("Failed to warp raster")
         destRas.FlushCache()
 
     # Done!
