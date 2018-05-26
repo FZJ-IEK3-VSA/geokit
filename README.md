@@ -31,9 +31,10 @@ Be sure GDAL and netCDF4 are previously installed
 	conda install -c conda-forge gdal>=2.0.0 netCDF4
 
 !For Windows users! 
-	* A path variable will need to be set to tell the system where to find the GDAL dependancies
+	* Sometimes a path variable will need to be set to tell the system where to find the GDAL dependancies
 	* Path variables name must be: "GDAL_DATA"
 	* When installed with Anaconda, path should be: "<anaconda-top-directory>\Library\share\gdal"
+	* As of GeoKit version 1.1.0, GeoKit will attempt to add this path automatically at runtime
 	
 Then install GeoKit via pip as follow
 	
