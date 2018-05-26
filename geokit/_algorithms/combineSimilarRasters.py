@@ -1,4 +1,4 @@
-from geokit._core.regionmask import *
+from geokit.core.regionmask import *
 from os.path import basename
 from json import dumps
 

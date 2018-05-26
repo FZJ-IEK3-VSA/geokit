@@ -485,117 +485,19 @@ class RegionMask(object):
             plt.figure(figsize=(4,4))
             ax = plt.subplot(111)
 
-            g = s.geometry
-            h=drawGeoms(g, ax=ax)
+            r= s.drawSelf(ax=ax)
 
             ax.set_aspect('equal')
             ax.autoscale(enable=True)
             ax.axis('off')
             plt.tight_layout()
             plt.savefig(f, format="svg", dpi=100)
+            plt.close()
 
             f.seek(0)
             s.svg = f.read().decode('ascii')
 
         return s.svg
-
-    def drawMask( s, **kwargs):
-        """Draw the region on a matplotlib figure
-
-        * All kwargs (except 'bounds') are passed on to util.drawImage()"""
-        return drawImage( s.mask, bounds=s.extent.xyXY, **kwargs )
-
-    def drawGeometry( s, **kwargs):
-        """Draw the region on a matplotlib figure
-
-        * All kwargs passed on to geom.drawGeoms()"""
-        return drawGeoms( s.geometry, srs=s.srs, **kwargs )
-
-    # def drawImage(s, matrix, ax=None, hideExternal=True, cbar=False, output=None, noBorder=True, geomArgs={}, **imageArgs):
-    #     """Draw the region geometry on top of a matrix image
-
-    #     - The image data is assumed to match the boundaries of the RegionMask object
-
-    #     Inputs:
-    #         matrix - np.ndarray : The 2-dimensional image data to plot
-
-    #         ax - matplotlib axis object : The axis to draw the figure onto
-    #             * If given as 'None', then a fresh axis will be produced and displayed or saved immediately
-    #             * When not 'None', then this function returns a handle to the drawn image which can be used however you see fit
-
-    #         hideExternal - T/F : If true, hide values found outside the region
-
-    #         cbar - True/False : Flag indicating whether or not to automatically add a colorbar
-    #             * Only operates when an axis has not been given
-
-    #         output - str : A path to save the output figure to
-    #             * Only applies when 'ax' is None
-    #             * If this is None and 'ax' is None, the figure is displayed immediately
-
-    #         noBorder - T/F : A flag determining whether or not to show the borders of the plot's axis
-    #             * Only useful when 'ax' is None
-
-    #         geomArgs - dict : keyword arguments to pass on to the bourder drawing
-    #             * All are passed on to a call to RegionMask.drawGeometry(...)
-
-    #         **imageArgs : All other keyword arguements are passed on to the image plotting
-    #             * Performed by geokit.raster.drawImage(...)
-        
-    #     """
-    #     from matplotlib.colors import LinearSegmentedColormap
-
-    #     # Do we make our own figure?
-    #     if ax is None:
-    #         doShow = True
-    #         # import some things
-    #         import matplotlib.pyplot as plt
-
-    #         # make a figure and axis
-    #         plt.figure(figsize=(12,12))
-    #         ax = plt.subplot(111)
-    #     else: 
-    #         doShow=False
-
-    #     # Draw matrix
-    #     if not "cmap" in imageArgs:
-    #         cmap = LinearSegmentedColormap.from_list('red_green_blue',[(0,91/255,130/255),(171/255,221/255,164/255),(180/255,20/255,20/255)])
-    #     else:
-    #         cmap = imageArgs.pop("cmap")
-
-    #     vmin = imageArgs.pop("vmin", matrix[s.mask].min())
-    #     vmax = imageArgs.pop("vmax", matrix[s.mask].max())
-
-    #     _imageArgs = dict(bounds=s.extent)
-    #     _imageArgs.update(imageArgs)
-    #     h=drawImage(matrix, ax=ax, cmap=cmap, vmin=vmin, vmax=vmax, **_imageArgs)
-
-    #     # Draw region
-    #     if hideExternal:
-    #         cmap2 = LinearSegmentedColormap.from_list('alpha_to_white',[(1,1,1,0),(1,1,1)])
-    #         drawImage(~s.mask, ax=ax, bounds=s.extent, cmap=cmap2)
-
-    #     _geomArgs = dict(simplification=None, fc='None', ec='k', linewidth=3)
-    #     _geomArgs.update(geomArgs)
-    #     s.drawGeometry(ax=ax, **_geomArgs)
-
-    #     # Done!
-    #     if doShow:
-    #         ax.set_aspect('equal')
-    #         ax.autoscale(enable=True)
-
-    #         if noBorder: plt.axis('off')
-    #         if cbar: 
-    #             cb = plt.colorbar(h)
-    #             cb.ax.tick_params(labelsize=18) 
-
-    #         if output: 
-    #             plt.savefig(output, dpi=200)
-    #             plt.close()
-    #         else: 
-    #             plt.show()
-    #     else:
-    #         return ax
-
 
     def _tempFile(s, head="tmp", ext=".tif"):
         """***RM INTERNAL***
@@ -904,9 +806,10 @@ class RegionMask(object):
         source = loadVector(source)
         
         # Do we need to buffer?
+        if buffer==0: buffer=None
         if not buffer is None and bufferMethod == 'geom':
             def doBuffer(ftr): return {'geom':ftr.geom.Buffer(buffer)}
-            source = s.mutateVector(source, where=where, processor=doBuffer, keepAttributes=False, _slim=True)
+            source = s.mutateVector(source, where=where, processor=doBuffer, matchContext=True, keepAttributes=False, _slim=True)
 
             where=None # Set where to None since the filtering has already been done
 
@@ -915,11 +818,11 @@ class RegionMask(object):
                                   applyMask=applyMask, noData=noData, **kwargs)
 
         # Do rasterize
-        final = s.rasterize( source, dtype='float32', bands=[1], burnValues=[1], where=where, resolutionDiv=resolutionDiv, 
+        final = s.rasterize( source, dtype='float32', value=1, where=where, resolutionDiv=resolutionDiv, 
                                  applyMask=False, noData=noData)
-
         # Check for results
         if not (final > 0).any():
+            print("WTF???")
             # no results were found
             return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
                                   applyMask=applyMask, noData=noData)
@@ -951,7 +854,7 @@ class RegionMask(object):
     ## Vector feature indicator
     def indicateGeoms(s, geom, **kwargs):
         """
-        Convenience function to indicate values found within a geometry (or a 
+        Convenience wrapper to indicate values found within a geometry (or a 
         list of geometries)
 
         * Simply creates a new vector source from the given geometry and then 
@@ -1009,9 +912,90 @@ class RegionMask(object):
 
 
     #############################################################################
-    ## CONVENIENCE FUNCTIONS
+    ## CONVENIENCE WRAPPERS
+    def drawMask( s, ax=None, **kwargs):
+        """Convenience wrapper around geokit.util.drawImage which plots the 
+        RegionMask's mask over the RegionMask's context.
+
+        * See geokit.util.drawImage for more info on argument options
+        * Unless specified, the plotting extent is set to the RegionMask's extent
+            - This only plays a role when generating a new axis
+
+        """
+        xlim = kwargs.pop("xlim", (s.extent.xMin, s.extent.xMax))
+        ylim = kwargs.pop("ylim", (s.extent.yMin, s.extent.yMax))
+        return drawImage( s.mask, ax=ax, xlim=xlim, ylim=ylim, **kwargs )
+
+    def drawImage( s, matrix, ax=None, drawSelf=True, **kwargs):
+        """Convenience wrapper around geokit.util.drawImage which plots matrix data
+        which is assumed to match the boundaries of the RegionMask
+
+        * See geokit.util.drawImage for more info on argument options
+        * Unless specified, the plotting extent is set to the RegionMask's extent
+            - This only plays a role when generating a new axis
+
+        """
+        xlim = kwargs.pop("xlim", (s.extent.xMin, s.extent.xMax))
+        ylim = kwargs.pop("ylim", (s.extent.yMin, s.extent.yMax))
+
+        ax = drawImage( matrix, ax=ax, xlim=xlim, ylim=ylim, **kwargs )
+
+        if drawSelf:
+            s.drawSelf( ax=ax, fc='None', ec='k', linewidth=2)
+        return ax
+
+    def drawGeoms( s, geoms, ax=None, drawSelf=True, **kwargs):
+        """Convenience wrapper around geokit.geom.drawGeoms which plots geometries
+        which are then plotted within the context of the RegionMask
+
+        * See geokit.geom.drawGeoms for more info on argument options
+        * Geometries are always plotted in the RegionMask's SRS
+        * Unless specified, x and y limits are set to the RegionMask's extent
+            - This only plays a role when generating a new axis
+        """
+        xlim = kwargs.pop("xlim", (s.extent.xMin, s.extent.xMax))
+        ylim = kwargs.pop("ylim", (s.extent.yMin, s.extent.yMax))
+        ax = drawGeoms( geoms, ax=ax, srs=s.srs, xlim=xlim, ylim=ylim, **kwargs )
+
+        if drawSelf:
+            s.drawSelf( ax=ax, fc='None', ec='k', linewidth=2)
+        return ax
+
+
+    def drawSelf( s, ax=None, **kwargs):
+        """Convenience wrapper around geokit.geom.drawGeoms which plots the 
+        RegionMask's geometry
+
+        * See geokit.geom.drawGeoms for more info on argument options
+        * Geometry are always plotted in the RegionMask's SRS
+        * Unless specified, x and y limits are set to the RegionMask's extent
+            - This only plays a role when generating a new axis
+        """
+        xlim = kwargs.pop("xlim", (s.extent.xMin, s.extent.xMax))
+        ylim = kwargs.pop("ylim", (s.extent.yMin, s.extent.yMax))
+        return drawGeoms( s.geometry, ax=ax, srs=s.srs, xlim=xlim, ylim=ylim, **kwargs )
+ 
+
+    def drawRaster( s, source, ax=None, drawSelf=True, **kwargs):
+        """Convenience wrapper around geokit.raster.drawRaster which plots a raster
+        dataset within the context of the RegionMask
+
+        * See geokit.raster.drawRaster for more info on argument options
+        * The raster is always warped to the RegionMask's SRS
+        * Unless specified, x and y limits are set to the RegionMask's extent
+            - This only plays a role when generating a new axis
+        """
+        xlim = kwargs.pop("xlim", (s.extent.xMin, s.extent.xMax))
+        ylim = kwargs.pop("ylim", (s.extent.yMin, s.extent.yMax))
+        ax = drawGeoms( s.geometry, ax=ax, srs=s.srs, xlim=xlim, ylim=ylim, **kwargs )
+        
+        if drawSelf:
+            s.drawSelf( ax=ax, fc='None', ec='k', linewidth=2)
+        return ax
+
+
     def createRaster(s, output=None, resolutionDiv=1, **kwargs):
-        """Convenience function for geokit.raster.createRaster which sets 'srs',
+        """Convenience wrapper for geokit.raster.createRaster which sets 'srs',
         'bounds', 'pixelWidth', and 'pixelHeight' inputs
 
         Parameters:
@@ -1037,7 +1021,7 @@ class RegionMask(object):
         return s.extent.createRaster( pixelWidth=pW, pixelHeight=pH, output=output, **kwargs)
 
     def warp(s, source, output=None, resolutionDiv=1, returnMatrix=True, applyMask=True, noData=None, resampleAlg='bilinear', **kwargs):
-        """Convenience function for geokit.raster.warp() which automatically sets
+        """Convenience wrapper for geokit.raster.warp() which automatically sets
         'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
         
         Note:
@@ -1114,8 +1098,8 @@ class RegionMask(object):
         # Return
         return final
 
-    def rasterize(s, source, output=None, resolutionDiv=1, returnMatrix=True, applyMask=True, **kwargs):
-        """Convenience function for geokit.vector.rasterize() which automatically
+    def rasterize(s, source, output=None, resolutionDiv=1, returnMatrix=True, applyMask=True, noData=None, **kwargs):
+        """Convenience wrapper for geokit.vector.rasterize() which automatically
         sets the 'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs 
 
         Note:
@@ -1208,7 +1192,7 @@ class RegionMask(object):
 
 
     def mutateVector(s, source, matchContext=False, **kwargs):
-        """Convenience function for geokit.vector.mutateVector which automatically
+        """Convenience wrapper for geokit.vector.mutateVector which automatically
         sets 'srs' and 'geom' inputs to the RegionMask's srs and geometry
 
         * The RegionMask's geometry is always used to select features within the 
@@ -1250,7 +1234,7 @@ class RegionMask(object):
         return mutateVector(source, srs=ext.srs, geom=s.geometry, **kwargs)
 
     def mutateRaster(s, source, matchContext=True, warpArgs=None, applyMask=True, processor=None, resampleAlg="bilinear", **mutateArgs):
-        """Convenience function for geokit.vector.mutateRaster which automatically
+        """Convenience wrapper for geokit.vector.mutateRaster which automatically
         sets 'bounds'. It also warps the raster to the RegionMask's area 
         and srs before mutating
 
@@ -1322,7 +1306,7 @@ class RegionMask(object):
 
 
     def polygonizeMatrix(s, matrix, flat=False, shrink=True,  _raw=False):
-        """Convenience function for geokit.geom.polygonizeMatrix which autmatically
+        """Convenience wrapper for geokit.geom.polygonizeMatrix which autmatically
         sets the 'bounds' and 'srs' inputs. The matrix data is assumed to span the
         RegionMask exactly.
 
@@ -1357,7 +1341,7 @@ class RegionMask(object):
 
 
     def polygonizeMask(s, mask, bounds=None, srs=None, flat=True, shrink=True):
-        """Convenience function for geokit.geom.polygonizeMask which autmatically
+        """Convenience wrapper for geokit.geom.polygonizeMask which autmatically
         sets the 'bounds' and 'srs' inputs. The mask data is assumed to span the
         RegionMask exactly
         
@@ -1388,3 +1372,4 @@ class RegionMask(object):
 
         """
         return polygonizeMask(mask, bounds=s.extent.xyXY, srs=s.srs, flat=flat, shrink=shrink)
+        

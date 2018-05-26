@@ -324,30 +324,30 @@ def quickVector(geom, output=None):
     if output: return output
     else: return dataSource
 
-
-def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None):
-    """GeoKit internal for quickly creating a raster datasource"""
+def fitBoundsTo(bounds, dx, dy):
     try:
         xMin, yMin, xMax, yMax = bounds
     except TypeError:
         xMin, yMin, xMax, yMax = bounds.xyXY
-        srs = bounds.srs
+
+    xMin = np.round(bounds[0]/dx)*dx
+    yMin = np.round(bounds[1]/dy)*dy
+    xMax = np.round(bounds[2]/dx)*dx
+    yMax = np.round(bounds[3]/dy)*dy
+
+    return xMin,yMin,xMax, yMax
+
+def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None):
+    """GeoKit internal for quickly creating a raster datasource"""
+
+    bounds = fitBoundsTo(bounds, dx, dy)
     
     ## Make a raster dataset and pull the band/maskBand objects
-    # fix origins to multiples of the resolutions
-    ## This first way behaves more like gdalwarp/rasterize, but it adds pixel when they shouldn't be
-    # originX = float(np.floor(xMin/dx)*dx)
-    # originY = float(np.ceil(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
+    originX = bounds[0]
+    originY = bounds[3] # Always use the "Y-at-Top" orientation
 
-    # cols = int(np.ceil((xMax-originX)/dx)) 
-    # rows = int(np.ceil((originY-yMin)/abs(dy)))
-
-    # Old way, which doesn't seem to agree with gdal warping behavior, but doesn't cause so many issues
-    originX = float(np.round(xMin/dx)*dx)
-    originY = float(np.round(yMax/dy)*dy) # Always use the "Y-at-Top" orientation
-
-    cols = int(round((xMax-originX)/dx)) 
-    rows = int(round((originY-yMin)/abs(dy)))
+    cols = int(round((bounds[2]-originX)/dx)) 
+    rows = int(round((originY-bounds[1])/abs(dy)))
     
     # Open the driver
     driver = gdal.GetDriverByName('Mem') # create a raster in memory
@@ -388,68 +388,157 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
 Feature = namedtuple("Feature", "geom attr")
 
 ### Image plotter
-def drawImage(data, bounds=None, ax=None, scaling=None, yAtTop=True, cbar=False, **kwargs):
+
+AxHands = namedtuple("AxHands", "ax handles cbar")
+def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fontsize=16, hideAxis=False, figsize=(12,12), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
-    Inputs:
-        data : The data to plot as a 2D matrix
-            - numpy.ndarray
+    Parameters:
+    -----------
+    matrix : numpy.ndarray
+        The matrix data to draw
 
-        bounds : The spatial context of the matrix's boundaries
-            - (xMin, yMin, xMax, yMax)
-            - geokit.Extent object
-            * If bounds is None, the plotted matrix will be bounded by the matrix's dimension sizes
+    ax : matplotlib axis; optional
+        The axis to draw the geometries on
+          * If not given, a new axis is generated and returned
+    
+    xlim : (float, float); optional
+        The x-axis limits to draw the marix on
 
-        ax : An optional matplotlib axes to plot on
-            * If ax is None, the function will draw and create its own axis
+    ylim : (float, float); optional
+        The y-axis limits to draw the marix on
 
-        scaling - int : An optional scaling factor used to scale down the data matrix
-            * Used to decrease strain on the system's resources for visualing the data
-            * make sure to use a NEGATIVE integer to scale down (positive will scale up and make a larger matrix)
+    yAtTop : bool; optional
+        If True, the first row of data should be plotted at the top of the image
 
-        yAtTop - True/False : Flag indicating that the data is in the typical y-index-starts-at-top orientation
-            * If False, the data matrix will be flipped before plotting
+    scaling : numeric; optional
+        An integer factor by which to scale the matrix before plotting
+        
+    figsize : (int, int); optional
+        The figure size to create when generating a new axis
+          * If resultign figure looks wierd, altering the figure size is your best
+            bet to make it look nicer
+    
+    fontsize : int; optional
+        A base font size to apply to tick marks which appear
+          * Titles and labels are given a size of 'fontsize' + 2
 
-        cbar - True/False : Flag indicating whether or not to automatically add a colorbar
-            * Only operates when an axis has not been given
+    cbarPadding : float; optional
+        The spacing padding to add between the generated axis and the generated
+        colorbar axis
+          * Only useful when generating a new axis
+          * Only useful when 'colorBy' is given
 
-        **kwargs : Passed on to a call to matplotlib's imshow function
-            * Determines the visual characteristics of the drawn image
+    cbarTitle : str; optional
+        The title to give to the generated colorbar
+          * If not given, but 'colorBy' is given, the same string for 'colorBy'
+            is used
+            * Only useful when 'colorBy' is given
+
+    vmin : float; optional
+        The minimum value to color
+          * Only useful when 'colorBy' is given
+
+    vmax : float; optional
+        The maximum value to color
+          * Only useful when 'colorBy' is given
+
+    cmap : str or matplotlib ColorMap; optional
+        The colormap to use when coloring
+          * Only useful when 'colorBy' is given
+
+    cbax : matplotlib axis; optional
+        An explicitly given axis to use for drawing the colorbar
+          * If not given, but 'colorBy' is given, an axis for the colorbar is 
+            automatically generated
+    
+    cbargs : dict; optional
+
+    leftMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    rightMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    topMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    bottomMargin : float; optional
+        Additional margin to add to the left of the figure
+          * Before using this, try adjusting the 'figsize'
+
+    Returns:
+    --------
+    A namedtuple containing:
+       'ax' -> The map axis
+       'handles' -> All geometry handles which were created in the order they were 
+                    drawn
+       'cbar' -> The colorbar handle if it was drawn
 
     """
-    showPlot = False
+    # Create an axis, if needed
+    if isinstance(ax, AxHands):ax = ax.ax
+
     if ax is None:
-        showPlot = True
+        newAxis=True
         import matplotlib.pyplot as plt
-        plt.figure(figsize=(12,12))
-        ax = plt.subplot(111)
 
-    # If bounds is none, make a boundary
-    if bounds is None:
-        xMin,yMin,xMax,yMax = 0,0,data.shape[1],data.shape[0] # bounds = xMin,yMin,xMax,yMax
+        plt.figure(figsize=figsize)
+
+        rightMargin+= 0.08 # Add area on the right for colorbar text
+        if not hideAxis: 
+            leftMargin += 0.08
+
+        cbarExtraPad = 0.05
+        cbarWidth = 0.04
+
+        ax = plt.axes([leftMargin, 
+                       bottomMargin, 
+                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                       1-(topMargin+bottomMargin)])
+
+        cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                         bottomMargin+cbarExtraPad, 
+                         cbarWidth, 
+                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
+
+        if hideAxis: ax.axis("off")
+        else: ax.tick_params(labelsize=fontsize)
     else:
-        try:
-            xMin,yMin,xMax,yMax = bounds
-        except: # maybe bounds is an ExtentObject
-            xMin,yMin,xMax,yMax = bounds.xyXY
+        newAxis=False
 
-    # Set extentdraw
-    extent = (xMin,xMax,yMin,yMax)
-    
-    # handle flipped data
-    if not yAtTop: data=data[::-1,:]
+    # handle flipped matrix
+    if not yAtTop: matrix=matrix[::-1,:]
 
     # Draw image
-    if scaling: data=scaleMatrix(data,scaling,strict=False)
-    h = ax.imshow( data, extent=extent, **kwargs)
+    if scaling: matrix=scaleMatrix(matrix,scaling,strict=False)
 
-    # Done!
-    if showPlot:
-        if cbar: plt.colorbar(h)
+    if not (xlim is None and ylim is None):
+        extent = xlim[0], xlim[1], ylim[0], ylim[1]
+    else:
+        extent = None
 
+    h = ax.imshow( matrix, extent=extent, cmap=cmap, **kwargs)
+
+    # Draw Colorbar
+    #print(cmap)
+    tmp = dict(cmap=cmap, orientation='vertical')
+    if not cbargs is None: tmp.update( cbargs )
+
+    if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
+    else: cbar = plt.colorbar( h, cax=cbax )
+
+    cbar.ax.tick_params(labelsize=fontsize)
+    if not cbarTitle is None:
+        cbar.set_label( cbarTitle , fontsize=fontsize+2 )
+
+    # Do some formatting
+    if newAxis:
         ax.set_aspect('equal')
         ax.autoscale(enable=True)
-        
-        plt.show()
-    else:
-        return h
+
+    # Done!
+    return AxHands( ax, h, cbar)

@@ -751,7 +751,6 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
     return h
 
 
-AxHands = namedtuple("AxHands", "ax handles cbar")
 def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0.01, rightMargin=0.01, topMargin=0.01, bottomMargin=0.01, **mplArgs):
     """Draw geometries onto a matplotlib figure
     

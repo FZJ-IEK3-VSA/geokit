@@ -377,13 +377,13 @@ def test_RegionMask_createRaster():
     band = ds.GetRasterBand(1)
     if (band.ReadAsArray()-rm.mask).any(): error("createRaster 2 - data mismatch")
 
-    # test Scaling down
-    scaledData = scaleMatrix(rm.mask,-4)
+    ############ The function is not meant for scaling down
+    # # test Scaling down 
+    # scaledData = scaleMatrix(rm.mask,-4)
+    # ds = rm.createRaster(resolutionDiv=1/4, data=scaledData, overwrite=True)
 
-    ds = rm.createRaster(resolutionDiv=1/4, data=scaledData, overwrite=True)
-
-    band = ds.GetRasterBand(1)
-    if (band.ReadAsArray()-scaledData).any(): error("createRaster 3 - data mismatch")  
+    # band = ds.GetRasterBand(1)
+    # if (band.ReadAsArray()-scaledData).any(): error("createRaster 3 - data mismatch")  
 
     # test Scaling up
     scaledData = scaleMatrix(rm.mask,2)
@@ -438,14 +438,14 @@ def test_RegionMask_warp():
     #rm.createRaster(data=warped_3, output=result("regionMask_warp_3.tif"), overwrite=True)
 
     ## define a resolution div
-    warped_4 = rm.warp(CLC_RASTER_PATH, resolutionDiv=5, resampleAlg='near', noDataValue=0)
+    warped_4 = rm.warp(CLC_RASTER_PATH, resolutionDiv=5, resampleAlg='near', noData=0)
 
     if not (warped_4.dtype==np.uint8): error("warp 4 - dtype")
     if not (warped_4.shape==(rm.mask.shape[0]*5, rm.mask.shape[1]*5)): error("warp 4 - shape")
     if not (isclose(warped_4.sum(),11240881) and isclose(warped_4.std(),9.37633272361)):
         error("warp 4 - result")
 
-    #rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noDataValue=0, overwrite=True)
+    #rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noData=0, overwrite=True)
 
     print( "RegionMask_warp passed")
 
@@ -463,7 +463,7 @@ def test_RegionMask_rasterize():
     #rm.createRaster(data=rasterize_1, output=result("regionMask_rasterize_1.tif"), overwrite=True)
 
     # attribute rasterizing
-    rasterize_2 = rm.rasterize( AACHEN_ZONES, attribute="YEAR", dtype="int16" )
+    rasterize_2 = rm.rasterize( AACHEN_ZONES, value="YEAR", dtype="int16" )
 
     if not (rasterize_2.dtype==np.int16): error("rasterize 2 - dtype")
     if not (rasterize_2.shape==rm.mask.shape): error("rasterize 2 - shape")
@@ -472,7 +472,7 @@ def test_RegionMask_rasterize():
     #rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
 
     # where statement and resolution div
-    rasterize_3 = rm.rasterize( AACHEN_ZONES, burnValues=[10], resolutionDiv=5, where="YEAR>2000", dtype=float )
+    rasterize_3 = rm.rasterize( AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float )
 
     if not (rasterize_3.dtype==np.float64): error("rasterize 3 - dtype")
     if not (rasterize_3.shape==(rm.mask.shape[0]*5, rm.mask.shape[1]*5)): 
@@ -494,23 +494,23 @@ def test_RegionMask_mutateRaster():
 
 
 if __name__=="__main__":
-    # test_RegionMask___init__()
-    # test_RegionMask_fromMask()
-    # test_RegionMask_fromGeom()
-    # test_RegionMask_fromVector()
-    # test_RegionMask_load()
-    # test_RegionMask_pixelRes()
-    # test_RegionMask_buildMask()
-    # test_RegionMask_area()
-    # test_RegionMask_buildGeometry()
-    # test_RegionMask_vectorPath()
-    # test_RegionMask_vector()
-    # test_RegionMask__repr_svg_()
-    # test_RegionMask_drawMask()
-    # test_RegionMask_drawGeometry()
-    # test_RegionMask_applyMask()
-    # test_RegionMask__returnBlank()
-    # test_RegionMask_indicateValues()
+    test_RegionMask___init__()
+    test_RegionMask_fromMask()
+    test_RegionMask_fromGeom()
+    test_RegionMask_fromVector()
+    test_RegionMask_load()
+    test_RegionMask_pixelRes()
+    test_RegionMask_buildMask()
+    test_RegionMask_area()
+    test_RegionMask_buildGeometry()
+    test_RegionMask_vectorPath()
+    test_RegionMask_vector()
+    test_RegionMask__repr_svg_()
+    test_RegionMask_drawMask()
+    test_RegionMask_drawGeometry()
+    test_RegionMask_applyMask()
+    test_RegionMask__returnBlank()
+    test_RegionMask_indicateValues()
     test_RegionMask_indicateFeatures()
     test_RegionMask_indicateGeoms()
     test_RegionMask_subRegions()

@@ -151,28 +151,15 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
             else:
                 raise GeoKitRasterError("Output file already exists: %s" %output)
 
-    # Calculate axis information
-    try: # maybe the user passed in an Extent object, test for this...
-        xMin, yMin, xMax, yMax = bounds 
-    except TypeError:
-        xMin, yMin, xMax, yMax = bounds.xyXY
-        srs = bounds.srs
+    # Ensure bounds is okay
+    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+    
+    ## Make a raster dataset and pull the band/maskBand objects
+    originX = bounds[0]
+    originY = bounds[3] # Always use the "Y-at-Top" orientation
 
-    # fix origins to multiples of the resolutions
-    ## This first way behaves more like gdalwarp/rasterize, but it adds pixel when they shouldn't be
-    # originX = float(np.floor(xMin/pixelWidth)*pixelWidth)
-    # originY = float(np.ceil(yMax/pixelHeight)*pixelHeight) # Always use the "Y-at-Top" orientation
-
-    # cols = int(np.ceil((xMax-originX)/pixelWidth)) 
-    # rows = int(np.ceil((originY-yMin)/abs(pixelHeight)))
-
-    # Old way, which doesn't seem to agree with gdal warping behavior, but doesn't cause so many issues
-    originX = float(np.round(xMin/pixelWidth)*pixelWidth)
-    originY = float(np.round(yMax/pixelHeight)*pixelHeight) # Always use the "Y-at-Top" orientation
-
-    cols = int(round((xMax-originX)/pixelWidth)) 
-    rows = int(round((originY-yMin)/abs(pixelHeight)))
-
+    cols = int(round((bounds[2]-originX)/pixelWidth)) 
+    rows = int(round((originY-bounds[1])/abs(pixelHeight)))
     
     # Get DataType
     if( not dtype is None): # a dtype was given, use it!
@@ -254,24 +241,30 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         raise e
 
 
-def createRasterLike( rasterInfo, **kwargs):
+def createRasterLike( source, copyMetadata=True, **kwargs):
     """Create a raster described by the given raster info (as returned from a 
     call to rasterInfo() ). 
 
     * This copies all characteristics of the given raster, including: bounds, 
       pixelWidth, pixelHeight, dtype, srs, noData, and meta. 
     * Any keyword argument which is given will override values found in the 
-      rasterInfo
+      source
 
     """
 
-    bounds = kwargs.pop("bounds", rasterInfo.bounds)
-    pixelWidth = kwargs.pop("pixelWidth", rasterInfo.pixelWidth)
-    pixelHeight = kwargs.pop("pixelHeight", rasterInfo.pixelHeight)
-    dtype = kwargs.pop("dtype", rasterInfo.dtype)
-    srs = kwargs.pop("srs", rasterInfo.srs)
-    noData = kwargs.pop("noData", rasterInfo.noData)
-    meta = kwargs.pop("meta", rasterInfo.meta)
+    if isRaster(source): source = rasterInfo(source)
+
+    if not isinstance(source, RasterInfo): raise GeoKitRasterError("Could not understand source")
+
+    bounds = kwargs.pop("bounds", source.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", source.pixelHeight)
+    dtype = kwargs.pop("dtype", source.dtype)
+    srs = kwargs.pop("srs", source.srs)
+    noData = kwargs.pop("noData", source.noData)
+    
+    if copyMetadata: meta = kwargs.pop("meta", source.meta)
+    else: meta=None
 
     return createRaster( bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs, 
                          noData=noData, meta=meta, **kwargs)
@@ -505,7 +498,7 @@ def isFlipped(source):
     if( dy<0 ): return True
     else: return False
 
-RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta")
+RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta, source")
 def rasterInfo(sourceDS):
     """Returns a named tuple containing information relating to the input raster
 
@@ -573,6 +566,7 @@ def rasterInfo(sourceDS):
     output['yWinSize'] = ySize
     output['bounds'] = (xMin, yMin, xMax, yMax)
     output['meta'] = sourceDS.GetMetadata_Dict()
+    output["source"] = sourceDS.GetDescription()
 
     # clean up 
     del sourceBand, sourceDS
@@ -1053,7 +1047,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
 
 ### Raster plotter
 def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
-    """Draw a matrix as an image on a matplotlib canvas
+    """Draw a raster as an image on a matplotlib canvas
 
     Parameters:
     -----------
@@ -1462,6 +1456,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     if pixelWidth is None: 
         if srsOkay: pixelWidth=dsInfo.dx
         else: pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
+    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
     
     if dtype is None: dtype=dsInfo.dtype
     dtype = gdalType(dtype)
@@ -1498,6 +1493,12 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
         copyMeta = kwargs.pop("copyMetadata", True)
         aligned = kwargs.pop("targetAlignedPixels", True)
+
+        # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
+        bounds = ( bounds[0]+0.001*pixelWidth,
+                   bounds[1]+0.001*pixelHeight,
+                   bounds[2]-0.001*pixelWidth,
+                   bounds[3]-0.001*pixelHeight, )
         
         # Let gdalwarp do everything...
         opts = gdal.WarpOptions( outputType=getattr(gdal, dtype), xRes=pixelWidth, yRes=pixelHeight, creationOptions=co, 

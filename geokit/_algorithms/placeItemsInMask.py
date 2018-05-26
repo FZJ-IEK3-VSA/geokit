@@ -1,4 +1,4 @@
-from geokit._core.regionmask import *
+from geokit.core.regionmask import *
 
 def placeItemsInMask(mask, separation, extent=None, pixelDivision=5, maxItems=10000000, outputSRS=None):
         """Distribute the maximal number of minimally separated items within the available areas

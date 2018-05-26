@@ -35,7 +35,6 @@ POINT_SET = [ "POINT (7 49.7)", "POINT (7 49.9)", "POINT (7.4 49.75)", "POINT (7
               "POINT (8 49.9)", "POINT (8.4 49.75)", "POINT (8 49.7)","POINT (9 49.7)", "POINT (9 49.9)", 
               "POINT (9.4 49.75)", "POINT (9 49.7)"]
 
-
 GEOM = ogr.CreateGeometryFromWkt(POLY)
 GEOM.AssignSpatialReference(EPSG4326)
 
@@ -57,7 +56,6 @@ MULTI_FTR_SHAPE_PATH = source("multiFeature.shp")
 BOXES = source("boxes.shp")
 LUX_SHAPE_PATH = source("LuxShape.shp")
 LUX_LINES_PATH = source("LuxLines.shp")
-
 
 AACHEN_SHAPE_PATH = source("aachenShapefile.shp")
 AACHEN_SHAPE_EXTENT = (5.974861621856746, 50.494369506836165, 6.419306755066032, 50.95013427734369)
@@ -93,7 +91,6 @@ SINGLE_HILL_PATH = source("elevation_singleHill.tif")
 ELEVATION_PATH = source("elevation.tif")
 CDDA_PATH = source("CDDA_aachenClipped.shp")
 NATURA_PATH = source("Natura2000_aachenClipped.shp")
-OSM_DIR = source("OSM-aachenClipped/")
 
 ## Def a visualizer func
 def vis(mat, points=None):

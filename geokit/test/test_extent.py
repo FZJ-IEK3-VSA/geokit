@@ -397,7 +397,7 @@ def test_Extent_mutateRaster():
     # test a simple clip
     r = ex.mutateRaster(CLC_RASTER_PATH, output=result("extent_mutateRaster1.tif"))
     mat = extractMatrix(r)
-    compare(mat.mean(),17.15317182)
+    compare(mat.mean(),17.14654805)
 
     # test a clip and warp
     r = ex.mutateRaster(CLC_RASTER_PATH, pixelHeight=0.001, pixelWidth=0.001, matchContext=True, output=result("extent_mutateRaster2.tif"), resampleAlg='near')
@@ -412,7 +412,7 @@ def test_Extent_mutateRaster():
 
     r = ex.mutateRaster(CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif"))
     mat3 = extractMatrix(r)
-    compare(mat3.mean(),19.28146477)
+    compare(mat3.mean(),19.27040301)
 
     print("Extent_mutateRaster passed")
 

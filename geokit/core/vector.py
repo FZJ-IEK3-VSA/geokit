@@ -149,7 +149,7 @@ def countFeatures(source, geom=None, where=None):
 
 ####################################################################
 # Vector feature count
-vecInfo = namedtuple("vecInfo","srs bounds xMin yMin xMax yMax count attributes")
+vecInfo = namedtuple("vecInfo","srs bounds xMin yMin xMax yMax count attributes source")
 def vectorInfo(source):
     """Extract general information about a vector source
 
@@ -186,6 +186,8 @@ def vectorInfo(source):
     info["yMax"] = yMax
 
     info["count"] = vecLyr.GetFeatureCount()
+
+    info["source"] = vecDS.GetDescription()
 
     info["attributes"] = []
     layerDef = vecLyr.GetLayerDefn()
@@ -895,6 +897,8 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         try: bounds = bounds.xyXY # Get a tuple from an Extent object
         except: pass # Bounds should already be a tuple
 
+    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+
     # Determine DataType is not given
     if dtype is None:
         if value==1: # Assume we want a bool matrix
@@ -940,7 +944,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
             else:
                 raise GeoKitRasterError("Output file already exists: %s" %output)
 
-        # Do rasterize
+        # Arrange some inputs
         aligned = kwargs.pop("targetAlignedPixels", True)
         
         if not "creationOptions" in kwargs:
@@ -949,6 +953,13 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         else:
             co = kwargs.pop("creationOptions")
 
+        # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
+        bounds = ( bounds[0]+0.001*pixelWidth,
+                   bounds[1]+0.001*pixelHeight,
+                   bounds[2]-0.001*pixelWidth,
+                   bounds[3]-0.001*pixelHeight, )
+
+        # Do rasterize
         tmp = gdal.Rasterize( output, source, outputBounds=bounds, xRes=pixelWidth, yRes=pixelHeight,
                               outputSRS=srs, outputType=getattr(gdal, dtype), noData=noData, where=where, 
                               creationOptions=co, targetAlignedPixels=aligned, **kwargs)

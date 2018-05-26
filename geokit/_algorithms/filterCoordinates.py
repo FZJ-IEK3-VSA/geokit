@@ -1,4 +1,4 @@
-from geokit._core.regionmask import *
+from geokit.core.regionmask import *
 
 #############################################################################################
 def filterCoordinates(lats, lons, geom):
