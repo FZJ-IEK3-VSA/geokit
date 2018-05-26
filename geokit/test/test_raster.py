@@ -258,7 +258,31 @@ def test_isRaster():
 
 def test_loadRaster(): print( "loadRaster is trivial")
 def test_createRasterLike(): print( "createRasterLike not tested...")
-def test_extractMatrix(): print( "extractMatrix not tested...")
+def test_extractMatrix(): 
+    # source, bounds=None, boundsSRS='latlon', maskBand=False, autocorrect=False
+    ri = rasterInfo(CLC_RASTER_PATH)
+
+    # Do a full read
+    mat1 = extractMatrix(CLC_RASTER_PATH)
+    compare( 10650913 , mat1.sum(), "full read values")
+    compare( 7.93459728918, mat1.std(), "full read values")
+
+    # Read within a boundary 
+    mat2 = extractMatrix( CLC_RASTER_PATH, bounds=(4015000.0, 3032000.0, 4020000.0, 3040000.0), boundsSRS=3035)
+    compare( (mat1[710:790, 29:79 ]-mat2).sum(), 0, "extract bounds")
+
+    # Read with conversion
+    mat3, bounds = extractMatrix( CLC_RASTER_PATH, bounds=(6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
+    if not bounds == (4037300.0, 3049100.0, 4074100.0, 3078600.0): error("extractMatrix - bounds")
+    compare(mat3.sum(), 2280501 )
+    compare(mat3.std(), 7.40666185608)  
+
+    # Test flipped raster
+    mat4, bounds = extractMatrix( CLC_FLIPCHECK_PATH, bounds=(6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
+    compare( (mat4-mat3).sum(), 0, "extractMatrix - flipped raster" )
+
+    print( "extractMatrix passed")
+
 def test_extractCutline(): print( "extractCutline not tested...")
 
 def test_rasterStats(): 
@@ -357,4 +381,3 @@ if __name__=="__main__":
     test_warp()
     test_drawRaster()
     test_polygonizeRaster()
-    

@@ -273,7 +273,7 @@ def createRasterLike( source, copyMetadata=True, **kwargs):
 
 ####################################################################
 # extract the raster as a matrix
-def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False, autocorrect=False ):
+def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autocorrect=False, returnBounds=False ):
     """extract all or part of a raster's band as a numpy matrix
     
     Note:
@@ -287,17 +287,19 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False, 
     source : Anything acceptable by loadRaster()
         The raster datasource
         
-    xOff : int; optional
-        The index offset in the x-dimension
+    bounds: tuple or Extent
+        The boundary to clip the raster to before mutating
+        * If given as an Extent, the extent is always cast to the source's 
+            - native srs before mutating
+        * If given as a tuple, (xMin, yMin, xMax, yMax) is expected
+            - Units must be in the srs specified by 'boundsSRS'
+        * This boundary must fit within the boundary of the rasters source
+        * The boundary is always fitted to the source's grid, so the returned
+          values do not necessarily match to the boundary which is provided        
 
-    yOff : int; optional
-        The index offset in the y-dimension
-
-    xWin: int; optional
-        The window size in the x-dimension
-
-    yWin : int; optional
-        The window size in the y-dimension
+    boundsSRS: Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the 'bounds' argument
+        * This is ignored if the 'bounds' argument is an Extent object or is None
 
     autocorrect : bool; optional
         If True, the matrix will search for no data values and change them to 
@@ -305,25 +307,68 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False, 
         * Data type will always result in a float, so be careful with large
           matricies
 
+    returnBounds : bool; optional
+        If True, return the computed bounds along with the matrix data
+
     Returns:
     --------
-    numpy.ndarray -> Two dimensional matrix
+    * If returnBounds is False: numpy.ndarray -> Two dimensional matrix
+    * If returnBounds is True: (numpy.ndarray, tuple)
+        - ndarray is matrix data
+        - tuple is the (xMin, yMin, xMax, yMax) of the computed bounds
 
     """
     sourceDS = loadRaster(source) # BE sure we have a raster
-    sourceBand = sourceDS.GetRasterBand(1) # get band
-    if maskBand: mb = sourceBand.GetMaskBand()
+    dsInfo = rasterInfo(sourceDS)
+    
+    if maskBand:  mb = sourceBand.GetMaskBand()
+    else: sourceBand = sourceDS.GetRasterBand(1) # get band
 
-    # set kwargs
-    kwargs={}
-    kwargs["xoff"] = xOff
-    kwargs["yoff"] = yOff
-    if not xWin is None: kwargs["win_xsize"] = xWin
-    if not yWin is None: kwargs["win_ysize"] = yWin
+    # Handle the boundaries
+    if not bounds is None:
+        # check for extent
+        try: isExtent = bounds._whatami=="Extent"
+        except: isExtent = False
+
+        # Ensure srs is okay
+        if isExtent:
+            bounds = bounds.castTo(dsInfo.srs).fit((dsInfo.dx, dsInfo.dy)).xyXY
+        else:
+            boundsSRS = loadSRS(boundsSRS)
+            if not dsInfo.srs.IsSame( boundsSRS ):
+                bounds = boundsToBounds(bounds, boundsSRS, dsInfo.srs)
+            bounds = fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy)
+
+        # Find offsets
+        xoff = int(np.round( (bounds[0] - dsInfo.xMin)/dsInfo.dx ))
+        if xoff < 0: raise GeoKitRasterError("The given boundary exceeds the raster's xMin value")
+
+        xwin = int(np.round( (bounds[2] - dsInfo.xMin)/dsInfo.dx )) - xoff
+        if xwin > dsInfo.xWinSize: raise GeoKitRasterError("The given boundary exceeds the raster's xMax value")
+
+        if dsInfo.yAtTop:
+            yoff = int(np.round( (dsInfo.yMax - bounds[3])/dsInfo.dy ))
+            if yoff < 0: raise GeoKitRasterError("The given boundary exceeds the raster's yMax value")
+
+            ywin = int(np.round( (dsInfo.yMax - bounds[1])/dsInfo.dy )) - yoff
+
+            if ywin > dsInfo.yWinSize: raise GeoKitRasterError("The given boundary exceeds the raster's yMin value")
+        else:
+            yoff = int(np.round( (bounds[1] - dsInfo.yMin)/dsInfo.dy ))
+            if yoff < 0: raise GeoKitRasterError("The given boundary exceeds the raster's yMin value")
+
+            ywin = int(np.round( (bounds[3] - dsInfo.yMin)/dsInfo.dy )) - yoff
+            if ywin > dsInfo.yWinSize: raise GeoKitRasterError("The given boundary exceeds the raster's yMax value")
+
+    else:
+        xoff=0
+        yoff=0
+        xwin=None
+        ywin=None
 
     # get Data
-    if maskBand: data = mb.ReadAsArray(**kwargs)
-    else: data = sourceBand.ReadAsArray(**kwargs)
+    if maskBand: data = mb.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+    else: data = sourceBand.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
 
     # Correct 'nodata' values
     if autocorrect:
@@ -333,7 +378,10 @@ def extractMatrix(source, xOff=0, yOff=0, xWin=None, yWin=None, maskBand=False, 
 
     # make sure we are returing data in the 'flipped-y' orientation
     if not isFlipped(source): data = data[::-1,:]
-    return data
+
+    # Done
+    if returnBounds: return data, bounds
+    else: return data
 
 def rasterStats( source, cutline=None, ignoreValue=None, **kwargs):
     """Compute basic statistics of the values contained in a raster dataset. 
@@ -904,26 +952,43 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     
 ####################################################################
 # General raster mutator
-def mutateRaster(source, processor, output=None, dtype=None, **kwargs):
-    """Process all pixels in a raster according to a given function
-
-    * Creates a gdal dataset with the resulting data
-    * If the user wishes to generate an output file (by giving an 'output' input),
-      then nothing will be returned to help avoid dependency issues. If no output 
-      is provided, the function will return a gdal dataset for immediate use
+def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autocorrect=False, output=None, dtype=None, **kwargs):
+    """Process all pixels in a raster according to a given function. The boundaries
+    of the resulting raster can be changed as long as the new boundaries are within 
+    the scope of the original raster, but the resolution cannot
 
     Parameters:
     -----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
-    processor - function
+    processor: function; optional
         The function performing the mutation of the raster's data 
         * The function will take single argument (a 2D numpy.ndarray) 
         * The function must return a numpy.ndarray of the same size as the input
         * The return type must also be containable within a Float32 (int and 
           boolean is okay)
         * See example below for more info
+
+    bounds: tuple or Extent
+        The boundary to clip the raster to before mutating
+        * If given as an Extent, the extent is always cast to the source's native
+          srs before mutating
+        * If given as a tuple, (xMin, yMin, xMax, yMax) is expected
+            - Units must be in the srs specified by 'boundsSRS'
+        * This boundary must fit within the boundary of the rasters source
+        * The boundary is always fitted to the source's grid, so the returned
+          values do not necessarily match to the boundary which is provided        
+
+    boundsSRS: Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the 'bounds' argument
+        * This is ignored if the 'bounds' argument is an Extent object or is None
+
+    autocorrect : bool; optional
+        If True, then before mutating the matrix extracted from the source will have
+        pixels equal to its 'noData' value converted to numpy.nan
+        * Data type will always result in a float, so be careful with large
+          matricies
 
     output : str; optional
         A path to an output file 
@@ -967,11 +1032,10 @@ def mutateRaster(source, processor, output=None, dtype=None, **kwargs):
 
     # Get ds info
     dsInfo = rasterInfo(workingDS)
-    workingExtent = dsInfo.bounds
-
+    
     # Read data into array
-    sourceBand = workingDS.GetRasterBand(1)
-    sourceData = sourceBand.ReadAsArray()
+    sourceData, bounds = extractMatrix( source, bounds=bounds, boundsSRS=boundsSRS, autocorrect=autocorrect, returnBounds=True )
+    workingExtent = dsInfo.bounds if (bounds is None) else bounds
 
     # Perform processing
     processedData = processor( sourceData ) if processor else sourceData
@@ -982,11 +1046,7 @@ def mutateRaster(source, processor, output=None, dtype=None, **kwargs):
     if( processedData.shape != sourceData.shape ):
         raise GeoKitRasterError( "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",format(rawSuitability.shape, sourceData.shape ))
     del sourceData
-
-    # Check if flipping is required
-    if not dsInfo.yAtTop:
-        processedData = processedData[::-1,:]
-    
+ 
     # Create an output raster
     if(output is None):
         return quickRaster( dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, 

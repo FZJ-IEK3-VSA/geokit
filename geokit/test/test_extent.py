@@ -303,9 +303,10 @@ def test_Extent_extractMatrix():
     # Make sure matricies are the same
     if not (mat1==mat2).all(): error("extractMatrix - fliping error")
 
-    # test fail
+    # test fail since the given extent does not fit in the grid of the raster
     try:
         p = ex.shift(dx=1).extractMatrix(CLC_RASTER_PATH)
+        print(p)
         error("extractMatrix - fail test")
     except GeoKitError as e:
         pass

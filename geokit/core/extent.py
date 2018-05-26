@@ -28,6 +28,8 @@ class Extent(object):
     * Extent.fromRaster( raster-file-path )
     * Extent.load( args )
     """
+    _whatami="Extent"
+
     def __init__(s, *args, srs='latlon'):
         """Create extent from explicitly defined boundaries
         
@@ -695,35 +697,42 @@ class Extent(object):
             raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
         return createRaster( bounds=s.xyXY, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=s.srs, **kwargs)
         
-    def extractMatrix(s, source):
-        """Extracts the extent directly from the given raster source as a matrix.
+    def extractMatrix(s, source, strict=True, **kwargs):
+        """Convenience wrapper around geokit.raster.extractMatrix(). Extracts the
+        extent directly from the given raster source as a matrix around the Extent
         
         Note:
         -----
         The called extent must fit somewhere within the raster's grid
 
+        Parameters:
+        -----------
+        source: gdal.Dataset or str
+            The raster source to be read
+
+        strict: bool; optional
+            Whether or not to allow a returned value which does not fit to the 
+            given extent
+            !! If this is set to False, it is STRONGLY recommended to also set the
+               argument 'returnBounds' as True so that the new computed boundary
+               can be known
+
+        **kwargs
+            All keyword arguments are passed to geokit.raster.extractMatrix
+
         Returns:
         --------
-        numpy.ndarray
+        numpy.ndarray or tuple
+            * See geokit.raster.extractMatrix
 
         """
-        
-        # open the dataset and get description
-        rasDS = loadRaster(source)
-        rasInfo = rasterInfo(rasDS)
-        rasExtent = Extent._fromInfo(rasInfo)
+        if strict:
+            ri = rasterInfo(source)
+            if not s.srs.IsSame( ri.srs ): raise GeoKitExtentError("Extent and source do not share an srs")
+            if not Extent._fromInfo(ri).contains(s, (ri.dx, ri.dy) ): raise GeoKitExtentError("Extent does not fit the raster's resolution")
 
-        # Find the main extent within the raster extent
-        xO, yO, xW, yW, xE, yE = rasExtent.findWithin(s, res=(rasInfo.dx, rasInfo.dy), yAtTop=rasInfo.yAtTop)
+        return extractMatrix(source, bounds=s.xyXY, boundsSRS=s.srs, **kwargs)
         
-        if xO<0 or yO<0 or xE>rasInfo.xWinSize or yE>rasInfo.yWinSize: 
-            raise GeoKitExtentError( "The extent does not appear to fit within the given raster")
-            
-        # Extract and return the matrix
-        arr = extractMatrix(rasDS, xOff=xO, yOff=yO, xWin=xW, yWin=yW)
-        
-        return arr
-
     def warp(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.raster.warp() which automatically sets the 
         'srs' and 'bounds' input. 
