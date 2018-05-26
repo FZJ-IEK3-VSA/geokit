@@ -1,3 +1,1 @@
-from geokit._algorithms.placeItemsInMask import placeItemsInMask
-from geokit._algorithms.filterCoordinates import filterCoordinates
 from geokit._algorithms.combineSimilarRasters import combineSimilarRasters

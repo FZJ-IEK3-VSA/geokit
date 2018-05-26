@@ -111,7 +111,9 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     if updateMeta: masterDS.SetMetadata( meta  )
 
     # Write final raster
-    del masterBand
     masterDS.FlushCache()
-    calculateStats(masterDS)
+    masterBand.ComputeRasterMinMax(0)
+    masterBand.ComputeBandStats(0)
+
+    return
 
