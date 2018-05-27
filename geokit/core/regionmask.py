@@ -822,7 +822,6 @@ class RegionMask(object):
                                  applyMask=False, noData=noData)
         # Check for results
         if not (final > 0).any():
-            print("WTF???")
             # no results were found
             return s._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape, 
                                   applyMask=applyMask, noData=noData)
@@ -861,14 +860,6 @@ class RegionMask(object):
           calls RegionMask.indicateFeatures
         * All keywords are passed on to RegionMask.indicateFeatures
         """
-        # Ensure geom is a list of geometries
-        if isinstance(geom, ogr.Geometry):
-            geom = [geom,]
-        elif isinstance(geom, list):
-            pass
-        else: # maybe geom is iterable
-            geom = list(geom)
-
         # Make a vector dataset
         ds = quickVector(geom)
 

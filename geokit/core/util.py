@@ -304,6 +304,15 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 def quickVector(geom, output=None):
     """GeoKit internal for quickly creating a vector datasource"""
     ######## Create a quick vector source
+    
+    if isinstance(geom, ogr.Geometry):
+        geom = [geom,]
+    elif isinstance(geom, list):
+        pass
+    else: # maybe geom is iterable
+        geom = list(geom)
+
+    # Arrange output
     if output:
         driver = gdal.GetDriverByName("ESRI Shapefile")
         dataSource = driver.Create( output, 0,0 )
@@ -312,13 +321,15 @@ def quickVector(geom, output=None):
         dataSource = driver.Create( "", 0, 0, 0, gdal.GDT_Unknown)
         
     # Create the layer and write feature
-    layer = dataSource.CreateLayer( "", geom.GetSpatialReference(), geom.GetGeometryType() )
-    feature = ogr.Feature(layer.GetLayerDefn())
-    feature.SetGeometry( geom )
+    layer = dataSource.CreateLayer( "", geom[0].GetSpatialReference(), geom[0].GetGeometryType() )
+    
+    for g in geom:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetGeometry( g )
 
-    # Create the feature
-    layer.CreateFeature( feature )
-    feature.Destroy()
+        # Create the feature
+        layer.CreateFeature( feature )
+        feature.Destroy()
 
     # Done!
     if output: return output
@@ -337,7 +348,7 @@ def fitBoundsTo(bounds, dx, dy):
 
     return xMin,yMin,xMax, yMax
 
-def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None):
+def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None, header=''):
     """GeoKit internal for quickly creating a raster datasource"""
 
     bounds = fitBoundsTo(bounds, dx, dy)
@@ -390,7 +401,7 @@ Feature = namedtuple("Feature", "geom attr")
 ### Image plotter
 
 AxHands = namedtuple("AxHands", "ax handles cbar")
-def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fontsize=16, hideAxis=False, figsize=(12,12), cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
+def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fontsize=16, hideAxis=False, figsize=(12,12), cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Parameters:
@@ -422,6 +433,9 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
     fontsize : int; optional
         A base font size to apply to tick marks which appear
           * Titles and labels are given a size of 'fontsize' + 2
+
+    cbar : bool; optional
+        If True, a color bar will be drawn
 
     cbarPadding : float; optional
         The spacing padding to add between the generated axis and the generated
@@ -481,29 +495,39 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
     """
     # Create an axis, if needed
     if isinstance(ax, AxHands):ax = ax.ax
-
     if ax is None:
         newAxis=True
+
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
-        rightMargin+= 0.08 # Add area on the right for colorbar text
-        if not hideAxis: 
-            leftMargin += 0.08
+        if not cbar: # We don't need a colorbar
+            if not hideAxis: leftMargin += 0.07
 
-        cbarExtraPad = 0.05
-        cbarWidth = 0.04
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin), 
+                           1-(topMargin+bottomMargin)])
+            cbax=None
 
-        ax = plt.axes([leftMargin, 
-                       bottomMargin, 
-                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
-                       1-(topMargin+bottomMargin)])
+        else: # We need a colorbar
+            rightMargin+= 0.08 # Add area on the right for colorbar text
+            if not hideAxis: 
+                leftMargin += 0.07
 
-        cbax = plt.axes([1-(rightMargin+cbarWidth), 
-                         bottomMargin+cbarExtraPad, 
-                         cbarWidth, 
-                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
+            cbarExtraPad = 0.05
+            cbarWidth = 0.04
+
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                           1-(topMargin+bottomMargin)])
+
+            cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                             bottomMargin+cbarExtraPad, 
+                             cbarWidth, 
+                             1-(topMargin+bottomMargin+2*cbarExtraPad)])
 
         if hideAxis: ax.axis("off")
         else: ax.tick_params(labelsize=fontsize)
@@ -524,16 +548,16 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
     h = ax.imshow( matrix, extent=extent, cmap=cmap, **kwargs)
 
     # Draw Colorbar
-    #print(cmap)
-    tmp = dict(cmap=cmap, orientation='vertical')
-    if not cbargs is None: tmp.update( cbargs )
+    if cbar:
+        tmp = dict(cmap=cmap, orientation='vertical')
+        if not cbargs is None: tmp.update( cbargs )
 
-    if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
-    else: cbar = plt.colorbar( h, cax=cbax )
+        if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
+        else: cbar = plt.colorbar( h, cax=cbax )
 
-    cbar.ax.tick_params(labelsize=fontsize)
-    if not cbarTitle is None:
-        cbar.set_label( cbarTitle , fontsize=fontsize+2 )
+        cbar.ax.tick_params(labelsize=fontsize)
+        if not cbarTitle is None:
+            cbar.set_label( cbarTitle , fontsize=fontsize+2 )
 
     # Do some formatting
     if newAxis:

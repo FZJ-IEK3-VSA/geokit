@@ -356,13 +356,16 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
         fGeom = ftr.GetGeometryRef().Clone()
         fItems = ftr.items().copy()
+        if onlyGeom: res = fGeom
+        elif onlyAttr: res = fItems
+        else: res = (fGeom, fItems)
     
     else:
         getter = _extractFeatures(source=source, geom=geom, where=where, srs=srs, 
                                   onlyGeom=onlyGeom, onlyAttr=onlyAttr,)
 
         # Get first result
-        fGeom, fItems = next(getter)
+        res = next(getter)
 
         # try to get a second result
         try:
@@ -378,12 +381,10 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
             fGeom.TransformTo( srs )
 
     # Done!
-    if onlyGeom:
-        return fGeom
-    elif onlyAttr: 
-        return fItems
+    if onlyGeom or onlyAttr:
+        return res
     else:
-        return Feature(fGeom, fItems)
+        return Feature(*res)
 
 def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
     """Convenience function calling extractFeatures and structuring the output as

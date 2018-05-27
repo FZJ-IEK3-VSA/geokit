@@ -1041,15 +1041,18 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
     processedData = processor( sourceData ) if processor else sourceData
     if(dtype and processedData.dtype!=dtype):
         processedData = processedData.astype(dtype)
+    
+    dtype = gdalType(processedData.dtype)
 
     # Ensure returned matrix is okay
     if( processedData.shape != sourceData.shape ):
         raise GeoKitRasterError( "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",format(rawSuitability.shape, sourceData.shape ))
     del sourceData
- 
+
     # Create an output raster
     if(output is None):
-        return quickRaster( dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, 
+        dtype = gdalType(processedData.dtype) if dtype is None else gdalType(dtype)
+        return quickRaster( dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, dType=dtype,
                             srs=dsInfo.srs, data=processedData, **kwargs )
 
     else:
@@ -1106,7 +1109,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Raster plotter
-def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
+def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
     """Draw a raster as an image on a matplotlib canvas
 
     Parameters:
@@ -1222,26 +1225,37 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
     if ax is None:
         newAxis=True
+
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
-        rightMargin+= 0.08 # Add area on the right for colorbar text
-        if not hideAxis: 
-            leftMargin += 0.08
+        if not cbar: # We don't need a colorbar
+            if not hideAxis: leftMargin += 0.07
 
-        cbarExtraPad = 0.05
-        cbarWidth = 0.04
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin), 
+                           1-(topMargin+bottomMargin)])
+            cbax=None
 
-        ax = plt.axes([leftMargin, 
-                       bottomMargin, 
-                       1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
-                       1-(topMargin+bottomMargin)])
+        else: # We need a colorbar
+            rightMargin+= 0.08 # Add area on the right for colorbar text
+            if not hideAxis: 
+                leftMargin += 0.07
 
-        cbax = plt.axes([1-(rightMargin+cbarWidth), 
-                         bottomMargin+cbarExtraPad, 
-                         cbarWidth, 
-                         1-(topMargin+bottomMargin+2*cbarExtraPad)])
+            cbarExtraPad = 0.05
+            cbarWidth = 0.04
+
+            ax = plt.axes([leftMargin, 
+                           bottomMargin, 
+                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+                           1-(topMargin+bottomMargin)])
+
+            cbax = plt.axes([1-(rightMargin+cbarWidth), 
+                             bottomMargin+cbarExtraPad, 
+                             cbarWidth, 
+                             1-(topMargin+bottomMargin+2*cbarExtraPad)])
 
         if hideAxis: ax.axis("off")
         else: ax.tick_params(labelsize=fontsize)
@@ -1279,15 +1293,16 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     h = ax.imshow( data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap)
 
     # Draw Colorbar
-    tmp = dict(cmap=cmap, orientation='vertical')
-    if not cbargs is None: tmp.update( cbargs )
+    if cbar:
+        tmp = dict(cmap=cmap, orientation='vertical')
+        if not cbargs is None: tmp.update( cbargs )
 
-    if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
-    else: cbar = plt.colorbar( h, cax=cbax )
+        if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
+        else: cbar = plt.colorbar( h, cax=cbax )
 
-    cbar.ax.tick_params(labelsize=fontsize)
-    if not cbarTitle is None:
-        cbar.set_label( cbarTitle , fontsize=fontsize+2 )
+        cbar.ax.tick_params(labelsize=fontsize)
+        if not cbarTitle is None:
+            cbar.set_label( cbarTitle , fontsize=fontsize+2 )
 
     # Do some formatting
     if newAxis:

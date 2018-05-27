@@ -1,26 +1,26 @@
 import os
 
-print("TESTING: util...")
+print("\nTESTING: util...")
 os.system("python test_util.py")
 
-print("TESTING: srs...")
+print("\nTESTING: srs...")
 os.system("python test_srs.py")
 
-print("TESTING: geom...")
+print("\nTESTING: geom...")
 os.system("python test_geom.py")
 
-print("TESTING: raster...")
+print("\nTESTING: raster...")
 os.system("python test_raster.py")
 
-print("TESTING: vector...")
+print("\nTESTING: vector...")
 os.system("python test_vector.py")
 
-print("TESTING: extent...")
+print("\nTESTING: extent...")
 os.system("python test_extent.py")
 
-print("TESTING: regionmask...")
+print("\nTESTING: regionmask...")
 os.system("python test_regionmask.py")
 
-print("TESTING: algorithms...")
+print("\nTESTING: algorithms...")
 os.system("python test_algorithms.py")
 
