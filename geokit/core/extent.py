@@ -187,7 +187,8 @@ class Extent(object):
         Extent
 
         """
-        if isinstance(source, LocationSet): return Extent.fromLocationSet(source)
+        if isinstance(source, Extent): return source
+        elif isinstance(source, LocationSet): return Extent.fromLocationSet(source)
         elif isinstance(source, ogr.Geometry): return Extent.fromGeom(source)
         elif isVector(source): return Extent.fromVector(source)
         elif isRaster(source): return Extent.fromRaster(source)
