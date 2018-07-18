@@ -425,7 +425,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     pandas.DataFrame
 
     """
-    return extractFeatures(**kwargs)
+    return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
 
 
 ####################################################################

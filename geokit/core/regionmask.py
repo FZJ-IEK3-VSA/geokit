@@ -206,7 +206,7 @@ class RegionMask(object):
         return RegionMask(extent=extent, pixelRes=(pixelWidth, pixelHeight), mask=mask, attributes=attributes)
 
     @staticmethod
-    def fromGeom(geom, pixelRes=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None):
+    def fromGeom(geom, pixelRes=DEFAULT_RES, srs=DEFAULT_SRS, extent=None, padExtent=DEFAULT_PAD, attributes=None, **k):
         """Make a RasterMask from a given geometry
 
         Parameters:
