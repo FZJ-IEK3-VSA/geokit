@@ -275,6 +275,7 @@ class LocationSet(object):
         s._bounds4326 = None
         s.count = len(s._locations)
 
+    def __len__(s): return s.count
     def __getitem__(s,i): return s._locations[i]
     def __repr__(s):
         out = " , Lon      , Lat\n"
