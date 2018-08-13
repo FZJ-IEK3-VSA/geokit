@@ -40,7 +40,7 @@ from geokit.core.geom import drawGeoms
 from geokit.core.raster import drawRaster
 
 # import the special algorithms
-#import geokit.algorithms
+import geokit.algorithms
 
 # Add useful paths for testing and stuff
 from collections import OrderedDict as _OrderedDict
