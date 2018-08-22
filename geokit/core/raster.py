@@ -152,7 +152,7 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
                 raise GeoKitRasterError("Output file already exists: %s" %output)
 
     # Ensure bounds is okay
-    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+    # bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
     
     ## Make a raster dataset and pull the band/maskBand objects
     originX = bounds[0]
