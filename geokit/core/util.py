@@ -351,7 +351,7 @@ def fitBoundsTo(bounds, dx, dy):
 def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None, header=''):
     """GeoKit internal for quickly creating a raster datasource"""
 
-    bounds = fitBoundsTo(bounds, dx, dy)
+    #bounds = fitBoundsTo(bounds, dx, dy)
     
     ## Make a raster dataset and pull the band/maskBand objects
     originX = bounds[0]
