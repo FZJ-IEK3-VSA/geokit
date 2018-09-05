@@ -61,7 +61,7 @@ def gdalType(s):
 
 ####################################################################
 # Raster writer
-def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, **kwargs):
+def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, scale=0, offset=0, **kwargs):
     """Create a raster file
     
     NOTE:
@@ -135,6 +135,16 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
         * array dimensions must fit raster dimensions as calculated by the bounds
           and the pixel resolution
 
+    scale : numeric; optional
+        The scaling value given to apply to all values
+        - numeric
+        * Must be the same datatye as the 'dtype' input (or that which is derived)
+
+    offset : numeric; optional
+        The offset value given to apply to all values
+        - numeric
+        * Must be the same datatye as the 'dtype' input (or that which is derived)
+
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
@@ -194,6 +204,8 @@ def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=No
 
         # Fill the raster will zeros, null values, or initial values (if given)
         band = raster.GetRasterBand(1)
+        if not scale is None: band.SetScale(scale)
+        if not offset is None: band.SetOffset(offset)
 
         if( not noData is None):
             band.SetNoDataValue(noData)
@@ -367,8 +379,12 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
         ywin=None
 
     # get Data
-    if maskBand: data = mb.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
-    else: data = sourceBand.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+    if maskBand: 
+        data = mb.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+    else: 
+        data = sourceBand.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+        if dsInfo.scale  != 1.0: data = data*dsInfo.scale
+        if dsInfo.offset != 0.0: data = data+dsInfo.offset
 
     # Correct 'nodata' values
     if autocorrect:
@@ -546,7 +562,7 @@ def isFlipped(source):
     if( dy<0 ): return True
     else: return False
 
-RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta, source")
+RasterInfo = namedtuple("RasterInfo","srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta, source, scale, offset")
 def rasterInfo(sourceDS):
     """Returns a named tuple containing information relating to the input raster
 
@@ -566,6 +582,8 @@ def rasterInfo(sourceDS):
                     dx:The raster's pixelWidth
                     dy: The raster's pixelHeight
                     noData: The noData value used by the raster
+                    scale: The scale value used by the raster
+                    offset: The offset value used by the raster
                     xWinSize: The width of the raster is pixels
                     yWinSize: The height of the raster is pixels
                     meta: The raster's meta data )
@@ -581,6 +599,8 @@ def rasterInfo(sourceDS):
     sourceBand = sourceDS.GetRasterBand(1)
     output['dtype'] = sourceBand.DataType
     output['noData'] = sourceBand.GetNoDataValue()
+    output['scale'] = sourceBand.GetScale()
+    output['offset'] = sourceBand.GetOffset()
     
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
@@ -765,11 +785,12 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     for xi,yi,ib in zip(xStarts, yStarts, inBounds):
         if not ib:
-            data = np.zeros((window,window))
-            data[:,:] = np.nan
+            data = np.empty((window,window))
         else:
             # Open and read from raster
             data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
+            if info.scale  != 1.0: data = data*info.scale
+            if info.offset != 0.0: data = data+info.offset
 
             # Look for nodata
             if not info.noData is None:
