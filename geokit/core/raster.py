@@ -61,7 +61,7 @@ def gdalType(s):
 
 ####################################################################
 # Raster writer
-def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, scale=0, offset=0, **kwargs):
+def createRaster( bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, scale=1, offset=0, **kwargs):
     """Create a raster file
     
     NOTE:

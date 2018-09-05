@@ -258,6 +258,10 @@ class LocationSet(object):
         if not _skip_check:
             if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
                 s._locations = np.array([Location.load(locations, srs=srs), ])
+            elif isinstance(locations, LocationSet):
+                s._locations = locations[:]
+            elif isinstance(locations, pd.DataFrame): 
+                s._locations = LocationSet( locations["geom"] )[:]
             else:
                 try: # Try loading all locations one at a time
                     s._locations = np.array([Location.load(l, srs=srs) for l in locations])
