@@ -262,7 +262,7 @@ class Extent(object):
         return "(%.5f,%.5f,%.5f,%.5f)"%s.xyXY
 
 
-    def pad(s, pad): 
+    def pad(s, pad, percent=False): 
         """Pad the extent in all directions
         
         Parameters:
@@ -271,6 +271,10 @@ class Extent(object):
             The amount to pad in all directions
             * In units of the extent's srs
             * Can also accept a negative padding
+
+        percent : bool, optional
+            If True, the padding values are understood to be a percentage of the
+            unpadded extent
         
         Returns:
         --------
@@ -286,6 +290,10 @@ class Extent(object):
         except: 
             xpad = pad
             ypad = pad
+
+        if percent:
+            xpad = xpad/100*(s.xMax-s.xMin) /2
+            ypad = ypad/100*(s.yMax-s.yMin) /2
 
         # Pad the extent
         return Extent(s.xMin-xpad, s.yMin-ypad, s.xMax+xpad, s.yMax+ypad, srs=s.srs)

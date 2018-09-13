@@ -962,7 +962,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
 
         # Do rasterize
         tmp = gdal.Rasterize( output, source, outputBounds=bounds, xRes=pixelWidth, yRes=pixelHeight,
-                              outputSRS=srs, outputType=getattr(gdal, dtype), noData=noData, where=where, 
+                              outputSRS=srs, noData=noData, where=where, 
                               creationOptions=co, targetAlignedPixels=aligned, **kwargs)
         
         if not isRaster(tmp): raise GeoKitRegionMaskError("Rasterization failed!")
