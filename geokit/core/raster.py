@@ -1286,7 +1286,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     # Load the raster datasource and check for transformation
     source = loadRaster(source)
     info = rasterInfo(source)
-
+    
     if not (srs is None and resolution is None and cutline is None and xlim is None and ylim is None):
         if not (xlim is None and ylim is None):
             bounds = (xlim[0], ylim[0], xlim[1], ylim[1],)
@@ -1531,6 +1531,10 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(source)
+    if dsInfo.scale != 1.0 or dsInfo.offset != 0.0:
+        isAdjusted = True
+    else:
+        isAdjusted = False
 
     # Handle potentially missing arguments
     if not srs is None: srs = loadSRS(srs)
@@ -1616,6 +1620,19 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         # Do a warp
         result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
         destRas.FlushCache()
+
+    # Do we need to readjust?
+    if isAdjusted: 
+        if isinstance(destRas, str):
+            ds = loadRaster(destRas, True)
+        else:
+            ds = destRas
+        band = ds.GetRasterBand(1)
+        band.SetScale(dsInfo.scale)
+        band.SetOffset(dsInfo.offset)
+        band.FlushCache()
+        ds.FlushCache()
+        del band, ds
 
     # Done!
     if not cutline is None: del tempdir
