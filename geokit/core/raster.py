@@ -1130,7 +1130,7 @@ def indexToCoord( yi, xi, source, asPoint=False):
     return output
 
 ### Raster plotter
-def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
+def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, zorder=1, **kwargs):
     """Draw a raster as an image on a matplotlib canvas
 
     Parameters:
@@ -1311,7 +1311,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
     # Draw image
     ext=(info.xMin,info.xMax,info.yMin,info.yMax,)
-    h = ax.imshow( data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap)
+    h = ax.imshow( data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap, zorder=zorder)
 
     # Draw Colorbar
     if cbar:
