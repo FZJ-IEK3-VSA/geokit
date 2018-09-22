@@ -6,7 +6,7 @@ import gdal, ogr, osr
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from glob import glob
 import warnings
-from collections import namedtuple, Iterable, defaultdict
+from collections import namedtuple, Iterable, defaultdict, OrderedDict
 import pandas as pd
 from scipy.stats import describe
 from scipy.interpolate import RectBivariateSpline

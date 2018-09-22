@@ -6,5 +6,6 @@ from geokit.core.vector import (   loadVector,
                                     extractFeature, 
                                     extractAsDataFrame,
                                     createVector, 
+                                    createGeoJson,
                                     mutateVector, 
                                     rasterize )

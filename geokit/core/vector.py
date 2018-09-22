@@ -668,6 +668,68 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         dataSource is None
         raise e
 
+
+def createGeoJson(geoms, output=None, srs=4326,):
+    """Convert a set of geometries to a geoJSON object"""
+    if(srs): srs = loadSRS(srs)
+
+    # arrange geom, index, and data
+    if isinstance(geoms, ogr.Geometry): # geoms is a single geometry
+        finalGeoms = [geoms,]
+        data = None
+        index = [0,]
+
+    elif isinstance(geoms, pd.Series):
+        index = geoms.index
+        finalGeoms = geoms.values
+        data = None
+
+    elif isinstance(geoms, pd.DataFrame):
+        index = geoms.index
+        finalGeoms = geoms.pop("geom").values
+        data = geoms
+        data["_index"] = index
+    else:
+        finalGeoms = list(geoms)
+        data = None
+        index = list(range(len(finalGeoms)))
+
+    if len(finalGeoms)==0: raise GeoKitVectorError("Empty geometry list given")
+
+    # Transform?
+    if not srs is None: finalGeoms = transform(finalGeoms, toSRS=srs)
+
+    # Make JSON object
+    if output is None:
+        from io import StringIO
+        fo = StringIO()
+        returnRaw=True
+    else:
+        fo = open(output, "w")
+        returnRaw=False
+
+    fo.write('{"type":"FeatureCollection","features":[')
+
+    for j,i,g in zip(range(len(index)), index, finalGeoms):
+
+        fo.write('%s{"type":"Feature",'%("" if j==0 else ","))
+        if data is None:
+            fo.write('"properties":{"_index":%s},'%str(i))
+        else:
+            fo.write('"properties":%s,'%data.loc[i].to_json())
+
+        fo.write('"geometry":%s}'%g.ExportToJson())
+        #fo.write('"geometry": {"type": "Point","coordinates": [125.6, 10.1] }}')
+    fo.write("]}")
+    
+    # Done!
+    if returnRaw:
+        fo.seek(0)
+        output = fo.readline()
+        
+    fo.close()
+    return output
+
 ####################################################################
 # mutuate a vector
 def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldDef=None, output=None, keepAttributes=True, _slim=False, **kwargs):
