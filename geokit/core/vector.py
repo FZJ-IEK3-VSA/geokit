@@ -668,8 +668,7 @@ def createVector( geoms, output=None, srs=None, fieldVals=None, fieldDef=None, o
         dataSource is None
         raise e
 
-
-def createGeoJson(geoms, output=None, srs=4326,):
+def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=''):
     """Convert a set of geometries to a geoJSON object"""
     if(srs): srs = loadSRS(srs)
 
@@ -686,8 +685,8 @@ def createGeoJson(geoms, output=None, srs=4326,):
 
     elif isinstance(geoms, pd.DataFrame):
         index = geoms.index
-        finalGeoms = geoms.pop("geom").values
-        data = geoms
+        finalGeoms = geoms.geom.values
+        data = geoms.loc[:, geoms.columns!='geom']
         data["_index"] = index
     else:
         finalGeoms = list(geoms)
@@ -700,35 +699,64 @@ def createGeoJson(geoms, output=None, srs=4326,):
     if not srs is None: finalGeoms = transform(finalGeoms, toSRS=srs)
 
     # Make JSON object
-    if output is None:
-        from io import StringIO
-        fo = StringIO()
-        returnRaw=True
-    else:
-        fo = open(output, "w")
-        returnRaw=False
+    from io import BytesIO
+    if not output is None and not isinstance(output, str):
+        if not output.writable(): raise GeoKitVectorError("Output object is not writable")
 
-    fo.write('{"type":"FeatureCollection","features":[')
+        if topo: 
+            fo = BytesIO()
+        else:
+            fo = output
+    elif isinstance(output, str) and not topo: 
+        fo = open(output, "wb")
+    else:
+        fo = BytesIO()
+
+    fo.write(bytes('{"type":"FeatureCollection","features":[', encoding='utf-8'))
 
     for j,i,g in zip(range(len(index)), index, finalGeoms):
 
-        fo.write('%s{"type":"Feature",'%("" if j==0 else ","))
+        fo.write(bytes('%s{"type":"Feature",'%("" if j==0 else ","), encoding='utf-8'))
         if data is None:
-            fo.write('"properties":{"_index":%s},'%str(i))
+            fo.write(bytes('"properties":{"_index":%s},'%str(i), encoding='utf-8'))
         else:
-            fo.write('"properties":%s,'%data.loc[i].to_json())
+            fo.write(bytes('"properties":%s,'%data.loc[i].fillna(fill).to_json(), encoding='utf-8'))
 
-        fo.write('"geometry":%s}'%g.ExportToJson())
-        #fo.write('"geometry": {"type": "Point","coordinates": [125.6, 10.1] }}')
-    fo.write("]}")
-    
-    # Done!
-    if returnRaw:
+        fo.write(bytes('"geometry":%s}'%g.ExportToJson(), encoding='utf-8'))
+        #fo.write(bytes('"geometry": {"type": "Point","coordinates": [125.6, 10.1] }}', encoding='utf-8'))
+    fo.write(bytes("]}", encoding='utf-8'))
+    fo.flush()
+
+    # Put in the right format
+    if topo:
+        from topojson import conversion
+        from io import TextIOWrapper
+
         fo.seek(0)
-        output = fo.readline()
+        topo = conversion.convert( TextIOWrapper(fo), object_name="primary" ) # automatically closes fo
+        topo = str(topo).replace("'", '"') 
+
+    # Done!
+    if output is None:
+        if topo: return topo
+        else: 
+            fo.seek(0)
+            geojson = fo.read()
+            fo.close()
+            return geojson.decode('utf-8')
         
-    fo.close()
-    return output
+    elif isinstance(output, str):
+        if topo:
+            with open(output, "w") as fo:
+                fo.write(topo)
+        else:
+            pass # we already wrote to the file!   
+        return output
+
+    else:
+        if topo: output.write(bytes(topo, encoding='utf-8'))
+        else: pass # We already wrote to the file!
+        return None
 
 ####################################################################
 # mutuate a vector
