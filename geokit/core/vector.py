@@ -356,9 +356,6 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
         fGeom = ftr.GetGeometryRef().Clone()
         fItems = ftr.items().copy()
-        if onlyGeom: res = fGeom
-        elif onlyAttr: res = fItems
-        else: res = (fGeom, fItems)
     
     else:
         getter = _extractFeatures(source=source, geom=geom, where=where, srs=srs, 
@@ -366,6 +363,10 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
         # Get first result
         res = next(getter)
+
+        if onlyGeom: fGeom = res
+        elif onlyAttr: fItems = res
+        else: (fGeom, fItems) = res
 
         # try to get a second result
         try:
@@ -375,7 +376,7 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
         else:
             raise GeoKitVectorError("More than one feature found")
 
-    if(not srs is None):
+    if(not srs is None and not onlyAttr):
         srs = loadSRS(srs)
         if (not fGeom.GetSpatialReference().IsSame(srs)):
             fGeom.TransformTo( srs )
@@ -384,7 +385,7 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
     if onlyGeom or onlyAttr:
         return res
     else:
-        return Feature(*res)
+        return Feature(fGeom, fItems)
 
 def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
     """Convenience function calling extractFeatures and structuring the output as
