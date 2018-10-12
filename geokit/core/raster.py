@@ -1243,12 +1243,10 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
     """
     # Create an axis, if needed
     if isinstance(ax, AxHands):ax = ax.ax
+    import matplotlib.pyplot as plt
 
     if ax is None:
         newAxis=True
-
-        import matplotlib.pyplot as plt
-
         plt.figure(figsize=figsize)
 
         if not cbar: # We don't need a colorbar
@@ -1318,8 +1316,10 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
         tmp = dict(cmap=cmap, orientation='vertical')
         if not cbargs is None: tmp.update( cbargs )
 
-        if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
-        else: cbar = plt.colorbar( h, cax=cbax )
+        if cbax is None:  
+            cbar = plt.colorbar( h, ax=ax, **tmp)
+        else: 
+            cbar = plt.colorbar( h, cax=cbax, **tmp )
 
         cbar.ax.tick_params(labelsize=fontsize)
         if not cbarTitle is None:

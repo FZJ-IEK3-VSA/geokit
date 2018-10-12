@@ -1069,7 +1069,7 @@ class RegionMask(object):
             if applyMask:
                 if "cutline" in kwargs: 
                     raise GeoKitRegionMaskError("Cannot apply both a cutline and the mask when returning the warped dataset")
-                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, cutline=s.vector, output=output, **kwargs)   
+                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, cutline=s.vectorPath, output=output, **kwargs)   
             else:
                 newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, output=output, **kwargs)
 
