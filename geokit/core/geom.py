@@ -519,7 +519,7 @@ def polygonizeMask( mask, bounds=None, srs=None, flat=True, shrink=True):
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
     
-    if not (mask.dtype == np.bool or matrix.dtype == np.uint8):
+    if not (mask.dtype == np.bool or mask.dtype == np.uint8):
         raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
 
     # Do vectorization
