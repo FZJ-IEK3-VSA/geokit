@@ -618,6 +618,7 @@ class RegionMask(object):
             * If float : The exact value to accept
               - Maybe cause issues due to float comparison issues. Using an 
                 integer is usually better
+            * If [int/float, ...] : The exact values to accept
             * If (float, float) : The inclusive Min and Max values to accept
               - None refers to no bound
               - Ex. (None, 5) -> "Indicate all values equal to and below 5"
@@ -662,11 +663,14 @@ class RegionMask(object):
 
         """
         # Unpack value
+        valueMin,valueMax = None, None
+        valueEquals = None
+        valueList = None
         if isinstance(value, tuple):
             valueMin,valueMax = value
-            valueEquals = None
+        elif isinstance(value, list):
+            valueList = value
         else:
-            valueMin,valueMax = None,None
             valueEquals = value
 
         # make processor
@@ -678,6 +682,8 @@ class RegionMask(object):
             ## Do processing
             if(not valueEquals is None):
                 output = data == valueEquals
+            elif(valueList is not None):
+                output = np.isin(data, valueList)
             else:
                 output = np.ones(data.shape, dtype="bool")
             
@@ -1363,4 +1369,3 @@ class RegionMask(object):
 
         """
         return polygonizeMask(mask, bounds=s.extent.xyXY, srs=s.srs, flat=flat, shrink=shrink)
-        
