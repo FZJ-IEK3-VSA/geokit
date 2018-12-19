@@ -1241,13 +1241,14 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
        'cbar' -> The colorbar handle if it was drawn
 
     """
+
+    import matplotlib.pyplot as plt
+
     # Create an axis, if needed
     if isinstance(ax, AxHands):ax = ax.ax
 
     if ax is None:
         newAxis=True
-
-        import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
