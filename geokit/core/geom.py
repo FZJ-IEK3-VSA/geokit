@@ -751,7 +751,7 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
     return h
 
 
-def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0.01, rightMargin=0.01, topMargin=0.01, bottomMargin=0.01, **mplArgs):
+def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12,12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbar=True, cbax=None, cbargs=None, leftMargin=0.01, rightMargin=0.01, topMargin=0.01, bottomMargin=0.01, **mplArgs):
     """Draw geometries onto a matplotlib figure
     
     * Each geometry type is displayed as an appropriate plotting type
@@ -1033,7 +1033,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
             warnings.warn(msg, UserWarning)
 
     # Add the colorbar, maybe
-    if not colorBy is None:
+    if not colorBy is None and cbar:
         from matplotlib.colorbar import ColorbarBase
         from matplotlib.colors import Normalize
 
