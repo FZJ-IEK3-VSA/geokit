@@ -382,10 +382,9 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
             fGeom.TransformTo( srs )
 
     # Done!
-    if onlyGeom or onlyAttr:
-        return res
-    else:
-        return Feature(fGeom, fItems)
+    if onlyGeom: return fGeom
+    elif onlyAttr: return fItems
+    else: return Feature(fGeom, fItems)
 
 def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
     """Convenience function calling extractFeatures and structuring the output as
