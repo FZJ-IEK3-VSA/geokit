@@ -50,6 +50,38 @@ Or install directly via python as
 
 See the [Examples page](Examples/)
 
+## Docker
+
+We are trying to get GeoKit to work within a Docker container. Try it out!
+
+* First pull the image with:
+```bash
+docker pull sevberg/geokit:latest
+```
+
+* You can then start a basic python interpreter with:
+```bash
+docker run -it sevberg/geokit:latest /bin/bash -c "python"
+```
+
+* Or you can start a jupyter notebook using:
+```bash
+docker run -it \
+    -p 8888:8888 \
+    sevberg/geokit /bin/bash \
+    -c "jupyter notebook --notebook-dir=/notebook-dir --ip='*' --port=8888 --no-browser --allow-root"
+```
+ - Which can then be connected to at the address "localhost:8888:<API-KEY>"
+ - The API Key can be found from the output of the earlier command
+
+* Finally, you might want to mount a volume to access geospatial data. For this you can use:
+```bash
+docker run -it \
+    --mount target=/notebook-dir,type=bind,src=<PATH-TO-DIRECTORY> \
+    -p 8888:8888 \
+    sevberg/geokit /bin/bash \
+    -c "jupyter notebook --notebook-dir=/notebook-dir --ip='*' --port=8888 --no-browser --allow-root"
+```
 ## License
 
 MIT License
