@@ -6,7 +6,9 @@ RUN conda install -y -c conda-forge numpy pandas matplotlib scipy descartes gdal
     conda clean -a
 
 # Install geokit and test
-COPY setup.py MANIFEST.in LICENSE.txt README.md contributors.txt Examples geokit /repos/geokit/
+COPY setup.py MANIFEST.in LICENSE.txt README.md contributors.txt /repos/geokit/
+COPY Examples /repos/geokit/Examples
+COPY geokit /repos/geokit/geokit
 RUN pip install -e /repos/geokit
 
 # Setup entry
