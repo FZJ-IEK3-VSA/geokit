@@ -69,7 +69,7 @@ docker run -it sevberg/geokit:latest -c "python"
 docker run -it \
     -p 8888:8888 \
     sevberg/geokit:latest \
-    -c "jupyter notebook --notebook-dir=/notebook-dir --ip='*' --port=8888 --no-browser --allow-root"
+    -c "jupyter notebook --ip='*' --port=8888 --no-browser --allow-root"
 ```
  - Which can then be connected to at the address "localhost:8888:<API-KEY>"
  - The API Key can be found from the output of the earlier command
@@ -77,10 +77,10 @@ docker run -it \
 * Finally, you might want to mount a volume to access geospatial data. For this you can use:
 ```bash
 docker run -it \
-    --mount target=/notebook-dir,type=bind,src=<PATH-TO-DIRECTORY> \
+    --mount target=/notebooks,type=bind,src=<PATH-TO-DIRECTORY> \
     -p 8888:8888 \
     sevberg/geokit:latest  \
-    -c "jupyter notebook --notebook-dir=/notebook-dir --ip='*' --port=8888 --no-browser --allow-root"
+    -c "jupyter notebook --notebook-dir=/notebooks --ip='*' --port=8888 --no-browser --allow-root"
 ```
 ## License
 
