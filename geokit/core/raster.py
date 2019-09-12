@@ -1082,7 +1082,7 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
 
         return output
 
-def indexToCoord( yi, xi, source, asPoint=False):
+def indexToCoord( yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=None, yAtTop=True, srs=None):
     """Convert the index of a raster to coordinate values.
     
     Parameters:
@@ -1107,24 +1107,39 @@ def indexToCoord( yi, xi, source, asPoint=False):
     * If 'asPoint' is False: tuple -> (x,y) coordinates
 
     """
-    # Get source info
-    if not isinstance(source, RasterInfo): source = rasterInfo(source)
+    if not source is None:
+        # Get source info
+        if not isinstance(source, RasterInfo): source = rasterInfo(source)
+
+        xMin = source.xMin
+        xMax = source.xMax
+        yMin = source.yMin
+        yMax = source.yMax
+        dx = source.dx
+        dy = source.dy
+        yAtTop = source.yAtTop
+    else:
+        try:
+            xMin, yMin, xMax, yMax = bounds
+        except:
+            xMin, yMin, xMax, yMax = bounds.xyXY
 
     # Caclulate coordinates
-    if source.yAtTop: 
-        x = source.xMin+source.pixelWidth*xi
-        y = source.yMax-source.pixelHeight*yi
+    if yAtTop: 
+        x = xMin+dx*(xi+0.5)
+        y = yMax-dy*(yi+0.5)
     else:
-        x = source.xMin+source.pixelWidth*xi
-        y = source.yMin+source.pixelHeight*yi
+        x = xMin+dx*(xi+0.5)
+        y = yMin+dy*(yi+0.5)
 
     # make the output
     if asPoint: 
         try: # maybe x and y are iterable
-            output = [point((xx,yy),srs=source.srs) for xx,yy in zip(x,y)]
+            output = [point((xx,yy),srs=srs) for xx,yy in zip(x,y)]
         except TypeError: # x and y should be a single point
-            output = point((x,y),srs=source.srs)
-    else: output = x,y
+            output = point((x,y),srs=srs)
+    else: 
+        output = np.column_stack([x,y])
 
     # Done!
     return output
