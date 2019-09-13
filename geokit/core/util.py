@@ -451,20 +451,15 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
 
     vmin : float; optional
         The minimum value to color
-          * Only useful when 'colorBy' is given
 
     vmax : float; optional
         The maximum value to color
-          * Only useful when 'colorBy' is given
 
     cmap : str or matplotlib ColorMap; optional
         The colormap to use when coloring
-          * Only useful when 'colorBy' is given
 
     cbax : matplotlib axis; optional
         An explicitly given axis to use for drawing the colorbar
-          * If not given, but 'colorBy' is given, an axis for the colorbar is 
-            automatically generated
     
     cbargs : dict; optional
 
@@ -545,7 +540,7 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
     else:
         extent = None
 
-    h = ax.imshow( matrix, extent=extent, cmap=cmap, **kwargs)
+    h = ax.imshow( matrix, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
     # Draw Colorbar
     if cbar:
