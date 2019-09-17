@@ -25,10 +25,10 @@ First clone a local copy of the repository to your computer
 
 	git clone https://github.com/FZJ-IEK3-VSA/geokit.git
 
-Be sure GDAL and netCDF4 are previously installed
+Be sure GDAL is previously installed
 	* If using Anaconda, this can be accomplished via:
 
-	conda install -c conda-forge gdal>=2.0.0 netCDF4
+	conda install -c conda-forge gdal==2.4.1
 
 !For Windows users! 
 	* Sometimes a path variable will need to be set to tell the system where to find the GDAL dependancies
