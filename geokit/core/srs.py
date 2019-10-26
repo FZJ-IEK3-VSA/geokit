@@ -83,7 +83,11 @@ def loadSRS(source):
         srs.ImportFromEPSG(source)
     else:
         raise GeoKitSRSError("Unknown srs source type: ", type(source))
-        
+
+    # https://trac.osgeo.org/gdal/wiki/rfc73_proj6_wkt2_srsbarn
+    if osgeo.gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
     return srs
 
 # Load a few typical constants

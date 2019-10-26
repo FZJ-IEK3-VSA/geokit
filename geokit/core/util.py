@@ -2,7 +2,7 @@
 
 import os, sys, re
 import numpy as np
-import gdal, ogr, osr
+import gdal, ogr, osr, osgeo
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from glob import glob
 import warnings
