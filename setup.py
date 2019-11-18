@@ -8,7 +8,7 @@ setup(
     packages = find_packages(),
     include_package_data=True,
     install_requires = [
-        "gdal==2.4.1",
+        "gdal",
         "numpy",
         "descartes",
         "pandas",
