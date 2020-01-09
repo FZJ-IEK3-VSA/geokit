@@ -3,11 +3,11 @@ from setuptools import setup, find_packages
 setup(
     name='geokit',
     version='1.1.3',
-    author='Severin Ryberg',
+    author='David Severin Ryberg',
     url='https://github.com/FZJ-IEK3-VSA/geokit',
-    packages = find_packages(),
+    packages=find_packages(),
     include_package_data=True,
-    install_requires = [
+    install_requires=[
         "gdal==2.4.1",
         "numpy",
         "descartes",
