@@ -153,6 +153,33 @@ def test_interpolateValues():
     assert np.isclose(v, 12)  # func
 
 
+def test_extractMatrix():
+    # source, bounds=None, boundsSRS='latlon', maskBand=False, autocorrect=False
+    ri = raster.rasterInfo(CLC_RASTER_PATH)
+
+    # Do a full read
+    mat1 = raster.extractMatrix(CLC_RASTER_PATH)
+    assert np.isclose(10650913, mat1.sum())  # full read values
+    assert np.isclose(7.93459728918, mat1.std())  # full read values
+
+    # Read within a boundary
+    mat2 = raster.extractMatrix(CLC_RASTER_PATH, bounds=(
+        4015000.0, 3032000.0, 4020000.0, 3040000.0), boundsSRS=3035)
+    assert np.isclose(mat1[710:790, 29:79], mat2).all()  # extract bounds
+
+    # Read with conversion
+    mat3, bounds = raster.extractMatrix(CLC_RASTER_PATH, bounds=(
+        6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
+    assert bounds == (4037300.0, 3049100.0, 4074100.0, 3078600.0)
+    assert np.isclose(mat3.sum(), 2280501)
+    assert np.isclose(mat3.std(), 7.40666185608)
+
+    # Test flipped raster
+    mat4, bounds = raster.extractMatrix(CLC_FLIPCHECK_PATH, bounds=(
+        6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
+    assert np.isclose(mat4, mat3).all()  # flipped raster
+
+
 def test_gradient():
     # create a sloping surface dataset
     x, y = np.meshgrid(np.abs(np.arange(-100, 100)),
@@ -283,34 +310,6 @@ def test_createRasterLike():
     newRaster = raster.createRasterLike(sourceInfo, data=data*4)
     newdata = raster.extractMatrix(newRaster)
     assert np.isclose(data, newdata/4).all()
-
-
-def test_extractMatrix():
-    # source, bounds=None, boundsSRS='latlon', maskBand=False, autocorrect=False
-    ri = raster.rasterInfo(CLC_RASTER_PATH)
-
-    # Do a full read
-    mat1 = raster.extractMatrix(CLC_RASTER_PATH)
-    assert np.isclose(10650913, mat1.sum())  # full read values
-    assert np.isclose(7.93459728918, mat1.std())  # full read values
-
-    # Read within a boundary
-    mat2 = raster.extractMatrix(CLC_RASTER_PATH, bounds=(
-        4015000.0, 3032000.0, 4020000.0, 3040000.0), boundsSRS=3035)
-    assert np.isclose(mat1[710:790, 29:79], mat2).all()  # extract bounds
-
-    # Read with conversion
-    mat3, bounds = raster.extractMatrix(CLC_RASTER_PATH, bounds=(
-        6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
-    assert bounds == (4037300.0, 3049100.0, 4074100.0, 3078600.0)
-    assert np.isclose(mat3.sum(), 2280501)
-    assert np.isclose(mat3.std(), 7.40666185608)
-
-    # Test flipped raster
-    mat4, bounds = raster.extractMatrix(CLC_FLIPCHECK_PATH, bounds=(
-        6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True)
-    assert np.isclose(mat4, mat3).all()  # flipped raster
-
 
 def test_rasterStats():
     result = raster.rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
