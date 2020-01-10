@@ -53,3 +53,6 @@ def test_quickRaster(): assert False
 
 @pytest.mark.skip("No test implemented for: util.drawImage")
 def test_drawImage(): assert False
+
+@pytest.mark.skip("No test implemented for: util.KernelProcessor")
+def test_KernelProcessor(): assert False

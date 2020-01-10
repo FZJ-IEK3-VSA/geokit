@@ -261,7 +261,7 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     Example:
     --------
     * Say we want to make a processor which calculates the average of pixels 
-      which are within a distance of 2 indcies. In other words, we want the 
+      which are within a distance of 2 indicies. In other words, we want the 
       average of a 5x5 matrix centered around each pixel.
     * Assume that we can use the value -9999 as a no data value
 

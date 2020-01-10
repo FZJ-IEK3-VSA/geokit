@@ -1,51 +1,49 @@
-from helpers import *
-from geokit.geom import *
-from geokit import Location, LocationSet
+from .helpers import *
+from geokit import Location, LocationSet, geom
 
-xy = (9,5)
+xy = (9, 5)
+
 
 def test_Location___init__():
     l = Location(*xy)
-    print("Location___init__ passed")
+    assert True
+
 
 def test_Location___hash__():
     l = Location(*xy)
-    compare(hash(l), 4109769254643766781)
-    print( "Location___hash__ passed")
+    assert hash(l) == 4109769254643766781
+
 
 def test_Location___eq__():
     # TEst against locations
     l1 = Location(*xy)
     l2 = Location(*xy)
-    
-    if not l1 == l2: error("Location matching")
+
+    assert l1 == l2
 
     l3 = Location(xy[0], xy[1]+0.001)
-    if l1 == l3: error("Location matching")
+    assert (l1 == l3) == False
 
     # test against tuple
-    if not l1 == xy: error("Location matching")
+    assert l1 == xy
 
     # test against geometry
-    pt = point(*xy, srs=4326)
+    pt = geom.point(*xy, srs=4326)
     pt.TransformTo(EPSG3035)
 
-    if not l1 == pt: error("Location matching")
-    
-    print( "Location___eq__ passed")
+    assert l1 == pt
+
 
 def test_Location___ne__():
-    print( "Location___ne__ is trivial")
+    l1 = Location(*xy)
+    l3 = Location(xy[0], xy[1]+0.001)
+    assert l1 != l3
+
 
 def test_Location___str__():
-    
     l1 = Location(*xy)
-    if not str(l1)=='(9.00000,5.00000)': error("string representation")
+    assert str(l1) == '(9.00000,5.00000)'
 
-    print( "Location___str__ passed")
-
-def test_Location___repr__():
-    print( "Location___repr__ is trivial")
 
 def test_Location_fromString():
     l1 = Location(*xy)
@@ -57,175 +55,264 @@ def test_Location_fromString():
             ' qweqdada( 9.00000,5.00000)adfafdq ',
             ' ( 9.00,  5) ',
             ' ( 9.00000,  5.00000) ']
-    
+
     for p in okay:
-        if not l1==Location.fromString(p): error("fromString")
-    
-    print( "Location_fromString passed")
+        assert l1 == Location.fromString(p)
+
 
 def test_Location_fromPointGeom():
     l1 = Location(*xy)
 
-    pt = point(*xy, srs=4326)
+    pt = geom.point(*xy, srs=4326)
     pt.TransformTo(EPSG3035)
     l2 = Location.fromPointGeom(pt)
-    if not l1==l2: error("fromPointGeom")
+    assert l1 == l2
 
-    print( "Location_fromPointGeom passed")
 
 def test_Location_fromXY():
     l1 = Location(*xy)
-    
-    pt = point(*xy, srs=4326)
+
+    pt = geom.point(*xy, srs=4326)
     pt.TransformTo(EPSG3035)
 
     l2 = Location.fromXY(pt.GetX(), pt.GetY(), srs=EPSG3035)
-    if not l1==l2: error("fromXY")
+    assert l1 == l2
 
-    print( "Location_fromXY passed")
 
 def test_Location_latlon():
-    print( "Location_latlon is trivial")
+    pt = geom.point(*xy, srs=4326)
+    pt.TransformTo(EPSG3035)
+
+    l1 = Location.fromPointGeom(pt)
+    assert np.isclose(l1.latlon, (xy[1], xy[0])).all()
+
 
 def test_Location_asGeom():
-    print( "Location_asGeom is trivial")
+    l1 = Location(*xy)
+
+    g = l1.asGeom()
+    assert g.GetSpatialReference().IsSame(EPSG4326)
+    assert np.isclose(g.GetX(), xy[0])
+    assert np.isclose(g.GetY(), xy[1])
+
+    pt = geom.point(*xy, srs=4326)
+    pt.TransformTo(EPSG3035)
+    g = l1.asGeom(srs=EPSG3035)
+    assert g.GetSpatialReference().IsSame(EPSG3035)
+    assert np.isclose(g.GetX(), pt.GetX())
+    assert np.isclose(g.GetY(), pt.GetY())
+
 
 def test_Location_asXY():
-    print( "Location_asXY is trivial")
+    l1 = Location(*xy)
+    assert np.isclose(l1.asXY(srs=EPSG4326), xy).all()
+
+    pt = geom.point(*xy)
+    pt.TransformTo(EPSG3035)
+    assert np.isclose(l1.asXY(srs=EPSG3035), (pt.GetX(), pt.GetY())).all()
+
 
 def test_Location_geom():
-    print( "Location_geom is trivial")
+    l1 = Location(*xy)
+
+    g = l1.geom
+    assert g.GetSpatialReference().IsSame(EPSG4326)
+    assert np.isclose(g.GetX(), xy[0])
+    assert np.isclose(g.GetY(), xy[1])
+
+    l2 = Location.fromXY(*xy, srs=EPSG3035)
+    assert not g.GetSpatialReference().IsSame(EPSG3035)
+
 
 def test_Location_makePickleable():
-    print( "Location_makePickleable is trivial")
+    l1 = Location(*xy)
+    assert l1._geom is None
+
+    g = l1.geom
+    assert not l1._geom is None
+
+    l1.makePickleable()
+    assert l1._geom is None
+
 
 def test_Location_load():
     l1 = Location(*xy)
 
-    if not l1==Location.load(l1): error("load")
-
+    assert l1 == Location.load(l1)
 
     # From pt
-    pt = point(*xy, srs=4326)
+    pt = geom.point(*xy, srs=4326)
     pt.TransformTo(EPSG3035)
-    if not l1==Location.load(pt): error("load")
+    assert l1 == Location.load(pt)
 
     # From xy
-    if not l1==Location.load(xy): error("load")
+    assert l1 == Location.load(xy)
 
     # From str
-    if not l1==Location.load(' ( 9.00000,5.00000) ',): error("load")
+    assert l1 == Location.load(' ( 9.00000,5.00000) ',)
 
     # From xy with srs
     xy_3035 = pt.GetX(), pt.GetY()
+    assert l1 == Location.load(xy_3035, srs=3035)
+    assert l1 == Location.load(list(xy_3035), srs=3035)
+    assert l1 == Location.load(np.array(xy_3035), srs=3035)
 
-    if not l1==Location.load(xy_3035, srs=3035): error("load")
-
-    if not l1==Location.load( list(xy_3035), srs=3035): error("load")
-
-    if not l1==Location.load( np.array(xy_3035), srs=3035): error("load")
-
-    print( "Location_load passed")
 
 def test_LocationSet___init__():
     # From xy list
     ls = LocationSet(pointsInAachen4326)
 
     # From numpy array
-    ls2 = LocationSet( np.array(pointsInAachen4326))
-    if not ls[1] == ls2[1]: error("LocationSet init")
+    ls2 = LocationSet(np.array(pointsInAachen4326))
+    assert ls[1] == ls2[1]
 
     # From numpy array with srs change
-    ls2 = LocationSet( np.array(pointsInAachen3035), srs=3035)
-    if not ls[1] == ls2[1]: error("LocationSet init")
+    ls2 = LocationSet(np.array(pointsInAachen3035), srs=3035)
+    assert ls[1] == ls2[1]
 
     # From single pt
     ls3 = LocationSet(xy)
-    if not ls3.count==1: error("LocationSet single xy")
+    assert ls3.count == 1
 
     # From single geom
-    pt = point(*xy, srs=4326)
+    pt = geom.point(*xy, srs=4326)
     ls4 = LocationSet(pt)
-    if not ls4.count==1: error("LocationSet single geom")
-    if not ls3[0]==ls4[0]: error("LocationSet single xy")
+    assert ls4.count == 1
+    assert ls3[0] == ls4[0]
 
     # From many geoms
-    pts = [ point(x,y, srs=4326) for x,y in np.random.random(size=(10,2)) ]
+    pts = [geom.point(x, y, srs=4326)
+           for x, y in np.random.random(size=(10, 2))]
     ls5 = LocationSet(pts)
-    if not ls5.count==10: error("LocationSet single geom")
-   
-    print( "LocationSet___init__ passed")
+    assert ls5.count == 10
+
 
 def test_LocationSet___getitem__():
-    print( "LocationSet___getitem__ is trivial")
+    ls = LocationSet([[1, 1],
+                      [1, 2],
+                      [2, 2.5],
+                      [2, 3], ])
 
-def test_LocationSet___repr__():
-    print( "LocationSet___repr__ is trivial")
+    assert ls[2] == (2, 2.5)
+
 
 def test_LocationSet_getBounds():
     ls = LocationSet(pointsInAachen4326)
 
     bounds = ls.getBounds(3035)
 
-    compare(bounds[0], 4039553.1900635841)
-    compare(bounds[1], 3052769.5385426758)
-    compare(bounds[2], 4065568.4155270099)
-    compare(bounds[3], 3087947.74365965)
+    assert np.isclose(bounds[0], 4039553.1900635841)
+    assert np.isclose(bounds[1], 3052769.5385426758)
+    assert np.isclose(bounds[2], 4065568.4155270099)
+    assert np.isclose(bounds[3], 3087947.74365965)
 
-    print( "LocationSet_getBounds passed")
 
 def test_LocationSet_asString():
-    pts = [(2,3), (4,2), (5,5)]
+    pts = [(2, 3), (4, 2), (5, 5)]
     ls = LocationSet(pts)
 
     s = ls.asString()
-    if not s[1]=="(4.00000,2.00000)": error("asString")
+    assert s[1] == "(4.00000,2.00000)"
 
-    print( "LocationSet_asString passed")
-
-def test_LocationSet_makePickleable():
-    print( "LocationSet_makePickleable is trivial")
 
 def test_LocationSet_asGeom():
-    print( "LocationSet_asGeom is trivial")
+    pts = [(2, 3), (4, 2), (5, 7)]
+    ls = LocationSet(pts)
+    geoms = ls.asGeom()
+
+    assert np.isclose(geoms[1].GetX(), 4)
+    assert np.isclose(geoms[1].GetY(), 2)
+    assert np.isclose(geoms[2].GetX(), 5)
+    assert np.isclose(geoms[2].GetY(), 7)
+
+
+def test_LocationSet_makePickleable():
+    pts = [(2, 3), (4, 2), (5, 5)]
+    ls = LocationSet(pts)
+    geoms = ls.asGeom()
+
+    assert not ls[1]._geom is None
+
+    ls.makePickleable()
+
+    assert ls[1]._geom is None
+
 
 def test_LocationSet_asXY():
-    print( "LocationSet_asXY is trivial")
+    pts = [(2, 3), (4, 2), (5, 7)]
+    ls = LocationSet(pts)
+    xyvals = ls.asXY(srs=EPSG4326)
+
+    assert np.isclose(xyvals[1], (4, 2)).all()
+    assert np.isclose(xyvals[2], (5, 7)).all()
+
 
 def test_LocationSet_asHash():
-    print( "LocationSet_asHash is trivial")
+    pts = [(2, 3), (4, 2), (5, 7)]
+    ls = LocationSet(pts)
+    h = ls.asHash()
+
+    assert h[0] == 3927246602883527356
+    assert h[1] == 3568298024840608381
+    assert h[2] == 3686734391468548956
+
 
 def test_LocationSet_splitKMeans():
-    print( "LocationSet_splitKMeans is not tested...")
+    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5),
+           (2, -1), (2, -1.5), (2, -1.25)]
+    locs = LocationSet(pts)
+
+    sublocsGen = locs.splitKMeans(groups=3, random_state=0)
+
+    sublocs = list(sublocsGen)
+
+    assert sublocs[0].count == 3
+    assert sublocs[0][0] == (2, -1)
+    assert sublocs[0][1] == (2, -1.5)
+    assert sublocs[0][2] == (2, -1.25)
+
+    assert sublocs[1].count == 2
+    assert sublocs[1][0] == (-1, -1)
+    assert sublocs[1][1] == (-1, -1.5)
+
+    assert sublocs[2].count == 2
+    assert sublocs[2][0] == (2, 1)
+    assert sublocs[2][1] == (2, 1.5)
+
 
 def test_LocationSet_bisect():
-    print( "LocationSet_bisect is not tested...")
+    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5),
+           (2, -1), (2, -1.5), (2, -1.25)]
+    locs = LocationSet(pts)
 
+    # Lon Only
+    sublocsGen = locs.bisect(lon=True, lat=False)
 
-if __name__ == "__main__":
-    test_Location___init__()
-    test_Location___hash__()
-    test_Location___eq__()
-    test_Location___ne__()
-    test_Location___str__()
-    test_Location___repr__()
-    test_Location_fromString()
-    test_Location_fromPointGeom()
-    test_Location_fromXY()
-    test_Location_latlon()
-    test_Location_asGeom()
-    test_Location_asXY()
-    test_Location_geom()
-    test_Location_makePickleable()
-    test_Location_load()
-    test_LocationSet___init__()
-    test_LocationSet___getitem__()
-    test_LocationSet___repr__()
-    test_LocationSet_getBounds()
-    test_LocationSet_asString()
-    test_LocationSet_asGeom()
-    test_LocationSet_asXY()
-    test_LocationSet_asHash()
-    test_LocationSet_splitKMeans()
-    test_LocationSet_bisect()
+    sublocs = list(sublocsGen)
 
+    assert sublocs[0].count == 2
+    assert sublocs[0][0] == (-1, -1)
+    assert sublocs[0][1] == (-1, -1.5)
+
+    assert sublocs[1].count == 5
+    assert sublocs[1][0] == (2, 1)
+    assert sublocs[1][1] == (2, 1.5)
+    assert sublocs[1][2] == (2, -1)
+    assert sublocs[1][3] == (2, -1.5)
+    assert sublocs[1][4] == (2, -1.25)
+
+    # Lat Only
+    sublocsGen = locs.bisect(lon=False, lat=True)
+
+    sublocs = list(sublocsGen)
+
+    assert sublocs[0].count == 3
+    assert sublocs[0][0] == (-1, -1.5)
+    assert sublocs[0][1] == (2, -1.5)
+    assert sublocs[0][2] == (2, -1.25)
+    
+    assert sublocs[1].count == 4
+    assert sublocs[1][0] == (-1, -1)
+    assert sublocs[1][1] == (2, 1)
+    assert sublocs[1][2] == (2, 1.5)
+    assert sublocs[1][3] == (2, -1)
