@@ -1,8 +1,10 @@
-from .helpers import MASK_DATA, np
+from .helpers import MASK_DATA, np, CLC_RASTER_PATH, AACHEN_SHAPE_PATH
 from geokit import util
-import pytest 
+import pytest
 
 # Scale Matrix
+
+
 def test_scaleMatrix():
     # setup
     sumCheck = MASK_DATA.sum()
@@ -32,11 +34,22 @@ def test_scaleMatrix():
     scaledMatrix5 = util.scaleMatrix(MASK_DATA, -3, strict=False)
     assert(scaledMatrix5.sum()/2/4 != sumCheck)
 
+
+def test_isRaster():
+    s1 = util.isRaster(CLC_RASTER_PATH)
+    assert s1 == True
+
+    s2 = util.isRaster(AACHEN_SHAPE_PATH)
+    assert s2 == False
+
+
 @pytest.mark.skip("No test implemented for: util.quickVector")
 def test_quickVector(): assert False
 
+
 @pytest.mark.skip("No test implemented for: util.quickRaster")
 def test_quickRaster(): assert False
+
 
 @pytest.mark.skip("No test implemented for: util.drawImage")
 def test_drawImage(): assert False
