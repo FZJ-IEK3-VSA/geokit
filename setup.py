@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='geokit',
-    version='1.1.3',
+    version='1.2.0',
     author='David Severin Ryberg',
     url='https://github.com/FZJ-IEK3-VSA/geokit',
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        "gdal",
+        "gdal>2.0.0,<3.0.0",
         "numpy",
         "descartes",
         "pandas",
