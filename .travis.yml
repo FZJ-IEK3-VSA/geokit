@@ -15,8 +15,7 @@ before_install:
 install:
   - conda env create --file=requirements.yml -n geokit_testing
   - source activate geokit_testing
-  - conda install pytest
-  - conda install codecov
+  - conda install pytest codecov
   - pip install -e .
 
 script:
