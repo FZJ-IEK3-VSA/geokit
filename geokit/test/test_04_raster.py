@@ -102,8 +102,8 @@ def test_extractValues():
         assert (v.data == real)
 
     for v, real in zip(v2.itertuples(), realDiffs):
-        assert np.isclose(v.xOffset, real[0])
-        assert np.isclose(v.yOffset, real[1])
+        assert np.isclose(v.xOffset, real[0], rtol=1e-4)
+        assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
     # test point input
     pt = ogr.Geometry(ogr.wkbPoint)
@@ -113,8 +113,8 @@ def test_extractValues():
     v3 = raster.extractValues(CLC_RASTER_PATH, pt)
 
     assert (v3.data == 3)
-    assert np.isclose(v3.xOffset, 0.44700000000187856)
-    assert np.isclose(v3.yOffset, 0.31600000000094042)
+    assert np.isclose(v3.xOffset, 0.44700000000187856, rtol=1e-4)
+    assert np.isclose(v3.yOffset, 0.31600000000094042, rtol=1e-4)
 
     # test window fetch
     real = np.array([[12, 12, 12, 12, 12],
