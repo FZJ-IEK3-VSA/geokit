@@ -92,8 +92,8 @@ def test_extractValues():
         assert (v.data == real)
 
     for v, real in zip(v1.itertuples(), realDiffs):
-        assert np.isclose(v.xOffset, real[0])
-        assert np.isclose(v.yOffset, real[1])
+        assert np.isclose(v.xOffset, real[0], rtol=1e-5)
+        assert np.isclose(v.yOffset, real[1], rtol=1e-5)
 
     # test flipped
     v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
