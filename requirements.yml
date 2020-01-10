@@ -1,0 +1,13 @@
+name: geokit
+channels:
+  - conda-forge
+dependencies:
+  - python<3.8
+  - pip
+  - matplotlib
+  - descartes
+  - pandas
+  - numpy
+  - scipy
+  - scikit-learn
+  - gdal>2.0.0,<3.0.0

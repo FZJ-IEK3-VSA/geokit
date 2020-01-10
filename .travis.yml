@@ -1,0 +1,21 @@
+# Modified from
+# https://github.com/PyPSA/PyPSA/master/.travis.yml
+language: python
+sudo: false
+
+before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+install:
+  - conda env create --file=requirements.yml -n geokit_testing
+  - conda activate geokit_testing
+  - pip install -e .
+
+script:
+  - pytest --cov geokit/test --cov-report term-missing
