@@ -1,3 +1,3 @@
-from helpers import *
+from .helpers import *
 
 # Put tests here
