@@ -1,106 +1,109 @@
-from helpers import *
-from geokit.vector import *
-from geokit.geom import box
-from geokit.util import GeoKitError
-import geokit as gk
+from .helpers import *
+from geokit import vector, raster, geom, util
 
-## ogrType
+# ogrType
+
+
 def test_ogrType():
-    if( ogrType(bool) != "OFTInteger" ): error("ogr type")
-    if( ogrType("float32") != "OFTReal" ): error("ogr type")
-    if( ogrType("Integer64") != "OFTInteger64" ): error("ogr type")
-    if( ogrType(NUMPY_FLOAT_ARRAY) != "OFTReal" ): error("ogr type")
-    if( ogrType(NUMPY_FLOAT_ARRAY.dtype) != "OFTReal" ): error("ogr type")
-
-    print( "ogrType passed" )
+    assert vector.ogrType(bool) == "OFTInteger"
+    assert vector.ogrType("float32") == "OFTReal"
+    assert vector.ogrType("Integer64") == "OFTInteger64"
+    assert vector.ogrType(NUMPY_FLOAT_ARRAY) == "OFTReal"
+    assert vector.ogrType(NUMPY_FLOAT_ARRAY.dtype) == "OFTReal"
 
 
 def test_countFeatures():
-    if countFeatures(MULTI_FTR_SHAPE_PATH) != 4: error("Simple vector count")
+    # Simple vector count
+    assert vector.countFeatures(MULTI_FTR_SHAPE_PATH) == 4
 
-    if countFeatures(MULTI_FTR_SHAPE_PATH, geom=box(5.89,48.77,6.89,49.64, srs=EPSG4326)) != 2:
-        error("Vector count - same SRS, geom filter")
+    #  same SRS, geom filter
+    cnt = vector.countFeatures(MULTI_FTR_SHAPE_PATH,
+                               geom=geom.box(5.89, 48.77, 6.89, 49.64, srs=EPSG4326))
+    assert cnt == 2
 
-    if countFeatures(MULTI_FTR_SHAPE_PATH, geom=box(4022802,2867575, 4104365,2938843, srs=EPSG3035)) != 2:
-        error("Vector count - different SRS, geom filter")
+    # different SRS, geom filter
+    cnt = vector.countFeatures(MULTI_FTR_SHAPE_PATH,
+                               geom=geom.box(4022802, 2867575, 4104365, 2938843, srs=EPSG3035))
+    assert cnt == 2
 
-    if countFeatures(MULTI_FTR_SHAPE_PATH, where="name LIKE 'mo%'") != 2:
-        error("Vector count - where filter")
+    # where filter
+    cnt = vector.countFeatures(MULTI_FTR_SHAPE_PATH, where="name LIKE 'mo%'")
+    assert cnt == 2
 
-    print( "countFeatures passed" )
 
 def test_extractFeatures():
     # test basic
-    vi = list(extractFeatures(BOXES, asPandas=False))
+    vi = list(vector.extractFeatures(BOXES, asPandas=False))
 
-    if len(vi)!=3: error("extractFeatures 1 - count mismatch") 
+    assert len(vi) == 3  # count mismatch
 
-    if (vi[0][0].Area()!=1.0): error("extractFeatures 1 - geom mismatch")
-    if (vi[0][1]['name']!="harry"): error("extractFeatures 1 - attribute mismatch")
+    assert (vi[0][0].Area() == 1.0)  # geom mismatch
+    assert (vi[0][1]['name'] == "harry")  # attribute mismatch
 
-    if (vi[1][0].Area()!=4.0): error("extractFeatures 1 - geom mismatch")
-    if (vi[1][1]['name']!="ron"): error("extractFeatures 1 - attribute mismatch")
+    assert (vi[1][0].Area() == 4.0)  # geom mismatch
+    assert (vi[1][1]['name'] == "ron")  # attribute mismatch
 
-    if (vi[2][0].Area()!=9.0): error("extractFeatures 1 - geom mismatch")
-    if (vi[2][1]['name']!="hermoine"): error("extractFeatures 1 - attribute mismatch")
+    assert (vi[2][0].Area() == 9.0)  # geom mismatch
+    assert (vi[2][1]['name'] == "hermoine")  # attribute mismatch
 
     # test clip
-    vi = list(extractFeatures(BOXES, geom=box(0,0,3,3, srs=EPSG4326), asPandas=False))
+    vi = list(vector.extractFeatures(BOXES, geom=geom.box(
+        0, 0, 3, 3, srs=EPSG4326), asPandas=False))
 
-    if len(vi)!=2: error("extractFeatures 2 - count mismatch")   
+    assert len(vi) == 2  # count mismatch
 
-    if (vi[0][0].Area()!=1.0): error("extractFeatures 2 - geom mismatch")
-    if (vi[0][1]['name']!="harry"): error("extractFeatures 2 - attribute mismatch")
+    assert (vi[0][0].Area() == 1.0)  # geom mismatch
+    assert (vi[0][1]['name'] == "harry")  # attribute mismatch
 
-    if (vi[1][0].Area()!=4.0): error("extractFeatures 2 - geom mismatch")
-    if (vi[1][1]['name']!="ron"): error("extractFeatures 2 - attribute mismatch")
+    assert (vi[1][0].Area() == 4.0)  # geom mismatch
+    assert (vi[1][1]['name'] == "ron")  # attribute mismatch
 
     # test srs change and attribute filter
-    vi = list(extractFeatures(BOXES, where="smart>0", srs=EPSG3035, asPandas=False))
+    vi = list(vector.extractFeatures(
+        BOXES, where="smart>0", srs=EPSG3035, asPandas=False))
 
-    if len(vi)!=1: error("extractFeatures 3 - count mismatch")   
-    if (not vi[0][0].GetSpatialReference().IsSame(EPSG3035)): error("extractFeatures 3 - srs mismatch")
-    if (vi[0][1]['name']!="hermoine"): error("extractFeatures 3 - attribute mismatch")
+    assert len(vi) == 1  # count mismatch
+    assert vi[0][0].GetSpatialReference().IsSame(EPSG3035)  # srs mismatch
+    assert (vi[0][1]['name'] == "hermoine")  # attribute mismatch
 
     # Test loading as a dataframe
-    vi = extractFeatures(BOXES, asPandas=True)
-    if vi.shape!=(3,3): error("extractFeatures 4 - shape mismatch") 
+    vi = vector.extractFeatures(BOXES, asPandas=True)
+    assert vi.shape == (3, 3)  # shape mismatch
 
-    if (vi.geom[0].Area()!=1.0): error("extractFeatures 4 - geom mismatch")
-    if (vi['name'][0]!="harry"): error("extractFeatures 4 - attribute mismatch")
+    assert (vi.geom[0].Area() == 1.0)  # geom mismatch
+    assert (vi['name'][0] == "harry")  # attribute mismatch
 
-    if (vi.geom[1].Area()!=4.0): error("extractFeatures 4 - geom mismatch")
-    if (vi['name'][1]!="ron"): error("extractFeatures 4 - attribute mismatch")
+    assert (vi.geom[1].Area() == 4.0)  # geom mismatch
+    assert (vi['name'][1] == "ron")  # attribute mismatch
 
-    if (vi.geom[2].Area()!=9.0): error("extractFeatures 4 - geom mismatch")
-    if (vi['name'][2]!="hermoine"): error("extractFeatures 4 - attribute mismatch")
+    assert (vi.geom[2].Area() == 9.0)  # geom mismatch
+    assert (vi['name'][2] == "hermoine")  # attribute mismatch
 
-    print( "extractFeatures passed" )
 
 def test_extractFeature():
     # test succeed
-    geom, attr = extractFeature(BOXES, where=1)
-    if (geom.Area()!=4.0): error("extractFeature 1 - geom mismatch")
-    if (attr['name']!="ron"): error("extractFeature 1 - attribute mismatch")
+    geom, attr = vector.extractFeature(BOXES, where=1)
+    assert (geom.Area() == 4.0)  # geom mismatch
+    assert (attr['name'] == "ron")  # attribute mismatch
 
-    geom, attr = extractFeature(BOXES, where="name='harry'")
-    if (geom.Area()!=1.0): error("extractFeature 2 - geom mismatch")
-    if (attr['name']!="harry"): error("extractFeature 2 - attribute mismatch")
+    geom, attr = vector.extractFeature(BOXES, where="name='harry'")
+    assert (geom.Area() == 1.0)  # geom mismatch
+    assert (attr['name'] == "harry")  # attribute mismatch
 
     # test fail
     try:
-        geom, attr = extractFeature(BOXES, where="smart=0")
-        error("extractFeature 3 - fail test")
-    except GeoKitError:
-        pass
+        geom, attr = vector.extractFeature(BOXES, where="smart=0")
+        assert False
+    except util.GeoKitError:
+        assert True
     else:
-        error("extractFeature 3 - fail test")
+        assert False
 
-    print( "extractFeature passed" )
+# Create shape file
 
-## Create shape file
+
 def test_createVector():
-    ## Setup
+    # Setup
     out1 = result("util_shape1.shp")
     out2 = result("util_shape2.shp")
     out3 = result("util_shape3.shp")
@@ -109,162 +112,199 @@ def test_createVector():
     # run and check
 
     # Single WKT feature, no attributes
-    createVector(POLY, out1, srs=EPSG4326, overwrite=True)
+    vector.createVector(POLY, out1, srs=EPSG4326, overwrite=True)
 
     ds = ogr.Open(out1)
     ly = ds.GetLayer()
-    if (ly.GetFeatureCount()!=1): error("Vector creation 1 - feature count mismatch")
-    if (not ly.GetSpatialRef().IsSame(EPSG4326)): error("Vector creation - srs mismatch")
+    assert (ly.GetFeatureCount() == 1)  # feature count mismatch
+    assert (ly.GetSpatialRef().IsSame(EPSG4326))  # srs mismatch
 
     # Single GEOM feature, with attributes
-    createVector(GEOM_3035, out2, fieldVals={"id":1,"name":["fred",],"value":12.34}, fieldDef={"id":"int8", "name":str, "value":float}, overwrite=True )
+    vector.createVector(GEOM_3035, out2, fieldVals={"id": 1, "name": ["fred", ], "value": 12.34}, fieldDef={
+                        "id": "int8", "name": str, "value": float}, overwrite=True)
 
     ds = ogr.Open(out2)
     ly = ds.GetLayer()
     ftr = ly.GetFeature(0)
     attr = ftr.items()
-    if (type(attr["id"])!=int or type(attr["name"])!=str or type(attr["value"])!=float): error("Vector creation 2 - attribute type mismatch")
-    if (ftr.items()["id"]!=1): error("Vector creation  2- int attribute mismatch")
-    if (ftr.items()["name"]!="fred"): error("Vector creation 2 - str attribute mismatch")
-    if (ftr.items()["value"]!=12.34): error("Vector creation 2 - float attribute mismatch")
+    assert type(attr["id"]) == int  # attribute type mismatch
+    assert type(attr["name"]) == str  # attribute type mismatch
+    assert type(attr["value"]) == float  # attribute type mismatch
+    assert (ftr.items()["id"] == 1)  # int attribute mismatch
+    assert (ftr.items()["name"] == "fred")  # str attribute mismatch
+    assert (ftr.items()["value"] == 12.34)  # float attribute mismatch
 
     # Multiple GEOM features, attribute-type definition, srs-cast
-    createVector(SUB_GEOMS, out3, srs=EPSG3035, fieldDef={"newField":"Real"}, fieldVals={"newField":range(3)} )
+    vector.createVector(SUB_GEOMS, out3, srs=EPSG3035, fieldDef={
+                        "newField": "Real"}, fieldVals={"newField": range(3)})
 
     ds = ogr.Open(out3)
     ly = ds.GetLayer()
-    if (ly.GetFeatureCount()!=3): error("Vector creation 3 - feature count mismatch")
-    if (not ly.GetSpatialRef().IsSame(EPSG3035)): error("Vector creation 3- srs mismatch")
+    assert (ly.GetFeatureCount() == 3)  # feature count mismatch
+    assert (ly.GetSpatialRef().IsSame(EPSG3035))  # srs mismatch
     for i in range(3):
         ftr = ly.GetFeature(i)
-        if not (i-ftr.items()["newField"])<0.0001: error("Vector creation 3 - value mismatch")
+        assert np.isclose(i, ftr.items()["newField"])
 
         geomCheck = SUB_GEOMS[i].Clone()
         geomCheck.TransformTo(EPSG3035)
 
-        if not (ftr.GetGeometryRef().Area()-geomCheck.Area())<0.0001: error("Vector creation 3 - geometry area mismatch")
+        assert np.isclose(ftr.GetGeometryRef().Area(), geomCheck.Area())
 
     # Multiple points, save in memory
-    memVec = createVector(POINT_SET, srs=EPSG4326)
+    memVec = vector.createVector(POINT_SET, srs=EPSG4326)
 
     ly = memVec.GetLayer()
-    if ly.GetFeatureCount() != len(POINT_SET): error("Vector creation 4 - feature count mismatch")
+    assert ly.GetFeatureCount() == len(POINT_SET)
     for i in range(len(POINT_SET)):
         ftr = ly.GetFeature(i)
-        if not ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i]):
-          error("Vector creation 4 - feature mismatch")
+        assert ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i])
 
-    print( "createVector passed" )
 
 def test_mutateVector():
     # Setup
     ext_small = (6.1, 50.7, 6.25, 50.9)
-    box_aachen = box(AACHEN_SHAPE_EXTENT, srs=EPSG4326)
+    box_aachen = geom.box(AACHEN_SHAPE_EXTENT, srs=EPSG4326)
     box_aachen.TransformTo(EPSG3035)
 
-    sentance = ["Never","have","I","ever","ridden","on","a","horse","Did","you","know","that","?"]
-    sentanceSmall = ["Never","have","I","ever","you"]
+    sentance = ["Never", "have", "I", "ever", "ridden", "on",
+                "a", "horse", "Did", "you", "know", "that", "?"]
+    sentanceSmall = ["Never", "have", "I", "ever", "you"]
 
-    ## simple repeater
-    ps1 = mutateVector( AACHEN_POINTS, processor=None )
-    
-    res1 = extractFeatures(ps1)
-    if res1.shape[0]!=13: error( "mutateVector 1 - item count")
+    # simple repeater
+    ps1 = vector.mutateVector(AACHEN_POINTS, processor=None)
+
+    res1 = vector.extractFeatures(ps1)
+    assert res1.shape[0] == 13  # item count")
     for i in range(13):
-        if not res1.geom[i].GetSpatialReference().IsSame(EPSG4326): error("mutateVector 1 - geom srs")
-        if not res1.geom[i].GetGeometryName()=="POINT": error("mutateVector 1 - geom type")
-        if res1['word'][i] != sentance[i]: error("mutateVector 1 - attribute writing")
+        assert res1.geom[i].GetSpatialReference().IsSame(EPSG4326)  # geom srs
+        assert res1.geom[i].GetGeometryName() == "POINT"  # geom type
+        assert res1['word'][i] == sentance[i]  # attribute writing
 
-    ## spatial filtering
-    ps2 = mutateVector( AACHEN_POINTS, processor=None, geom=ext_small )
+    # spatial filtering
+    ps2 = vector.mutateVector(AACHEN_POINTS, processor=None, geom=ext_small)
 
-    res2 = extractFeatures(ps2)
-    if res2.shape[0]!=5: error( "mutateVector 2 - item count")
+    res2 = vector.extractFeatures(ps2)
+    assert res2.shape[0] == 5  # item count
     for i in range(5):
-        if not (res2['word'][i] == sentanceSmall[i]): error("mutateVector 2 - attribute writing")
+        assert (res2['word'][i] == sentanceSmall[i])  # attribute writing
 
-    ## attribute and spatial filtering
-    ps3 = mutateVector( AACHEN_POINTS, processor=None, geom=ext_small, where="id<5" )
+    # attribute and spatial filtering
+    ps3 = vector.mutateVector(
+        AACHEN_POINTS, processor=None, geom=ext_small, where="id<5")
 
-    res3 = extractFeatures(ps3)
-    if res3.shape[0]!=4: error( "mutateVector 3 - item count")
+    res3 = vector.extractFeatures(ps3)
+    assert res3.shape[0] == 4  # item count
     for i in range(4):
-        if not (res3['word'][i] == sentanceSmall[i]): error("mutateVector 3 - attribute writing")
+        assert (res3['word'][i] == sentanceSmall[i])  # attribute writing
 
-    ## Test no items found
-    ps4 = mutateVector( AACHEN_POINTS, processor=None, where="id<0" )
+    # Test no items found
+    ps4 = vector.mutateVector(AACHEN_POINTS, processor=None, where="id<0")
 
-    if not ps4 is None: error("mutateVector 4 - no items found")
+    assert ps4 is None  # no items found
 
-    ## Simple grower func ina new srs
+    # Simple grower func in a new srs
     def growByWordLength(ftr):
-        size = len(ftr["word"])*1000
+        size = len(ftr["word"])*10
         newGeom = ftr.geom.Buffer(size)
 
-        return {'geom':newGeom, "size":size}
+        return {'geom': newGeom, "size": size}
 
     output5 = result("mutateVector5.shp")
-    mutateVector( AACHEN_POINTS, processor=growByWordLength, srs=EPSG3035, output=output5, overwrite=True)
-    ps5 = loadVector(output5)
+    vector.mutateVector(AACHEN_POINTS, processor=growByWordLength,
+                        srs=EPSG3035, output=output5, overwrite=True)
+    ps5 = vector.loadVector(output5)
 
-    res5 = extractFeatures(ps5)
-    if res5.shape[0]!=13: error( "mutateVector 5 - item count")
+    res5 = vector.extractFeatures(ps5)
+    assert res5.shape[0] == 13  # item count
     for i in range(13):
-        if not res5.geom[i].GetSpatialReference().IsSame(EPSG3035): error("mutateVector 5 - geom srs")
-        if not res5.geom[i].GetGeometryName()=="POLYGON": error("mutateVector 5 - geom type")
-        if not (res5['word'][i] == sentance[i]): error("mutateVector 5 - attribute writing")
-        if not (res5['size'][i] == len(sentance[i])*1000): error("mutateVector 5 - attribute writing")
+        assert res5.geom[i].GetSpatialReference().IsSame(EPSG3035)  # geom srs
+        assert res5.geom[i].GetGeometryName() == "POLYGON"  # geom type
+        assert (res5['word'][i] == sentance[i])  # attribute writing
+        assert (res5['size'][i] == len(sentance[i])*10)  # attribute writing
 
-        # test if the new areas are close to what they shoud be 
-        area = 1000*len(sentance[i])*1000*len(sentance[i])*np.pi
-        if not abs(1 - area/res5.geom[i].Area())<0.001: error("mutateVector 5 - geom area")
+        # test if the new areas are close to what they shoud be
+        area = np.power(10*len(sentance[i]), 2)*np.pi
+        assert np.isclose(area, res5.geom[i].Area(), rtol=1.e-3)  # geom area
 
-    ## Test inline processor, with filtering, and writign to file
-    mutateVector( AACHEN_ZONES, srs=4326, geom=box_aachen, where="YEAR>2000", processor=lambda ftr: {'geom':ftr.geom.Centroid(), "YEAR":ftr["YEAR"]}, output=result("mutateVector6.shp"), overwrite=True)
+    # Test inline processor, with filtering, and writing to file
+    vector.mutateVector(AACHEN_ZONES,
+                        srs=4326,
+                        geom=box_aachen,
+                        where="YEAR>2000",
+                        processor=lambda ftr: {
+                            'geom': ftr.geom.Centroid(), "YEAR": ftr["YEAR"]},
+                        output=result("mutateVector6.shp"),
+                        overwrite=True
+                        )
 
 
-    print( "mutateVector passed" )
+def test_loadVector():
+    assert util.isVector(vector.loadVector(BOXES))
 
-def test_loadVector(): print("loadVector is trivial")
-def test_vectorInfo(): print("vectorInfo is trivial")
-def test_rasterize(): 
+
+def test_vectorInfo():
+    vi = vector.vectorInfo(AACHEN_ZONES)
+    for a, b in zip(vi.attributes,
+                    ['PK_UID', 'SITE_CODE', 'PARENT_ISO',
+                     'ISO3', 'SITE_NAME', 'SITE_AREA',
+                     'YEAR', 'DESIGNATE', 'CDDA_disse']):
+        assert a == b
+
+    assert np.isclose(vi.bounds,
+                      (4037376.3605322, 3045182.1758945677,
+                       4092345.479879612, 3109991.6386917345)
+                      ).all()
+
+    assert np.isclose(vi.count, 115)
+    assert vi.srs.IsSame(EPSG3035)
+    assert np.isclose(vi.xMin, 4037376.3605322)
+    assert np.isclose(vi.yMin, 3045182.1758945677)
+    assert np.isclose(vi.xMax, 4092345.479879612)
+    assert np.isclose(vi.yMax, 3109991.6386917345)
+
+def test_rasterize():
 
     # Simple vectorization to file
-    r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, output=result("rasterized1.tif"))
-    mat1 = gk.raster.extractMatrix(r)
-    compare(mat1.mean(), 0.13910192, "rasterization - simple")
+    r = vector.rasterize(source=AACHEN_ZONES, 
+                         pixelWidth=250,
+                         pixelHeight=250, 
+                         output=result("rasterized1.tif"))
+    mat1 = raster.extractMatrix(r)
+    assert np.isclose(mat1.mean(), 0.13910192) 
 
     # Simple vectorization to mem
-    r = rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )
-    mat2 = gk.raster.extractMatrix(r)
-    compare( (mat2-mat1).mean(), 0, "rasterization - memory")
+    r = vector.rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )
+    mat2 = raster.extractMatrix(r)
+    assert np.isclose(mat2,mat1).all()
 
     # Change srs to disc
-    r = rasterize(source=AACHEN_ZONES, srs=4326, pixelWidth=0.01, pixelHeight=0.01, output=result("rasterized2.tif"))
-    mat = gk.raster.extractMatrix(r)
-    compare(mat.mean(), 0.12660478, "rasterization - simple")
+    r = vector.rasterize(source=AACHEN_ZONES, 
+                         srs=4326, 
+                         pixelWidth=0.01,
+                         pixelHeight=0.01, 
+                         output=result("rasterized2.tif"))
+    mat = raster.extractMatrix(r)
+    assert np.isclose(mat.mean(), 0.12660478)
 
     # Write attribute values to disc
-    r = rasterize(source=AACHEN_ZONES, value="YEAR", pixelWidth=250, pixelHeight=250, output=result("rasterized3.tif"), noData=-1)
-    mat = gk.raster.extractMatrix(r, autocorrect=True)
-    compare(np.isnan(mat).sum(), 48831, "rasterization - nan values")
-    compare(np.nanmean(mat), 1995.84283904, "rasterization - simple")
+    r = vector.rasterize(source=AACHEN_ZONES, 
+                         value="YEAR", 
+                         pixelWidth=250,
+                         pixelHeight=250, 
+                         output=result("rasterized3.tif"), 
+                         noData=-1)
+    mat = raster.extractMatrix(r, autocorrect=True)
+    assert np.isclose(np.isnan(mat).sum(), 48831)
+    assert np.isclose(np.nanmean(mat), 1995.84283904)
 
     # Write attribute values to mem, and use where clause
-    r = rasterize(source=AACHEN_ZONES, value="YEAR", pixelWidth=250, pixelHeight=250, noData=-1, where="YEAR>2000")
-    mat = gk.raster.extractMatrix(r, autocorrect=True)
-    compare(np.isnan(mat).sum(), 53706, "rasterization - nan values")
-    compare(np.nanmean(mat), 2004.96384743, "rasterization - simple") 
-
-    print( "rasterize passed")   
-
-if __name__=="__main__":
-    test_loadVector()
-    test_ogrType()
-    test_countFeatures()
-    test_vectorInfo()
-    test_extractFeatures()
-    test_extractFeature()
-    test_createVector()
-    test_mutateVector()
-    test_rasterize()
+    r = vector.rasterize(source=AACHEN_ZONES, 
+                         value="YEAR", 
+                         pixelWidth=250,
+                         pixelHeight=250, 
+                         noData=-1,
+                         where="YEAR>2000")
+    mat = raster.extractMatrix(r, autocorrect=True)
+    assert np.isclose(np.isnan(mat).sum(), 53706)
+    assert np.isclose(np.nanmean(mat), 2004.96384743)
