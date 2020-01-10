@@ -41,6 +41,13 @@ def test_isRaster():
 
     s2 = util.isRaster(AACHEN_SHAPE_PATH)
     assert s2 == False
+    
+def test_isVector():
+    s1 = util.isVector(CLC_RASTER_PATH)
+    assert s1 == False
+
+    s2 = util.isVector(AACHEN_SHAPE_PATH)
+    assert s2 == True
 
 
 @pytest.mark.skip("No test implemented for: util.quickVector")
