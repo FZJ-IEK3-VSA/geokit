@@ -64,7 +64,7 @@ Sometimes a path variable will need to be set to tell the system where to find t
 
 - Path variables name must be: "GDAL\*DATA"
 - When installed with Anaconda, path should be: "<anaconda-top-directory>\Library\share\gdal"
-  \_ As of GeoKit version 1.1.0, GeoKit will attempt to add this path automatically at runtime
+- As of GeoKit version 1.1.0, GeoKit will attempt to add this path automatically at runtime
 
 Now install GeoKit via pip as follows
 
