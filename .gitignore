@@ -24,3 +24,4 @@ testing/results/eligibility_plots
 .vscode/settings.json
 .vscode/launch.json
 .coverage
+.pytest
