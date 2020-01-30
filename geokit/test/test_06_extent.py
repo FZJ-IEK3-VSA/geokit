@@ -113,16 +113,31 @@ def test_Extent_box():
     ex1 = Extent.load((1, 2, 4, 4), srs=4326)
     assert np.isclose(ex1.box.Area(), 6.0)
 
+
 def test_Extent___eq__():
     # setup
     ex1 = Extent(3, -4, -5, 10, srs=EPSG4326)
-    ex2 = Extent.fromVector( source=MULTI_FTR_SHAPE_PATH )
-    ex3 = Extent.fromVector( source=MULTI_FTR_SHAPE_PATH )
+    ex2 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
+    ex3 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
 
     # Equality
     assert (ex2 != ex1)
     assert (ex2 == ex2)
     assert (ex2 == ex3)
+
+
+def test_Extent___add__():
+    # setup
+    ex1 = Extent.load((1, 2, 3, 4), srs=EPSG4326)
+    ex2 = Extent.load((1, 1, 3, 3), srs=EPSG4326)
+
+    # Simple add
+    ex = ex1 + ex2
+    assert ex.xMin == 1
+    assert ex.xMax == 3
+    assert ex.yMin == 1
+    assert ex.yMax == 4
+
 
 def test_Extent_pad():
     #setup

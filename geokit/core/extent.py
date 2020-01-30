@@ -254,11 +254,11 @@ class Extent(object):
         if (not s.srs.IsSame(o.srs) ): 
             o = o.castTo(s.srs)
         
-        newExt = gk.Extent( np.min( s.xMin, o.xMin ),
-                            np.min( s.yMin, o.yMin ),
-                            np.max( s.xMax, o.xMax ),
-                            np.max( s.yMax, o.yMax ),
-                            srs=s.srs )
+        newExt = Extent( np.minimum( s.xMin, o.xMin ),
+                         np.minimum( s.yMin, o.yMin ),
+                         np.maximum( s.xMax, o.xMax ),
+                         np.maximum( s.yMax, o.yMax ),
+                         srs=s.srs )
         return newExt
 
     def __repr__(s):
