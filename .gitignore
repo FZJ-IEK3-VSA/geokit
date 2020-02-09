@@ -25,3 +25,4 @@ testing/results/eligibility_plots
 .vscode/launch.json
 .coverage
 .pytest
+.cache/v/cache/lastfailed
