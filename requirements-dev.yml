@@ -1,4 +1,4 @@
-name: geokit-dev
+name: dev-geokit
 channels:
   - conda-forge
 dependencies:
