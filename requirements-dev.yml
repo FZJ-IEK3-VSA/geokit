@@ -3,6 +3,10 @@ channels:
   - conda-forge
 dependencies:
   - python
+  - pytest
+  - pytest-cov
+  - pylint
+  - autopep8
   - pip
   - matplotlib
   - descartes
