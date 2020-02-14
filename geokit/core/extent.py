@@ -4,7 +4,8 @@ from .geom import *
 from .raster import *
 from .vector import *
 
-IndexSet = namedtuple("IndexSet","xStart yStart xWin yWin xEnd yEnd")
+IndexSet = namedtuple("IndexSet", "xStart yStart xWin yWin xEnd yEnd")
+
 
 class Extent(object):
     """Geographic extent
@@ -28,16 +29,16 @@ class Extent(object):
     * Extent.fromRaster( raster-file-path )
     * Extent.load( args )
     """
-    _whatami="Extent"
+    _whatami = "Extent"
 
     def __init__(s, *args, srs='latlon'):
         """Create extent from explicitly defined boundaries
-        
+
         Usage:
         ------
         Extent(xMin, yMin, xMax, yMax [, srs=<srs>])
         Extent( (xMin, yMin, xMax, yMax) [, srs=<srs>])
-        
+
         Where:    
             xMin - The minimal x value in the respective SRS
             yMin - The minimal y value in the respective SRS
@@ -47,22 +48,23 @@ class Extent(object):
 
         """
         # Unpack args
-        if len(args)==1:
+        if len(args) == 1:
             xMin, yMin, xMax, yMax = args[0]
-        elif len(args)==4:
+        elif len(args) == 4:
             xMin, yMin, xMax, yMax = args
         else:
-            raise GeoKitExtentError("Incorrect number of positional arguments givin in init (accepts 1 or 4). Is an srs given as 'srs=...'?")
-        
+            raise GeoKitExtentError(
+                "Incorrect number of positional arguments givin in init (accepts 1 or 4). Is an srs given as 'srs=...'?")
+
         # Ensure good inputs
         xMin, xMax = min(xMin, xMax), max(xMin, xMax)
-        yMin, yMax = min(yMin, yMax), max(yMin, yMax) 
+        yMin, yMax = min(yMin, yMax), max(yMin, yMax)
 
         s.xMin = xMin
         s.xMax = xMax
         s.yMin = yMin
         s.yMax = yMax
-        s.srs  = loadSRS(srs)
+        s.srs = loadSRS(srs)
 
         s._box = box(s.xMin, s.yMin, s.xMax, s.yMax, srs=s.srs)
 
@@ -78,7 +80,7 @@ class Extent(object):
         srs : Anything acceptable to geokit.srs.loadSRS(); optional
             The srs of the input coordinates
               * If not given, lat/lon coordinates are assumed
-        
+
         Returns:
         --------
         Extent
@@ -87,9 +89,9 @@ class Extent(object):
         return Extent(bounds[0], bounds[2], bounds[1], bounds[3], srs=srs)
 
     @staticmethod
-    def fromGeom( geom ):
+    def fromGeom(geom):
         """Create extent around a given geometry
-        
+
         Parameters:
         -----------
         geom : ogr.Geometry 
@@ -107,9 +109,40 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=geom.GetSpatialReference())
 
     @staticmethod
-    def fromVector( source ):
+    def fromTile(xi, yi, zoom):
+        """Generates an Extent corresponding to tiles used for "slippy maps"
+
+        Parameters:
+        -----------
+        xi : int
+            The tile's X-index
+            - Range depends on zoom value
+
+        yi : int
+            The tile's Y-index
+            - Range depends on zoom value
+
+        zoom : int
+            The tile's zoom index
+            - Range is between 0 and 18
+
+        Returns:
+        --------
+        geokit.Extent
+
+        """
+        tl = smopy.num2deg(xi-0.0, yi+1.0, zoom)[::-1]
+        br = smopy.num2deg(xi+1.0, yi-0.0, zoom)[::-1]
+
+        o = xyTransform([tl, br], fromSRS=EPSG4326,
+                        toSRS=EPSG3857, outputFormat='xy')
+
+        return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=EPSG3857)
+
+    @staticmethod
+    def fromVector(source):
         """Create extent around the contemts of a vector source
-        
+
         Parameters:
         -----------
         source : Anything acceptable by loadVector()
@@ -124,15 +157,15 @@ class Extent(object):
 
         shapeLayer = shapeDS.GetLayer()
         shapeSRS = shapeLayer.GetSpatialRef()
-        
-        xMin,xMax,yMin,yMax = shapeLayer.GetExtent()
+
+        xMin, xMax, yMin, yMax = shapeLayer.GetExtent()
 
         return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
 
     @staticmethod
-    def fromRaster( source ):
+    def fromRaster(source):
         """Create extent around the contents of a raster source
-        
+
         Parameters:
         -----------
         source : Anything acceptable by loadRaster()
@@ -145,18 +178,18 @@ class Extent(object):
         """
         dsInfo = rasterInfo(source)
 
-        xMin,yMin,xMax,yMax = dsInfo.bounds
+        xMin, yMin, xMax, yMax = dsInfo.bounds
 
         return Extent(xMin, yMin, xMax, yMax, srs=dsInfo.srs)
 
     @staticmethod
-    def fromLocationSet( locs ):
+    def fromLocationSet(locs):
         """Create extent around the contents of a LocationSet object
-        
+
         Parameters:
         -----------
         locs : LocationSet
-            
+
         Returns:
         --------
         Extent
@@ -165,14 +198,13 @@ class Extent(object):
         lonMin, latMin, lonMax, latMax = locs.getBounds()
         return Extent(lonMin, latMin, lonMax, latMax, srs=EPSG4326)
 
-
     @staticmethod
-    def load( source, **kwargs ):
+    def load(source, **kwargs):
         """Attempts to load an Extent from a variety of inputs in the most 
         appropriate manner
 
         One Extent initializer (.fromXXX) is called depending on the inputs
-            
+
             source is LocationSet -> Extent.fromLocationSet( source )
             source is ogr.Geometry -> Extent.fromGeom( source )
             source is not a string: -> Extent(*source, **kwargs)
@@ -187,16 +219,23 @@ class Extent(object):
         Extent
 
         """
-        if (isinstance(source, Extent)): return source
-        elif isinstance(source, LocationSet): return Extent.fromLocationSet(source)
-        elif isinstance(source, ogr.Geometry): return Extent.fromGeom(source)
-        elif isVector(source): return Extent.fromVector(source)
-        elif isRaster(source): return Extent.fromRaster(source)
-        
-        try: # Maybe the source is an iterable giving xyXY 
+        if (isinstance(source, Extent)):
+            return source
+        elif isinstance(source, LocationSet):
+            return Extent.fromLocationSet(source)
+        elif isinstance(source, ogr.Geometry):
+            return Extent.fromGeom(source)
+        elif isVector(source):
+            return Extent.fromVector(source)
+        elif isRaster(source):
+            return Extent.fromRaster(source)
+
+        try:  # Maybe the source is an iterable giving xyXY
             vals = list(source)
-            if len(vals)==4: return Extent( vals, **kwargs)
-        except: pass
+            if len(vals) == 4:
+                return Extent(vals, **kwargs)
+        except:
+            pass
 
         raise GeoKitExtentError("Could not load the source")
 
@@ -206,78 +245,81 @@ class Extent(object):
 
         Creates an Extent from rasterInfo's returned value
         """
-        return Extent( info.xMin, info.yMin, info.xMax, info.yMax, srs=info.srs)
+        return Extent(info.xMin, info.yMin, info.xMax, info.yMax, srs=info.srs)
 
     @property
-    def xyXY(s): 
+    def xyXY(s):
         """Returns a tuple of the extent boundaries in order:
             xMin, yMin, xMax, yMax"""
         return (s.xMin, s.yMin, s.xMax, s.yMax)
 
     @property
-    def xXyY(s): 
+    def xXyY(s):
         """Returns a tuple of the extent boundaries in order:
             xMin, xMax, yMin, yMax"""
         return (s.xMin, s.xMax, s.yMin, s.yMax)
 
     @property
-    def ylim(s): 
+    def ylim(s):
         """Returns a tuple of the y-axis extent boundaries in order:
             yMin, yMax
         """
         return (s.yMin, s.yMax)
 
     @property
-    def xlim(s): 
+    def xlim(s):
         """Returns a tuple of the x-axis extent boundaries in order:
             xMin, xMax
         """
         return (s.xMin, s.xMax)
 
     @property
-    def box(s): 
+    def box(s):
         """Returns a rectangular ogr.Geometry object representing the extent"""
         return s._box.Clone()
 
-    def __eq__(s,o):
-        #if (s.xyXY != o.xyXY): return False
-        if (not s.srs.IsSame(o.srs) ): return False
-        if not np.isclose(s.xMin, o.xMin): return False
-        if not np.isclose(s.xMax, o.xMax): return False
-        if not np.isclose(s.yMin, o.yMin): return False
-        if not np.isclose(s.yMin, o.yMin): return False
+    def __eq__(s, o):
+        # if (s.xyXY != o.xyXY): return False
+        if (not s.srs.IsSame(o.srs)):
+            return False
+        if not np.isclose(s.xMin, o.xMin):
+            return False
+        if not np.isclose(s.xMax, o.xMax):
+            return False
+        if not np.isclose(s.yMin, o.yMin):
+            return False
+        if not np.isclose(s.yMin, o.yMin):
+            return False
         return True
 
-
-    def __add__(s,o):
-        #if (s.xyXY != o.xyXY): return False
-        if (not s.srs.IsSame(o.srs) ): 
+    def __add__(s, o):
+        # if (s.xyXY != o.xyXY): return False
+        if (not s.srs.IsSame(o.srs)):
             o = o.castTo(s.srs)
-        
-        newExt = Extent( np.minimum( s.xMin, o.xMin ),
-                         np.minimum( s.yMin, o.yMin ),
-                         np.maximum( s.xMax, o.xMax ),
-                         np.maximum( s.yMax, o.yMax ),
-                         srs=s.srs )
+
+        newExt = Extent(np.minimum(s.xMin, o.xMin),
+                        np.minimum(s.yMin, o.yMin),
+                        np.maximum(s.xMax, o.xMax),
+                        np.maximum(s.yMax, o.yMax),
+                        srs=s.srs)
         return newExt
 
     def __repr__(s):
         out = ""
-        out += "xMin: %f\n"%s.xMin
-        out += "xMax: %f\n"%s.xMax
-        out += "yMin: %f\n"%s.yMin
-        out += "yMax: %f\n"%s.yMax
-        out += "srs: %s\n"%s.srs.ExportToWkt()
+        out += "xMin: %f\n" % s.xMin
+        out += "xMax: %f\n" % s.xMax
+        out += "yMin: %f\n" % s.yMin
+        out += "yMax: %f\n" % s.yMax
+        out += "srs: %s\n" % s.srs.ExportToWkt()
 
         return out
 
     def __str__(s):
-        return "(%.5f,%.5f,%.5f,%.5f)"%s.xyXY
+        return "(%.5f,%.5f,%.5f,%.5f)" % s.xyXY
 
-
-    def pad(s, pad, percent=False): 
+    def pad(s, pad, percent=False):
         """Pad the extent in all directions
-        
+
         Parameters:
         -----------
         pad : float
@@ -288,32 +330,33 @@ class Extent(object):
         percent : bool, optional
             If True, the padding values are understood to be a percentage of the
             unpadded extent
-        
+
         Returns:
         --------
         Extent
 
         """
         # Check for no input pads
-        if pad is None: return s
-        
+        if pad is None:
+            return s
+
         # try breaking apart by x and y component
-        try: 
+        try:
             xpad, ypad = pad
-        except: 
+        except:
             xpad = pad
             ypad = pad
 
         if percent:
-            xpad = xpad/100*(s.xMax-s.xMin) /2
-            ypad = ypad/100*(s.yMax-s.yMin) /2
+            xpad = xpad/100*(s.xMax-s.xMin) / 2
+            ypad = ypad/100*(s.yMax-s.yMin) / 2
 
         # Pad the extent
         return Extent(s.xMin-xpad, s.yMin-ypad, s.xMax+xpad, s.yMax+ypad, srs=s.srs)
 
-    def shift(s, dx=0, dy=0): 
+    def shift(s, dx=0, dy=0):
         """Shift the extent in the X and/or Y dimensions
-        
+
         Parameters:
         -----------
         dx : float
@@ -323,7 +366,7 @@ class Extent(object):
         dy : float
             The amount to shift in the y dimension
             * In units of the extent's srs
-        
+
         Returns:
         --------
         Extent
@@ -334,7 +377,7 @@ class Extent(object):
     def fitsResolution(s, unit, tolerance=1e-6):
         """Test if calling Extent first around the given unit(s) (at least within
         an error defined by 'tolerance')
-        
+
         Parameters:
         -----------
         unit : numeric or tuple
@@ -356,7 +399,7 @@ class Extent(object):
         >>> ex.fitsResolution( (25, 10) ) # True!
         >>> ex.fitsResolution(33) # False!
         >>> ex.fitsResolution( (25, 33) ) # False!
-        
+
         """
         try:
             unitX, unitY = unit
@@ -377,7 +420,7 @@ class Extent(object):
 
     def fit(s, unit, dtype=None):
         """Fit the extent to a given pixel resolution
-        
+
         Note:
         -----
         The extent is always expanded to fit onto the given unit
@@ -396,16 +439,18 @@ class Extent(object):
         Returns:
         --------
         Extent
-        
+
         """
         try:
             unitX, unitY = unit
         except:
             unitX, unitY = unit, unit
-        
+
         # Look for bad sizes
-        if (unitX> s.xMax-s.xMin): raise GeoKitExtentError("Unit size is larger than extent width")
-        if (unitY> s.yMax-s.yMin): raise GeoKitExtentError("Unit size is larger than extent width")
+        if (unitX > s.xMax-s.xMin):
+            raise GeoKitExtentError("Unit size is larger than extent width")
+        if (unitY > s.yMax-s.yMin):
+            raise GeoKitExtentError("Unit size is larger than extent width")
 
         # Calculate new extent
         newXMin = np.floor(s.xMin/unitX)*unitX
@@ -414,10 +459,10 @@ class Extent(object):
         newYMax = np.ceil(s.yMax/unitY)*unitY
 
         # Done!
-        if dtype is None or isinstance(unitX,dtype):
-            return Extent( newXMin, newYMin, newXMax, newYMax, srs=s.srs )
+        if dtype is None or isinstance(unitX, dtype):
+            return Extent(newXMin, newYMin, newXMax, newYMax, srs=s.srs)
         else:
-            return Extent( dtype(newXMin), dtype(newYMin), dtype(newXMax), dtype(newYMax), srs=s.srs )
+            return Extent(dtype(newXMin), dtype(newYMin), dtype(newXMax), dtype(newYMax), srs=s.srs)
 
     def corners(s, asPoints=False):
         """Returns the four corners of the extent as ogr.gGometry points or as (x,y)
@@ -427,17 +472,17 @@ class Extent(object):
 
         if (asPoints):
             # Make corner points
-            bl = point( s.xMin, s.yMin, srs=s.srs )
-            br = point( s.xMax, s.yMin, srs=s.srs )
-            tl = point( s.xMin, s.yMax, srs=s.srs )
-            tr = point( s.xMax, s.yMax, srs=s.srs )
+            bl = point(s.xMin, s.yMin, srs=s.srs)
+            br = point(s.xMax, s.yMin, srs=s.srs)
+            tl = point(s.xMin, s.yMax, srs=s.srs)
+            tr = point(s.xMax, s.yMax, srs=s.srs)
 
         else:
             # Make corner points
-            bl = ( s.xMin, s.yMin)
-            br = ( s.xMax, s.yMin)
-            tl = ( s.xMin, s.yMax)
-            tr = ( s.xMax, s.yMax)
+            bl = (s.xMin, s.yMin)
+            br = (s.xMax, s.yMin)
+            tl = (s.xMin, s.yMax)
+            tr = (s.xMax, s.yMax)
 
         return (bl, br, tl, tr)
 
@@ -445,12 +490,12 @@ class Extent(object):
         """
         Creates a new Extent by transforming an extent from the original Extent's
         srs to a target SRS. 
-        
+
         Note:
         -----
         The resulting region spanned by the extent will be equal-to or (almost 
         certainly) larger than the original
-        
+
         Parameters:
         -----------
         srs : Anything acceptable to geokit.srs.loadSRS()
@@ -459,12 +504,12 @@ class Extent(object):
         Returns:
         --------
         Extent
-        
+
         """
-        srs=loadSRS(srs)
+        srs = loadSRS(srs)
 
         # Check for same srs
-        if( srs.IsSame(s.srs)):
+        if(srs.IsSame(s.srs)):
             return s
 
         # Create a transformer
@@ -477,12 +522,12 @@ class Extent(object):
 
         for pt in s.corners(True):
             try:
-                pt.Transform( transformer )
+                pt.Transform(transformer)
             except Exception as e:
-                print("Could not transform between the following SRS:\n\nSOURCE:\n%s\n\nTARGET:\n%s\n\n"%(s.srs.ExportToWkt(), srs.ExportToWkt()))
+                print("Could not transform between the following SRS:\n\nSOURCE:\n%s\n\nTARGET:\n%s\n\n" % (
+                    s.srs.ExportToWkt(), srs.ExportToWkt()))
                 raise e
 
-            
             X.append(pt.GetX())
             Y.append(pt.GetY())
 
@@ -492,34 +537,46 @@ class Extent(object):
     def inSourceExtent(s, source):
         """Tests if the extent box is at least partially contained in the extent-box
         of the given vector or raster source"""
-        if isinstance(source, str): 
+        if isinstance(source, str):
 
-            if isVector(source): isvec = True
-            elif isRaster(source): isvec = False
-            else: raise GeoKitExtentError("Could not handle source: "+source)
+            if isVector(source):
+                isvec = True
+            elif isRaster(source):
+                isvec = False
+            else:
+                raise GeoKitExtentError("Could not handle source: "+source)
 
         elif isinstance(source, gdal.Dataset):
-            if source.GetLayer() is None: isvec = False
-            else: isvec = True
+            if source.GetLayer() is None:
+                isvec = False
+            else:
+                isvec = True
 
-        elif isinstance( source, ogr.DataSource): isvec = True
+        elif isinstance(source, ogr.DataSource):
+            isvec = True
         else:
             raise GeoKitExtentError("Source type could not be determined")
 
         # Check extent for inclusion
-        if isvec: sourceExtent = Extent.fromVector(source).castTo(s.srs)
-        else: sourceExtent = Extent.fromRaster(source).castTo(s.srs)
-        
-        for p in sourceExtent.corners(asPoints=True): # Are the source's corners in the main object's extent?
-            if s._box.Contains(p): return True
-        for p in s.corners(asPoints=True): # Are the main object's corners in the sources's extent?
-            if sourceExtent._box.Contains(p): return True
+        if isvec:
+            sourceExtent = Extent.fromVector(source).castTo(s.srs)
+        else:
+            sourceExtent = Extent.fromRaster(source).castTo(s.srs)
+
+        # Are the source's corners in the main object's extent?
+        for p in sourceExtent.corners(asPoints=True):
+            if s._box.Contains(p):
+                return True
+        # Are the main object's corners in the sources's extent?
+        for p in s.corners(asPoints=True):
+            if sourceExtent._box.Contains(p):
+                return True
 
         return False
 
     def filterSources(s, sources):
         """Filter a list of sources by those whose's envelope overlaps the Extent.
-        
+
         Note:
         -----
         Creates a filter object which can be immediately iterated over, or else 
@@ -533,7 +590,7 @@ class Extent(object):
             * An iterable of paths pointing to vector/raster sources
             * A glob string which will generate a list of source paths
                 - see glob.glob for more info
-        
+
         Returns:
         --------
         filter
@@ -546,7 +603,7 @@ class Extent(object):
             directoryList = sources
 
         return filter(s.inSourceExtent, directoryList)
-    
+
     def containsLoc(s, locs, srs=None):
         """Test if the extent contains a location or an iterable of locations
 
@@ -554,36 +611,38 @@ class Extent(object):
         -----------
         locs : Anything acceptable to LocationSet()
             The locations to be checked
-        
+
 
         srs : Anything acceptable to geokit.srs.loadSRS()
             The srs to cast the Extent object to 
-        
+
         Returns:
         --------
         * If a single location is checker: bool
         * If multiple locations are checked: numpy.ndarray
 
         """
-        boxG = s.box # initialize the box
+        boxG = s.box  # initialize the box
 
         # Normalize locations
-        locs = LocationSet(locs).asXY(s.srs) 
+        locs = LocationSet(locs).asXY(s.srs)
 
         # Do tests
         sel = np.ones(locs.shape[0], dtype=bool)
-        sel *= locs[:,0] >= s.xMin 
-        sel *= locs[:,0] <= s.xMax
-        sel *= locs[:,1] >= s.yMin 
-        sel *= locs[:,1] <= s.yMax
+        sel *= locs[:, 0] >= s.xMin
+        sel *= locs[:, 0] <= s.xMax
+        sel *= locs[:, 1] >= s.yMin
+        sel *= locs[:, 1] <= s.yMax
 
         # Done!
-        if sel.size == 1: return sel[0] 
-        else: return sel
-    
+        if sel.size == 1:
+            return sel[0]
+        else:
+            return sel
+
     def contains(s, extent, res=None):
         """Tests if the extent contains another given extent
-        
+
         Note:
         -----
         If an optional resolution ('res') is given, the containment value is also
@@ -594,39 +653,41 @@ class Extent(object):
         -----------
         extent : Extent
             The Extent object to test for containment
-        
+
         res : numeric or tuple
             The X & Y resolution to enforce 
-        
+
         Returns:
         --------
         bool
 
         """
         # test raw bounds
-        if( not extent.srs.IsSame(s.srs) or 
+        if(not extent.srs.IsSame(s.srs) or
             extent.xMin < s.xMin or extent.yMin < s.yMin or
-            extent.xMax > s.xMax or extent.yMax > s.yMax):
+                extent.xMax > s.xMax or extent.yMax > s.yMax):
             return False
 
-        if( res ):
+        if(res):
             # unpack resolution
-            try: dx, dy = res
-            except: dx, dy = res, res
+            try:
+                dx, dy = res
+            except:
+                dx, dy = res, res
 
             # Test for factor of resolutions
             thresh = dx/1000
-            if( (extent.xMin - s.xMin)%dx>thresh or
-                (extent.yMin - s.yMin)%dy>thresh or
-                (s.xMax - extent.xMax)%dx>thresh or
-                (s.yMax - extent.yMax)%dy>thresh ):
+            if((extent.xMin - s.xMin) % dx > thresh or
+                (extent.yMin - s.yMin) % dy > thresh or
+                (s.xMax - extent.xMax) % dx > thresh or
+                    (s.yMax - extent.yMax) % dy > thresh):
                 return False
         return True
 
     def findWithin(s, extent, res=100, yAtTop=True):
         """Finds the indexes of the given extent within the main extent according
         to the given resolution.
-        
+
         Note:
         -----
         * Use this to compute the index offsets and window sizes of a window 
@@ -637,7 +698,7 @@ class Extent(object):
         -----------
         extent : Extent
             The extent to find within the calling extent
-        
+
         res : numeric or tuple
             A resolution to check containment on
 
@@ -655,22 +716,23 @@ class Extent(object):
 
         # try to unpack the resolution
         try:
-            dx,dy = res
+            dx, dy = res
         except:
-            dx,dy = res,res
+            dx, dy = res, res
 
         # Get offsets
         tmpX = (extent.xMin - s.xMin)/dx
         xOff = int(np.round(tmpX))
 
-        if( yAtTop ):
+        if(yAtTop):
             tmpY = (s.yMax - extent.yMax)/dy
         else:
             tmpY = (extent.yMin - s.yMin)/dy
         yOff = int(np.round(tmpY))
 
         if not (np.isclose(xOff, tmpX) and np.isclose(yOff, tmpY)):
-            raise GeoKitExtentError("The extents are not relatable on the given resolution")
+            raise GeoKitExtentError(
+                "The extents are not relatable on the given resolution")
 
         # Get window sizes
         tmpX = (extent.xMax - extent.xMin)/dx
@@ -680,32 +742,33 @@ class Extent(object):
         yWin = int(np.round(tmpY))
 
         if not (np.isclose(xWin, tmpX) and np.isclose(yWin, tmpY)):
-            raise GeoKitExtentError("The extents are not relatable on the given resolution")
+            raise GeoKitExtentError(
+                "The extents are not relatable on the given resolution")
 
         # Done!
         return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
-    
 
     #############################################################################
-    ## CONVENIENCE FUNCTIONS
+    # CONVENIENCE FUNCTIONS
+
     def createRaster(s, pixelWidth, pixelHeight, **kwargs):
         """Convenience function for geokit.raster.createRaster which sets 'bounds'
         and 'srs' inputs
 
         * The input resolution MUST fit within the extent
-        
+
         Parameters:
         -----------
         pixelWidth : numeric
             The pixel width of the raster in units of the input srs
             * The keyword 'dx' can be used as well and will override anything given 
             assigned to 'pixelWidth'
-        
+
         pixelHeight : numeric
             The pixel height of the raster in units of the input srs
             * The keyword 'dy' can be used as well and will override anything given 
               assigned to 'pixelHeight'
-        
+
         **kwargs:
             All other keyword arguments are passed on to geokit.raster.createRaster()
 
@@ -715,14 +778,15 @@ class Extent(object):
         * If 'output' is a string: None
 
         """
-        if not s.fitsResolution((pixelWidth,pixelHeight)):
-            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
-        return createRaster( bounds=s.xyXY, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=s.srs, **kwargs)
-        
+        if not s.fitsResolution((pixelWidth, pixelHeight)):
+            raise GeoKitExtentError(
+                "The given resolution does not fit to the Extent boundaries")
+        return createRaster(bounds=s.xyXY, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=s.srs, **kwargs)
+
     def extractMatrix(s, source, strict=True, **kwargs):
         """Convenience wrapper around geokit.raster.extractMatrix(). Extracts the
         extent directly from the given raster source as a matrix around the Extent
-        
+
         Note:
         -----
         The called extent must fit somewhere within the raster's grid
@@ -750,11 +814,15 @@ class Extent(object):
         """
         if strict:
             ri = rasterInfo(source)
-            if not s.srs.IsSame( ri.srs ): raise GeoKitExtentError("Extent and source do not share an srs")
-            if not Extent._fromInfo(ri).contains(s, (ri.dx, ri.dy) ): raise GeoKitExtentError("Extent does not fit the raster's resolution")
+            if not s.srs.IsSame(ri.srs):
+                raise GeoKitExtentError(
+                    "Extent and source do not share an srs")
+            if not Extent._fromInfo(ri).contains(s, (ri.dx, ri.dy)):
+                raise GeoKitExtentError(
+                    "Extent does not fit the raster's resolution")
 
         return extractMatrix(source, bounds=s.xyXY, boundsSRS=s.srs, **kwargs)
-        
+
     def warp(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.raster.warp() which automatically sets the 
         'srs' and 'bounds' input. 
@@ -765,16 +833,16 @@ class Extent(object):
         different algorithm is used which can sometimes add an extra row of pixels. Be
         aware of this if you intend to compare value-matricies directly from rasters 
         generated with this function.
-        
+
         Parameters:
         -----------
         source : str
             The path to the vector file to load
-        
+
         pixelHeight : numeric; optional
             The pixel height (y-resolution) of the output raster
             * Only required if this value should be changed
-        
+
         pixelWidth : numeric; optional
             The pixel width (x-resolution) of the output raster
             * Only required if this value should be changed
@@ -782,7 +850,7 @@ class Extent(object):
         strict : bool
             If True, raise an error if trying to warp to a pixelWidth and 
             pixelHeight which does not fit into the Extent
-    
+
         **kwargs:
             All other keyword arguments are passed on to geokit.raster.warp()
 
@@ -792,9 +860,10 @@ class Extent(object):
         * If 'output' is a string: None
 
         """
-        if strict and not s.fitsResolution((pixelWidth,pixelHeight)):
-            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
-        return warp(source=source, pixelWidth=pixelWidth, pixelHeight=pixelHeight, 
+        if strict and not s.fitsResolution((pixelWidth, pixelHeight)):
+            raise GeoKitExtentError(
+                "The given resolution does not fit to the Extent boundaries")
+        return warp(source=source, pixelWidth=pixelWidth, pixelHeight=pixelHeight,
                     srs=s.srs, bounds=s.xyXY, **kwargs)
 
     def rasterize(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
@@ -807,16 +876,16 @@ class Extent(object):
         different algorithm is used which can sometimes add an extra row of pixels. Be
         aware of this if you intend to compare value-matricies directly from rasters 
         generated with this function.
-        
+
         Parameters:
         -----------
         source : str
             The path to the vector file to load
-        
+
         pixelHeight : numeric; optional
             The pixel height (y-resolution) of the output raster
             * Only required if this value should be changed
-        
+
         pixelWidth : numeric; optional
             The pixel width (x-resolution) of the output raster
             * Only required if this value should be changed
@@ -824,25 +893,26 @@ class Extent(object):
         strict : bool
             If True, raise an error if trying to rasterize to a pixelWidth and 
             pixelHeight which does not fit into the Extent
-    
+
         **kwargs:
             All other keyword arguments are passed on to geokit.raster.warp()
-        
+
         Returns:
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-        
+
         """
-        if strict and not s.fitsResolution((pixelWidth,pixelHeight)):
-            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
-        return rasterize(source=source, pixelWidth=pixelWidth, pixelHeight=pixelHeight, 
+        if strict and not s.fitsResolution((pixelWidth, pixelHeight)):
+            raise GeoKitExtentError(
+                "The given resolution does not fit to the Extent boundaries")
+        return rasterize(source=source, pixelWidth=pixelWidth, pixelHeight=pixelHeight,
                          srs=s.srs, bounds=s.xyXY, **kwargs)
 
     def extractFeatures(s, source, **kwargs):
         """Convenience wrapper for geokit.vector.extractFeatures() by setting the 
         'geom' input to the extent's box
-        
+
         Parameters:
         -----------
         source : str
@@ -850,15 +920,14 @@ class Extent(object):
 
         **kwargs:
             All other keyword arguments are passed on to vector.extractFeatures()
-           
+
         Returns:
         --------
         * If asPandas is True: pandas.DataFrame or pandas.Series
         * If asPandas is False: generator
 
         """
-        return extractFeatures( source=source, geom=s._box, **kwargs )
-
+        return extractFeatures(source=source, geom=s._box, **kwargs)
 
     def mutateVector(s, source, matchContext=False, **kwargs):
         """Convenience function for geokit.vector.mutateVector which automatically
@@ -882,17 +951,17 @@ class Extent(object):
 
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
-            
+
 
         Returns:
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-        
+
         """
         # Get the working srs
         if not matchContext:
-            vinfo = vectorInfo( source )
+            vinfo = vectorInfo(source)
             ext = s.castTo(vinfo.srs)
         else:
             ext = s
@@ -915,10 +984,10 @@ class Extent(object):
         -----------
         source : Anything acceptable to geokit.raster.loadRaster()
             The source to mutate
-        
+
         pixelHeight : numeric
             The pixel height (y-resolution) of the output raster
-        
+
         pixelWidth : numeric
             The pixel width (x-resolution) of the output raster
 
@@ -954,27 +1023,33 @@ class Extent(object):
         * If 'output' is a string: None
 
         """
-        if warpArgs is None: warpArgs = {}
+        if warpArgs is None:
+            warpArgs = {}
 
-        if processor is None: # We wont do a mutation without a processor, since everything else
-                              # can be handled by Warp. Therefore we pass on any 'output' that is 
-                              # given to the warping stage, unless one was already given
+        if processor is None:  # We wont do a mutation without a processor, since everything else
+            # can be handled by Warp. Therefore we pass on any 'output' that is
+            # given to the warping stage, unless one was already given
             warpArgs["output"] = warpArgs.get("output", mutateArgs["output"])
-        
+
         # Warp the source
         if matchContext:
             if pixelWidth is None or pixelHeight is None:
-                raise GeoKitExtentError("pixelWidth and pixelHeight must be provided when matchContext is True")
+                raise GeoKitExtentError(
+                    "pixelWidth and pixelHeight must be provided when matchContext is True")
 
-            source = s.warp( source, resampleAlg=resampleAlg, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=True, **warpArgs )
+            source = s.warp(source, resampleAlg=resampleAlg, pixelWidth=pixelWidth,
+                            pixelHeight=pixelWidth, strict=True, **warpArgs)
         else:
             if not "srs" in mutateArgs:
                 source = loadRaster(source)
                 srs = source.GetProjectionRef()
 
             ext = s.castTo(srs)
-            source = ext.warp( source, resampleAlg=resampleAlg, pixelWidth=pixelWidth, pixelHeight=pixelWidth, strict=False, **warpArgs )   
+            source = ext.warp(source, resampleAlg=resampleAlg, pixelWidth=pixelWidth,
+                              pixelHeight=pixelWidth, strict=False, **warpArgs)
 
         # mutate the source
-        if not processor is None: return mutateRaster(source, processor=processor, **mutateArgs)
-        else: return source
+        if not processor is None:
+            return mutateRaster(source, processor=processor, **mutateArgs)
+        else:
+            return source

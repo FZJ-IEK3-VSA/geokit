@@ -1,8 +1,12 @@
-name: geokit
+name: dev-geokit
 channels:
   - conda-forge
 dependencies:
   - python
+  - pytest
+  - pytest-cov
+  - pylint
+  - autopep8
   - pip
   - matplotlib
   - descartes
@@ -11,5 +15,8 @@ dependencies:
   - scipy
   - scikit-learn
   - gdal>2.0.0,<3.0.0
+  - jupyter
+  - notebook
+  - jupyterlab
   - pip:
       - smopy
