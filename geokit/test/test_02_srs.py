@@ -1,4 +1,4 @@
-from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326
+from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, osr
 from geokit import srs
 
 
@@ -34,3 +34,8 @@ def test_loadSRS():
 
     # Are they the same?
     assert s1.IsSame(s2)
+
+
+def test_centeredLAEA():
+    s1 = srs.centeredLAEA(6.8, 50.0775)
+    assert isinstance(s1, osr.SpatialReference)
