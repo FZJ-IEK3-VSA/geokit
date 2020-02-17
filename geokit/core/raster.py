@@ -7,7 +7,7 @@ if( "win" in sys.platform):COMPRESSION_OPTION = ["COMPRESS=LZW"]
 else: COMPRESSION_OPTION = ["COMPRESS=DEFLATE"]
 
 # Basic Loader
-def loadRaster(source):
+def loadRaster(source, mode=0):
     """
     Load a raster dataset from a path to a file on disc
 
@@ -24,7 +24,7 @@ def loadRaster(source):
 
     """
     if(isinstance(source,str)):
-        ds = gdal.Open(source)
+        ds = gdal.Open(source, mode)
     else:
         ds = source
 
@@ -1459,7 +1459,7 @@ def polygonizeRaster( source, srs=None, flat=False, shrink=True):
     # Done!
     return pd.DataFrame(dict(geom=finalGeoms, value=finalRID))
     
-def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, dtype=None, noData=None, fill=None, overwrite=True, **kwargs):
+def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=None, pixelWidth=None, srs=None, bounds=None, dtype=None, noData=None, fill=None, overwrite=True, meta=None, **kwargs):
     """Warps a given raster source to another context
 
     * Can be used to 'warp' a raster in memory to a raster on disk
@@ -1636,18 +1636,34 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
         destRas.FlushCache()
 
+
+
+    # Do we have meta data?
+    if not meta is None:
+        if isinstance(result, str):
+            ds = loadRaster(result, 1)
+        else:
+            ds = result
+
+        for k, v in meta.items():
+            ds.SetMetadataItem(k, v)
+
+        del ds
+
     # Do we need to readjust?
     if isAdjusted: 
-        if isinstance(destRas, str):
-            ds = loadRaster(destRas, True)
+        if isinstance(result, str):
+            ds = loadRaster(result, 1)
         else:
-            ds = destRas
+            ds = result
         band = ds.GetRasterBand(1)
         band.SetScale(dsInfo.scale)
         band.SetOffset(dsInfo.offset)
         band.FlushCache()
         ds.FlushCache()
         del band, ds
+
+    # TODO: Should 'result' be deleted at this point?
 
     # Done!
     if not cutline is None: del tempdir
