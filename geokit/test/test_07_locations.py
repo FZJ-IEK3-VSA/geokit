@@ -11,7 +11,7 @@ def test_Location___init__():
 
 def test_Location___hash__():
     l = Location(*xy)
-    assert hash(l) == 4109769254643766781
+    assert isinstance(hash(l), int)
 
 
 def test_Location___eq__():
@@ -252,9 +252,13 @@ def test_LocationSet_asHash():
     ls = LocationSet(pts)
     h = ls.asHash()
 
-    assert h[0] == 3927246602883527356
-    assert h[1] == 3568298024840608381
-    assert h[2] == 3686734391468548956
+    assert isinstance(h[0], int)
+    assert isinstance(h[1], int)
+    assert isinstance(h[2], int)
+
+    assert h[0] != h[1]
+    assert h[0] != h[2]
+    assert h[1] != h[2]
 
 
 def test_LocationSet_splitKMeans():
