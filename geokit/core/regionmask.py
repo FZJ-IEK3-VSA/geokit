@@ -1064,14 +1064,14 @@ class RegionMask(object):
 
         # do warp
         if returnMatrix:
-            newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, output=output, **kwargs)
+            newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, output=output, noData=noData, **kwargs)
         else:
             if applyMask:
                 if "cutline" in kwargs: 
                     raise GeoKitRegionMaskError("Cannot apply both a cutline and the mask when returning the warped dataset")
-                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, cutline=s.vectorPath, output=output, **kwargs)   
+                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, cutline=s.vectorPath, output=output, noData=noData, **kwargs)   
             else:
-                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, output=output, **kwargs)
+                newDS = s.extent.warp(source=source, pixelWidth=pW, pixelHeight=pH, resampleAlg=resampleAlg, output=output, noData=noData, **kwargs)
 
         if not returnMatrix: return newDS
 
@@ -1136,14 +1136,14 @@ class RegionMask(object):
 
         # do rasterization
         if returnMatrix:
-            newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, output=output, **kwargs)
+            newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, output=output, noData=noData, **kwargs)
         else:
             if applyMask:
                 if "cutline" in kwargs: 
                     raise GeoKitRegionMaskError("Cannot apply both a cutline and the mask when returning the rasterized dataset")
-                newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, cutline=s.vectorPath, output=output, **kwargs)   
+                newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, cutline=s.vectorPath, output=output, noData=noData, **kwargs)   
             else:
-                newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, output=output, **kwargs)
+                newDS = s.extent.rasterize(source=source, pixelWidth=pW, pixelHeight=pH, output=output, noData=noData, **kwargs)
 
         if not returnMatrix: return newDS
 
