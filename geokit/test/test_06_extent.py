@@ -300,6 +300,18 @@ def test_Extent_findWithin():
     assert w2.yWin == 35  # flipped - yWin
 
 
+def test_Extent_computPixelSize():
+    ex = Extent(0,1,2,3, srs=EPSG4326)
+
+    dx,dy = ex.computePixelSize( 5 )
+    assert np.isclose(dx, 0.4 )
+    assert np.isclose(dy, 0.4 )
+
+    dx,dy = ex.computePixelSize( 5, 10 )
+    assert np.isclose(dx, 0.4 )
+    assert np.isclose(dy, 0.2 )
+
+    
 def test_Extent_createRaster():
     ex = Extent.fromRaster(CLC_RASTER_PATH)
 

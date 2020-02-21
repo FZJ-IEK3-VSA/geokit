@@ -684,6 +684,7 @@ class Extent(object):
                 return False
         return True
 
+
     def findWithin(s, extent, res=100, yAtTop=True):
         """Finds the indexes of the given extent within the main extent according
         to the given resolution.
@@ -747,6 +748,31 @@ class Extent(object):
 
         # Done!
         return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
+
+    def computePixelSize(s, *args):
+        """Finds the pixel resolution which fits to the Extent for a given pixel count.
+
+        Note:
+        -----
+        * If only one integer argument is given, it is assumed to fit to both the X and Y dimensions
+        * If two integer arguments are given, it is assumed to be in the order X then Y
+
+
+        Returns:
+            tuple -> (pixelWidth, pixelHeight)
+
+        """
+
+        if len(args) == 1:
+            pixels_x = args[0]
+            pixels_y = args[0]
+        else:
+            pixels_x, pixels_y = args
+    
+        pixelWidth = (s.xMax-s.xMin) / pixels_x
+        pixelHeight= (s.yMax-s.yMin) / pixels_y
+    
+        return pixelWidth, pixelHeight
 
     #############################################################################
     # CONVENIENCE FUNCTIONS
