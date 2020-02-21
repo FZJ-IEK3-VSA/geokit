@@ -460,3 +460,33 @@ def test_Extent_mutateRaster():
                         output=result("extent_mutateRaster3.tif"))
     mat3 = raster.extractMatrix(r)
     assert np.isclose(mat3.mean(), 19.27040301)
+
+
+def test_Extent_clipRaster():
+    ex = Extent.fromVector(AACHEN_SHAPE_PATH)
+
+    # test a simple clip
+    r = ex.clipRaster(AACHEN_URBAN_LC)
+    mat = raster.extractMatrix(r)
+
+    assert np.isclose(mat.mean(), 1.583447145588637)
+    assert np.isclose(mat.std(), 0.5784475661496283)
+
+    ri = raster.rasterInfo(r)
+    assert ri.dx == 100
+    assert ri.dy == 100
+    assert ri.xMin == 4038300.0
+    assert ri.yMin == 3048700.0
+    assert ri.xMax == 4067000.0
+    assert ri.yMax == 3101000.0
+
+
+def test_Extent_contoursFromRaster():
+    ext = Extent.fromVector(AACHEN_SHAPE_PATH)
+    geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
+                                   contourEdges=[1, 2, 3], transformGeoms=True)
+
+    assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
+    assert len(geoms) == 95
+    assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
+    assert geoms.iloc[61].ID == 1

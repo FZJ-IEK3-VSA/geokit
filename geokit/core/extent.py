@@ -12,7 +12,7 @@ class Extent(object):
 
     The Extent object represents geographic extents of an area and exposes useful
     methods which depend on those extents. This includes:
-        - Easily representing the boundaries as (xMin, xMax, yMin, yMax) or 
+        - Easily representing the boundaries as (xMin, xMax, yMin, yMax) or
           (xMin, yMin, xMax, yMax)
         - Casting to another projection system
         - Padding and shifting the boundaries
@@ -39,7 +39,7 @@ class Extent(object):
         Extent(xMin, yMin, xMax, yMax [, srs=<srs>])
         Extent( (xMin, yMin, xMax, yMax) [, srs=<srs>])
 
-        Where:    
+        Where:
             xMin - The minimal x value in the respective SRS
             yMin - The minimal y value in the respective SRS
             xMax - The maximal x value in the respective SRS
@@ -74,7 +74,7 @@ class Extent(object):
 
         Parameters:
         -----------
-        bounds : tuple 
+        bounds : tuple
             The (xMin, xMax, yMin, yMax) values for the extent
 
         srs : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -94,7 +94,7 @@ class Extent(object):
 
         Parameters:
         -----------
-        geom : ogr.Geometry 
+        geom : ogr.Geometry
             The geometry from which to extract the extent
 
         Returns:
@@ -200,7 +200,7 @@ class Extent(object):
 
     @staticmethod
     def load(source, **kwargs):
-        """Attempts to load an Extent from a variety of inputs in the most 
+        """Attempts to load an Extent from a variety of inputs in the most
         appropriate manner
 
         One Extent initializer (.fromXXX) is called depending on the inputs
@@ -489,17 +489,17 @@ class Extent(object):
     def castTo(s, srs):
         """
         Creates a new Extent by transforming an extent from the original Extent's
-        srs to a target SRS. 
+        srs to a target SRS.
 
         Note:
         -----
-        The resulting region spanned by the extent will be equal-to or (almost 
+        The resulting region spanned by the extent will be equal-to or (almost
         certainly) larger than the original
 
         Parameters:
         -----------
         srs : Anything acceptable to geokit.srs.loadSRS()
-            The srs to cast the Extent object to 
+            The srs to cast the Extent object to
 
         Returns:
         --------
@@ -579,12 +579,12 @@ class Extent(object):
 
         Note:
         -----
-        Creates a filter object which can be immediately iterated over, or else 
+        Creates a filter object which can be immediately iterated over, or else
         can be cast as a list
 
         Parameters:
         -----------
-        sources : list or str 
+        sources : list or str
             The sources to filter
             * An iterable of vector/raster sources
             * An iterable of paths pointing to vector/raster sources
@@ -614,7 +614,7 @@ class Extent(object):
 
 
         srs : Anything acceptable to geokit.srs.loadSRS()
-            The srs to cast the Extent object to 
+            The srs to cast the Extent object to
 
         Returns:
         --------
@@ -655,7 +655,7 @@ class Extent(object):
             The Extent object to test for containment
 
         res : numeric or tuple
-            The X & Y resolution to enforce 
+            The X & Y resolution to enforce
 
         Returns:
         --------
@@ -684,14 +684,13 @@ class Extent(object):
                 return False
         return True
 
-
     def findWithin(s, extent, res=100, yAtTop=True):
         """Finds the indexes of the given extent within the main extent according
         to the given resolution.
 
         Note:
         -----
-        * Use this to compute the index offsets and window sizes of a window 
+        * Use this to compute the index offsets and window sizes of a window
           within a raster dataset
         * The two extents MUST share the same SRS
 
@@ -768,10 +767,10 @@ class Extent(object):
             pixels_y = args[0]
         else:
             pixels_x, pixels_y = args
-    
+
         pixelWidth = (s.xMax-s.xMin) / pixels_x
-        pixelHeight= (s.yMax-s.yMin) / pixels_y
-    
+        pixelHeight = (s.yMax-s.yMin) / pixels_y
+
         return pixelWidth, pixelHeight
 
     #############################################################################
@@ -787,12 +786,12 @@ class Extent(object):
         -----------
         pixelWidth : numeric
             The pixel width of the raster in units of the input srs
-            * The keyword 'dx' can be used as well and will override anything given 
+            * The keyword 'dx' can be used as well and will override anything given
             assigned to 'pixelWidth'
 
         pixelHeight : numeric
             The pixel height of the raster in units of the input srs
-            * The keyword 'dy' can be used as well and will override anything given 
+            * The keyword 'dy' can be used as well and will override anything given
               assigned to 'pixelHeight'
 
         **kwargs:
@@ -823,7 +822,7 @@ class Extent(object):
             The raster source to be read
 
         strict: bool; optional
-            Whether or not to allow a returned value which does not fit to the 
+            Whether or not to allow a returned value which does not fit to the
             given extent
             !! If this is set to False, it is STRONGLY recommended to also set the
                argument 'returnBounds' as True so that the new computed boundary
@@ -850,14 +849,14 @@ class Extent(object):
         return extractMatrix(source, bounds=s.xyXY, boundsSRS=s.srs, **kwargs)
 
     def warp(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
-        """Convenience function for geokit.raster.warp() which automatically sets the 
-        'srs' and 'bounds' input. 
+        """Convenience function for geokit.raster.warp() which automatically sets the
+        'srs' and 'bounds' input.
 
         Note:
         -----
         When creating an 'in memory' raster vs one which is saved to disk, a slightly
         different algorithm is used which can sometimes add an extra row of pixels. Be
-        aware of this if you intend to compare value-matricies directly from rasters 
+        aware of this if you intend to compare value-matricies directly from rasters
         generated with this function.
 
         Parameters:
@@ -874,7 +873,7 @@ class Extent(object):
             * Only required if this value should be changed
 
         strict : bool
-            If True, raise an error if trying to warp to a pixelWidth and 
+            If True, raise an error if trying to warp to a pixelWidth and
             pixelHeight which does not fit into the Extent
 
         **kwargs:
@@ -894,13 +893,13 @@ class Extent(object):
 
     def rasterize(s, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.vector.rasterize() which automatically
-        sets the 'srs' and 'bounds' input. 
+        sets the 'srs' and 'bounds' input.
 
         Note:
         -----
         When creating an 'in memory' raster vs one which is saved to disk, a slightly
         different algorithm is used which can sometimes add an extra row of pixels. Be
-        aware of this if you intend to compare value-matricies directly from rasters 
+        aware of this if you intend to compare value-matricies directly from rasters
         generated with this function.
 
         Parameters:
@@ -917,7 +916,7 @@ class Extent(object):
             * Only required if this value should be changed
 
         strict : bool
-            If True, raise an error if trying to rasterize to a pixelWidth and 
+            If True, raise an error if trying to rasterize to a pixelWidth and
             pixelHeight which does not fit into the Extent
 
         **kwargs:
@@ -936,7 +935,7 @@ class Extent(object):
                          srs=s.srs, bounds=s.xyXY, **kwargs)
 
     def extractFeatures(s, source, **kwargs):
-        """Convenience wrapper for geokit.vector.extractFeatures() by setting the 
+        """Convenience wrapper for geokit.vector.extractFeatures() by setting the
         'geom' input to the extent's box
 
         Parameters:
@@ -970,10 +969,10 @@ class Extent(object):
             The source to clip
 
         matchContext : bool; optional
-            * If True, transforms all geometries to the Extent's srs before 
+            * If True, transforms all geometries to the Extent's srs before
               mutating
             * If False, the Extent is cast to the source's srs, and all filtering
-              and mutating happens in that context 
+              and mutating happens in that context
 
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
@@ -996,7 +995,7 @@ class Extent(object):
         return mutateVector(source, srs=ext.srs, geom=ext._box, **kwargs)
 
     def mutateRaster(s, source, pixelWidth=None, pixelHeight=None, matchContext=False, warpArgs=None, processor=None, resampleAlg='bilinear', **mutateArgs):
-        """Convenience function for geokit.vector.mutateRaster which automatically
+        """Convenience function for geokit.raster.mutateRaster which automatically
         warps the raster to the extent's area and srs before mutating
 
         Note:
@@ -1020,7 +1019,7 @@ class Extent(object):
         matchContext : bool; optional
             * If True, Warp to the Extent's boundaries and srs before mutating
                 - pixelHeight and pixelWidth MUST be provided in this case
-            * If False, only warp to the Extent's boundaries, but keep its 
+            * If False, only warp to the Extent's boundaries, but keep its
               srs and resolution intact
 
         warpArgs : dict; optional
@@ -1028,10 +1027,10 @@ class Extent(object):
             * See geokit.raster.warp()
 
         processor - function; optional
-            The function performing the mutation of the raster's data 
-            * The function will take single argument (a 2D numpy.ndarray) 
+            The function performing the mutation of the raster's data
+            * The function will take single argument (a 2D numpy.ndarray)
             * The function must return a numpy.ndarray of the same size as the input
-            * The return type must also be containable within a Float32 (int and 
+            * The return type must also be containable within a Float32 (int and
               boolean is okay)
             * See example in geokit.raster.mutateRaster for more info
 
@@ -1055,9 +1054,11 @@ class Extent(object):
         if processor is None:  # We wont do a mutation without a processor, since everything else
             # can be handled by Warp. Therefore we pass on any 'output' that is
             # given to the warping stage, unless one was already given
-            warpArgs["output"] = warpArgs.get("output", mutateArgs["output"])
+            warpArgs["output"] = warpArgs.get(
+                "output", mutateArgs.get("output", None))
 
         # Warp the source
+        # TODO: Should the warping be updated to use Extent.clipRaster???
         if matchContext:
             if pixelWidth is None or pixelHeight is None:
                 raise GeoKitExtentError(
@@ -1079,3 +1080,74 @@ class Extent(object):
             return mutateRaster(source, processor=processor, **mutateArgs)
         else:
             return source
+
+    def clipRaster(s, source, output=None, **kwargs):
+        """Clip a given raster source to the caling Extent
+
+        Parameters:
+        -----------
+        source : Anything acceptable to geokit.raster.loadRaster()
+            The source to clip
+
+        **kwargs:
+            All other keyword arguments are passed to gdal.Translate
+
+        Returns:
+        --------
+        * If 'output' is None: gdal.Dataset
+        * If 'output' is a string: None
+
+        """
+        from time import time_ns
+        opts = gdal.TranslateOptions(
+            projWin=[s.xMin, s.yMax, s.xMax, s.yMin],
+            projWinSRS=s.srs, **kwargs)
+
+        if output is None:
+            fname = "/vsimem/clip_{}.tif".format(time_ns())
+        else:
+            fname = output
+        ds = gdal.Translate(fname, source, options=opts)
+
+        return ds if output is None else output
+
+    def contoursFromRaster(s, raster, contourEdges, transformGeoms=True, contoursKwargs={}, ):
+        """Convenience wrapper for geokit.raster.contours which autmatically
+        creates a raster for the given matrix (which is assumed to match the
+        domain of the RegionMask)
+
+        Parameters:
+        -----------
+        raster : The raster datasource to warp from
+
+        contourEdges : [float,]
+            The edges to search for withing the raster dataset
+            * This parameter can be set as "None", in which case an additional
+                argument should be given to specify how the edges should be determined
+                - See the documentation of "GDALContourGenerateEx"
+                - Ex. "LEVEL_INTERVAL=10", contourEdges=None
+
+        contoursKwargs : dict
+            Keyword arguments to pass on to the contours function
+            * See geokit.raster.contours
+
+        warpKwargs : dict
+            Keyword arguments to pass on to the raster warp function
+            * See geokit.RegionMask.warp
+
+        Returns:
+        --------
+        pandas.DataFrame
+
+        With columns:
+            'geom' -> The contiguous-valued geometries
+            'ID' -> The associated contour edge for each object
+
+        """
+        raster = s.clipRaster(raster)
+        geoms = contours(raster, contourEdges, **contoursKwargs)
+
+        if transformGeoms:
+            geoms.geom = transform(geoms.geom, toSRS=s.srs)
+
+        return geoms

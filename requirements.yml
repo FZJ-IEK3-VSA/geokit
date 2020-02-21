@@ -10,6 +10,6 @@ dependencies:
   - numpy
   - scipy
   - scikit-learn
-  - gdal>2.0.0,<3.0.0
+  - gdal>2.2.0,<3.0.0
   - pip:
       - smopy
