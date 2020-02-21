@@ -311,6 +311,7 @@ def test_createRasterLike():
     newdata = raster.extractMatrix(newRaster)
     assert np.isclose(data, newdata/4).all()
 
+
 def test_rasterStats():
     result = raster.rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
     assert np.isclose(result.mean, 15.711518944519621)
@@ -336,11 +337,12 @@ def test_indexToCoord():
     YS = raster.rasterInfo(CLC_FLIPCHECK_PATH).yWinSize-1
 
     xy_flipped = raster.indexToCoord(
-                    xi=np.array([10, 11, 22, 5]), 
-                    yi=np.array([YS-5, YS-5, YS-3, YS-5]), 
-                    source=rasterSource,
-                )
+        xi=np.array([10, 11, 22, 5]),
+        yi=np.array([YS-5, YS-5, YS-3, YS-5]),
+        source=rasterSource,
+    )
     assert np.isclose(xy_flipped, xy).all()
+
 
 def test_drawRaster():
     r = raster.drawRaster(AACHEN_URBAN_LC)
@@ -356,7 +358,7 @@ def test_drawRaster():
 
     # cutline
     r = raster.drawRaster(AACHEN_URBAN_LC, cutline=AACHEN_SHAPE_PATH,
-                   resolution=0.001, srs=4326)
+                          resolution=0.001, srs=4326)
     plt.savefig(result("drawRaster-4.png"), dpi=100)
 
     assert True
@@ -364,33 +366,44 @@ def test_drawRaster():
 
 def test_polygonizeRaster():
     geoms = raster.polygonizeRaster(AACHEN_URBAN_LC)
-    assert np.isclose(geoms.shape[0], 423) # geom count
+    assert np.isclose(geoms.shape[0], 423)  # geom count
     is3 = geoms.value == 3
-    assert np.isclose(is3.sum(), 2) # value count
+    assert np.isclose(is3.sum(), 2)  # value count
     assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(),
-            120529999.18190208) # geom area
-
+                      120529999.18190208)  # geom area
 
     geoms = raster.polygonizeRaster(AACHEN_URBAN_LC, flat=True)
-    assert np.isclose(geoms.shape[0], 3) # geom count
+    assert np.isclose(geoms.shape[0], 3)  # geom count
     is3 = geoms.value == 3
-    assert np.isclose(is3.sum(), 1) # value count
+    assert np.isclose(is3.sum(), 1)  # value count
     assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(),
-            120529999.18190208) # geom area
+                      120529999.18190208)  # geom area
+
+
+def test_contours():
+    geoms = raster.contours(AACHEN_ELIGIBILITY_RASTER, contourEdges=[0.5])
+
+    ri = raster.rasterInfo(AACHEN_ELIGIBILITY_RASTER)
+
+    assert geoms.shape[0] == 114  # geom count
+    assert np.isclose(geoms.geom[59].Area(), 0.022376976699986426)
+    assert np.isclose(geoms.ID[59], 1)
+    assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
+
 
 def test_warp():
     # Change resolution to disk
-    d = raster.warp(CLC_RASTER_PATH, 
+    d = raster.warp(CLC_RASTER_PATH,
                     pixelHeight=200,
-                    pixelWidth=200, 
+                    pixelWidth=200,
                     output=result("warp1.tif"))
     v1 = raster.extractMatrix(d)
-    assert np.isclose(v1.mean(), 16.3141463057 )
+    assert np.isclose(v1.mean(), 16.3141463057)
 
     # change resolution to memory
     d = raster.warp(CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200)
     v2 = raster.extractMatrix(d)
-    assert np.isclose(v1,v2).all()
+    assert np.isclose(v1, v2).all()
 
     # Do a cutline from disk
     d = raster.warp(CLC_RASTER_PATH, cutline=AACHEN_SHAPE_PATH,
@@ -400,25 +413,25 @@ def test_warp():
     assert np.isclose(v3[0, 0], 99)
 
     # Do a cutline from memory
-    d = raster.warp(CLC_RASTER_PATH, 
-                    cutline=geom.box(*AACHEN_SHAPE_EXTENT_3035, 
-                                srs=EPSG3035), 
+    d = raster.warp(CLC_RASTER_PATH,
+                    cutline=geom.box(*AACHEN_SHAPE_EXTENT_3035,
+                                     srs=EPSG3035),
                     noData=99)
     v4 = raster.extractMatrix(d)
     assert np.isclose(v4[0, 0], 99)
     assert np.isclose(v4.mean(), 76.72702479)
 
     # Do a flipped-source check
-    d = raster.warp(CLC_FLIPCHECK_PATH, 
-                    cutline=geom.box(*AACHEN_SHAPE_EXTENT_3035, 
-                                srs=EPSG3035), 
+    d = raster.warp(CLC_FLIPCHECK_PATH,
+                    cutline=geom.box(*AACHEN_SHAPE_EXTENT_3035,
+                                     srs=EPSG3035),
                     noData=99)
     v5 = raster.extractMatrix(d)
-    assert np.isclose(v4,v5).all()
+    assert np.isclose(v4, v5).all()
 
-    d = raster.warp(CLC_FLIPCHECK_PATH, 
+    d = raster.warp(CLC_FLIPCHECK_PATH,
                     pixelHeight=200,
-                    pixelWidth=200, 
+                    pixelWidth=200,
                     output=result("warp6.tif"))
     v6 = raster.extractMatrix(d)
-    assert np.isclose(v1,v6).all()
+    assert np.isclose(v1, v6).all()
