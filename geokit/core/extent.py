@@ -1111,10 +1111,9 @@ class Extent(object):
 
         return ds if output is None else output
 
-    def contoursFromRaster(s, raster, contourEdges, transformGeoms=True, contoursKwargs={}, ):
+    def contoursFromRaster(s, raster, contourEdges, transformGeoms=True, **kwargs):
         """Convenience wrapper for geokit.raster.contours which autmatically
-        creates a raster for the given matrix (which is assumed to match the
-        domain of the RegionMask)
+        clips a raster to the invoked Extent 
 
         Parameters:
         -----------
@@ -1127,13 +1126,13 @@ class Extent(object):
                 - See the documentation of "GDALContourGenerateEx"
                 - Ex. "LEVEL_INTERVAL=10", contourEdges=None
 
-        contoursKwargs : dict
+        transformGeoms : bool
+            If True, geometries are transformed to the Extent's SRS, otehrwise they
+            are left in their native SRS
+
+        kwargs
             Keyword arguments to pass on to the contours function
             * See geokit.raster.contours
-
-        warpKwargs : dict
-            Keyword arguments to pass on to the raster warp function
-            * See geokit.RegionMask.warp
 
         Returns:
         --------
@@ -1145,7 +1144,7 @@ class Extent(object):
 
         """
         raster = s.clipRaster(raster)
-        geoms = contours(raster, contourEdges, **contoursKwargs)
+        geoms = contours(raster, contourEdges, **kwargs)
 
         if transformGeoms:
             geoms.geom = transform(geoms.geom, toSRS=s.srs)
