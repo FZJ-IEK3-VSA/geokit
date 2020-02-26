@@ -714,7 +714,7 @@ class RegionMask(object):
                     np.logical_and(data >= valueMin, output, output)
                 if(not valueMax is None):
                     np.logical_and(data <= valueMax, output, output)
-
+                
             # Fill nan values, maybe
             if(not noData is None):
                 output[nodat] = noData
@@ -1452,7 +1452,7 @@ class RegionMask(object):
         """
         raster = s.warp(raster, applyMask=applyMask,
                         returnMatrix=False, **warpKwargs)
-        geoms = s.extent.contours(raster, contourEdges, **contoursKwargs)
+        geoms = contours(raster, contourEdges, **contoursKwargs)
 
         return geoms
 
