@@ -28,55 +28,35 @@ Therefore, it is our pleasure to offer it to anyone who is interested in its use
 
 ## Installation
 
-First clone a local copy of the repository to your computer
+1. First clone a local copy of the repository to your computer, and move into the created directory
 
 ```
 git clone https://github.com/FZJ-IEK3-VSA/geokit.git
+cd geokit
 ```
 
-### Short Version:
+1. (Alternative) If you want to use the 'dev' branch (or another branch) then use:
 
-When using Anaconda (recommended), GeoKit should be installable to a new environment with:
+```
+git checkout dev
+```
+
+2. When using Anaconda (recommended), GeoKit should be installable to a new environment with:
 
 ```
 conda env create --file requirements.yml
 ```
 
-Or into an existing environment with:
+2. (Alternative) Or into an existing environment with:
 
 ```
 conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
 ```
 
-### Longer Version:
-
-Be sure GDAL is previously installed \* If using Anaconda, this can be accomplished via:
-
-- Any GDAL version 2.x.x should work, however testing is performed with version 2.4.1
+3. Now install GeoKit via pip as follows (remove the '-e' if you do not want to install GeoKit in 'editable' mode)
 
 ```
-conda install -c conda-forge gdal==2.4.1
-```
-
-!For Windows users!
-
-Sometimes a path variable will need to be set to tell the system where to find the GDAL dependancies
-
-- Path variables name must be: "GDAL\*DATA"
-- When installed with Anaconda, path should be: "<anaconda-top-directory>\Library\share\gdal"
-- As of GeoKit version 1.1.0, GeoKit will attempt to add this path automatically at runtime
-
-Now install GeoKit via pip as follows
-
-```
-cd geokit
 pip install -e .
-```
-
-Or install directly via python as
-
-```
-python setup.py install
 ```
 
 ## Examples
