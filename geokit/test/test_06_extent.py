@@ -1,5 +1,5 @@
 from .helpers import *
-from geokit import Extent, LocationSet, util, raster, vector
+from geokit import Extent, LocationSet, util, raster, vector, _test_data_
 
 
 def test_Extent___init__():
@@ -490,3 +490,13 @@ def test_Extent_contoursFromRaster():
     assert len(geoms) == 95
     assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
     assert geoms.iloc[61].ID == 1
+
+
+def test_Extent_mosiacTiles():
+    ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
+    ras = ext.mosaicTiles(join(_test_data_['prior_tiles'],
+                               "osm_roads_minor.{z}.{x}.{y}.tif"),
+                          9, pixelsPerTile=128)
+    rasmat = raster.extractMatrix(ras)
+    assert np.isclose(np.nanmean(rasmat), 425.9861755371094)
+    assert np.isclose(np.nanstd(rasmat), 449.9284113160365)

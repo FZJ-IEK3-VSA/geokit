@@ -1150,3 +1150,85 @@ class Extent(object):
             geoms.geom = transform(geoms.geom, toSRS=s.srs)
 
         return geoms
+
+    def mosaicTiles(s, source, zoom, pixelsPerTile=8192, workingType=np.uint16, noData=2**16-1, output=None, **kwargs):
+        """Create a raster source surrounding the Extent from a collection of tiles 
+
+        Parameters:
+        -----------
+        source : str
+            The source to fetch tiles from
+            * Formats include:
+
+        zoom : int
+            The zoom level of the expected tile source
+
+        pixelsPerTile : int, (int,int)
+            The number of pixels found in each tile
+
+        workingType : np.dtype
+            The datatype of the working matrix (should match the raster source)
+
+        noData : numeric
+            The value to treat as 'no data'
+
+        output : str
+            An optional path for an output raster (.tif) file
+
+        Returns:
+        --------
+        * If 'output' is None: gdal.Dataset
+        * If 'output' is a string: None
+
+        """
+        if not isinstance(pixelsPerTile, tuple):
+            dy = dx = int(pixelsPerTile)
+        else:
+            dy, dx = int(pixelsPerTile[0]), int(pixelsPerTile[1])
+
+        # Get Bounds of new raster in EPSG3857
+        ext4326 = s.castTo(EPSG4326)
+
+        tl_tile_xi, tl_tile_yi = smopy.deg2num(
+            ext4326.yMax, ext4326.xMin, zoom)
+        br_tile_xi, br_tile_yi = smopy.deg2num(
+            ext4326.yMin, ext4326.xMax, zoom)
+
+        tl_lat, tl_lon = smopy.num2deg(tl_tile_xi,   tl_tile_yi, zoom)
+        br_lat, br_lon = smopy.num2deg(br_tile_xi+1, br_tile_yi+1, zoom)
+
+        coords3857 = xyTransform([(tl_lon, tl_lat), (br_lon, br_lat)],
+                                 fromSRS=EPSG4326, toSRS=EPSG3857, outputFormat='xy')
+
+        ext = Extent(coords3857.x.min(),
+                     coords3857.y.min(),
+                     coords3857.x.max(),
+                     coords3857.y.max(),
+                     srs=EPSG3857)
+
+        # Fetch tiles
+        # TODO: This can be easily parallelized!!
+        def source_filled(xi, yi, zoom): return source.replace(
+            "{z}", str(zoom)).replace("{x}", str(xi)).replace("{y}", str(yi))
+
+        total_size = dy*(br_tile_yi+1-tl_tile_yi), dx*(br_tile_xi+1-tl_tile_xi)
+
+        canvas = np.full(total_size, noData, dtype=workingType)
+        empty = np.full((dy, dx), noData, dtype=workingType)
+        for yi_mat, yi_tile in enumerate(range(tl_tile_yi, br_tile_yi+1)):
+            for xi_mat, xi_tile in enumerate(range(tl_tile_xi, br_tile_xi+1)):
+                current_source = source_filled(xi_tile, yi_tile, zoom)
+                # if os.path.isfile(current_source):
+                try:
+                    mat = extractMatrix(current_source)
+                except:
+                    mat = empty
+                    warnings.warn(
+                        "Source could not be loaded: "+current_source)
+                canvas[yi_mat*dy:(yi_mat+1)*dy, xi_mat*dx:(xi_mat+1)*dx] = mat
+
+        # Make raster output
+        pw, ph = ext.computePixelSize(total_size[0], total_size[1])
+        output = ext.createRaster(pixelWidth=pw, pixelHeight=ph,
+                                  output=output, noData=noData, data=canvas, **kwargs)
+        return output
