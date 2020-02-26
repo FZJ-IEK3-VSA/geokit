@@ -26,3 +26,4 @@ testing/results/eligibility_plots
 .coverage
 .pytest
 .cache/v/cache/lastfailed
+.pytest_cache/*
