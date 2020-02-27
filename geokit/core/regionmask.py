@@ -620,7 +620,7 @@ class RegionMask(object):
         # Done
         return output
 
-    def indicateValues(s, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', **kwargs):
+    def indicateValues(s, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', geomsFromContours=False, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -680,6 +680,13 @@ class RegionMask(object):
         noData : numeric
             The noData value to use when applying the mask
 
+        geomsFromContours: bool
+            If True, then geometries will be constructed from the function 
+            geokit.RegionMask.contoursFromMatrix, as opposed to using
+            geokit.RegionMask.polygonizeMask.
+            - This will result in simpler geometries which are easier to grow, 
+              but which do not strictly follow the edges of the indicated pixels
+
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
 
@@ -714,7 +721,7 @@ class RegionMask(object):
                     np.logical_and(data >= valueMin, output, output)
                 if(not valueMax is None):
                     np.logical_and(data <= valueMax, output, output)
-                
+
             # Fill nan values, maybe
             if(not noData is None):
                 output[nodat] = noData
@@ -738,7 +745,10 @@ class RegionMask(object):
 
         # Apply a buffer if requested
         if not buffer is None:
-            geoms = s.polygonizeMask(final > 0.5, flat=False)
+            if geomsFromContours:
+                geoms = s.contoursFromMask(final)
+            else:
+                geoms = s.polygonizeMask(final > 0.5, flat=False)
 
             if len(geoms) > 0:
                 geoms = [g.Buffer(buffer) for g in geoms]
@@ -1534,10 +1544,10 @@ class RegionMask(object):
             'ID' -> The associated contour edge for each object
 
         """
-        geom = rm.contoursFromMatrix(matrix=mask, contourEdges=[truthThreshold, ],
-                                     createRasterKwargs=createRasterKwargs,
-                                     contoursKwargs=contoursKwargs)
+        geomDF = s.contoursFromMatrix(matrix=mask, contourEdges=[truthThreshold, ],
+                                      createRasterKwargs=createRasterKwargs,
+                                      contoursKwargs=contoursKwargs)
 
-        geoms = geoms[geoms.ID == (1 if trueAboveThreshold else 0)].geom
+        geoms = geomDF[geomDF.ID == (1 if trueAboveThreshold else 0)].geom
 
         return geoms
