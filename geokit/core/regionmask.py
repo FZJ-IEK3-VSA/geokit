@@ -620,7 +620,7 @@ class RegionMask(object):
         # Done
         return output
 
-    def indicateValues(s, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', geomsFromContours=False, **kwargs):
+    def indicateValues(s, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -687,6 +687,32 @@ class RegionMask(object):
             - This will result in simpler geometries which are easier to grow, 
               but which do not strictly follow the edges of the indicated pixels
 
+
+        bufferMethod : str; optional
+            An indicator determining the method to use when buffereing
+            * Options are: 'area' and 'contour'
+            * If 'area', the function will first rasterize the raw geometries and
+              will then apply the buffer to the indicated pixels
+              - Uses geokit.RegionMask.polygonizeMask
+              - This is the safer option although is not as accurate as the 'geom'
+                option since it does not capture the exact edges of the geometries
+              - This method can be made more accurate by increasing the 
+                'resolutionDiv' input
+            * If 'contour', the function will still rasterize the raw geometries, 
+              but will then create geometries via mask contours (not the explicit
+              pixel edges)
+              - Uses geokit.RegionMask.contoursFromMatrix 
+              - This option will recreate geometries which are more similar to the 
+                original geometries compared to the 'area' method 
+              - This method can be made more accurate by increasing the 
+                'resolutionDiv' input
+
+        preBufferSimplification: numeric
+            If given, then geometries will be simplified (using ogr.Geometry.Simplify)
+            using the specified value before being buffered
+            - Using this can drastically decrease the time it takes to perform the 
+              bufferring procedure, but can decrease accuracy if it is too high
+
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
 
@@ -694,9 +720,9 @@ class RegionMask(object):
         Returns:
         --------
         numpy.ndarray
-
-
         """
+        assert bufferMethod in ['area', 'contour']
+
         # Unpack value
         if isinstance(value, tuple):
             valueMin, valueMax = value
@@ -745,10 +771,13 @@ class RegionMask(object):
 
         # Apply a buffer if requested
         if not buffer is None:
-            if geomsFromContours:
+            if bufferMethod == 'contour':
                 geoms = s.contoursFromMask(final)
-            else:
+            elif bufferMethod == 'area':
                 geoms = s.polygonizeMask(final > 0.5, flat=False)
+
+            if preBufferSimplification is not None:
+                geoms = [g.Simplify(preBufferSimplification) for g in geoms]
 
             if len(geoms) > 0:
                 geoms = [g.Buffer(buffer) for g in geoms]
@@ -779,7 +808,7 @@ class RegionMask(object):
 
     #######################################################################################
     # Vector feature indicator
-    def indicateFeatures(s, source, where=None, buffer=None, bufferMethod='geom', resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=0, **kwargs):
+    def indicateFeatures(s, source, where=None, buffer=None, bufferMethod='geom', resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=0, preBufferSimplification=None, **kwargs):
         """
         Indicates the RegionMask pixels which are found within the features (or 
         a subset of the features) contained in a given vector datasource
@@ -807,7 +836,7 @@ class RegionMask(object):
 
         bufferMethod : str; optional
             An indicator determining the method to use when buffereing
-            * Options are: 'geom' and 'area'
+            * Options are: 'geom', 'area', and 'contour'
             * If 'geom', the function will attempt to grow each of the geometries
               directly using the ogr library
               - This can fail sometimes when the geometries are particularly 
@@ -817,6 +846,13 @@ class RegionMask(object):
               will then apply the buffer to the indicated pixels
               - This is the safer option although is not as accurate as the 'geom'
                 option since it does not capture the exact edges of the geometries
+              - This method can be made more accurate by increasing the 
+                'resolutionDiv' input
+            * If 'contour', the function will still rasterize the raw geometries, 
+              but will then create geometries via mask contours (not the explicit
+              pixel edges)
+              - This option will recreate geometries which are more similar to the 
+                original geometries compared to the 'area' method 
               - This method can be made more accurate by increasing the 
                 'resolutionDiv' input
 
@@ -835,6 +871,13 @@ class RegionMask(object):
         noData : numeric
             The noData value to use when applying the mask
 
+        preBufferSimplification: numeric
+            If given, then geometries will be simplified (using ogr.Geometry.Simplify)
+            using the specified value before being buffered
+            - Using this can drastically decrease the time it takes to perform the 
+              bufferring procedure, but can decrease accuracy if it is too high
+
+
         kwargs -- Passed on to RegionMask.rasterize()
             * Most notably: 'allTouched'
 
@@ -843,6 +886,7 @@ class RegionMask(object):
         numpy.ndarray
 
         """
+        assert bufferMethod in ['geom', 'area', 'contour']
         # Ensure path to dataSet exists
         source = loadVector(source)
 
@@ -850,7 +894,12 @@ class RegionMask(object):
         if buffer == 0:
             buffer = None
         if not buffer is None and bufferMethod == 'geom':
-            def doBuffer(ftr): return {'geom': ftr.geom.Buffer(buffer)}
+            def doBuffer(ftr):
+                if preBufferSimplification is not None:
+                    geom = ftr.geom.Simplify(preBufferSimplification)
+                else:
+                    geom = ftr.geom
+                return {'geom': geom.Buffer(buffer)}
             source = s.mutateVector(source, where=where, processor=doBuffer,
                                     matchContext=True, keepAttributes=False, _slim=True)
 
@@ -870,9 +919,15 @@ class RegionMask(object):
                                   applyMask=applyMask, noData=noData)
 
         # maybe we want to do the other buffer method
-        if not buffer is None and bufferMethod == 'area':
-            geoms = polygonizeMask(
-                final > 0.5, bounds=s.extent, srs=s.srs, flat=False)
+        if not buffer is None and (bufferMethod == 'area' or bufferMethod == 'contour'):
+            if bufferMethod == 'area':
+                geoms = s.polygonizeMask(final > 0.5, flat=False)
+            elif bufferMethod == 'contour':
+                geoms = s.contoursFromMask(final)
+
+            if preBufferSimplification is not None:
+                geoms = [g.Simplify(preBufferSimplification) for g in geoms]
+
             if len(geoms) > 0:
                 geoms = [g.Buffer(buffer) for g in geoms]
                 dataSet = createVector(geoms)
