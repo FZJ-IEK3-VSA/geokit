@@ -1,5 +1,5 @@
 from .helpers import *
-from geokit import Extent, LocationSet, util, raster, vector, _test_data_
+from geokit import srs, Extent, LocationSet, util, raster, vector, _test_data_
 
 
 def test_Extent___init__():
@@ -490,6 +490,17 @@ def test_Extent_contoursFromRaster():
     assert len(geoms) == 95
     assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
     assert geoms.iloc[61].ID == 1
+
+
+def test_Extent_tileBox():
+    ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
+    ext_box = ext.tileBox(12)
+
+    assert np.isclose(ext_box.xMin, 655523.954574)
+    assert np.isclose(ext_box.xMax, 724011.531917)
+    assert np.isclose(ext_box.yMin, 6525887.726875)
+    assert np.isclose(ext_box.yMax, 6613943.183460)
+    assert ext_box.srs.IsSame(srs.EPSG3857)
 
 
 def test_Extent_mosiacTiles():

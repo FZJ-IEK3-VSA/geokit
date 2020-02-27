@@ -5,6 +5,7 @@ from .raster import *
 from .vector import *
 
 IndexSet = namedtuple("IndexSet", "xStart yStart xWin yWin xEnd yEnd")
+TileIndexBox = namedtuple("tileBox", "xi_start xi_stop yi_start yi_stop")
 
 
 class Extent(object):
@@ -1151,7 +1152,78 @@ class Extent(object):
 
         return geoms
 
-    def mosaicTiles(s, source, zoom, pixelsPerTile=8192, workingType=np.uint16, noData=2**16-1, output=None, **kwargs):
+    def tileIndexBox(s, zoom):
+        """Determine the tile indexes at a given zoom level which surround the invoked Extent
+
+        Parameters:
+        -----------
+        zoom : int
+            The zoom level of the expected tile source
+
+        Returns:
+        --------
+        namedtuple:
+            - xi_start: int - The starting x index
+            - xi_stop:  int - The ending x index
+            - yi_start: int - The starting y index
+            - yi_stop:  int - The ending y index
+
+        """
+        ext4326 = s.castTo(EPSG4326)
+
+        tl_tile_xi, tl_tile_yi = smopy.deg2num(
+            ext4326.yMax, ext4326.xMin, zoom)
+        br_tile_xi, br_tile_yi = smopy.deg2num(
+            ext4326.yMin, ext4326.xMax, zoom)
+
+        return TileIndexBox(xi_start=tl_tile_xi, xi_stop=br_tile_xi, yi_start=tl_tile_yi, yi_stop=br_tile_yi)
+
+    def tileBox(s, zoom, return_index_box=False):
+        """Determine the tile Extent at a given zoom level which surround the invoked Extent
+
+        Parameters:
+        -----------
+        zoom : int
+            The zoom level of the expected tile source
+
+        return_index_box : bool
+            If true, also return the index box at the specified zoom level (from s.tileIndexBox)
+
+        Returns:
+        --------
+        if return_index_box is False: geokit.Extent
+
+        if return_index_box is True: Tuple
+            - Item 0: geokit.Extent
+            - Item 1: namedtuple(xi_start, xi_stop, yi_start, yi_stop)
+
+        """
+        # Get Bounds of new raster in EPSG3857
+        tb = s.tileIndexBox(zoom)
+
+        tl_tile_xi = tb.xi_start
+        tl_tile_yi = tb.yi_start
+        br_tile_xi = tb.xi_stop
+        br_tile_yi = tb.yi_stop
+
+        tl_lat, tl_lon = smopy.num2deg(tl_tile_xi,   tl_tile_yi, zoom)
+        br_lat, br_lon = smopy.num2deg(br_tile_xi+1, br_tile_yi+1, zoom)
+
+        coords3857 = xyTransform([(tl_lon, tl_lat), (br_lon, br_lat)],
+                                 fromSRS=EPSG4326, toSRS=EPSG3857, outputFormat='xy')
+
+        ext = Extent(coords3857.x.min(),
+                     coords3857.y.min(),
+                     coords3857.x.max(),
+                     coords3857.y.max(),
+                     srs=EPSG3857)
+
+        if return_index_box:
+            return ext, tb
+        else:
+            return ext
+
+    def mosaicTiles(s, source, zoom, pixelsPerTile, workingType=np.uint16, noData=2**16-1, output=None, **kwargs):
         """Create a raster source surrounding the Extent from a collection of tiles 
 
         Parameters:
@@ -1186,37 +1258,20 @@ class Extent(object):
         else:
             dy, dx = int(pixelsPerTile[0]), int(pixelsPerTile[1])
 
-        # Get Bounds of new raster in EPSG3857
-        ext4326 = s.castTo(EPSG4326)
-
-        tl_tile_xi, tl_tile_yi = smopy.deg2num(
-            ext4326.yMax, ext4326.xMin, zoom)
-        br_tile_xi, br_tile_yi = smopy.deg2num(
-            ext4326.yMin, ext4326.xMax, zoom)
-
-        tl_lat, tl_lon = smopy.num2deg(tl_tile_xi,   tl_tile_yi, zoom)
-        br_lat, br_lon = smopy.num2deg(br_tile_xi+1, br_tile_yi+1, zoom)
-
-        coords3857 = xyTransform([(tl_lon, tl_lat), (br_lon, br_lat)],
-                                 fromSRS=EPSG4326, toSRS=EPSG3857, outputFormat='xy')
-
-        ext = Extent(coords3857.x.min(),
-                     coords3857.y.min(),
-                     coords3857.x.max(),
-                     coords3857.y.max(),
-                     srs=EPSG3857)
+        ext, tb = s.tileBox(zoom, return_index_box=True)
 
         # Fetch tiles
         # TODO: This can be easily parallelized!!
         def source_filled(xi, yi, zoom): return source.replace(
             "{z}", str(zoom)).replace("{x}", str(xi)).replace("{y}", str(yi))
 
-        total_size = dy*(br_tile_yi+1-tl_tile_yi), dx*(br_tile_xi+1-tl_tile_xi)
+        total_size = dy*(tb.yi_stop+1-tb.yi_start), dx * \
+            (tb.xi_stop+1-tb.xi_start)
 
         canvas = np.full(total_size, noData, dtype=workingType)
         empty = np.full((dy, dx), noData, dtype=workingType)
-        for yi_mat, yi_tile in enumerate(range(tl_tile_yi, br_tile_yi+1)):
-            for xi_mat, xi_tile in enumerate(range(tl_tile_xi, br_tile_xi+1)):
+        for yi_mat, yi_tile in enumerate(range(tb.yi_start, tb.yi_stop+1)):
+            for xi_mat, xi_tile in enumerate(range(tb.xi_start, tb.xi_stop+1)):
                 current_source = source_filled(xi_tile, yi_tile, zoom)
                 # if os.path.isfile(current_source):
                 try:
