@@ -1230,7 +1230,15 @@ class Extent(object):
         -----------
         source : str
             The source to fetch tiles from
-            * Formats include:
+            * Must include indicators for:
+              {z} -> The tile's zoom level
+              {x} -> The tile's x-index
+              {y} -> The tile's y-index
+            * Ex:
+              File on disk     : "/path/to/tile/directory/{z}/{x}/{y}/filename.tif"
+              Remote HTTP file : "/vsicurl_streaming/http://path/to/resource/{z}/{x}/{y}/filename.tif"
+            * Find more info at https://gdal.org/user/virtual_file_systems.html
+
 
         zoom : int
             The zoom level of the expected tile source
