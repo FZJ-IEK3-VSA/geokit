@@ -141,7 +141,7 @@ class Extent(object):
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=EPSG3857)
 
     @staticmethod
-    def fromVector(source):
+    def fromVector(source, where=None, geom=None):
         """Create extent around the contemts of a vector source
 
         Parameters:
@@ -149,19 +149,35 @@ class Extent(object):
         source : Anything acceptable by loadVector()
             The vector datasource to read from
 
+        where : str; optional
+            An SQL-style filtering string
+            * Can be used to filter the input source according to their attributes
+            * For tips, see "http://www.gdal.org/ogr_sql.html"
+            Ex: 
+              where="eye_color='Green' AND IQ>90"
+
+        geom : ogr.Geometry; optional
+            The geometry to search within
+            * All features are extracted which touch this Geometry
+
         Returns:
         --------
         Extent
 
         """
-        shapeDS = loadVector(source)
+        if where is None and geom is None:
+            shapeDS = loadVector(source)
 
-        shapeLayer = shapeDS.GetLayer()
-        shapeSRS = shapeLayer.GetSpatialRef()
+            shapeLayer = shapeDS.GetLayer()
+            shapeSRS = shapeLayer.GetSpatialRef()
 
-        xMin, xMax, yMin, yMax = shapeLayer.GetExtent()
+            xMin, xMax, yMin, yMax = shapeLayer.GetExtent()
 
-        return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
+            return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
+        else:
+            geom = extractFeature(source, where=where,
+                                  geom=geom, onlyGeom=True)
+            return Extent.fromGeom(geom)
 
     @staticmethod
     def fromRaster(source):
