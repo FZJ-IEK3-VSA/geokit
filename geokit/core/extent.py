@@ -1349,7 +1349,7 @@ class Extent(object):
         sources = list(s.tileSources(zoom=zoom, source=source))
         return s.rasterMosaic(sources, _skipFiltering=True, **kwargs)
 
-    def rasterMosaic(s, sources, _warpKwargs={resampleAlg: 'near'}, _skipFiltering=False, **kwargs):
+    def rasterMosaic(s, sources, _warpKwargs={}, _skipFiltering=False, **kwargs):
         """Create a raster source surrounding the Extent from a collection of other rasters
 
         Parameters:
@@ -1384,7 +1384,9 @@ class Extent(object):
 
         output = inputs.pop('output', None)
         master_raster = ext._quickRaster(**inputs)
-        gdal.Warp(master_raster, sources, **warpKwargs)
+        gdal.Warp(master_raster, sources,
+                  resampleAlg=_warpKwargs.pop('resampleAlg', 'near'),
+                  **_warpKwargs)
 
         if output is not None:
             gdal.Translate(output, master_raster,
