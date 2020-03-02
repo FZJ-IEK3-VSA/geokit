@@ -1,6 +1,8 @@
 '''The Util sub-module contains a number of generally helpful utillity functions, classes, and constants. It is also used for common imports across all GeoKit functionality'''
 
-import os, sys, re
+import os
+import sys
+import re
 import numpy as np
 from osgeo import gdal, ogr, osr
 from tempfile import TemporaryDirectory, NamedTemporaryFile
@@ -20,24 +22,50 @@ _test = osr.SpatialReference()
 res = _test.ImportFromEPSG(4326)
 
 # Quick check if gdal loaded properly
-if(not res==0 ):
-    raise RuntimeError("GDAL did not load properly. Check your 'GDAL_DATA' environment variable")
+if(not res == 0):
+    raise RuntimeError(
+        "GDAL did not load properly. Check your 'GDAL_DATA' environment variable")
 
 ######################################################################################
 # An few errors just for me!
-class GeoKitError(Exception): pass
-class GeoKitSRSError(GeoKitError): pass
-class GeoKitGeomError(GeoKitError): pass
-class GeoKitLocationError(GeoKitError): pass
-class GeoKitRasterError(GeoKitError): pass
-class GeoKitVectorError(GeoKitError): pass
-class GeoKitExtentError(GeoKitError): pass
-class GeoKitRegionMaskError(GeoKitError): pass
+
+
+class GeoKitError(Exception):
+    pass
+
+
+class GeoKitSRSError(GeoKitError):
+    pass
+
+
+class GeoKitGeomError(GeoKitError):
+    pass
+
+
+class GeoKitLocationError(GeoKitError):
+    pass
+
+
+class GeoKitRasterError(GeoKitError):
+    pass
+
+
+class GeoKitVectorError(GeoKitError):
+    pass
+
+
+class GeoKitExtentError(GeoKitError):
+    pass
+
+
+class GeoKitRegionMaskError(GeoKitError):
+    pass
 
 #####################################################################
 # Testers
 
-def isVector(source): 
+
+def isVector(source):
     """
     Test if loadVector fails for the given input
 
@@ -51,20 +79,25 @@ def isVector(source):
     bool -> True if the given input is a vector
 
     """
-    
-    if isinstance(source, gdal.Dataset): 
-        if source.GetLayerCount() > 0: return True
-        else: return False
+
+    if isinstance(source, gdal.Dataset):
+        if source.GetLayerCount() > 0:
+            return True
+        else:
+            return False
     elif isinstance(source, str):
         d = gdal.IdentifyDriver(source)
 
         meta = d.GetMetadata()
-        if meta.get("DCAP_VECTOR", False)=="YES": return True
-        else: return False
+        if meta.get("DCAP_VECTOR", False) == "YES":
+            return True
+        else:
+            return False
     else:
         return False
 
-def isRaster(source): 
+
+def isRaster(source):
     """
     Test if loadRaster fails for the given input
 
@@ -78,18 +111,22 @@ def isRaster(source):
     bool -> True if the given input is a raster
 
     """
-    if isinstance(source, gdal.Dataset): 
+    if isinstance(source, gdal.Dataset):
         try:
-            if source.GetLayerCount() == 0: return True # This should always be true?
-            else: return False
+            if source.GetLayerCount() == 0:
+                return True  # This should always be true?
+            else:
+                return False
         except:
             return False
     elif isinstance(source, str):
         d = gdal.IdentifyDriver(source)
 
         meta = d.GetMetadata()
-        if meta.get("DCAP_RASTER", False)=="YES": return True
-        else: return False
+        if meta.get("DCAP_RASTER", False) == "YES":
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -112,14 +149,14 @@ def scaleMatrix(mat, scale, strict=True):
         mat : numpy.ndarray or [[numeric,],] 
             The data to be scaled
               * Must be two dimensional
-        
+
         scale : int or (int, int)
             The dimensional scaling factor for either both, or independently for
             the Y and X dimensions
               * If scaling down, the scaling factors must be a factor of the their 
                 associated dimension in the input matrix (unless 'strict' is set 
                 to False)
-        
+
         strict : bool 
             Whether or not to force a fail when scaling-down by a scaling factor 
             which is not a dimensional factor
@@ -136,7 +173,7 @@ def scaleMatrix(mat, scale, strict=True):
     --------
 
     numpy.ndarray
-    
+
 
     Examples:
     ---------
@@ -172,62 +209,80 @@ def scaleMatrix(mat, scale, strict=True):
 
     # unpack scale
     try:
-        yScale,xScale = scale
+        yScale, xScale = scale
     except:
-        yScale,xScale = scale, scale
+        yScale, xScale = scale, scale
 
     # check for ints
-    if( not (isinstance(xScale,int) and isinstance(yScale,int))):
+    if(not (isinstance(xScale, int) and isinstance(yScale, int))):
         raise ValueError("scale must be integer types")
 
-    if (xScale==0 and yScale==0): return mat # no scaling (it would just be silly to call this)
-    elif (xScale>0 and yScale>0): # scale up
-        out = np.zeros((mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
+    if (xScale == 0 and yScale == 0):
+        return mat  # no scaling (it would just be silly to call this)
+    elif (xScale > 0 and yScale > 0):  # scale up
+        out = np.zeros(
+            (mat.shape[0]*yScale, mat.shape[1]*xScale), dtype=mat.dtype)
         for yo in range(yScale):
             for xo in range(xScale):
                 out[yo::yScale, xo::xScale] = mat
-    
-    elif (xScale<0 and yScale<0): # scale down
+
+    elif (xScale < 0 and yScale < 0):  # scale down
         xScale = -1*xScale
         yScale = -1*yScale
         # ensure scale is a factor of both xSize and ySize
         if strict:
-            if( not( mat.shape[0]%yScale==0 and mat.shape[1]%xScale==0)):
-                raise GeoKitError("Matrix can only be scaled down by a factor of it's dimensions")
+            if(not(mat.shape[0] % yScale == 0 and mat.shape[1] % xScale == 0)):
+                raise GeoKitError(
+                    "Matrix can only be scaled down by a factor of it's dimensions")
             yPad = 0
             xPad = 0
         else:
-            yPad = yScale-mat.shape[0]%yScale # get the amount to pad in the y direction
-            xPad = xScale-mat.shape[1]%xScale # get the amount to pad in the x direction
-            
-            if yPad==yScale: yPad=0
-            if xPad==xScale: xPad=0
+            # get the amount to pad in the y direction
+            yPad = yScale-mat.shape[0] % yScale
+            # get the amount to pad in the x direction
+            xPad = xScale-mat.shape[1] % xScale
+
+            if yPad == yScale:
+                yPad = 0
+            if xPad == xScale:
+                xPad = 0
 
             # Do y-padding
-            if yPad>0: mat = np.concatenate( (mat, np.zeros((yPad,mat.shape[1])) ), 0)
-            if xPad>0: mat = np.concatenate( (mat, np.zeros((mat.shape[0],xPad)) ), 1)
-        
-        out = np.zeros((mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
+            if yPad > 0:
+                mat = np.concatenate((mat, np.zeros((yPad, mat.shape[1]))), 0)
+            if xPad > 0:
+                mat = np.concatenate((mat, np.zeros((mat.shape[0], xPad))), 1)
+
+        out = np.zeros(
+            (mat.shape[0]//yScale, mat.shape[1]//xScale), dtype="float")
         for yo in range(yScale):
             for xo in range(xScale):
                 out += mat[yo::yScale, xo::xScale]
         out = out/(xScale*yScale)
 
         # Correct the edges if a padding was provided
-        if yPad>0: out[:-1,-1] *= yScale/(yScale-yPad) # fix the right edge EXCLUDING the bot-left point
-        if xPad>0: out[-1,:-1] *= xScale/(xScale-xPad) # fix the bottom edge EXCLUDING the bot-left point
-        if yPad>0: out[-1,-1]  *= yScale*xScale/(yScale-yPad)/(xScale-xPad) # fix the bot-left point
+        if yPad > 0:
+            # fix the right edge EXCLUDING the bot-left point
+            out[:-1, -1] *= yScale/(yScale-yPad)
+        if xPad > 0:
+            # fix the bottom edge EXCLUDING the bot-left point
+            out[-1, :-1] *= xScale/(xScale-xPad)
+        if yPad > 0:
+            out[-1, -1] *= yScale*xScale / \
+                (yScale-yPad)/(xScale-xPad)  # fix the bot-left point
 
-    else: # we have both a scaleup and a scale down
+    else:  # we have both a scaleup and a scale down
         raise GeoKitError("Dimensions must be scaled in the same direction")
 
     return out
 
 # A predefined kernel processor for use in mutateRaster
+
+
 def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     """A decorator which automates the production of kernel processors for use 
     in mutateRaster (although it could really used for processing any matrix)
-    
+
     Parameters:
     -----------
     size : int
@@ -253,7 +308,7 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
           'yi' in addition to the matrix
         * The xi and yi correspond to the index of the center pixel in the 
           original matrix
-    
+
     Returns:
     --------
     function
@@ -280,17 +335,21 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
             yN, xN = matrix.shape
 
             # make a padded version of the matrix
-            paddedMatrix = np.ones((yN+2*size,xN+2*size), dtype=matrix.dtype)*edgeValue
-            paddedMatrix[size:-size,size:-size] = matrix
+            paddedMatrix = np.ones(
+                (yN+2*size, xN+2*size), dtype=matrix.dtype)*edgeValue
+            paddedMatrix[size:-size, size:-size] = matrix
 
             # apply kernel to each pixel
-            output = np.zeros((yN,xN), dtype = matrix.dtype if outputType is None else outputType)
+            output = np.zeros(
+                (yN, xN), dtype=matrix.dtype if outputType is None else outputType)
             for yi in range(yN):
                 for xi in range(xN):
                     slicedMatrix = paddedMatrix[yi:2*size+yi+1, xi:2*size+xi+1]
-                    
-                    if passIndex: output[yi,xi] = kernel(slicedMatrix, xi=xi, yi=yi)
-                    else: output[yi,xi] = kernel(slicedMatrix)
+
+                    if passIndex:
+                        output[yi, xi] = kernel(slicedMatrix, xi=xi, yi=yi)
+                    else:
+                        output[yi, xi] = kernel(slicedMatrix)
 
             # done!
             return output
@@ -298,42 +357,46 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     return wrapper1
 
 #############################################################
-## internal use source generators
+# internal use source generators
 
 
 def quickVector(geom, output=None):
     """GeoKit internal for quickly creating a vector datasource"""
-    ######## Create a quick vector source
-    
+    # Create a quick vector source
+
     if isinstance(geom, ogr.Geometry):
-        geom = [geom,]
+        geom = [geom, ]
     elif isinstance(geom, list):
         pass
-    else: # maybe geom is iterable
+    else:  # maybe geom is iterable
         geom = list(geom)
 
     # Arrange output
     if output:
         driver = gdal.GetDriverByName("ESRI Shapefile")
-        dataSource = driver.Create( output, 0,0 )
+        dataSource = driver.Create(output, 0, 0)
     else:
         driver = gdal.GetDriverByName("Memory")
-        dataSource = driver.Create( "", 0, 0, 0, gdal.GDT_Unknown)
-        
+        dataSource = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
+
     # Create the layer and write feature
-    layer = dataSource.CreateLayer( "", geom[0].GetSpatialReference(), geom[0].GetGeometryType() )
-    
+    layer = dataSource.CreateLayer(
+        "", geom[0].GetSpatialReference(), geom[0].GetGeometryType())
+
     for g in geom:
         feature = ogr.Feature(layer.GetLayerDefn())
-        feature.SetGeometry( g )
+        feature.SetGeometry(g)
 
         # Create the feature
-        layer.CreateFeature( feature )
+        layer.CreateFeature(feature)
         feature.Destroy()
 
     # Done!
-    if output: return output
-    else: return dataSource
+    if output:
+        return output
+    else:
+        return dataSource
+
 
 def fitBoundsTo(bounds, dx, dy):
     try:
@@ -346,62 +409,66 @@ def fitBoundsTo(bounds, dx, dy):
     xMax = np.round(bounds[2]/dx)*dx
     yMax = np.round(bounds[3]/dy)*dy
 
-    return xMin,yMin,xMax, yMax
+    return xMin, yMin, xMax, yMax
+
 
 def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None, header=''):
     """GeoKit internal for quickly creating a raster datasource"""
 
     #bounds = fitBoundsTo(bounds, dx, dy)
-    
-    ## Make a raster dataset and pull the band/maskBand objects
-    originX = bounds[0]
-    originY = bounds[3] # Always use the "Y-at-Top" orientation
 
-    cols = int(round((bounds[2]-originX)/dx)) 
+    # Make a raster dataset and pull the band/maskBand objects
+    originX = bounds[0]
+    originY = bounds[3]  # Always use the "Y-at-Top" orientation
+
+    cols = int(round((bounds[2]-originX)/dx))
     rows = int(round((originY-bounds[1])/abs(dy)))
-    
+
     # Open the driver
-    driver = gdal.GetDriverByName('Mem') # create a raster in memory
-    raster = driver.Create('', cols, rows, 1, getattr(gdal,dType))
+    driver = gdal.GetDriverByName('Mem')  # create a raster in memory
+    raster = driver.Create('', cols, rows, 1, getattr(gdal, dType))
 
     if(raster is None):
         raise GeoKitError("Failed to create temporary raster")
 
     raster.SetGeoTransform((originX, abs(dx), 0, originY, 0, -1*abs(dy)))
-    
+
     # Set the SRS
-    raster.SetProjection( srs.ExportToWkt() )
-    
+    raster.SetProjection(srs.ExportToWkt())
+
     # get the band
     band = raster.GetRasterBand(1)
 
     # set nodata
-    if not noData is None: 
+    if not noData is None:
         band.SetNoDataValue(noData)
-        if fill is None and data is None: 
+        if fill is None and data is None:
             band.Fill(noData)
 
     # do fill
-    if not fill is None: band.Fill(fill)
+    if not fill is None:
+        band.Fill(fill)
 
     # add data
-    if not data is None: 
+    if not data is None:
         band.WriteArray(data)
-    band.FlushCache()
-    
+        band.FlushCache()
+
     # Done!
     del band
     raster.FlushCache()
     return raster
 
 
-### Helpful classes
+# Helpful classes
 Feature = namedtuple("Feature", "geom attr")
 
-### Image plotter
+# Image plotter
 
 AxHands = namedtuple("AxHands", "ax handles cbar")
-def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fontsize=16, hideAxis=False, figsize=(12,12), cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
+
+
+def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fontsize=16, hideAxis=False, figsize=(12, 12), cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, **kwargs):
     """Draw a matrix as an image on a matplotlib canvas
 
     Parameters:
@@ -412,7 +479,7 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
     ax : matplotlib axis; optional
         The axis to draw the geometries on
           * If not given, a new axis is generated and returned
-    
+
     xlim : (float, float); optional
         The x-axis limits to draw the marix on
 
@@ -424,12 +491,12 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
 
     scaling : numeric; optional
         An integer factor by which to scale the matrix before plotting
-        
+
     figsize : (int, int); optional
         The figure size to create when generating a new axis
           * If resultign figure looks wierd, altering the figure size is your best
             bet to make it look nicer
-    
+
     fontsize : int; optional
         A base font size to apply to tick marks which appear
           * Titles and labels are given a size of 'fontsize' + 2
@@ -460,7 +527,7 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
 
     cbax : matplotlib axis; optional
         An explicitly given axis to use for drawing the colorbar
-    
+
     cbargs : dict; optional
 
     leftMargin : float; optional
@@ -489,70 +556,80 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
 
     """
     # Create an axis, if needed
-    if isinstance(ax, AxHands):ax = ax.ax
+    if isinstance(ax, AxHands):
+        ax = ax.ax
     if ax is None:
-        newAxis=True
+        newAxis = True
 
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
-        if not cbar: # We don't need a colorbar
-            if not hideAxis: leftMargin += 0.07
+        if not cbar:  # We don't need a colorbar
+            if not hideAxis:
+                leftMargin += 0.07
 
-            ax = plt.axes([leftMargin, 
-                           bottomMargin, 
-                           1-(rightMargin+leftMargin), 
+            ax = plt.axes([leftMargin,
+                           bottomMargin,
+                           1-(rightMargin+leftMargin),
                            1-(topMargin+bottomMargin)])
-            cbax=None
+            cbax = None
 
-        else: # We need a colorbar
-            rightMargin+= 0.08 # Add area on the right for colorbar text
-            if not hideAxis: 
+        else:  # We need a colorbar
+            rightMargin += 0.08  # Add area on the right for colorbar text
+            if not hideAxis:
                 leftMargin += 0.07
 
             cbarExtraPad = 0.05
             cbarWidth = 0.04
 
-            ax = plt.axes([leftMargin, 
-                           bottomMargin, 
-                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding), 
+            ax = plt.axes([leftMargin,
+                           bottomMargin,
+                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding),
                            1-(topMargin+bottomMargin)])
 
-            cbax = plt.axes([1-(rightMargin+cbarWidth), 
-                             bottomMargin+cbarExtraPad, 
-                             cbarWidth, 
+            cbax = plt.axes([1-(rightMargin+cbarWidth),
+                             bottomMargin+cbarExtraPad,
+                             cbarWidth,
                              1-(topMargin+bottomMargin+2*cbarExtraPad)])
 
-        if hideAxis: ax.axis("off")
-        else: ax.tick_params(labelsize=fontsize)
+        if hideAxis:
+            ax.axis("off")
+        else:
+            ax.tick_params(labelsize=fontsize)
     else:
-        newAxis=False
+        newAxis = False
 
     # handle flipped matrix
-    if not yAtTop: matrix=matrix[::-1,:]
+    if not yAtTop:
+        matrix = matrix[::-1, :]
 
     # Draw image
-    if scaling: matrix=scaleMatrix(matrix,scaling,strict=False)
+    if scaling:
+        matrix = scaleMatrix(matrix, scaling, strict=False)
 
     if not (xlim is None and ylim is None):
         extent = xlim[0], xlim[1], ylim[0], ylim[1]
     else:
         extent = None
 
-    h = ax.imshow( matrix, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+    h = ax.imshow(matrix, extent=extent, cmap=cmap,
+                  vmin=vmin, vmax=vmax, **kwargs)
 
     # Draw Colorbar
     if cbar:
         tmp = dict(cmap=cmap, orientation='vertical')
-        if not cbargs is None: tmp.update( cbargs )
+        if not cbargs is None:
+            tmp.update(cbargs)
 
-        if cbax is None:  cbar = plt.colorbar( h, ax=ax, **tmp)
-        else: cbar = plt.colorbar( h, cax=cbax )
+        if cbax is None:
+            cbar = plt.colorbar(h, ax=ax, **tmp)
+        else:
+            cbar = plt.colorbar(h, cax=cbax)
 
         cbar.ax.tick_params(labelsize=fontsize)
         if not cbarTitle is None:
-            cbar.set_label( cbarTitle , fontsize=fontsize+2 )
+            cbar.set_label(cbarTitle, fontsize=fontsize+2)
 
     # Do some formatting
     if newAxis:
@@ -560,4 +637,4 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
         ax.autoscale(enable=True)
 
     # Done!
-    return AxHands( ax, h, cbar)
+    return AxHands(ax, h, cbar)
