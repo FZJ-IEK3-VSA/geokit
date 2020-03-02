@@ -434,9 +434,9 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     else:
         data = sourceBand.ReadAsArray(
             xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
-        if dsInfo.scale != 1.0:
+        if dsInfo.scale is not None and dsInfo.scale != 1.0:
             data = data*dsInfo.scale
-        if dsInfo.offset != 0.0:
+        if dsInfo.offset is not None and dsInfo.offset != 0.0:
             data = data+dsInfo.offset
 
     # Correct 'nodata' values
@@ -1166,7 +1166,7 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
     if(output is None):
         dtype = gdalType(
             processedData.dtype) if dtype is None else gdalType(dtype)
-        return quickRaster(dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, dType=dtype,
+        return quickRaster(dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, dtype=dtype,
                            srs=dsInfo.srs, data=processedData, **kwargs)
 
     else:
@@ -1851,7 +1851,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
 
         # Warp to a raster in memory
         destRas = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth,
-                              dy=pixelHeight, dType=dtype, noData=noData, fill=fill)
+                              dy=pixelHeight, dtype=dtype, noData=noData, fill=fill)
 
         # Do a warp
         result = gdal.Warp(

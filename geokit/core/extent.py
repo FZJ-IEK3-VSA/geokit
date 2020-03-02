@@ -153,7 +153,7 @@ class Extent(object):
             An SQL-style filtering string
             * Can be used to filter the input source according to their attributes
             * For tips, see "http://www.gdal.org/ogr_sql.html"
-            Ex: 
+            Ex:
               where="eye_color='Green' AND IQ>90"
 
         geom : ogr.Geometry; optional
@@ -825,6 +825,39 @@ class Extent(object):
                 "The given resolution does not fit to the Extent boundaries")
         return createRaster(bounds=s.xyXY, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=s.srs, **kwargs)
 
+    def _quickRaster(s, pixelWidth, pixelHeight, **kwargs):
+        """Convenience function for geokit.raster.createRaster which sets 'bounds'
+        and 'srs' inputs
+
+        * The input resolution MUST fit within the extent
+
+        Parameters:
+        -----------
+        pixelWidth : numeric
+            The pixel width of the raster in units of the input srs
+            * The keyword 'dx' can be used as well and will override anything given
+            assigned to 'pixelWidth'
+
+        pixelHeight : numeric
+            The pixel height of the raster in units of the input srs
+            * The keyword 'dy' can be used as well and will override anything given
+              assigned to 'pixelHeight'
+
+        **kwargs:
+            All other keyword arguments are passed on to geokit.raster.createRaster()
+
+        Returns:
+        --------
+        * If 'output' is None: gdal.Dataset
+        * If 'output' is a string: None
+
+        """
+        assert s.fitsResolution((pixelWidth, pixelHeight)),\
+            GeoKitExtentError(
+            "The given resolution does not fit to the Extent boundaries")
+
+        return quickRaster(bounds=s.xyXY, dx=pixelWidth, dy=pixelHeight, srs=s.srs, **kwargs)
+
     def extractMatrix(s, source, strict=True, **kwargs):
         """Convenience wrapper around geokit.raster.extractMatrix(). Extracts the
         extent directly from the given raster source as a matrix around the Extent
@@ -1130,7 +1163,7 @@ class Extent(object):
 
     def contoursFromRaster(s, raster, contourEdges, transformGeoms=True, **kwargs):
         """Convenience wrapper for geokit.raster.contours which autmatically
-        clips a raster to the invoked Extent 
+        clips a raster to the invoked Extent
 
         Parameters:
         -----------
@@ -1194,6 +1227,42 @@ class Extent(object):
 
         return TileIndexBox(xi_start=tl_tile_xi, xi_stop=br_tile_xi, yi_start=tl_tile_yi, yi_stop=br_tile_yi)
 
+    def tileSources(s, zoom, source=None):
+        """Get the tiles sources which contribute to the invoking Extent
+
+        Parameters:
+        -----------
+        zoom : int
+            The zoom level of the expected tile source
+
+        source : str
+            The source to fetch tiles from
+            * Must include indicators for:
+              {z} -> The tile's zoom level
+              {x} -> The tile's x-index
+              {y} -> The tile's y-index
+            * Ex:
+              File on disk     : "/path/to/tile/directory/{z}/{x}/{y}/filename.tif"
+              Remote HTTP file : "/vsicurl_streaming/http://path/to/resource/{z}/{x}/{y}/filename.tif"
+            * Find more info at https://gdal.org/user/virtual_file_systems.html
+
+
+        Yields:
+        --------
+        if source is given:     str
+        if source is not given: (xi,yi,zoom)
+
+        """
+        tb = s.tileIndexBox(zoom)
+        for xi in range(tb.xi_start, tb.xi_stop+1):
+            for yi in range(tb.yi_start, tb.yi_stop+1):
+                if source is None:
+                    yield (xi, yi, zoom)
+                else:
+                    yield source.replace("{z}", str(zoom)
+                                         ).replace("{x}", str(xi)
+                                                   ).replace("{y}", str(yi))
+
     def tileBox(s, zoom, return_index_box=False):
         """Determine the tile Extent at a given zoom level which surround the invoked Extent
 
@@ -1239,8 +1308,8 @@ class Extent(object):
         else:
             return ext
 
-    def mosaicTiles(s, source, zoom, pixelsPerTile, workingType=np.uint16, noData=2**16-1, output=None, **kwargs):
-        """Create a raster source surrounding the Extent from a collection of tiles 
+    def tileMosaic(s, source, zoom, **kwargs):
+        """Create a raster source surrounding the Extent from a collection of tiles
 
         Parameters:
         -----------
@@ -1277,37 +1346,49 @@ class Extent(object):
         * If 'output' is a string: None
 
         """
-        if not isinstance(pixelsPerTile, tuple):
-            dy = dx = int(pixelsPerTile)
+        sources = list(s.tileSources(zoom=zoom, source=source))
+        return s.rasterMosaic(sources, _skipFiltering=True, **kwargs)
+
+    def rasterMosaic(s, sources, _warpKwargs={resampleAlg: 'near'}, _skipFiltering=False, **kwargs):
+        """Create a raster source surrounding the Extent from a collection of other rasters
+
+        Parameters:
+        -----------
+        sources : list, or something acceptable to gk.Extent.filterSources
+            The sources to add together over the invoking Extent
+
+        Returns:
+        --------
+        * If 'output' is None: gdal.Dataset
+        * If 'output' is a string: None
+
+        """
+        if _skipFiltering:
+            sources = sorted(list(sources))
         else:
-            dy, dx = int(pixelsPerTile[0]), int(pixelsPerTile[1])
+            sources = sorted(list(s.filterSources(sources)))
 
-        ext, tb = s.tileBox(zoom, return_index_box=True)
+        if len(sources) == 0:
+            warnings.warn("No suitable sources found")
+            return None
 
-        # Fetch tiles
-        # TODO: This can be easily parallelized!!
-        def source_filled(xi, yi, zoom): return source.replace(
-            "{z}", str(zoom)).replace("{x}", str(xi)).replace("{y}", str(yi))
+        ri = rasterInfo(sources[0])
+        inputs = {}
+        for key in ["pixelWidth", "pixelHeight", "noData",
+                    "srs", "dtype", "scale", "offset", ]:
+            inputs[key] = getattr(ri, key)
+        inputs.update(kwargs)
 
-        total_size = dy*(tb.yi_stop+1-tb.yi_start), dx * \
-            (tb.xi_stop+1-tb.xi_start)
+        ext = s.castTo(inputs.pop('srs')).fit(
+            (inputs['pixelWidth'], inputs['pixelHeight']))
 
-        canvas = np.full(total_size, noData, dtype=workingType)
-        empty = np.full((dy, dx), noData, dtype=workingType)
-        for yi_mat, yi_tile in enumerate(range(tb.yi_start, tb.yi_stop+1)):
-            for xi_mat, xi_tile in enumerate(range(tb.xi_start, tb.xi_stop+1)):
-                current_source = source_filled(xi_tile, yi_tile, zoom)
-                # if os.path.isfile(current_source):
-                try:
-                    mat = extractMatrix(current_source)
-                except:
-                    mat = empty
-                    warnings.warn(
-                        "Source could not be loaded: "+current_source)
-                canvas[yi_mat*dy:(yi_mat+1)*dy, xi_mat*dx:(xi_mat+1)*dx] = mat
+        output = inputs.pop('output', None)
+        master_raster = ext._quickRaster(**inputs)
+        gdal.Warp(master_raster, sources, **warpKwargs)
 
-        # Make raster output
-        pw, ph = ext.computePixelSize(total_size[0], total_size[1])
-        output = ext.createRaster(pixelWidth=pw, pixelHeight=ph,
-                                  output=output, noData=noData, data=canvas, **kwargs)
-        return output
+        if output is not None:
+            gdal.Translate(output, master_raster,
+                           creationOptions=['COMPRESS=DEFLATE'])
+            return output
+        else:
+            return master_raster

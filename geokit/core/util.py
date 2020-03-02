@@ -412,7 +412,7 @@ def fitBoundsTo(bounds, dx, dy):
     return xMin, yMin, xMax, yMax
 
 
-def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, data=None, header=''):
+def quickRaster(bounds, srs, dx, dy, dtype="GDT_Byte", noData=None, fill=None, data=None, scale=None, offset=None):
     """GeoKit internal for quickly creating a raster datasource"""
 
     #bounds = fitBoundsTo(bounds, dx, dy)
@@ -426,7 +426,8 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
 
     # Open the driver
     driver = gdal.GetDriverByName('Mem')  # create a raster in memory
-    raster = driver.Create('', cols, rows, 1, getattr(gdal, dType))
+    dtype = getattr(gdal, dtype) if isinstance(dtype, str) else dtype
+    raster = driver.Create('', cols, rows, 1, dtype)
 
     if(raster is None):
         raise GeoKitError("Failed to create temporary raster")
@@ -439,15 +440,20 @@ def quickRaster(bounds, srs, dx, dy, dType="GDT_Byte", noData=None, fill=None, d
     # get the band
     band = raster.GetRasterBand(1)
 
-    # set nodata
+    # set optionals
     if not noData is None:
         band.SetNoDataValue(noData)
         if fill is None and data is None:
             band.Fill(noData)
 
-    # do fill
     if not fill is None:
         band.Fill(fill)
+
+    if not scale is None:
+        band.SetScale(scale)
+
+    if not offset is None:
+        band.SetOffset(offset)
 
     # add data
     if not data is None:

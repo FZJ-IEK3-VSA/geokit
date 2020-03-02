@@ -505,9 +505,9 @@ def test_Extent_tileBox():
 
 def test_Extent_mosiacTiles():
     ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
-    ras = ext.mosaicTiles(join(_test_data_['prior_tiles'],
-                               "osm_roads_minor.{z}.{x}.{y}.tif"),
-                          9, pixelsPerTile=128)
+    ras = ext.tileMosaic(join(_test_data_['prior_tiles'],
+                              "osm_roads_minor.{z}.{x}.{y}.tif"),
+                         9, pixelsPerTile=128)
     rasmat = raster.extractMatrix(ras)
-    assert np.isclose(np.nanmean(rasmat), 425.9861755371094)
-    assert np.isclose(np.nanstd(rasmat), 449.9284113160365)
+    assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
+    assert np.isclose(np.nanstd(rasmat), 672.636988117134)

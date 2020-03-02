@@ -41,7 +41,8 @@ def test_isRaster():
 
     s2 = util.isRaster(AACHEN_SHAPE_PATH)
     assert s2 == False
-    
+
+
 def test_isVector():
     s1 = util.isVector(CLC_RASTER_PATH)
     assert s1 == False
@@ -60,6 +61,7 @@ def test_quickRaster(): assert False
 
 @pytest.mark.skip("No test implemented for: util.drawImage")
 def test_drawImage(): assert False
+
 
 @pytest.mark.skip("No test implemented for: util.KernelProcessor")
 def test_KernelProcessor(): assert False
