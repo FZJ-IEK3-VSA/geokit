@@ -5,8 +5,10 @@ from .location import *
 
 if("win" in sys.platform):
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
+    COMPRESSION_OPTION_STR = "LZW"
 else:
     COMPRESSION_OPTION = ["COMPRESS=DEFLATE"]
+    COMPRESSION_OPTION_STR = "DEFLATE"
 
 # Basic Loader
 
@@ -83,7 +85,7 @@ def gdalType(s):
 # Raster writer
 
 
-def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, scale=1, offset=0, **kwargs):
+def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=None, srs='europe_m', compress=True, noData=None, overwrite=True, fill=None, data=None, meta=None, scale=1, offset=0, creationOptions=dict(), **kwargs):
     """Create a raster file
 
     NOTE:
@@ -201,16 +203,19 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         dtype = gdalType(data.dtype)
     else:  # Otherwise, just assume we want a Byte
         dtype = "GDT_Byte"
-
+    
     # Open the driver
+    opts = OrderedDict()
+    if (compress and output is not None):
+        opts['COMPRESS']=COMPRESSION_OPTION_STR
+    if creationOptions is not None:
+        opts.update(creationOptions)
+    opts = ["{}={}".format(k,v) for k,v in opts.items()]
+
     if(output is None):
         driver = gdal.GetDriverByName('Mem')  # create a raster in memory
-        raster = driver.Create('', cols, rows, 1, getattr(gdal, dtype))
+        raster = driver.Create('', cols, rows, 1, getattr(gdal, dtype), opts)
     else:
-        if (compress):
-            opts = COMPRESSION_OPTION
-        else:
-            opts = []
 
         driver = gdal.GetDriverByName('GTiff')  # Create a raster in storage
         raster = driver.Create(output, cols, rows, 1,
@@ -1871,17 +1876,17 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         del ds
 
     # Do we need to readjust?
-    if isAdjusted:
-        if isinstance(result, str):
-            ds = loadRaster(result, 1)
-        else:
-            ds = result
-        band = ds.GetRasterBand(1)
-        band.SetScale(dsInfo.scale)
-        band.SetOffset(dsInfo.offset)
-        band.FlushCache()
-        ds.FlushCache()
-        del band, ds
+#    if isAdjusted:
+#        if isinstance(result, str):
+#            ds = loadRaster(result, 1)
+#        else:
+#            ds = result
+#        band = ds.GetRasterBand(1)
+#        band.SetScale(dsInfo.scale)
+#        band.SetOffset(dsInfo.offset)
+#        band.FlushCache()
+#        ds.FlushCache()
+#        del band, ds
 
     # TODO: Should 'result' be deleted at this point?
 
