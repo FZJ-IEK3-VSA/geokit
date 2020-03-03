@@ -553,43 +553,16 @@ class Extent(object):
 
     def inSourceExtent(s, source):
         """Tests if the extent box is at least partially contained in the extent-box
-        of the given vector or raster source"""
-        if isinstance(source, str):
+        of the given vector or raster source
 
-            if isVector(source):
-                isvec = True
-            elif isRaster(source):
-                isvec = False
-            else:
-                raise GeoKitExtentError("Could not handle source: "+source)
+        Parameters:
+        -----------
+        sources : str
+            The sources to test
 
-        elif isinstance(source, gdal.Dataset):
-            if source.GetLayer() is None:
-                isvec = False
-            else:
-                isvec = True
-
-        elif isinstance(source, ogr.DataSource):
-            isvec = True
-        else:
-            raise GeoKitExtentError("Source type could not be determined")
-
-        # Check extent for inclusion
-        if isvec:
-            sourceExtent = Extent.fromVector(source).castTo(s.srs)
-        else:
-            sourceExtent = Extent.fromRaster(source).castTo(s.srs)
-
-        # Are the source's corners in the main object's extent?
-        for p in sourceExtent.corners(asPoints=True):
-            if s._box.Contains(p):
-                return True
-        # Are the main object's corners in the sources's extent?
-        for p in s.corners(asPoints=True):
-            if sourceExtent._box.Contains(p):
-                return True
-
-        return False
+        """
+        sourceExtent = Extent.load(source)
+        return s.overlaps(sourceExtent)
 
     def filterSources(s, sources):
         """Filter a list of sources by those whose's envelope overlaps the Extent.
@@ -656,6 +629,42 @@ class Extent(object):
             return sel[0]
         else:
             return sel
+
+    def overlaps(s, extent, referenceSRS=EPSG4326):
+        """Tests if the extent overlaps with another given extent
+
+        Note:
+        -----
+        If an optional resolution ('res') is given, the containment value is also
+        dependent on whether or not the given extent fits within the larger extent
+        AND is situated along the given resolution
+
+        Parameters:
+        -----------
+        extent : Extent
+            The Extent object to test for containment
+
+        referenceSRS
+            The spatial reference frame to do the comparison in
+            * Can be 'self'
+
+        Returns:
+        --------
+        bool
+
+        """
+        if referenceSRS != 'self':
+            s = s.castTo(referenceSRS)
+        else:
+            referenceSRS = s.srs
+        extent = extent.castTo(referenceSRS)
+
+        if s.box.Intersects(extent.box):
+            return True
+        if extent.box.Intersects(s.box):
+            return True
+
+        return False
 
     def contains(s, extent, res=None):
         """Tests if the extent contains another given extent

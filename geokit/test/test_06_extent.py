@@ -241,6 +241,13 @@ def test_Extent_inSourceExtent():
     assert (ex2.inSourceExtent(LUX_SHAPE_PATH) == True)
     assert (ex2.inSourceExtent(AACHEN_SHAPE_PATH) == False)
 
+    # Overlapping, but not within eachother
+    ext1 = Extent(0, 0, 3, 3, srs=4326)
+    ext2 = Extent(-1, 1, 4, 2, srs=4326)
+    vec = vector.createVector(ext2.box)
+
+    assert (ext1.inSourceExtent(vec) == True)
+
 
 def test_Extent_filterSources():
     sources = source("*.shp")
