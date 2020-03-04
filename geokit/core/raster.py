@@ -1,7 +1,23 @@
-from .util import *
-from .srs import *
-from .geom import *
-from .location import *
+import os
+import sys
+import numpy as np
+from osgeo import gdal, ogr
+from tempfile import TemporaryDirectory, NamedTemporaryFile
+import warnings
+from collections import OrderedDict, namedtuple
+from collections.abc import Iterable
+import pandas as pd
+from scipy.interpolate import RectBivariateSpline
+
+from . import util as UTIL
+from . import srs as SRS
+from . import geom as GEOM
+from .location import Location, LocationSet
+
+
+class GeoKitRasterError(UTIL.GeoKitError):
+    pass
+
 
 if("win" in sys.platform):
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -187,7 +203,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
                     "Output file already exists: %s" % output)
 
     # Ensure bounds is okay
-    # bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+    # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     # Make a raster dataset and pull the band/maskBand objects
     originX = bounds[0]
@@ -203,14 +219,14 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         dtype = gdalType(data.dtype)
     else:  # Otherwise, just assume we want a Byte
         dtype = "GDT_Byte"
-    
+
     # Open the driver
     opts = OrderedDict()
     if (compress and output is not None):
-        opts['COMPRESS']=COMPRESSION_OPTION_STR
+        opts['COMPRESS'] = COMPRESSION_OPTION_STR
     if creationOptions is not None:
         opts.update(creationOptions)
-    opts = ["{}={}".format(k,v) for k,v in opts.items()]
+    opts = ["{}={}".format(k, v) for k, v in opts.items()]
 
     if(output is None):
         driver = gdal.GetDriverByName('Mem')  # create a raster in memory
@@ -231,7 +247,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
 
         # Set the SRS
         if not srs is None:
-            rasterSRS = loadSRS(srs)
+            rasterSRS = SRS.loadSRS(srs)
             raster.SetProjection(rasterSRS.ExportToWkt())
 
         # Fill the raster will zeros, null values, or initial values (if given)
@@ -299,7 +315,7 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
 
     """
 
-    if isRaster(source):
+    if UTIL.isRaster(source):
         source = rasterInfo(source)
 
     if not isinstance(source, RasterInfo):
@@ -372,7 +388,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     dsInfo = rasterInfo(sourceDS)
 
     if maskBand:
-        mb = sourceBand.GetMaskBand()
+        mb = sourceDS.GetMaskBand()
     else:
         sourceBand = sourceDS.GetRasterBand(1)  # get band
 
@@ -388,10 +404,10 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
         if isExtent:
             bounds = bounds.castTo(dsInfo.srs).fit((dsInfo.dx, dsInfo.dy)).xyXY
         else:
-            boundsSRS = loadSRS(boundsSRS)
+            boundsSRS = SRS.loadSRS(boundsSRS)
             if not dsInfo.srs.IsSame(boundsSRS):
-                bounds = boundsToBounds(bounds, boundsSRS, dsInfo.srs)
-            bounds = fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy)
+                bounds = GEOM.boundsToBounds(bounds, boundsSRS, dsInfo.srs)
+            bounds = UTIL.fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy)
 
         # Find offsets
         xoff = int(np.round((bounds[0] - dsInfo.xMin)/dsInfo.dx))
@@ -574,7 +590,6 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
     # Get the factor
     sourceInfo = rasterInfo(source)
     if factor == "latlonToM":
-        lonMid = (sourceInfo.xMax + sourceInfo.xMin)/2
         latMid = (sourceInfo.yMax + sourceInfo.yMin)/2
         R_EARTH = 6371000
         DEGtoRAD = np.pi/180
@@ -663,7 +678,7 @@ def rasterInfo(sourceDS):
     sourceDS = loadRaster(sourceDS)
 
     # get srs
-    srs = loadSRS(sourceDS.GetProjectionRef())
+    srs = SRS.loadSRS(sourceDS.GetProjectionRef())
     output['srs'] = srs
 
     # get extent and resolution
@@ -676,7 +691,7 @@ def rasterInfo(sourceDS):
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
 
-    xOrigin, dx, trash, yOrigin, trash, dy = sourceDS.GetGeoTransform()
+    xOrigin, dx, _, yOrigin, _, dy = sourceDS.GetGeoTransform()
 
     xMin = xOrigin
     xMax = xOrigin+dx*xSize
@@ -779,7 +794,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     # Be sure we have a raster and srs
     source = loadRaster(source)
     info = rasterInfo(source)
-    pointSRS = loadSRS(pointSRS)
+    pointSRS = SRS.loadSRS(pointSRS)
 
     # Ensure we have a list of point geometries
     try:
@@ -797,7 +812,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
         def loadPoint(pt, s):
             if isinstance(pt, ogr.Geometry):
                 if pt.GetGeometryName() != "POINT":
-                    raise GeoKitGeomError("Invalid geometry given")
+                    raise GEOM.GeoKitGeomError("Invalid geometry given")
                 return pt
 
             if isinstance(pt, Location):
@@ -821,7 +836,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
         # make sure we're using the pointSRS for the points in the list
         pointSRS = points[0].GetSpatialReference()
         if not pointSRS.IsSame(info.srs):
-            points = transform(points, fromSRS=pointSRS, toSRS=info.srs)
+            points = GEOM.transform(points, fromSRS=pointSRS, toSRS=info.srs)
 
     # Get x/y values as numpy arrays
     x = np.array([pt.GetX() for pt in points])
@@ -1164,19 +1179,19 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
     # Ensure returned matrix is okay
     if(processedData.shape != sourceData.shape):
         raise GeoKitRasterError("Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}", format(
-            rawSuitability.shape, sourceData.shape))
+            processedData.shape, sourceData.shape))
     del sourceData
 
     # Create an output raster
     if(output is None):
         dtype = gdalType(
             processedData.dtype) if dtype is None else gdalType(dtype)
-        return quickRaster(dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, dtype=dtype,
-                           srs=dsInfo.srs, data=processedData, **kwargs)
+        return UTIL.quickRaster(dy=dsInfo.dy, dx=dsInfo.dx, bounds=workingExtent, dtype=dtype,
+                                srs=dsInfo.srs, data=processedData, **kwargs)
 
     else:
-        outDS = createRaster(pixelHeight=dsInfo.dy, pixelWidth=dsInfo.dx, bounds=workingExtent,
-                             srs=dsInfo.srs, data=processedData, output=output, **kwargs)
+        createRaster(pixelHeight=dsInfo.dy, pixelWidth=dsInfo.dx, bounds=workingExtent,
+                     srs=dsInfo.srs, data=processedData, output=output, **kwargs)
 
         return output
 
@@ -1212,7 +1227,7 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
             source = rasterInfo(source)
 
         xMin = source.xMin
-        xMax = source.xMax
+        # xMax = source.xMax
         yMin = source.yMin
         yMax = source.yMax
         dx = source.dx
@@ -1235,9 +1250,9 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
     # make the output
     if asPoint:
         try:  # maybe x and y are iterable
-            output = [point((xx, yy), srs=srs) for xx, yy in zip(x, y)]
+            output = [GEOM.point((xx, yy), srs=srs) for xx, yy in zip(x, y)]
         except TypeError:  # x and y should be a single point
-            output = point((x, y), srs=srs)
+            output = GEOM.point((x, y), srs=srs)
     else:
         output = np.column_stack([x, y])
 
@@ -1359,7 +1374,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
     """
     # Create an axis, if needed
-    if isinstance(ax, AxHands):
+    if isinstance(ax, UTIL.AxHands):
         ax = ax.ax
     import matplotlib.pyplot as plt
 
@@ -1461,7 +1476,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
         ax.set_ylim(*ylim)
 
     # Done!
-    return AxHands(ax, h, cbar)
+    return UTIL.AxHands(ax, h, cbar)
 
 # 3
 # Make a geometry from a matrix mask
@@ -1509,7 +1524,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     band = source.GetRasterBand(1)
     maskBand = band.GetMaskBand()
     if srs is None:
-        srs = loadSRS(source.GetProjectionRef())
+        srs = SRS.loadSRS(source.GetProjectionRef())
 
     # Do polygonize
     vecDS = gdal.GetDriverByName("Memory").Create(
@@ -1525,7 +1540,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # Polygonize geometry
     result = gdal.Polygonize(band, maskBand, vecLyr, 0)
     if(result != 0):
-        raise GeoKitGeomError("Failed to polygonize geometry")
+        raise GEOM.GeoKitGeomError("Failed to polygonize geometry")
 
     # Check the geoms
     ftrN = vecLyr.GetFeatureCount()
@@ -1558,7 +1573,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
         finalRID = []
         for _rid in set(rid):
             smallGeomSet = geoms[rid == _rid]
-            finalGeoms.append(flatten(smallGeomSet) if len(
+            finalGeoms.append(GEOM.flatten(smallGeomSet) if len(
                 smallGeomSet) > 1 else smallGeomSet[0])
             finalRID.append(_rid)
     else:
@@ -1569,8 +1584,6 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     vecLyr = None
     vecDS = None
     maskBand = None
-    rasBand = None
-    raster = None
 
     # Done!
     return pd.DataFrame(dict(geom=finalGeoms, value=finalRID))
@@ -1623,7 +1636,7 @@ def contours(source, contourEdges, polygonize=True, unpack=True, **kwargs):
     # Open raster
     raster = loadRaster(source)
     band = raster.GetRasterBand(1)
-    rasterSRS = loadSRS(raster.GetProjectionRef())
+    rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 
     # Make temporary vector
     driver = gdal.GetDriverByName("Memory")
@@ -1763,7 +1776,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
 
     # Handle potentially missing arguments
     if not srs is None:
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
     if srs is None:
         srs = dsInfo.srs
         srsOkay = True
@@ -1777,7 +1790,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         if srsOkay:
             bounds = dsInfo.bounds
         else:
-            bounds = boundsToBounds(dsInfo.bounds, dsInfo.srs, srs)
+            bounds = GEOM.boundsToBounds(dsInfo.bounds, dsInfo.srs, srs)
 
     if pixelHeight is None:
         if srsOkay:
@@ -1790,7 +1803,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             pixelWidth = dsInfo.dx
         else:
             pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
-    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+    bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     if dtype is None:
         dtype = dsInfo.dtype
@@ -1803,10 +1816,10 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     if not cutline is None:
         if isinstance(cutline, ogr.Geometry):
             tempdir = TemporaryDirectory()
-            cutline = quickVector(
+            cutline = UTIL.quickVector(
                 cutline, output=os.path.join(tempdir.name, "tmp.shp"))
         # cutline is already a path to a vector
-        elif isVector(cutline):
+        elif UTIL.isVector(cutline):
             tempdir = None
         else:
             raise GeoKitRasterError(
@@ -1845,7 +1858,7 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
                                 copyMetadata=copyMeta, targetAlignedPixels=aligned, cutlineDSName=cutline, **kwargs)
 
         result = gdal.Warp(output, source, options=opts)
-        if not isRaster(result):
+        if not UTIL.isRaster(result):
             raise GeoKitRasterError("Failed to translate raster")
 
         destRas = output
@@ -1855,8 +1868,8 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
             warnings.warn(msg, UserWarning)
 
         # Warp to a raster in memory
-        destRas = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth,
-                              dy=pixelHeight, dtype=dtype, noData=noData, fill=fill)
+        destRas = UTIL.quickRaster(bounds=bounds, srs=srs, dx=pixelWidth,
+                                   dy=pixelHeight, dtype=dtype, noData=noData, fill=fill)
 
         # Do a warp
         result = gdal.Warp(

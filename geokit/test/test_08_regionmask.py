@@ -1,5 +1,5 @@
 from .helpers import *
-from geokit import RegionMask, Extent, geom, vector, raster, util
+from geokit import RegionMask, Extent, geom, vector, raster, util, error
 import pytest
 
 
@@ -14,7 +14,7 @@ def test_RegionMask___init__():
     try:
         rm = RegionMask(ext, 1)
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'Either mask or geom should be defined'
     else:
         assert False
@@ -23,7 +23,7 @@ def test_RegionMask___init__():
     try:
         rm = RegionMask(ext, (1, 3), geom=GEOM)
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'The given extent does not fit the given pixelRes'
     else:
         assert False
@@ -32,7 +32,7 @@ def test_RegionMask___init__():
     try:
         rm = RegionMask(ext, (1, 2), mask=MASK_DATA)
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'Extent and pixels sizes do not correspond to mask shape'
     else:
         assert False
@@ -41,7 +41,7 @@ def test_RegionMask___init__():
     try:
         rm = RegionMask(ext, (1, 2), geom="bananas")
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'geom is not an ogr.Geometry object'
     else:
         assert False
@@ -53,7 +53,7 @@ def test_RegionMask___init__():
     try:
         rm = RegionMask(ext, (1, 2), geom=badGeom)
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'geom does not have an srs'
     else:
         assert False
@@ -140,7 +140,7 @@ def test_RegionMask_fromVector():
         rm3 = RegionMask.fromVector(
             MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'")
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(e) == 'Zero features found'
     else:
         assert False
@@ -150,7 +150,7 @@ def test_RegionMask_fromVector():
         rm4 = RegionMask.fromVector(
             MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'")
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert 'Multiple fetures found' in str(e)
     else:
         assert False
@@ -173,7 +173,7 @@ def test_RegionMask_pixelRes():
     try:
         ps = rm2.pixelRes
         assert False
-    except util.GeoKitRegionMaskError as e:
+    except error.GeoKitRegionMaskError as e:
         assert str(
             e) == 'pixelRes only accessable when pixelWidth equals pixelHeight'
     else:

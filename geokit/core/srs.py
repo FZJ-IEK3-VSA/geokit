@@ -1,4 +1,15 @@
-from .util import *
+import os
+import numpy as np
+from osgeo import osr
+import warnings
+from collections import namedtuple
+
+from . import util as UTIL
+
+
+class GeoKitSRSError(UTIL.GeoKitError):
+    pass
+
 
 ######################################################################################
 # Common SRS library
@@ -18,29 +29,29 @@ class _SRSCOMMON:
     _latlon.ImportFromEPSG(4326)
 
     @property
-    def latlon(s):
+    def latlon(self):
         """Basic SRS for unprojected latitude and longitude coordinates
 
         Units: Degrees"""
-        return s._latlon
+        return self._latlon
     # basic latitude and longitude
     _europe_m = osr.SpatialReference()
     _europe_m.ImportFromEPSG(3035)
 
     @property
-    def europe_m(s):
+    def europe_m(self):
         """Equal-Area projection centered around Europe.
 
         * Good for relational operations within Europe
 
         Units: Meters"""
-        return s._europe_m
+        return self._europe_m
 
     # basic getter
-    def __getitem__(s, name):
-        if not hasattr(s, name):
+    def __getitem__(self, name):
+        if not hasattr(self, name):
             raise ValueError("SRS \"%s\" not found" % name)
-        return getattr(s, "_"+name)
+        return getattr(self, "_"+name)
 
 
 # Initialize

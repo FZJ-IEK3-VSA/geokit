@@ -1,7 +1,21 @@
-from .util import *
-from .srs import *
-from .geom import *
-from .raster import *
+import os
+import numpy as np
+from osgeo import gdal, ogr, osr
+from tempfile import TemporaryDirectory
+import warnings
+from collections import namedtuple, defaultdict, OrderedDict
+from collections.abc import Iterable
+import pandas as pd
+
+from . import util as UTIL
+from . import srs as SRS
+from . import geom as GEOM
+from . import raster as RASTER
+
+
+class GeoKitVectorError(UTIL.GeoKitError):
+    pass
+
 
 ####################################################################
 # INTERNAL FUNCTIONS
@@ -237,7 +251,7 @@ def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
     # Make a transformer
     trx = None
     if(not srs is None):
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
         lyrSRS = layer.GetSpatialRef()
         if (not lyrSRS.IsSame(srs)):
             trx = osr.CoordinateTransformation(lyrSRS, srs)
@@ -254,7 +268,7 @@ def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
         elif onlyAttr:
             yield oItems
         else:
-            yield Feature(oGeom, oItems)
+            yield UTIL.Feature(oGeom, oItems)
 
 
 def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, asPandas=True, indexCol=None, **kwargs):
@@ -407,14 +421,14 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
         # try to get a second result
         try:
-            s = next(getter)
+            next(getter)
         except StopIteration:
             pass
         else:
             raise GeoKitVectorError("More than one feature found")
 
     if(not srs is None and not onlyAttr):
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
         if (not fGeom.GetSpatialReference().IsSame(srs)):
             fGeom.TransformTo(srs)
 
@@ -424,7 +438,7 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
     elif onlyAttr:
         return fItems
     else:
-        return Feature(fGeom, fItems)
+        return UTIL.Feature(fGeom, fItems)
 
 
 def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
@@ -528,7 +542,7 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
 
     """
     if(srs):
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
 
     # Search for file
     if(output):
@@ -595,7 +609,7 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
             raise ValueError("srs must be given when passing wkt strings")
 
         # Create geoms
-        finalGeoms = [convertWKT(wkt, srs) for wkt in geoms]
+        finalGeoms = [GEOM.convertWKT(wkt, srs) for wkt in geoms]
 
     else:
         raise ValueError(
@@ -738,7 +752,7 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
 def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=''):
     """Convert a set of geometries to a geoJSON object"""
     if(srs):
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
 
     # arrange geom, index, and data
     if isinstance(geoms, ogr.Geometry):  # geoms is a single geometry
@@ -766,7 +780,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=''):
 
     # Transform?
     if not srs is None:
-        finalGeoms = transform(finalGeoms, toSRS=srs)
+        finalGeoms = GEOM.transform(finalGeoms, toSRS=srs)
 
     # Make JSON object
     from io import BytesIO
@@ -957,7 +971,7 @@ def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldD
 
         # make sure the geometries have an srs
         if not geoms.geom[0].GetSpatialReference():
-            srs = loadSRS(srs)
+            srs = SRS.loadSRS(srs)
             geoms.geom.apply(lambda x: x.AssignSpatialReference(srs))
 
     # Create a new shapefile from the results
@@ -1062,7 +1076,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         srs = vecinfo.srs
         srsOkay = True
     else:
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
         if srs.IsSame(vecinfo.srs):
             srsOkay = True
         else:
@@ -1072,14 +1086,14 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
     if bounds is None:
         bounds = vecinfo.bounds
         if not srsOkay:
-            bounds = boundsToBounds(bounds, vecinfo.srs, srs)
+            bounds = GEOM.boundsToBounds(bounds, vecinfo.srs, srs)
     else:
         try:
             bounds = bounds.xyXY  # Get a tuple from an Extent object
         except:
             pass  # Bounds should already be a tuple
 
-    bounds = fitBoundsTo(bounds, pixelWidth, pixelHeight)
+    bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     # Determine DataType is not given
     if dtype is None:
@@ -1088,7 +1102,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         else:  # assume float
             dtype = "GDT_Float32"
     else:
-        dtype = gdalType(dtype)
+        dtype = RASTER.gdalType(dtype)
 
     # Collect rasterization options
     if output is None and not 'bands' in kwargs:
@@ -1103,20 +1117,21 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
     # We need to follow this path in both cases since the below fails when simultaneously rasterizing and writing to disk (I couldn't figure out why...)
     if output is None or not srsOkay:
         # Create temporary output file
-        outputDS = quickRaster(bounds=bounds, srs=srs, dx=pixelWidth,
-                               dy=pixelHeight, dtype=dtype, noData=noData, fill=fill)
+        outputDS = UTIL.quickRaster(bounds=bounds, srs=srs, dx=pixelWidth,
+                                    dy=pixelHeight, dtype=dtype, noData=noData, fill=fill)
 
         # Do rasterize
         tmp = gdal.Rasterize(outputDS, source, where=where, **kwargs)
         if(tmp == 0):
-            raise GeoKitRegionMaskError("Rasterization failed!")
+            raise RASTER.GeoKitRasterError("Rasterization failed!")
         outputDS.FlushCache()
 
         if output is None:
             return outputDS
         else:
-            ri = rasterInfo(outputDS)
-            createRasterLike(ri, output=output, data=extractMatrix(outputDS))
+            ri = RASTER.rasterInfo(outputDS)
+            RASTER.createRasterLike(ri, output=output,
+                                    data=RASTER.extractMatrix(outputDS))
             return output
 
     # Do a rasterization to a file on disk
@@ -1128,7 +1143,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
                 if(os.path.isfile(output+".aux.xml")):  # Because QGIS....
                     os.remove(output+".aux.xml")
             else:
-                raise GeoKitRasterError(
+                raise RASTER.GeoKitRasterError(
                     "Output file already exists: %s" % output)
 
         # Arrange some inputs
@@ -1136,7 +1151,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
 
         if not "creationOptions" in kwargs:
             if compress:
-                co = COMPRESSION_OPTION
+                co = RASTER.COMPRESSION_OPTION
             else:
                 co = []
         else:
@@ -1153,7 +1168,7 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
                              outputSRS=srs, noData=noData, where=where,
                              creationOptions=co, targetAlignedPixels=aligned, **kwargs)
 
-        if not isRaster(tmp):
-            raise GeoKitRegionMaskError("Rasterization failed!")
+        if not UTIL.isRaster(tmp):
+            raise RASTER.GeoKitRasterError("Rasterization failed!")
 
         return output

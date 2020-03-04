@@ -1,4 +1,4 @@
-'''The Util sub-module contains a number of generally helpful utillity functions, classes, and constants. It is also used for common imports across all GeoKit functionality'''
+'''The Util sub-module contains a number of generally helpful utility functions, classes, and constants'''
 
 import os
 import sys
@@ -8,7 +8,8 @@ from osgeo import gdal, ogr, osr
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from glob import glob
 import warnings
-from collections import namedtuple, Iterable, defaultdict, OrderedDict
+from collections import namedtuple, defaultdict, OrderedDict
+from collections.abc import Iterable
 import pandas as pd
 from scipy.stats import describe
 from scipy.interpolate import RectBivariateSpline
@@ -31,34 +32,6 @@ if(not res == 0):
 
 
 class GeoKitError(Exception):
-    pass
-
-
-class GeoKitSRSError(GeoKitError):
-    pass
-
-
-class GeoKitGeomError(GeoKitError):
-    pass
-
-
-class GeoKitLocationError(GeoKitError):
-    pass
-
-
-class GeoKitRasterError(GeoKitError):
-    pass
-
-
-class GeoKitVectorError(GeoKitError):
-    pass
-
-
-class GeoKitExtentError(GeoKitError):
-    pass
-
-
-class GeoKitRegionMaskError(GeoKitError):
     pass
 
 #####################################################################

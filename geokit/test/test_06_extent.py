@@ -1,5 +1,5 @@
 from .helpers import *
-from geokit import srs, Extent, LocationSet, util, raster, vector, _test_data_
+from geokit import srs, Extent, LocationSet, util, raster, vector, error, _test_data_
 
 
 def test_Extent___init__():
@@ -327,7 +327,7 @@ def test_Extent_createRaster():
     try:
         r = ex.createRaster(pixelHeight=200, pixelWidth=200, fill=2)
         assert False
-    except util.GeoKitExtentError:
+    except error.GeoKitExtentError:
         assert True
     else:
         assert False

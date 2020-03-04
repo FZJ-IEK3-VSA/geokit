@@ -1,7 +1,16 @@
-from .util import *
-from .srs import *
-
+import numpy as np
+from osgeo import ogr, osr, gdal
+import warnings
+import pandas as pd
 import smopy
+
+from . import util as UTIL
+from . import srs as SRS
+
+
+class GeoKitGeomError(UTIL.GeoKitError):
+    pass
+
 
 POINT = ogr.wkbPoint
 MULTIPOINT = ogr.wkbMultiPoint
@@ -50,7 +59,7 @@ def point(*args, srs='latlon'):
     pt = ogr.Geometry(ogr.wkbPoint)
     pt.AddPoint(float(x), float(y))
     if not srs is None:
-        pt.AssignSpatialReference(loadSRS(srs))
+        pt.AssignSpatialReference(SRS.loadSRS(srs))
     return pt
 
 
@@ -106,7 +115,7 @@ def box(*args, srs=4326):
 
     outBox.AddGeometry(ring)
     if(not srs is None):
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
         outBox.AssignSpatialReference(srs)
     return outBox
 
@@ -136,10 +145,10 @@ def tile(xi, yi, zoom):
     tl = smopy.num2deg(xi-0.0, yi+1.0, zoom)[::-1]
     br = smopy.num2deg(xi+1.0, yi-0.0, zoom)[::-1]
 
-    o = xyTransform([tl, br], fromSRS=EPSG4326,
-                    toSRS=EPSG3857, outputFormat='xy')
+    o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326,
+                        toSRS=SRS.EPSG3857, outputFormat='xy')
 
-    return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=EPSG3857)
+    return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
 
 def makeBox(*args, **kwargs):
@@ -183,7 +192,7 @@ def polygon(outerRing, *args, srs=4326):
       geom = polygon( box, diamond )
     """
     if not srs is None:
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
 
     # Make the complete geometry
     g = ogr.Geometry(ogr.wkbPolygon)
@@ -286,7 +295,7 @@ def empty(gtype, srs=None):
     geom = ogr.Geometry(getattr(ogr, "wkb"+gtype))
 
     if not srs is None:
-        geom.AssignSpatialReference(loadSRS(srs))
+        geom.AssignSpatialReference(SRS.loadSRS(srs))
 
     return geom
 
@@ -358,7 +367,7 @@ def convertWKT(wkt, srs=None):
     if geom is None:  # test for success
         raise GeoKitGeomError("Failed to create geometry")
     if srs:
-        geom.AssignSpatialReference(loadSRS(srs))  # Assign the given srs
+        geom.AssignSpatialReference(SRS.loadSRS(srs))  # Assign the given srs
     return geom
 
 # 3
@@ -439,7 +448,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
     pixelWidth = (xMax-xMin)/matrix.shape[1]
 
     if not srs is None:
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
 
     # Make a raster dataset and pull the band/maskBand objects
 
@@ -461,7 +470,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
 
     # Set the SRS
     if not srs is None:
-        rasterSRS = loadSRS(srs)
+        rasterSRS = SRS.loadSRS(srs)
         raster.SetProjection(rasterSRS.ExportToWkt())
 
     # Set data into band
@@ -658,8 +667,8 @@ def transform(geoms, toSRS='europe_m', fromSRS=None, segment=None):
             raise GeoKitGeomError("Could not determine fromSRS from geometry")
 
     # load srs's
-    fromSRS = loadSRS(fromSRS)
-    toSRS = loadSRS(toSRS)
+    fromSRS = SRS.loadSRS(fromSRS)
+    toSRS = SRS.loadSRS(toSRS)
 
     # make a transformer
     trx = osr.CoordinateTransformation(fromSRS, toSRS)
@@ -982,7 +991,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
        'cbar' -> The colorbar handle if it was drawn
 
     """
-    if isinstance(ax, AxHands):
+    if isinstance(ax, UTIL.AxHands):
         ax = ax.ax
 
     if ax is None:
@@ -1052,7 +1061,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
     # Check Geometry SRS
     if not srs is None:
-        srs = loadSRS(srs)
+        srs = SRS.loadSRS(srs)
         for gi, g in enumerate(geoms):
             gsrs = g.GetSpatialReference()
             if gsrs is None:
@@ -1177,9 +1186,9 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
     # Organize return
     if isFrame:
-        return AxHands(ax, pd.Series(h, index=data.index), cbar)
+        return UTIL.AxHands(ax, pd.Series(h, index=data.index), cbar)
     else:
-        return AxHands(ax, h, cbar)
+        return UTIL.AxHands(ax, h, cbar)
 
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
