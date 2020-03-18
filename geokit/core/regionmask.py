@@ -670,7 +670,12 @@ class RegionMask(object):
         else:
             geomDF = RASTER.polygonizeRaster(newDS)
             geoms = geomDF[geomDF.value == 1].geom
-            
+        
+        if len(geoms)==0: 
+            return []
+        else:
+            geoms = list(geoms)
+
         if transformGeoms:
             geoms = GEOM.transform(geoms, toSRS=self.srs)
 
