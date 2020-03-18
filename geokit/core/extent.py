@@ -517,7 +517,7 @@ class Extent(object):
 
         return (bl, br, tl, tr)
 
-    def castTo(self, srs):
+    def castTo(self, srs, segments=100):
         """
         Creates a new Extent by transforming an extent from the original Extent's
         srs to a target SRS.
@@ -539,31 +539,35 @@ class Extent(object):
         """
         srs = SRS.loadSRS(srs)
 
-        # Check for same srs
         if(srs.IsSame(self.srs)):
             return self
-
-        # Create a transformer
-        srs = SRS.loadSRS(srs)
-        transformer = osr.CoordinateTransformation(self.srs, srs)
-
-        # Transform and record points
-        X = []
-        Y = []
-
-        for pt in self.corners(True):
-            try:
-                pt.Transform(transformer)
-            except Exception as e:
-                print("Could not transform between the following SRS:\n\nSOURCE:\n%s\n\nTARGET:\n%s\n\n" % (
-                    self.srs.ExportToWkt(), srs.ExportToWkt()))
-                raise e
-
-            X.append(pt.GetX())
-            Y.append(pt.GetY())
-
-        # return new extent
-        return Extent(min(X), min(Y), max(X), max(Y), srs=srs)
+        
+        segment_size = min(self.xMax-self.xMin, self.yMax-self.yMin) / segments
+        box = self.box
+        box.Segmentize(segment_size)
+        box = GEOM.transform( box, toSRS=srs)
+        xMin, xMax, yMin, yMax = box.GetEnvelope()
+        return Extent(xMin, yMin, xMax, yMax, srs=srs)
+#        # Create a transformer
+#        transformer = osr.CoordinateTransformation(self.srs, srs)
+#
+#        # Transform and record points
+#        X = []
+#        Y = []
+#
+#        for pt in self.corners(True):
+#            try:
+#                pt.Transform(transformer)
+#            except Exception as e:
+#                print("Could not transform between the following SRS:\n\nSOURCE:\n%s\n\nTARGET:\n%s\n\n" % (
+#                    self.srs.ExportToWkt(), srs.ExportToWkt()))
+#                raise e
+#
+#            X.append(pt.GetX())
+#            Y.append(pt.GetY())
+#
+#        # return new extent
+#        return Extent(min(X), min(Y), max(X), max(Y), srs=srs)
 
     def inSourceExtent(self, source):
         """Tests if the extent box is at least partially contained in the extent-box
