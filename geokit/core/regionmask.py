@@ -631,6 +631,59 @@ class RegionMask(object):
         # Done
         return output
 
+    def indicateValueToGeoms(self, source, value, contours=False, transformGeoms=True):
+        """
+        TODO: UPDATE ME
+        """
+        # Unpack value
+        if isinstance(value, tuple):
+            valueMin, valueMax = value
+            valueEquals = None
+        else:
+            valueMin, valueMax = None, None
+            valueEquals = value
+
+        # make processor
+        def processor(data):
+            # Do processing
+            if(not valueEquals is None):
+                output = data == valueEquals
+            else:
+                output = np.ones(data.shape, dtype="bool")
+
+                if(not valueMin is None):
+                    np.logical_and(data >= valueMin, output, output)
+                if(not valueMax is None):
+                    np.logical_and(data <= valueMax, output, output)
+
+            # Done!
+            return output
+
+        # Do processing
+        newDS = self.extent.mutateRaster(
+            source, processor=processor, dtype="bool", matchContext=False)
+        
+        # Make contours
+        if contours:
+            geomDF = self.extent.contoursFromRaster(newDS, [1], transformGeoms=False)
+            geoms = geomDF[geomDF.ID == 1].geom
+        else:
+            geomDF = RASTER.polygonizeRaster(newDS)
+            geoms = geomDF[geomDF.value == 1].geom
+        
+        if len(geoms)==0: 
+            return []
+        else:
+            geoms = list(geoms)
+
+        if transformGeoms:
+            geoms = GEOM.transform(geoms, toSRS=self.srs)
+
+        return geoms
+
+
+
+        
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
