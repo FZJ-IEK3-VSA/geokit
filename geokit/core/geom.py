@@ -3,6 +3,7 @@ from osgeo import ogr, osr, gdal
 import warnings
 import pandas as pd
 import smopy
+from collections import namedtuple
 
 from . import util as UTIL
 from . import srs as SRS
@@ -142,13 +143,76 @@ def tile(xi, yi, zoom):
     ogr.Geometry
 
     """
-    tl = smopy.num2deg(xi-0.0, yi+1.0, zoom)[::-1]
-    br = smopy.num2deg(xi+1.0, yi-0.0, zoom)[::-1]
+    tl = smopy.num2deg(xi - 0.0, yi + 1.0, zoom)[::-1]
+    br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
     o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326,
                         toSRS=SRS.EPSG3857, outputFormat='xy')
 
     return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
+
+
+Tile = namedtuple("Tile", "xi yi zoom")
+
+
+def subTiles(geom, zoom, checkIntersect=True, asGeom=False):
+    """
+    Generate a collection of tiles which encompass the passed geometry.
+
+    Parameters:
+    -----------
+    geom : ogr.Geometry
+        The geometry to be analyzed
+
+    zoom : int
+        The zoom level to generate tiles on
+
+    checkIntersect : bool
+        If True, only tiles which overlap the given geomtry are returned
+
+    asGeom : bool
+        If True, geometry object corresponding to each tile is yielded,
+        instead of (xi,yi,zoom) tuples
+
+    Returns:
+    --------
+
+    If asGeom is False: Generates (xi, yi, zoom) tuples
+    If asGeom is True:  Generates Geometry objects
+    """
+    geom4326 = transform(geom, toSRS=SRS.EPSG4326)
+    if checkIntersect:
+        geom3857 = transform(geom, toSRS=SRS.EPSG3857)
+
+    xmin, xmax, ymin, ymax = geom4326.GetEnvelope()
+
+    tl_xi, tl_yi = smopy.deg2num(ymax, xmin, zoom)
+    br_xi, br_yi = smopy.deg2num(ymin, xmax, zoom)
+
+    for xi in range(tl_xi, br_xi + 1):
+        for yi in range(tl_yi, br_yi + 1):
+
+            if checkIntersect or asGeom:
+                gtile = tile(xi, yi, zoom)
+
+            if checkIntersect:
+                if not geom3857.Intersects(gtile):
+                    continue
+
+            if asGeom:
+                yield gtile
+            else:
+                yield Tile(xi, yi, zoom)
+
+
+def tileize(geom, zoom):
+    """Deconstruct a given geometry into a set of tiled geometries
+
+    Returns: Generator of ogr.Geometry objects
+    """
+    geom = transform(geom, toSRS=SRS.EPSG3857)
+    for tile_ in subTiles(geom, zoom, asGeom=True, checkIntersect=True):
+        yield geom.Intersection(tile_)
 
 
 def makeBox(*args, **kwargs):
@@ -290,9 +354,9 @@ def empty(gtype, srs=None):
     --------
     ogr.Geometry
     """
-    if not hasattr(ogr, "wkb"+gtype):
-        raise GeoKitGeomError("Could not find geometry type: "+gtype)
-    geom = ogr.Geometry(getattr(ogr, "wkb"+gtype))
+    if not hasattr(ogr, "wkb" + gtype):
+        raise GeoKitGeomError("Could not find geometry type: " + gtype)
+    geom = ogr.Geometry(getattr(ogr, "wkb" + gtype))
 
     if not srs is None:
         geom.AssignSpatialReference(SRS.loadSRS(srs))
@@ -374,7 +438,7 @@ def convertWKT(wkt, srs=None):
 # Make a geometry from a matrix mask
 
 
-def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _raw=False):
+def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _raw=False):
     """Create a geometry set from a matrix of integer values
 
     Each unique-valued group of pixels will be converted to a geometry
@@ -444,8 +508,8 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
         except:
             raise GeoKitGeomError("Could not understand 'bounds' input")
 
-    pixelHeight = (yMax-yMin)/matrix.shape[0]
-    pixelWidth = (xMax-xMin)/matrix.shape[1]
+    pixelHeight = (yMax - yMin) / matrix.shape[0]
+    pixelWidth = (xMax - xMin) / matrix.shape[1]
 
     if not srs is None:
         srs = SRS.loadSRS(srs)
@@ -453,8 +517,8 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
     # Make a raster dataset and pull the band/maskBand objects
 
     # used 'round' instead of 'int' because this matched GDAL behavior better
-    cols = int(round((xMax-xMin)/pixelWidth))
-    rows = int(round((yMax-yMin)/abs(pixelHeight)))
+    cols = int(round((xMax - xMin) / pixelWidth))
+    rows = int(round((yMax - yMin) / abs(pixelHeight)))
     originX = xMin
     originY = yMax  # Always use the "Y-at-Top" orientation
 
@@ -466,7 +530,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
         raise GeoKitGeomError("Failed to create temporary raster")
 
     raster.SetGeoTransform(
-        (originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+        (originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
 
     # Set the SRS
     if not srs is None:
@@ -519,7 +583,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True,  _r
     # Do shrink, maybe
     if shrink:
         # Compute shrink factor
-        shrinkFactor = -0.00001*(xMax-xMin)/matrix.shape[1]
+        shrinkFactor = -0.00001 * (xMax - xMin) / matrix.shape[1]
         geoms = [g.Buffer(shrinkFactor) for g in geoms]
 
     # Do flatten, maybe
@@ -741,11 +805,11 @@ def flatten(geoms):
                 if not geoms[gi].IsValid():
                     warnings.warn(
                         "WARNING: Invalid Geometry encountered", UserWarning)
-                if not geoms[gi+1].IsValid():
+                if not geoms[gi + 1].IsValid():
                     warnings.warn(
                         "WARNING: Invalid Geometry encountered", UserWarning)
 
-                newGeoms.append(geoms[gi].Union(geoms[gi+1]))
+                newGeoms.append(geoms[gi].Union(geoms[gi + 1]))
             except IndexError:  # should only occur when length of geoms is odd
                 newGeoms.append(geoms[gi])
 
@@ -1007,8 +1071,8 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
             ax = plt.axes([leftMargin,
                            bottomMargin,
-                           1-(rightMargin+leftMargin),
-                           1-(topMargin+bottomMargin)])
+                           1 - (rightMargin + leftMargin),
+                           1 - (topMargin + bottomMargin)])
             cbax = None
 
         else:  # We need a colorbar
@@ -1021,13 +1085,14 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
             ax = plt.axes([leftMargin,
                            bottomMargin,
-                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding),
-                           1-(topMargin+bottomMargin)])
+                           1 - (rightMargin + leftMargin +
+                                cbarWidth + cbarPadding),
+                           1 - (topMargin + bottomMargin)])
 
-            cbax = plt.axes([1-(rightMargin+cbarWidth),
-                             bottomMargin+cbarExtraPad,
+            cbax = plt.axes([1 - (rightMargin + cbarWidth),
+                             bottomMargin + cbarExtraPad,
                              cbarWidth,
-                             1-(topMargin+bottomMargin+2*cbarExtraPad)])
+                             1 - (topMargin + bottomMargin + 2 * cbarExtraPad)])
 
         if hideAxis:
             ax.axis("off")
@@ -1086,7 +1151,8 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         if not ylim is None:
             yMin, yMax = ylim
 
-        simplificationValue = max(xMax-xMin, yMax-yMin)/simplificationFactor
+        simplificationValue = max(
+            xMax - xMin, yMax - yMin) / simplificationFactor
 
         oGeoms = geoms
         geoms = []
@@ -1119,7 +1185,8 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         cValMax = colorVals.max() if vmax is None else vmax
         cValMin = colorVals.min() if vmin is None else vmin
 
-        _colorVals = [cmap(v) for v in (colorVals-cValMin)/(cValMax-cValMin)]
+        _colorVals = [cmap(v)
+                      for v in (colorVals - cValMin) / (cValMax - cValMin)]
 
     # Do Plotting
     # make patches
@@ -1170,7 +1237,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         cbar = ColorbarBase(cbax, **tmp)
         cbar.ax.tick_params(labelsize=fontsize)
         cbar.set_label(
-            colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize+2)
+            colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
     else:
         cbar = None
 
@@ -1211,7 +1278,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
             * If no growStep is given, a decent one will be calculated
     """
     if growStep is None:
-        growStep = np.sqrt(targetArea/np.pi)/2
+        growStep = np.sqrt(targetArea / np.pi) / 2
 
     # Be sure we are working with a polygon
     if geom.GetGeometryName() == "POLYGON":
@@ -1230,7 +1297,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
 
     # Check the geometry's size
     gArea = geom.Area()
-    if gArea < 1.5*targetArea:
+    if gArea < 1.5 * targetArea:
         return [geom.Clone(), ]
 
     # Find the most starting boundary coordinate
@@ -1273,10 +1340,10 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     searchGeom = tmp.Intersection(geom)
     sgArea = searchGeom.Area()
 
-    if gArea < 2*targetArea:  # use a slightly smalled target area when the whole geometry
+    if gArea < 2 * targetArea:  # use a slightly smalled target area when the whole geometry
         #  is close to twice the target area in order to increase the
         #  liklihood of a usable leftover
-        workingTarget = 0.9*targetArea
+        workingTarget = 0.9 * targetArea
     else:
         workingTarget = targetArea
 
@@ -1286,9 +1353,9 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
         newGeom = tmp.Intersection(geom)
         newArea = newGeom.Area()
 
-        if newArea > workingTarget*1.1:
-            dA = (newArea-sgArea)/growStep
-            weightedGrowStep = (workingTarget-sgArea)/dA
+        if newArea > workingTarget * 1.1:
+            dA = (newArea - sgArea) / growStep
+            weightedGrowStep = (workingTarget - sgArea) / dA
 
             tmp = start.Buffer(weightedGrowStep)
             tmp.Simplify(growStep)
@@ -1309,14 +1376,14 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
                 break
 
     # Check the left over geometry, maybe some poops have been created and we need to glue them together
-    outputGeom = searchGeom.Simplify(growStep/20)
+    outputGeom = searchGeom.Simplify(growStep / 20)
     geomToDo = []
 
     leftOvers = geom.Difference(searchGeom)
     if leftOvers.GetGeometryName() == "MULTIPOLYGON":
         for gi in range(leftOvers.GetGeometryCount()):
             leftOver = leftOvers.GetGeometryRef(gi)
-            if leftOver.Area() < targetArea*0.5:
+            if leftOver.Area() < targetArea * 0.5:
                 outputGeom = outputGeom.Union(leftOver)
             else:
                 geomToDo.append(leftOver)
@@ -1327,14 +1394,14 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
             "FATAL ERROR: Difference did not result in a polygon")
 
     # make an output array
-    if outputGeom.Area() < targetArea*1.5:
+    if outputGeom.Area() < targetArea * 1.5:
         output = [outputGeom]
     else:
         # the search geom plus some (or maybe all) of the left over poops total an area which is too large,
         #  so it will need recomputing. But in order to decrease the liklihhod of an infinite loop,
         #  use a difference starting point than the one used before
         #  - This will loop a maximum of 6 times before an exception is raised
-        output = partition(outputGeom, targetArea, growStep, _startPoint+1)
+        output = partition(outputGeom, targetArea, growStep, _startPoint + 1)
 
     for g in geomToDo:
         tmpOutput = partition(g, targetArea, growStep)

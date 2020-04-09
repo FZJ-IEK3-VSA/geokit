@@ -1065,7 +1065,7 @@ class RegionMask(object):
 
                 count += 1
 
-    def subTiles(self, zoom, only_overlapping=True):
+    def subTiles(self, zoom, checkIntersect=True, asGeom=False):
         """Generates tile Extents at a given zoom level which encompass the envoking Regionmask.
 
         Parameters:
@@ -1073,20 +1073,18 @@ class RegionMask(object):
         zoom : int
             The zoom level of the expected tile source
 
-        only_overlapping : bool
-            If True, exclude tiles which do not overlap with the RegionMask's geometry
+        checkIntersect : bool
+            If True, exclude tiles which do not intersect with the RegionMask's geometry
+
+        asGeom : bool
+            If True, returns tuple of ogr.Geometries in stead of (xi,yi,zoom) tuples
 
         Returns:
         --------
-        Generator of Extents objects
+        Generator of Geometries or (xi,yi,zoom) tuples
+
         """
-
-        rm_geometry = GEOM.transform(self.geometry, toSRS=SRS.EPSG3857)
-
-        for ext in self.extent.subTiles(zoom):
-            if only_overlapping and not rm_geometry.Intersects(ext.box):
-                continue
-            yield ext
+        yield from GEOM.subTiles(self.geometry, zoom, checkIntersect=checkIntersect, asGeom=asGeom)
 
     #############################################################################
     # CONVENIENCE WRAPPERS

@@ -24,6 +24,46 @@ def test_tile():
     assert np.isclose(envelope[3], 6462292.119341941)
 
 
+def test_subTiles():
+    tiles = list(geom.subTiles(GEOM,
+                               zoom=5,
+                               checkIntersect=False,
+                               asGeom=False))
+    assert len(tiles) == 4
+
+    assert tiles[0] == (16, 12, 5)
+    assert tiles[1] == (16, 13, 5)
+    assert tiles[2] == (17, 12, 5)
+    assert tiles[3] == (17, 13, 5)
+
+    tiles = list(geom.subTiles(GEOM,
+                               zoom=7,
+                               checkIntersect=True,
+                               asGeom=False))
+
+    assert len(tiles) == 7
+
+    assert tiles[0] == (67, 50, 7)
+    assert tiles[1] == (67, 51, 7)
+    assert tiles[2] == (67, 52, 7)
+    assert tiles[3] == (68, 49, 7)
+    assert tiles[4] == (68, 50, 7)
+    assert tiles[5] == (68, 51, 7)
+    assert tiles[6] == (69, 49, 7)
+
+
+def test_tileize():
+    geoms = list(geom.tileize(GEOM, zoom=7))
+
+    assert np.isclose(geoms[0].Area(), 6185440214.480698)
+    assert np.isclose(geoms[1].Area(), 22669806295.02369)
+    assert np.isclose(geoms[2].Area(), 4971343426.690063)
+    assert np.isclose(geoms[3].Area(), 11085156736.902699)
+    assert np.isclose(geoms[4].Area(), 60694504952.24364)
+    assert np.isclose(geoms[5].Area(), 8127832949.697159)
+    assert np.isclose(geoms[6].Area(), 4469553269.708176)
+
+
 def test_point():
     x, y = pointInAachen3035
 
@@ -140,7 +180,7 @@ def test_polygonizeMask():
 def test_flatten():
 
     # Overlapping polygons
-    bounds = [(i, i, i+2, i+2) for i in range(5)]
+    bounds = [(i, i, i + 2, i + 2) for i in range(5)]
     # test basic combination
     geomList = [geom.box(b, srs=EPSG4326) for b in bounds]
 

@@ -526,7 +526,8 @@ def test_Extent_contoursFromRaster():
 def test_Extent_subTiles():
     ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
 
-    tiles = list(ext.subTiles(9))
+    tiles = [Extent.fromTile(t.xi, t.yi, t.zoom) for t in ext.subTiles(9)]
+
     assert len(tiles) == 4
 
     assert np.isclose(tiles[0].xMin, 626172.135712)

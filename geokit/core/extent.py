@@ -1349,7 +1349,7 @@ class Extent(object):
                                          ).replace("{x}", str(xi)
                                                    ).replace("{y}", str(yi))
 
-    def subTiles(self, zoom):
+    def subTiles(self, zoom, asGeom=False):
         """Generates tile Extents at a given zoom level which encompass the envoking Extent.
 
         Parameters:
@@ -1357,15 +1357,15 @@ class Extent(object):
         zoom : int
             The zoom level of the expected tile source
 
+        asGeom : bool
+            If True, returns tuple of ogr.Geometries in stead of (xi,yi,zoom) tuples
+
         Returns:
         --------
-        Generator of Extents
-        """
-        tb = self.tileIndexBox(zoom)
+        Generator of Geometries or (xi,yi,zoom) tuples
 
-        for xi in range(tb.xi_start, tb.xi_stop + 1):
-            for yi in range(tb.yi_start, tb.yi_stop + 1):
-                yield Extent.fromTile(xi, yi, zoom)
+        """
+        yield from GEOM.subTiles(self.box, zoom, checkIntersect=False, asGeom=asGeom)
 
     def tileBox(self, zoom, return_index_box=False):
         """Determine the tile Extent at a given zoom level which surround the invoked Extent

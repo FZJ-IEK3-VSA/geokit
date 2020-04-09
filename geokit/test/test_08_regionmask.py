@@ -359,16 +359,16 @@ def test_RegionMask_subRegions():
 def test_RegionMask_subTiles():
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
 
-    tiles = list(rm.subTiles(9, only_overlapping=False))
+    tiles = list(rm.subTiles(9, checkIntersect=False))
     assert len(tiles) == 4
 
-    tiles = list(rm.subTiles(10, only_overlapping=False))
+    tiles = list(rm.subTiles(10, checkIntersect=False))
     assert len(tiles) == 9
 
-    tiles = list(rm.subTiles(11, only_overlapping=False))
+    tiles = list(rm.subTiles(11, checkIntersect=False))
     assert len(tiles) == 20
 
-    tiles = list(rm.subTiles(12, only_overlapping=False))
+    tiles = list(rm.subTiles(12, checkIntersect=False))
     assert len(tiles) == 63
 
     tiles = list(rm.subTiles(9))
