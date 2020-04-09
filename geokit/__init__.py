@@ -1,6 +1,6 @@
 """The GeoKit library is a collection of general geospatial operations"""
 
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 # maybe set GDAL_DATA variable
 from os import environ as _environ
