@@ -18,7 +18,7 @@ class GeoKitExtentError(UTIL.GeoKitError):
 
 
 IndexSet = namedtuple("IndexSet", "xStart yStart xWin yWin xEnd yEnd")
-TileIndexBox = namedtuple("tileBox", "xi_start xi_stop yi_start yi_stop")
+TileIndexBox = namedtuple("tileBox", "xi_start xi_stop yi_start yi_stop zoom")
 
 
 class Extent(object):
@@ -146,8 +146,8 @@ class Extent(object):
         geokit.Extent
 
         """
-        tl = smopy.num2deg(xi-0.0, yi+1.0, zoom)[::-1]
-        br = smopy.num2deg(xi+1.0, yi-0.0, zoom)[::-1]
+        tl = smopy.num2deg(xi - 0.0, yi + 1.0, zoom)[::-1]
+        br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
         o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326,
                             toSRS=SRS.EPSG3857, outputFormat='xy')
@@ -230,6 +230,30 @@ class Extent(object):
         return Extent(lonMin, latMin, lonMax, latMax, srs=SRS.EPSG4326)
 
     @staticmethod
+    def fromWKT(wkt, delimiter="|"):
+        """Create extent from a Well-Known_Text string
+
+        * Actually the input should be two WKT strings seperated by a "|" character
+        * These correspond to "<A Geometry WKT>|<an SRS WKT>"
+
+        Parameters:
+        -----------
+        wkt : The string to be processed
+
+        delimiter : The delimiter which seperates the two WKT sections 
+
+        Returns:
+        --------
+        Extent
+
+        """
+        geomWKT, srsWKT = wkt.split(delimiter)
+        srs = SRS.loadSRS(srsWKT)
+        geom = GEOM.convertWKT(geomWKT, srs=srs)
+
+        return Extent.fromGeom(geom)
+
+    @staticmethod
     def load(source, **kwargs):
         """Attempts to load an Extent from a variety of inputs in the most
         appropriate manner
@@ -260,6 +284,8 @@ class Extent(object):
             return Extent.fromVector(source)
         elif UTIL.isRaster(source):
             return Extent.fromRaster(source)
+        elif isinstance(source, str):
+            return Extent.fromWKT(source)
 
         try:  # Maybe the source is an iterable giving xyXY
             vals = list(source)
@@ -348,6 +374,23 @@ class Extent(object):
     def __str__(self):
         return "(%.5f,%.5f,%.5f,%.5f)" % self.xyXY
 
+    def exportWKT(self, delimiter="|"):
+        """Export the extent to a Well-Known_Text string
+
+        * Actually the will be two WKT strings seperated by a "|" character
+        * These correspond to "<A Geometry WKT>|<an SRS WKT>"
+
+        Parameters:
+        -----------
+        delimiter : The delimiter which seperates the two WKT sections
+
+        Returns:
+        --------
+        string
+
+        """
+        return "{}{}{}".format(self.box.ExportToWkt(), delimiter, self.srs.ExportToWkt())
+
     def pad(self, pad, percent=False):
         """Pad the extent in all directions
 
@@ -379,11 +422,11 @@ class Extent(object):
             ypad = pad
 
         if percent:
-            xpad = xpad/100*(self.xMax-self.xMin) / 2
-            ypad = ypad/100*(self.yMax-self.yMin) / 2
+            xpad = xpad / 100 * (self.xMax - self.xMin) / 2
+            ypad = ypad / 100 * (self.yMax - self.yMin) / 2
 
         # Pad the extent
-        return Extent(self.xMin-xpad, self.yMin-ypad, self.xMax+xpad, self.yMax+ypad, srs=self.srs)
+        return Extent(self.xMin - xpad, self.yMin - ypad, self.xMax + xpad, self.yMax + ypad, srs=self.srs)
 
     def shift(self, dx=0, dy=0):
         """Shift the extent in the X and/or Y dimensions
@@ -403,7 +446,7 @@ class Extent(object):
         Extent
 
         """
-        return Extent(self.xMin+dx, self.yMin+dy, self.xMax+dx, self.yMax+dy, srs=self.srs)
+        return Extent(self.xMin + dx, self.yMin + dy, self.xMax + dx, self.yMax + dy, srs=self.srs)
 
     def fitsResolution(self, unit, tolerance=1e-6):
         """Test if calling Extent first around the given unit(s) (at least within
@@ -437,13 +480,13 @@ class Extent(object):
         except:
             unitX, unitY = unit, unit
 
-        xSteps = (self.xMax-self.xMin)/unitX
-        xResidual = abs(xSteps-np.round(xSteps))
+        xSteps = (self.xMax - self.xMin) / unitX
+        xResidual = abs(xSteps - np.round(xSteps))
         if xResidual > tolerance:
             return False
 
-        ySteps = (self.yMax-self.yMin)/unitY
-        yResidual = abs(ySteps-np.round(ySteps))
+        ySteps = (self.yMax - self.yMin) / unitY
+        yResidual = abs(ySteps - np.round(ySteps))
         if yResidual > tolerance:
             return False
 
@@ -478,16 +521,16 @@ class Extent(object):
             unitX, unitY = unit, unit
 
         # Look for bad sizes
-        if (unitX > self.xMax-self.xMin):
+        if (unitX > self.xMax - self.xMin):
             raise GeoKitExtentError("Unit size is larger than extent width")
-        if (unitY > self.yMax-self.yMin):
+        if (unitY > self.yMax - self.yMin):
             raise GeoKitExtentError("Unit size is larger than extent width")
 
         # Calculate new extent
-        newXMin = np.floor(self.xMin/unitX)*unitX
-        newYMin = np.floor(self.yMin/unitY)*unitY
-        newXMax = np.ceil(self.xMax/unitX)*unitX
-        newYMax = np.ceil(self.yMax/unitY)*unitY
+        newXMin = np.floor(self.xMin / unitX) * unitX
+        newYMin = np.floor(self.yMin / unitY) * unitY
+        newXMax = np.ceil(self.xMax / unitX) * unitX
+        newYMax = np.ceil(self.yMax / unitY) * unitY
 
         # Done!
         if dtype is None or isinstance(unitX, dtype):
@@ -541,11 +584,12 @@ class Extent(object):
 
         if(srs.IsSame(self.srs)):
             return self
-        
-        segment_size = min(self.xMax-self.xMin, self.yMax-self.yMin) / segments
+
+        segment_size = min(self.xMax - self.xMin,
+                           self.yMax - self.yMin) / segments
         box = self.box
         box.Segmentize(segment_size)
-        box = GEOM.transform( box, toSRS=srs)
+        box = GEOM.transform(box, toSRS=srs)
         xMin, xMax, yMin, yMax = box.GetEnvelope()
         return Extent(xMin, yMin, xMax, yMax, srs=srs)
 #        # Create a transformer
@@ -720,7 +764,7 @@ class Extent(object):
                 dx, dy = res, res
 
             # Test for factor of resolutions
-            thresh = dx/1000
+            thresh = dx / 1000
             if((extent.xMin - self.xMin) % dx > thresh or
                 (extent.yMin - self.yMin) % dy > thresh or
                 (self.xMax - extent.xMax) % dx > thresh or
@@ -765,13 +809,13 @@ class Extent(object):
             dx, dy = res, res
 
         # Get offsets
-        tmpX = (extent.xMin - self.xMin)/dx
+        tmpX = (extent.xMin - self.xMin) / dx
         xOff = int(np.round(tmpX))
 
         if(yAtTop):
-            tmpY = (self.yMax - extent.yMax)/dy
+            tmpY = (self.yMax - extent.yMax) / dy
         else:
-            tmpY = (extent.yMin - self.yMin)/dy
+            tmpY = (extent.yMin - self.yMin) / dy
         yOff = int(np.round(tmpY))
 
         if not (np.isclose(xOff, tmpX) and np.isclose(yOff, tmpY)):
@@ -779,10 +823,10 @@ class Extent(object):
                 "The extents are not relatable on the given resolution")
 
         # Get window sizes
-        tmpX = (extent.xMax - extent.xMin)/dx
+        tmpX = (extent.xMax - extent.xMin) / dx
         xWin = int(np.round(tmpX))
 
-        tmpY = (extent.yMax - extent.yMin)/dy
+        tmpY = (extent.yMax - extent.yMin) / dy
         yWin = int(np.round(tmpY))
 
         if not (np.isclose(xWin, tmpX) and np.isclose(yWin, tmpY)):
@@ -790,7 +834,7 @@ class Extent(object):
                 "The extents are not relatable on the given resolution")
 
         # Done!
-        return IndexSet(xOff, yOff, xWin, yWin, xOff+xWin, yOff+yWin)
+        return IndexSet(xOff, yOff, xWin, yWin, xOff + xWin, yOff + yWin)
 
     def computePixelSize(self, *args):
         """Finds the pixel resolution which fits to the Extent for a given pixel count.
@@ -812,8 +856,8 @@ class Extent(object):
         else:
             pixels_x, pixels_y = args
 
-        pixelWidth = (self.xMax-self.xMin) / pixels_x
-        pixelHeight = (self.yMax-self.yMin) / pixels_y
+        pixelWidth = (self.xMax - self.xMin) / pixels_x
+        pixelHeight = (self.yMax - self.yMin) / pixels_y
 
         return pixelWidth, pixelHeight
 
@@ -1267,7 +1311,7 @@ class Extent(object):
         br_tile_xi, br_tile_yi = smopy.deg2num(
             ext4326.yMin, ext4326.xMax, zoom)
 
-        return TileIndexBox(xi_start=tl_tile_xi, xi_stop=br_tile_xi, yi_start=tl_tile_yi, yi_stop=br_tile_yi)
+        return TileIndexBox(xi_start=tl_tile_xi, xi_stop=br_tile_xi, yi_start=tl_tile_yi, yi_stop=br_tile_yi, zoom=zoom)
 
     def tileSources(self, zoom, source=None):
         """Get the tiles sources which contribute to the invoking Extent
@@ -1296,14 +1340,32 @@ class Extent(object):
 
         """
         tb = self.tileIndexBox(zoom)
-        for xi in range(tb.xi_start, tb.xi_stop+1):
-            for yi in range(tb.yi_start, tb.yi_stop+1):
+        for xi in range(tb.xi_start, tb.xi_stop + 1):
+            for yi in range(tb.yi_start, tb.yi_stop + 1):
                 if source is None:
                     yield (xi, yi, zoom)
                 else:
                     yield source.replace("{z}", str(zoom)
                                          ).replace("{x}", str(xi)
                                                    ).replace("{y}", str(yi))
+
+    def subTiles(self, zoom):
+        """Generates tile Extents at a given zoom level which encompass the envoking Extent.
+
+        Parameters:
+        -----------
+        zoom : int
+            The zoom level of the expected tile source
+
+        Returns:
+        --------
+        Generator of Extents
+        """
+        tb = self.tileIndexBox(zoom)
+
+        for xi in range(tb.xi_start, tb.xi_stop + 1):
+            for yi in range(tb.yi_start, tb.yi_stop + 1):
+                yield Extent.fromTile(xi, yi, zoom)
 
     def tileBox(self, zoom, return_index_box=False):
         """Determine the tile Extent at a given zoom level which surround the invoked Extent
@@ -1333,8 +1395,8 @@ class Extent(object):
         br_tile_xi = tb.xi_stop
         br_tile_yi = tb.yi_stop
 
-        tl_lat, tl_lon = smopy.num2deg(tl_tile_xi,   tl_tile_yi, zoom)
-        br_lat, br_lon = smopy.num2deg(br_tile_xi+1, br_tile_yi+1, zoom)
+        tl_lat, tl_lon = smopy.num2deg(tl_tile_xi, tl_tile_yi, zoom)
+        br_lat, br_lon = smopy.num2deg(br_tile_xi + 1, br_tile_yi + 1, zoom)
 
         coords3857 = SRS.xyTransform([(tl_lon, tl_lat), (br_lon, br_lat)],
                                      fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat='xy')

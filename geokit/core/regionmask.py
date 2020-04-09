@@ -161,7 +161,7 @@ class RegionMask(object):
             if(mask.dtype == "uint8"):
                 mask = mask.astype("bool")
 
-            if not np.isclose(extent.xMin+pixelWidth*mask.shape[1], extent.xMax) or not np.isclose(extent.yMin+pixelHeight*mask.shape[0], extent.yMax):
+            if not np.isclose(extent.xMin + pixelWidth * mask.shape[1], extent.xMax) or not np.isclose(extent.yMin + pixelHeight * mask.shape[0], extent.yMax):
                 raise GeoKitRegionMaskError(
                     "Extent and pixels sizes do not correspond to mask shape")
 
@@ -222,8 +222,8 @@ class RegionMask(object):
         """
 
         # get pixelWidth and pixelHeight
-        pixelWidth = (extent.xMax-extent.xMin)/(mask.shape[1])
-        pixelHeight = (extent.yMax-extent.yMin)/(mask.shape[0])
+        pixelWidth = (extent.xMax - extent.xMin) / (mask.shape[1])
+        pixelHeight = (extent.yMax - extent.yMin) / (mask.shape[0])
 
         return RegionMask(extent=extent, pixelRes=(pixelWidth, pixelHeight), mask=mask, attributes=attributes)
 
@@ -466,7 +466,7 @@ class RegionMask(object):
 
     @property
     def area(self):
-        return self.mask.sum()*self.pixelWidth*self.pixelHeight
+        return self.mask.sum() * self.pixelWidth * self.pixelHeight
 
     def buildGeometry(self):
         """Explicitly build the RegionMask's geometry"""
@@ -555,8 +555,8 @@ class RegionMask(object):
 
     def _resolve(self, div):
         if(div < 0):
-            div = 1.0/abs(int(div))
-        return (self.pixelWidth/div, self.pixelHeight/div)
+            div = 1.0 / abs(int(div))
+        return (self.pixelWidth / div, self.pixelHeight / div)
 
     def applyMask(self, mat, noData=0):
         """Shortcut to apply the RegionMask's mask to an array. Mainly intended
@@ -601,8 +601,8 @@ class RegionMask(object):
                 raise GeoKitRegionMaskError(
                     "Matrix dimensions must be multiples of mask dimensions")
 
-            yScale = Y//self.height
-            xScale = X//self.width
+            yScale = Y // self.height
+            xScale = X // self.width
 
             scaledMask = UTIL.scaleMatrix(self.mask, (yScale, xScale))
             sel = np.where(~scaledMask)
@@ -618,8 +618,8 @@ class RegionMask(object):
     def _returnBlank(self, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, **kwargs):
         # make output
         if not forceMaskShape and resolutionDiv > 1:
-            yN = self.mask.shape[0]*int(resolutionDiv)
-            xN = self.mask.shape[1]*int(resolutionDiv)
+            yN = self.mask.shape[0] * int(resolutionDiv)
+            xN = self.mask.shape[1] * int(resolutionDiv)
             output = np.zeros((yN, xN))
         else:
             output = np.zeros(self.mask.shape)
@@ -662,16 +662,17 @@ class RegionMask(object):
         # Do processing
         newDS = self.extent.mutateRaster(
             source, processor=processor, dtype="bool", matchContext=False)
-        
+
         # Make contours
         if contours:
-            geomDF = self.extent.contoursFromRaster(newDS, [1], transformGeoms=False)
+            geomDF = self.extent.contoursFromRaster(
+                newDS, [1], transformGeoms=False)
             geoms = geomDF[geomDF.ID == 1].geom
         else:
             geomDF = RASTER.polygonizeRaster(newDS)
             geoms = geomDF[geomDF.value == 1].geom
-        
-        if len(geoms)==0: 
+
+        if len(geoms) == 0:
             return []
         else:
             geoms = list(geoms)
@@ -681,9 +682,6 @@ class RegionMask(object):
 
         return geoms
 
-
-
-        
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
@@ -861,7 +859,7 @@ class RegionMask(object):
 
         if forceMaskShape:
             if resolutionDiv > 1:
-                final = UTIL.scaleMatrix(final, -1*resolutionDiv)
+                final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
 
         # Apply mask?
         if applyMask:
@@ -1004,7 +1002,7 @@ class RegionMask(object):
         # Make sure we have the mask's shape
         if forceMaskShape:
             if resolutionDiv > 1:
-                final = UTIL.scaleMatrix(final, -1*resolutionDiv)
+                final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
 
         # Apply mask?
         if applyMask:
@@ -1038,20 +1036,20 @@ class RegionMask(object):
         """
         # get useful matrix info
         yN, xN = self.mask.shape
-        pixelGridSize = int(gridSize/min(self.pixelWidth, self.pixelHeight))
+        pixelGridSize = int(gridSize / min(self.pixelWidth, self.pixelHeight))
 
         # Make grid areas
         count = 0
         for ys in range(0, yN, pixelGridSize):
 
-            yn = min(yN, ys+pixelGridSize)
-            yMax = self.extent.yMax - ys*self.pixelHeight
-            yMin = self.extent.yMax - yn*self.pixelHeight
+            yn = min(yN, ys + pixelGridSize)
+            yMax = self.extent.yMax - ys * self.pixelHeight
+            yMin = self.extent.yMax - yn * self.pixelHeight
 
             for xs in range(0, xN, pixelGridSize):
-                xn = min(xN, xs+pixelGridSize)
-                xMin = self.extent.xMin + xs*self.pixelWidth
-                xMax = self.extent.xMin + xn*self.pixelWidth
+                xn = min(xN, xs + pixelGridSize)
+                xMin = self.extent.xMin + xs * self.pixelWidth
+                xMax = self.extent.xMin + xn * self.pixelWidth
 
                 sectionMask = self.mask[ys:yn, xs:xn]
                 if not sectionMask.any():
@@ -1066,6 +1064,29 @@ class RegionMask(object):
                     yield RegionMask.fromMask(sectionExtent, sectionMask, dict(id=count))
 
                 count += 1
+
+    def subTiles(self, zoom, only_overlapping=True):
+        """Generates tile Extents at a given zoom level which encompass the envoking Regionmask.
+
+        Parameters:
+        -----------
+        zoom : int
+            The zoom level of the expected tile source
+
+        only_overlapping : bool
+            If True, exclude tiles which do not overlap with the RegionMask's geometry
+
+        Returns:
+        --------
+        Generator of Extents objects
+        """
+
+        rm_geometry = GEOM.transform(self.geometry, toSRS=SRS.EPSG3857)
+
+        for ext in self.extent.subTiles(zoom):
+            if only_overlapping and not rm_geometry.Intersects(ext.box):
+                continue
+            yield ext
 
     #############################################################################
     # CONVENIENCE WRAPPERS
@@ -1475,7 +1496,7 @@ class RegionMask(object):
 
             return self.extent.mutateRaster(source, matchContext=False, warpArgs=warpArgs, resampleAlg=resampleAlg, **mutateArgs)
 
-    def polygonizeMatrix(self, matrix, flat=False, shrink=True,  _raw=False):
+    def polygonizeMatrix(self, matrix, flat=False, shrink=True, _raw=False):
         """Convenience wrapper for geokit.geom.polygonizeMatrix which autmatically
         sets the 'bounds' and 'srs' inputs. The matrix data is assumed to span the
         RegionMask exactly.
@@ -1507,7 +1528,7 @@ class RegionMask(object):
                                 'value' -> The value for each geometry
 
         """
-        return GEOM.polygonizeMatrix(matrix, bounds=self.extent.xyXY, srs=self.srs, flat=flat, shrink=shrink,  _raw=_raw)
+        return GEOM.polygonizeMatrix(matrix, bounds=self.extent.xyXY, srs=self.srs, flat=flat, shrink=shrink, _raw=_raw)
 
     def polygonizeMask(self, mask, bounds=None, srs=None, flat=True, shrink=True):
         """Convenience wrapper for geokit.geom.polygonizeMask which autmatically

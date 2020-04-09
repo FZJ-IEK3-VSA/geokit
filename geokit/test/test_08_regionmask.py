@@ -86,7 +86,7 @@ def test_RegionMask_fromGeom():
 
     g = GEOM.Clone()
     g.TransformTo(EPSG4326)
-    assert np.isclose(rm2.mask.sum()*dxy*dxy, g.Area(), rtol=1e-3)
+    assert np.isclose(rm2.mask.sum() * dxy * dxy, g.Area(), rtol=1e-3)
 
     # fromGeom with geometry and extent
     dxy = 0.05
@@ -99,7 +99,7 @@ def test_RegionMask_fromGeom():
 
     g = GEOM.Clone()
     g.TransformTo(EPSG4326)
-    assert np.isclose(rm3.mask.sum()*dxy*dxy, g.Area(), rtol=1e-3)
+    assert np.isclose(rm3.mask.sum() * dxy * dxy, g.Area(), rtol=1e-3)
 
 
 def test_RegionMask_fromVector():
@@ -121,7 +121,7 @@ def test_RegionMask_fromVector():
     g = ftr.GetGeometryRef().Clone()
     g.TransformTo(EPSG3035)
     # check if total areas are close to one another
-    assert np.isclose(rm1.mask.sum()*100*100, g.Area(), rtol=1e-3)
+    assert np.isclose(rm1.mask.sum() * 100 * 100, g.Area(), rtol=1e-3)
 
     # fromVector - 'where' select
     rm2 = RegionMask.fromVector(
@@ -258,8 +258,8 @@ def test_RegionMask_applyMask():
         0.05), srs=EPSG4326, pixelRes=0.001)
 
     data1 = np.arange(rm.mask.size).reshape(rm.mask.shape)
-    data2 = np.arange(rm.mask.shape[0]*3*rm.mask.shape[1]
-                      * 3).reshape((rm.mask.shape[0]*3, rm.mask.shape[1]*3))
+    data2 = np.arange(rm.mask.shape[0] * 3 * rm.mask.shape[1]
+                      * 3).reshape((rm.mask.shape[0] * 3, rm.mask.shape[1] * 3))
 
     # test applying
     data1 = rm.applyMask(data1)
@@ -304,7 +304,7 @@ def test_RegionMask_indicateValues():
 
     combi = np.logical_and(res1 > 0.5, res2 > 0.5)
     # Some pixels will not end up the same due to warping issues
-    assert ((res4 > 0.5) != combi).sum() < res4.size*0.001
+    assert ((res4 > 0.5) != combi).sum() < res4.size * 0.001
 
     # Testing buffering
     res5 = rm.indicateValues(CLC_RASTER_PATH, value=(
@@ -356,6 +356,34 @@ def test_RegionMask_subRegions():
     print("RegionMask_subRegions not tested...")
 
 
+def test_RegionMask_subTiles():
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+
+    tiles = list(rm.subTiles(9, only_overlapping=False))
+    assert len(tiles) == 4
+
+    tiles = list(rm.subTiles(10, only_overlapping=False))
+    assert len(tiles) == 9
+
+    tiles = list(rm.subTiles(11, only_overlapping=False))
+    assert len(tiles) == 20
+
+    tiles = list(rm.subTiles(12, only_overlapping=False))
+    assert len(tiles) == 63
+
+    tiles = list(rm.subTiles(9))
+    assert len(tiles) == 4
+
+    tiles = list(rm.subTiles(10))
+    assert len(tiles) == 7
+
+    tiles = list(rm.subTiles(11))
+    assert len(tiles) == 13
+
+    tiles = list(rm.subTiles(12))
+    assert len(tiles) == 35
+
+
 def test_RegionMask_createRaster():
     rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(
         0.05), srs=EPSG4326, pixelRes=0.001)
@@ -364,8 +392,8 @@ def test_RegionMask_createRaster():
     ds = rm.createRaster()
 
     dsInfo = raster.rasterInfo(ds)
-    assert np.isclose(dsInfo.xMin,  6.15)
-    assert np.isclose(dsInfo.xMax,  6.25)
+    assert np.isclose(dsInfo.xMin, 6.15)
+    assert np.isclose(dsInfo.xMax, 6.25)
     assert np.isclose(dsInfo.yMin, 50.70)
     assert np.isclose(dsInfo.yMax, 50.80)
     assert dsInfo.srs.IsSame(EPSG4326)
@@ -443,7 +471,7 @@ def test_RegionMask_warp():
                        resampleAlg='near', noData=0)
 
     assert warped_4.dtype == np.uint8
-    assert warped_4.shape == (rm.mask.shape[0]*5, rm.mask.shape[1]*5)
+    assert warped_4.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(warped_4.sum(), 11240881)
     assert np.isclose(warped_4.std(), 9.37633272361)
     #rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noData=0, overwrite=True)
@@ -476,7 +504,7 @@ def test_RegionMask_rasterize():
         AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float)
 
     assert rasterize_3.dtype == np.float64
-    assert rasterize_3.shape == (rm.mask.shape[0]*5, rm.mask.shape[1]*5)
+    assert rasterize_3.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(rasterize_3.sum(), 4578070.0)
     assert np.isclose(rasterize_3.std(), 2.85958813405)
     #rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
