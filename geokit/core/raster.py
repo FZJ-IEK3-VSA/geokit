@@ -196,8 +196,8 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         if(os.path.isfile(output)):
             if(overwrite == True):
                 os.remove(output)
-                if(os.path.isfile(output+".aux.xml")):
-                    os.remove(output+".aux.xml")
+                if(os.path.isfile(output + ".aux.xml")):
+                    os.remove(output + ".aux.xml")
             else:
                 raise GeoKitRasterError(
                     "Output file already exists: %s" % output)
@@ -209,8 +209,8 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
     originX = bounds[0]
     originY = bounds[3]  # Always use the "Y-at-Top" orientation
 
-    cols = int(round((bounds[2]-originX)/pixelWidth))
-    rows = int(round((originY-bounds[1])/abs(pixelHeight)))
+    cols = int(round((bounds[2] - originX) / pixelWidth))
+    rows = int(round((originY - bounds[1]) / abs(pixelHeight)))
 
     # Get DataType
     if(not dtype is None):  # a dtype was given, use it!
@@ -243,7 +243,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
     # Do the rest in a "try" statement so that a failure wont bind the source
     try:
         raster.SetGeoTransform(
-            (originX, abs(pixelWidth), 0, originY, 0, -1*abs(pixelHeight)))
+            (originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
 
         # Set the SRS
         if not srs is None:
@@ -410,34 +410,34 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
             bounds = UTIL.fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy)
 
         # Find offsets
-        xoff = int(np.round((bounds[0] - dsInfo.xMin)/dsInfo.dx))
+        xoff = int(np.round((bounds[0] - dsInfo.xMin) / dsInfo.dx))
         if xoff < 0:
             raise GeoKitRasterError(
                 "The given boundary exceeds the raster's xMin value")
 
-        xwin = int(np.round((bounds[2] - dsInfo.xMin)/dsInfo.dx)) - xoff
+        xwin = int(np.round((bounds[2] - dsInfo.xMin) / dsInfo.dx)) - xoff
         if xwin > dsInfo.xWinSize:
             raise GeoKitRasterError(
                 "The given boundary exceeds the raster's xMax value")
 
         if dsInfo.yAtTop:
-            yoff = int(np.round((dsInfo.yMax - bounds[3])/dsInfo.dy))
+            yoff = int(np.round((dsInfo.yMax - bounds[3]) / dsInfo.dy))
             if yoff < 0:
                 raise GeoKitRasterError(
                     "The given boundary exceeds the raster's yMax value")
 
-            ywin = int(np.round((dsInfo.yMax - bounds[1])/dsInfo.dy)) - yoff
+            ywin = int(np.round((dsInfo.yMax - bounds[1]) / dsInfo.dy)) - yoff
 
             if ywin > dsInfo.yWinSize:
                 raise GeoKitRasterError(
                     "The given boundary exceeds the raster's yMin value")
         else:
-            yoff = int(np.round((bounds[1] - dsInfo.yMin)/dsInfo.dy))
+            yoff = int(np.round((bounds[1] - dsInfo.yMin) / dsInfo.dy))
             if yoff < 0:
                 raise GeoKitRasterError(
                     "The given boundary exceeds the raster's yMin value")
 
-            ywin = int(np.round((bounds[3] - dsInfo.yMin)/dsInfo.dy)) - yoff
+            ywin = int(np.round((bounds[3] - dsInfo.yMin) / dsInfo.dy)) - yoff
             if ywin > dsInfo.yWinSize:
                 raise GeoKitRasterError(
                     "The given boundary exceeds the raster's yMax value")
@@ -456,9 +456,9 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
         data = sourceBand.ReadAsArray(
             xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
         if dsInfo.scale is not None and dsInfo.scale != 1.0:
-            data = data*dsInfo.scale
+            data = data * dsInfo.scale
         if dsInfo.offset is not None and dsInfo.offset != 0.0:
-            data = data+dsInfo.offset
+            data = data + dsInfo.offset
 
     # Correct 'nodata' values
     if autocorrect:
@@ -590,12 +590,12 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
     # Get the factor
     sourceInfo = rasterInfo(source)
     if factor == "latlonToM":
-        latMid = (sourceInfo.yMax + sourceInfo.yMin)/2
+        latMid = (sourceInfo.yMax + sourceInfo.yMin) / 2
         R_EARTH = 6371000
-        DEGtoRAD = np.pi/180
+        DEGtoRAD = np.pi / 180
 
-        yFactor = R_EARTH*DEGtoRAD  # Get arc length in meters/Degree
-        xFactor = R_EARTH*DEGtoRAD*np.cos(latMid*DEGtoRAD)  # ditto...
+        yFactor = R_EARTH * DEGtoRAD  # Get arc length in meters/Degree
+        xFactor = R_EARTH * DEGtoRAD * np.cos(latMid * DEGtoRAD)  # ditto...
     else:
         try:
             xFactor, yFactor = factor
@@ -608,18 +608,18 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
 
     if mode in ["north-south", "ns", "total", "slope", "dir", "aspect"]:
         ns = np.zeros(arr.shape)
-        ns[1:-1, :] = (arr[2:, :] - arr[:-2, :])/(2*sourceInfo.dy*yFactor)
+        ns[1:-1, :] = (arr[2:, :] - arr[:-2, :]) / (2 * sourceInfo.dy * yFactor)
         if mode in ["north-south", "ns"]:
             output = ns
 
     if mode in ["east-west", "total", "slope", "dir", "aspect"]:
         ew = np.zeros(arr.shape)
-        ew[:, 1:-1] = (arr[:, :-2] - arr[:, 2:])/(2*sourceInfo.dx*xFactor)
+        ew[:, 1:-1] = (arr[:, :-2] - arr[:, 2:]) / (2 * sourceInfo.dx * xFactor)
         if mode in ["east-west", "ew"]:
             output = ew
 
     if mode == "total" or mode == "slope":
-        output = np.sqrt(ns*ns + ew*ew)
+        output = np.sqrt(ns * ns + ew * ew)
 
     if mode == "dir" or mode == "aspect":
         output = np.arctan2(ns, ew)
@@ -694,17 +694,17 @@ def rasterInfo(sourceDS):
     xOrigin, dx, _, yOrigin, _, dy = sourceDS.GetGeoTransform()
 
     xMin = xOrigin
-    xMax = xOrigin+dx*xSize
+    xMax = xOrigin + dx * xSize
 
     if(dy < 0):
         yMax = yOrigin
-        yMin = yMax+dy*ySize
-        dy = -1*dy
+        yMin = yMax + dy * ySize
+        dy = -1 * dy
         output["flipY"] = True
         output["yAtTop"] = True
     else:
         yMin = yOrigin
-        yMax = yOrigin+dy*ySize
+        yMax = yOrigin + dy * ySize
         output["flipY"] = False
         output["yAtTop"] = False
 
@@ -843,28 +843,28 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     y = np.array([pt.GetY() for pt in points])
 
     # Calculate x/y indexes
-    xValues = (x-(info.xMin+0.5*info.pixelWidth))/info.pixelWidth
+    xValues = (x - (info.xMin + 0.5 * info.pixelWidth)) / info.pixelWidth
     xIndexes = np.round(xValues)
-    xOffset = xValues-xIndexes
+    xOffset = xValues - xIndexes
 
     if info.yAtTop:
-        yValues = ((info.yMax-0.5*info.pixelWidth)-y)/abs(info.pixelHeight)
+        yValues = ((info.yMax - 0.5 * info.pixelWidth) - y) / abs(info.pixelHeight)
         yIndexes = np.round(yValues)
-        yOffset = yValues-yIndexes
+        yOffset = yValues - yIndexes
     else:
-        yValues = (y-(info.yMin+0.5*info.pixelWidth))/info.pixelHeight
+        yValues = (y - (info.yMin + 0.5 * info.pixelWidth)) / info.pixelHeight
         yIndexes = np.round(yValues)
-        yOffset = -1*(yValues-yIndexes)
+        yOffset = -1 * (yValues - yIndexes)
 
     # Calculate the starts and window size
-    xStarts = xIndexes-winRange
-    yStarts = yIndexes-winRange
-    window = 2*winRange+1
+    xStarts = xIndexes - winRange
+    yStarts = yIndexes - winRange
+    window = 2 * winRange + 1
 
     inBounds = xStarts > 0
     inBounds = inBounds & (yStarts > 0)
-    inBounds = inBounds & (xStarts+window < info.xWinSize)
-    inBounds = inBounds & (yStarts+window < info.yWinSize)
+    inBounds = inBounds & (xStarts + window < info.xWinSize)
+    inBounds = inBounds & (yStarts + window < info.yWinSize)
 
     if (~inBounds).any():
         msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
@@ -882,9 +882,9 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
             data = band.ReadAsArray(
                 xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
             if info.scale != 1.0:
-                data = data*info.scale
+                data = data * info.scale
             if info.offset != 0.0:
-                data = data+info.offset
+                data = data + info.offset
 
             # Look for nodata
             if not info.noData is None:
@@ -1018,14 +1018,15 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     # Do interpolation
     if mode == 'near':
         # Simple get the nearest value
+        win = 0 if winRange is None else winRange
         result = extractValues(
-            source, points, pointSRS=pointSRS, winRange=0, _onlyValues=True)
+            source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
 
     elif mode == "linear-spline":  # use a spline interpolation scheme
         # setup inputs
         win = 2 if winRange is None else winRange
-        x = np.linspace(-1*win, win, 2*win+1)
-        y = np.linspace(-1*win, win, 2*win+1)
+        x = np.linspace(-1 * win, win, 2 * win + 1)
+        y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
         values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
@@ -1040,8 +1041,8 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     elif mode == "cubic-spline":  # use a spline interpolation scheme
         # setup inputs
         win = 4 if winRange is None else winRange
-        x = np.linspace(-1*win, win, 2*win+1)
-        y = np.linspace(-1*win, win, 2*win+1)
+        x = np.linspace(-1 * win, win, 2 * win + 1)
+        y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
         values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
@@ -1241,11 +1242,11 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
 
     # Caclulate coordinates
     if yAtTop:
-        x = xMin+dx*(xi+0.5)
-        y = yMax-dy*(yi+0.5)
+        x = xMin + dx * (xi + 0.5)
+        y = yMax - dy * (yi + 0.5)
     else:
-        x = xMin+dx*(xi+0.5)
-        y = yMin+dy*(yi+0.5)
+        x = xMin + dx * (xi + 0.5)
+        y = yMin + dy * (yi + 0.5)
 
     # make the output
     if asPoint:
@@ -1388,8 +1389,8 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
             ax = plt.axes([leftMargin,
                            bottomMargin,
-                           1-(rightMargin+leftMargin),
-                           1-(topMargin+bottomMargin)])
+                           1 - (rightMargin + leftMargin),
+                           1 - (topMargin + bottomMargin)])
             cbax = None
 
         else:  # We need a colorbar
@@ -1402,13 +1403,13 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
             ax = plt.axes([leftMargin,
                            bottomMargin,
-                           1-(rightMargin+leftMargin+cbarWidth+cbarPadding),
-                           1-(topMargin+bottomMargin)])
+                           1 - (rightMargin + leftMargin + cbarWidth + cbarPadding),
+                           1 - (topMargin + bottomMargin)])
 
-            cbax = plt.axes([1-(rightMargin+cbarWidth),
-                             bottomMargin+cbarExtraPad,
+            cbax = plt.axes([1 - (rightMargin + cbarWidth),
+                             bottomMargin + cbarExtraPad,
                              cbarWidth,
-                             1-(topMargin+bottomMargin+2*cbarExtraPad)])
+                             1 - (topMargin + bottomMargin + 2 * cbarExtraPad)])
 
         if hideAxis:
             ax.axis("off")
@@ -1463,7 +1464,7 @@ def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize
 
         cbar.ax.tick_params(labelsize=fontsize)
         if not cbarTitle is None:
-            cbar.set_label(cbarTitle, fontsize=fontsize+2)
+            cbar.set_label(cbarTitle, fontsize=fontsize + 2)
 
     # Do some formatting
     if newAxis:
@@ -1655,7 +1656,7 @@ def contours(source, contourEdges, polygonize=True, unpack=True, **kwargs):
     if contourEdges is not None:
         opt = "FIXED_LEVELS="
         for edge in contourEdges:
-            opt += str(edge)+","
+            opt += str(edge) + ","
         args.append(opt[:-1])
 
     result = gdal.ContourGenerateEx(band, layer, options=args)
@@ -1796,13 +1797,13 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         if srsOkay:
             pixelHeight = dsInfo.dy
         else:
-            pixelHeight = (bounds[3]-bounds[1])/(dsInfo.yWinSize*1.1)
+            pixelHeight = (bounds[3] - bounds[1]) / (dsInfo.yWinSize * 1.1)
 
     if pixelWidth is None:
         if srsOkay:
             pixelWidth = dsInfo.dx
         else:
-            pixelWidth = (bounds[2]-bounds[0])/(dsInfo.xWinSize*1.1)
+            pixelWidth = (bounds[2] - bounds[0]) / (dsInfo.xWinSize * 1.1)
     bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     if dtype is None:
@@ -1830,8 +1831,8 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         if(os.path.isfile(output)):
             if(overwrite == True):
                 os.remove(output)
-                if(os.path.isfile(output+".aux.xml")):  # Because QGIS....
-                    os.remove(output+".aux.xml")
+                if(os.path.isfile(output + ".aux.xml")):  # Because QGIS....
+                    os.remove(output + ".aux.xml")
             else:
                 raise GeoKitRasterError(
                     "Output file already exists: %s" % output)
@@ -1847,10 +1848,10 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
         aligned = kwargs.pop("targetAlignedPixels", True)
 
         # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
-        bounds = (bounds[0]+0.001*pixelWidth,
-                  bounds[1]+0.001*pixelHeight,
-                  bounds[2]-0.001*pixelWidth,
-                  bounds[3]-0.001*pixelHeight, )
+        bounds = (bounds[0] + 0.001 * pixelWidth,
+                  bounds[1] + 0.001 * pixelHeight,
+                  bounds[2] - 0.001 * pixelWidth,
+                  bounds[3] - 0.001 * pixelHeight, )
 
         # Let gdalwarp do everything...
         opts = gdal.WarpOptions(outputType=getattr(gdal, dtype), xRes=pixelWidth, yRes=pixelHeight, creationOptions=co,
