@@ -317,6 +317,12 @@ class Extent(object):
         return (self.xMin, self.xMax, self.yMin, self.yMax)
 
     @property
+    def xYXy(self):
+        """Returns a tuple of the extent boundaries in order:
+            xMin, yMax, xMax, yMin"""
+        return (self.xMin, self.yMax, self.xMax, self.yMin)
+
+    @property
     def ylim(self):
         """Returns a tuple of the y-axis extent boundaries in order:
             yMin, yMax
