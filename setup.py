@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='geokit',
-    version='1.2.5',
+    version='1.2.6',
     author='David Severin Ryberg',
     url='https://github.com/FZJ-IEK3-VSA/geokit',
     packages=find_packages(),
