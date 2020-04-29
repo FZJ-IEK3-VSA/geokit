@@ -106,12 +106,12 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
 
     NOTE:
     -----
-    Raster datasets are always written in the 'yAtTop' orientation. Meaning that 
-    the first row of data values (either written to or read from the dataset) will 
-    refer to the TOP of the defined boundary, and will then move downward from 
+    Raster datasets are always written in the 'yAtTop' orientation. Meaning that
+    the first row of data values (either written to or read from the dataset) will
+    refer to the TOP of the defined boundary, and will then move downward from
     there
 
-    If a data matrix is given, and a negative pixelWidth is defined, the data 
+    If a data matrix is given, and a negative pixelWidth is defined, the data
     will be flipped automatically
 
     Parameters:
@@ -121,17 +121,17 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
 
     pixelWidth : numeric
         The pixel width of the raster in units of the input srs
-        * The keyword 'dx' can be used as well and will override anything given 
+        * The keyword 'dx' can be used as well and will override anything given
         assigned to 'pixelWidth'
 
     pixelHeight : numeric
         The pixel height of the raster in units of the input srs
-        * The keyword 'dy' can be used as well and will override anything given 
+        * The keyword 'dy' can be used as well and will override anything given
           assigned to 'pixelHeight'
 
     output : str; optional
-        A path to an output file 
-        * If output is None, the raster will be created in memory and a dataset 
+        A path to an output file
+        * If output is None, the raster will be created in memory and a dataset
           handel will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
@@ -140,7 +140,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         The datatype of the represented by the created raster's band
         * Options are: Byte, Int16, Int32, Int64, Float32, Float64
         * If dtype is None and data is None, the assumed datatype is a 'Byte'
-        * If dtype is None and data is not None, the datatype will be inferred 
+        * If dtype is None and data is not None, the datatype will be inferred
           from the given data
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -156,7 +156,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         * "DEFLATE" used for Linux/Mac, "LZW" used for Windows
 
     noData : numeric; optional
-        Specifies which value should be considered as 'no data' in the created 
+        Specifies which value should be considered as 'no data' in the created
         raster
         * Must be the same datatye as the 'dtype' input (or that which is derived)
 
@@ -305,12 +305,12 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
 
 
 def createRasterLike(source, copyMetadata=True, **kwargs):
-    """Create a raster described by the given raster info (as returned from a 
-    call to rasterInfo() ). 
+    """Create a raster described by the given raster info (as returned from a
+    call to rasterInfo() ).
 
-    * This copies all characteristics of the given raster, including: bounds, 
-      pixelWidth, pixelHeight, dtype, srs, noData, and meta. 
-    * Any keyword argument which is given will override values found in the 
+    * This copies all characteristics of the given raster, including: bounds,
+      pixelWidth, pixelHeight, dtype, srs, noData, and meta.
+    * Any keyword argument which is given will override values found in the
       source
 
     """
@@ -345,7 +345,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     Note:
     -----
     Unless one is trying to get the entire matrix from the raster dataset, usage
-    of this function requires intimate knowledge of the raster's characteristics. 
+    of this function requires intimate knowledge of the raster's characteristics.
     In such a case it is probably easier to use Extent.extractMatrix
 
     Parameters:
@@ -355,20 +355,20 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
 
     bounds: tuple or Extent
         The boundary to clip the raster to before mutating
-        * If given as an Extent, the extent is always cast to the source's 
+        * If given as an Extent, the extent is always cast to the source's
             - native srs before mutating
         * If given as a tuple, (xMin, yMin, xMax, yMax) is expected
             - Units must be in the srs specified by 'boundsSRS'
         * This boundary must fit within the boundary of the rasters source
         * The boundary is always fitted to the source's grid, so the returned
-          values do not necessarily match to the boundary which is provided        
+          values do not necessarily match to the boundary which is provided
 
     boundsSRS: Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the 'bounds' argument
         * This is ignored if the 'bounds' argument is an Extent object or is None
 
     autocorrect : bool; optional
-        If True, the matrix will search for no data values and change them to 
+        If True, the matrix will search for no data values and change them to
         numpy.nan
         * Data type will always result in a float, so be careful with large
           matricies
@@ -478,7 +478,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
 
 
 def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
-    """Compute basic statistics of the values contained in a raster dataset. 
+    """Compute basic statistics of the values contained in a raster dataset.
 
     Parameters:
     -----------
@@ -491,7 +491,7 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
 
     ignoreValue : numeric
         A value to ignore when computing the statistics
-        * If the raster source has a 'no Data' value, it is automatically 
+        * If the raster source has a 'no Data' value, it is automatically
           ignored
 
     **kwargs
@@ -546,9 +546,9 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
           "slope" : Same as 'total'
 
           "north-south" : Calculates the "north-facing" gradient as a ratio where
-                          negative numbers indicate a south facing gradient 
+                          negative numbers indicate a south facing gradient
 
-          "east-west" : Calculates the "east-facing" gradient as a ratio where 
+          "east-west" : Calculates the "east-facing" gradient as a ratio where
                         negative numbers indicate a west facing gradient
 
           "aspect" : calculates the gradient's direction in radians (0 is east)
@@ -556,19 +556,19 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
           "dir" : same as 'aspect'
 
     factor : numeric or 'latlonToM'
-        The scaling factor relating the units of the x & y dimensions to the z 
+        The scaling factor relating the units of the x & y dimensions to the z
         dimension
-        * If factor is 'latlonToM', the x & y units are assumed to be degrees 
-          (lat & lon) and the z units are assumed to be meters. A factor is then 
+        * If factor is 'latlonToM', the x & y units are assumed to be degrees
+          (lat & lon) and the z units are assumed to be meters. A factor is then
           computed for coordinates at the source's center.
-        * Example: If x,y units are meters and z units are feet, factor should 
+        * Example: If x,y units are meters and z units are feet, factor should
           be 0.3048
 
     asMatrix : bool
-        If True, makes the returned value a matrix 
+        If True, makes the returned value a matrix
         If False, makes the returned value a raster dataset
 
-    **kwargs : All extra key word arguments are passed on to a final call to 
+    **kwargs : All extra key word arguments are passed on to a final call to
         'createRaster'
         * Only useful when 'asMatrix' is True
 
@@ -655,15 +655,15 @@ def rasterInfo(sourceDS):
     Returns:
     --------
     namedtuple -> ( srs: The spatial reference system (as an OGR object)
-                    dtype: The datatype 
-                    flipY: A flag which indicates that the raster starts at the 
+                    dtype: The datatype
+                    flipY: A flag which indicates that the raster starts at the
                              'bottom' as opposed to at the 'top'
                     bounds: The (xMin, yMin, xMax, and yMax) values as a tuple
                     xMin: The minimal X boundary
                     yMin:The minimal Y boundary
                     xMax:The maximal X boundary
                     yMax: The maximal Y boundary
-                    pixelWidth: The raster's pixelWidth 
+                    pixelWidth: The raster's pixelWidth
                     pixelHeight: The raster's pixelHeight
                     dx:The raster's pixelWidth
                     dy: The raster's pixelHeight
@@ -735,10 +735,10 @@ ptValue = namedtuple('value', "data xOffset yOffset inBounds")
 
 
 def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True, _onlyValues=False):
-    """Extracts the value of a raster at a given point or collection of points. 
+    """Extracts the value of a raster at a given point or collection of points.
        Can also extract a window of values if desired
 
-    * If the given raster is not in the 'flipped-y' orientation, the result will 
+    * If the given raster is not in the 'flipped-y' orientation, the result will
       be automatically flipped
 
     Notes:
@@ -753,7 +753,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
         * All points must be in the same SRS
-        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
+        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat
           (opposite of what you may think...)
 
     pointSRS : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -761,30 +761,30 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
           * If not given, longitude/latitude is assumed
           * Only useful when 'points' is not a LocationSet
 
-    winRange : int 
-        The window range (in pixels) to extract the values centered around the 
+    winRange : int
+        The window range (in pixels) to extract the values centered around the
         closest raster index to the indicated locations.
         * A winRange of 0 will only extract the closest raster value
-        * A winRange of 1 will extract a window of shape (3,3) 
+        * A winRange of 1 will extract a window of shape (3,3)
         * A winRange of 3 will extract a window of shape (7,7)
 
     noDataOkay: bool
         If True, an error is raised if a 'noData' value is extracted
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
-    Returns: 
+    Returns:
     --------
-    * If only a single location is given: 
+    * If only a single location is given:
         namedtuple -> (data : The extracted data at the location
-                       xOffset : The X index distance from the location to the 
+                       xOffset : The X index distance from the location to the
                                  center of the closest raster pixel
-                       yOffset : The Y index distance from the location to the 
+                       yOffset : The Y index distance from the location to the
                                  center of the closest raster pixel
                        inBounds: Flag for whether or not the location is within
-                                 The raster's bounds    
-                        ) 
+                                 The raster's bounds
+                        )
     * If Multiple locations are given:
-        pandas.DataFrame 
+        pandas.DataFrame
             * Columns are (data, xOffset, yOffset, inBounds)
                 - See above for column descriptions
             * Index is 0...N if 'points' input is not a LocationSet
@@ -928,7 +928,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None, winRange=None, **kwargs):
     """Interpolates the value of a raster at a given point or collection of points.
 
-    Supports various interpolation schemes: 
+    Supports various interpolation schemes:
         'near', 'linear-spline', 'cubic-spline', 'average', or user-defined
 
 
@@ -940,7 +940,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
         * All points must be in the same SRS
-        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat 
+        * !REMEMBER! For lat and lon coordinates, X is lon and Y is lat
           (opposite of what you may think...)
 
     pointSRS : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -957,8 +957,8 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
           "average" - calculates average across a window
           "func" - uses user-provided calculator
 
-    func - function 
-        A user defined interpolation function 
+    func - function
+        A user defined interpolation function
         * Only utilized when 'mode' equals "func"
         * The function must take three arguments in this order...
           - A 2 dimensional data matrix
@@ -966,44 +966,44 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
           - A y-index-offset
         * See the example below for more information
 
-    winRange : int 
-        The window range (in pixels) to extract the values centered around the 
+    winRange : int
+        The window range (in pixels) to extract the values centered around the
         closest raster index to the indicated locations.
         * A winRange of 0 will only extract the closest raster value
-        * A winRange of 1 will extract a window of shape (3,3) 
+        * A winRange of 1 will extract a window of shape (3,3)
         * A winRange of 3 will extract a window of shape (7,7)
         * Only utilized when 'mode' equals "func"
-        * All interpolation schemes have a predefined window range which is 
+        * All interpolation schemes have a predefined window range which is
           appropriate to their use
             - near -> 0
             - linear-spline -> 2
             - cubic-spline -> 4
             - average -> 3
-            - func -> 3    
+            - func -> 3
 
 
-    Returns: 
+    Returns:
     --------
-    * If only a single location is given: numeric 
+    * If only a single location is given: numeric
         namedtuple -> (data : The extracted data at the location
-                       xOffset : The X index distance from the location to the 
+                       xOffset : The X index distance from the location to the
                                  center of the closest raster pixel
-                       yOffset : The Y index distance from the location to the 
+                       yOffset : The Y index distance from the location to the
                                  center of the closest raster pixel
                        inBounds: Flag for whether or not the location is within
-                                 The raster's bounds    
-                        ) 
+                                 The raster's bounds
+                        )
     * If Multiple locations are given: numpy.ndrray -> (N,)
         - where N is the number of locations
 
-    Example: 
+    Example:
     --------
     "Interpolate" according to the median value in a 5x5 window
 
     >>> def medianFinder( data, xOff, yOff ):
     >>>     return numpy.median(data)
     >>>
-    >>> result = interpolateValues( <source>, <points>, mode='func', 
+    >>> result = interpolateValues( <source>, <points>, mode='func',
     >>>                             func=medianFinder, winRange=2)
 
     """
@@ -1086,7 +1086,7 @@ def interpolateValues(source, points, pointSRS='latlon', mode='near', func=None,
 
 def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autocorrect=False, output=None, dtype=None, **kwargs):
     """Process all pixels in a raster according to a given function. The boundaries
-    of the resulting raster can be changed as long as the new boundaries are within 
+    of the resulting raster can be changed as long as the new boundaries are within
     the scope of the original raster, but the resolution cannot
 
     Parameters:
@@ -1095,10 +1095,10 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
         The raster datasource
 
     processor: function; optional
-        The function performing the mutation of the raster's data 
-        * The function will take single argument (a 2D numpy.ndarray) 
+        The function performing the mutation of the raster's data
+        * The function will take single argument (a 2D numpy.ndarray)
         * The function must return a numpy.ndarray of the same size as the input
-        * The return type must also be containable within a Float32 (int and 
+        * The return type must also be containable within a Float32 (int and
           boolean is okay)
         * See example below for more info
 
@@ -1110,7 +1110,7 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
             - Units must be in the srs specified by 'boundsSRS'
         * This boundary must fit within the boundary of the rasters source
         * The boundary is always fitted to the source's grid, so the returned
-          values do not necessarily match to the boundary which is provided        
+          values do not necessarily match to the boundary which is provided
 
     boundsSRS: Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the 'bounds' argument
@@ -1123,8 +1123,8 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
           matricies
 
     output : str; optional
-        A path to an output file 
-        * If output is None, the raster will be created in memory and a dataset 
+        A path to an output file
+        * If output is None, the raster will be created in memory and a dataset
           handel will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
@@ -1136,27 +1136,27 @@ def mutateRaster(source, processor=None, bounds=None, boundsSRS='latlon', autoco
           - A Numpy datatype such as numpy.uint8 or numpy.float64
           - a String such as "Byte", "UInt16", or "Double"
 
-    **kwargs: 
+    **kwargs:
         * All kwargs are passed on to a call to createRaster()
 
     Example:
     --------
-    If you wanted to assign suitability factors based on a raster containing 
+    If you wanted to assign suitability factors based on a raster containing
     integer identifiers
 
     >>> def calcSuitability( data ):
     >>>     # create an ouptut matrix
     >>>     outputMatrix = numpy.zeros( data.shape )
-    >>> 
+    >>>
     >>>     # do the processing
     >>>     outputMatrix[ data == 1 ] = 0.1
-    >>>     outputMatrix[ data == 2 ] = 0.2 
+    >>>     outputMatrix[ data == 2 ] = 0.2
     >>>     outputMatrix[ data == 10] = 0.4
     >>>     outputMatrix[ np.logical_and(data > 15, data < 20)  ] = 0.5
-    >>> 
+    >>>
     >>>     # return the output matrix
     >>>     return outputMatrix
-    >>> 
+    >>>
     >>> result = processRaster( <source-path>, processor=calcSuitability )
     """
     # open the dataset and get SRS
@@ -1211,7 +1211,7 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
         * a numpy array of ints is also acceptable
 
     source : Anything acceptable by loadRaster()
-        The contentual raster datasource 
+        The contentual raster datasource
 
     asPoint : bool
         Instruct program to return point geometries instead of x,y coordinates
@@ -1263,11 +1263,19 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
 # Raster plotter
 
 
-def drawSmopyMap(bounds, zoom, tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", tilesize=256, maxtiles=100, ax=None, **kwargs):
+def drawSmopyMap(bounds, zoom, tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", tilesize=256, maxtiles=100, ax=None, attribution="© OpenStreetMap contributors", attribution_size=12, **kwargs):
     """
     Draws a basemap using the "smopy" python package
 
-    * See more details about smopy here: https://github.com/rossant/smopy
+    NOTE:
+    * The basemap is drawn using the Smopy python package. See here: https://github.com/rossant/smopy
+    * Be careful to adhere to the usage guidelines of the chosen tile source
+        - By default, this source is OSM. See here: https://wiki.openstreetmap.org/wiki/Tile_servers
+
+    !IMPORTANT! If you will publish any images drawn with this method, it's likely that the tile source
+    will require an attribution to be written on the image. For example, if using OSM tile (the default),
+    you have to write "© OpenStreetMap contributors" clearly on the map. But this is different for each
+    tile source!
 
     Parameters:
     -----------
@@ -1342,6 +1350,9 @@ def drawSmopyMap(bounds, zoom, tileserver="https://a.tile.openstreetmap.org/{z}/
         img,
         extent=(xy.x.min(), xy.x.max(), xy.y.min(), xy.y.max()),
         **kwargs)
+
+    if attribution is not None:
+        ax.text(1, 0, attribution, transform=ax.transAxes, ha="right", va="bottom", zorder=10, fontsize=attribution_size)
 
     SmopyMap = namedtuple("SmopyMap", "ax srs bounds")
 
@@ -1617,8 +1628,8 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
         '', 0, 0, 0, gdal.GDT_Unknown)
     vecLyr = vecDS.CreateLayer("mem", srs=srs)
 
-    #vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
-    #vecLyr = vecDS.CreateLayer("layer",srs=srs)
+    # vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
+    # vecLyr = vecDS.CreateLayer("layer",srs=srs)
 
     vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
     vecLyr.CreateField(vecField)
@@ -1631,7 +1642,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # Check the geoms
     ftrN = vecLyr.GetFeatureCount()
     if(ftrN == 0):
-        #raise GlaesError("No features in created in temporary layer")
+        # raise GlaesError("No features in created in temporary layer")
         msg = "No features in created in temporary layer"
         warnings.warn(msg, UserWarning)
         return
