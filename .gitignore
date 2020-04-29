@@ -19,3 +19,11 @@ testing/results/*.prj
 testing/results/*.cpg
 testing/results/*.csv
 testing/results/eligibility_plots
+
+# Extras
+.vscode/settings.json
+.vscode/launch.json
+.coverage
+.pytest
+.cache/v/cache/lastfailed
+.pytest_cache/*

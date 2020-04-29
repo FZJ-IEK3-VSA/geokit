@@ -2,17 +2,18 @@ from setuptools import setup, find_packages
 
 setup(
     name='geokit',
-    version='1.1.2',
-    author='Severin Ryberg',
+    version='1.2.6',
+    author='David Severin Ryberg',
     url='https://github.com/FZJ-IEK3-VSA/geokit',
-    packages = find_packages(),
+    packages=find_packages(),
     include_package_data=True,
-    install_requires = [
-        "gdal>=2.0.0",
+    install_requires=[
+        "gdal>2.2.0,<3.0.0",
         "numpy",
         "descartes",
         "pandas",
         "scipy",
         "matplotlib",
+        "smopy",
     ]
 )

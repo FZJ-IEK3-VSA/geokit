@@ -1,11 +1,9 @@
 import numpy as np
 from os.path import join, dirname, isfile, isdir
-import ogr, gdal, osr
+from osgeo import ogr, gdal, osr
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-
-def error(msg=""): raise RuntimeError("test failed: "+msg)
 
 
 # Runtime vars
@@ -102,9 +100,3 @@ def vis(mat, points=None):
         plt.plot(points[1], points[0], 'o')
 
     plt.show()
-
-isclose = np.isclose
-
-def compare(v, expected, header=""):
-    if not isclose(v, expected):
-        raise error("%s   Expected:%.8f   Got:%.8f"%(header, expected, v))

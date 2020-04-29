@@ -38,7 +38,7 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     # Maybe create a new master dataset
     if not (os.path.isfile(master)): # we will need to create a master source
         # Determine no data value
-        noDataValue = kwargs.pop("noDataValue", None)
+        noDataValue = kwargs.pop("noData", None)
 
         if noDataValue is None:
             noDataSet = set([i.noData for i in infoSet])
@@ -51,8 +51,8 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         srs = infoSet[0].srs
         
         createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=master, 
-                     dtype=dtype, pixelWidth=dx, pixelHeight=dy, noDataValue=noDataValue, 
-                     srs=srs, fillValue=noDataValue, **kwargs)
+                     dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
+                     srs=srs, fill=noDataValue, **kwargs)
 
     # Open master dataset and check parameters
     masterDS = gdal.Open(master, gdal.GA_Update)
