@@ -14,6 +14,7 @@ from geokit.core.raster import (GeoKitRasterError,
                                 indexToCoord,
                                 polygonizeRaster,
                                 contours,
+                                drawSmopyMap,
                                 drawRaster,
                                 warp,
                                 )

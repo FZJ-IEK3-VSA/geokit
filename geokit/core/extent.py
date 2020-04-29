@@ -240,7 +240,7 @@ class Extent(object):
         -----------
         wkt : The string to be processed
 
-        delimiter : The delimiter which seperates the two WKT sections 
+        delimiter : The delimiter which seperates the two WKT sections
 
         Returns:
         --------
@@ -321,6 +321,18 @@ class Extent(object):
         """Returns a tuple of the extent boundaries in order:
             xMin, yMax, xMax, yMin"""
         return (self.xMin, self.yMax, self.xMax, self.yMin)
+
+    @property
+    def yxYX(self):
+        """Returns a tuple of the extent boundaries in order:
+            yMin, xMin, yMax, xMax"""
+        return (self.yMin, self.xMin, self.yMax, self.xMax)
+
+    @property
+    def YxyX(self):
+        """Returns a tuple of the extent boundaries in order:
+            yMax, xMin, yMin, xMax"""
+        return (self.yMax, self.xMin, self.yMin, self.xMax)
 
     @property
     def ylim(self):
@@ -1504,3 +1516,54 @@ class Extent(object):
             return output
         else:
             return master_raster
+
+    def drawSmopyMap(self, zoom, tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", tilesize=256, maxtiles=100, ax=None, **kwargs):
+        """
+        Draws a basemap using the "smopy" python package
+
+        * See more details about smopy here: https://github.com/rossant/smopy
+
+        Parameters:
+        -----------
+
+            zoom : int
+                The zoom level to draw (between 1-20)
+                * I suggest starting low (e.g. 4), and zooming in until you find a level that suits your needs
+
+            tileserver : string
+                The tile server to use
+
+            tilesize : int
+                The pixel size of the tiles from 'tileserver'
+
+            maxtiles : int
+                The maximum tiles to use when drawing an image
+                * Be careful to adhere to the usage conditions stated by your selected tileserver!
+
+            ax : matplotlib.axes
+                The matplotlib axes to draw on
+                * If 'None', then one will be generated automatically
+
+            kwargs
+                All extra keyword arguments are passed on to matplotlib.ax.imshow
+
+
+        Returns:
+        --------
+
+            namedtuple
+                * .ax     -> The axes draw on
+                * .srs    -> The SRS used when drawing (will always be EPSG 3857)
+                * .bounds -> The boundaries of the drawn map
+
+        """
+
+        return RASTER.drawSmopyMap(
+            bounds=self.castTo(SRS.EPSG4326).xyXY,
+            zoom=zoom,
+            tileserver=tileserver,
+            tilesize=tilesize,
+            maxtiles=maxtiles,
+            ax=ax,
+            **kwargs
+        )

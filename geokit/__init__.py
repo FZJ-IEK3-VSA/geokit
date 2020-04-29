@@ -38,7 +38,7 @@ from geokit.core.regionmask import RegionMask
 # import vidualizing functions to top level since they are
 from geokit.core.util import drawImage
 from geokit.core.geom import drawGeoms
-from geokit.core.raster import drawRaster
+from geokit.core.raster import drawRaster, drawSmopyMap
 
 # import the special algorithms
 import geokit.algorithms

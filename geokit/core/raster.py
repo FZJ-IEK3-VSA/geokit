@@ -1263,6 +1263,91 @@ def indexToCoord(yi, xi, source=None, asPoint=False, bounds=None, dx=None, dy=No
 # Raster plotter
 
 
+def drawSmopyMap(bounds, zoom, tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", tilesize=256, maxtiles=100, ax=None, **kwargs):
+    """
+    Draws a basemap using the "smopy" python package
+
+    * See more details about smopy here: https://github.com/rossant/smopy
+
+    Parameters:
+    -----------
+
+        bounds : (xMin, yMix, xMax, yMax) or Extent
+            The geographic extent to be drawn
+
+        zoom : int
+            The zoom level to draw (between 1-20)
+            * I suggest starting low (e.g. 4), and zooming in until you find a level that suits your needs
+
+        tileserver : string
+            The tile server to use
+
+        tilesize : int
+            The pixel size of the tiles from 'tileserver'
+
+        maxtiles : int
+            The maximum tiles to use when drawing an image
+            * Be careful to adhere to the usage conditions stated by your selected tileserver!
+
+        ax : matplotlib.axes
+            The matplotlib axes to draw on
+            * If 'None', then one will be generated automatically
+
+        kwargs
+            All extra keyword arguments are passed on to matplotlib.ax.imshow
+
+
+    Returns:
+    --------
+
+        namedtuple
+            * .ax     -> The axes draw on
+            * .srs    -> The SRS used when drawing (will always be EPSG 3857)
+            * .bounds -> The boundaries of the drawn map 
+
+    """
+    import smopy
+    if ax is None:
+        import matplotlib.pyplot as plt
+        ax = plt.gca()
+
+    try:
+        lon_min, lat_min, lon_max, lat_max = bounds.xyXY
+    except:
+        lon_min, lat_min, lon_max, lat_max = bounds
+
+    tile_box = smopy.get_tile_box(
+        (lat_max, lon_min, lat_min, lon_max),
+        zoom)
+
+    img = smopy.fetch_map(
+        box=tile_box,
+        z=zoom,
+        tileserver=tileserver,
+        tilesize=tilesize,
+        maxtiles=maxtiles,
+    )
+
+    tl_lat, tl_lon = smopy.num2deg(tile_box[0], tile_box[1], zoom=zoom)
+    br_lat, br_lon = smopy.num2deg(tile_box[2] + 1, tile_box[3] + 1, zoom=zoom)
+
+    xy = SRS.xyTransform(
+        [(tl_lon, tl_lat), (br_lon, br_lat)],
+        fromSRS=SRS.EPSG4326,
+        toSRS=SRS.EPSG3857,
+        outputFormat="xy"
+    )
+
+    ax.imshow(
+        img,
+        extent=(xy.x.min(), xy.x.max(), xy.y.min(), xy.y.max()),
+        **kwargs)
+
+    SmopyMap = namedtuple("SmopyMap", "ax srs bounds")
+
+    return SmopyMap(ax, SRS.EPSG3857, (tl_lon, br_lat, br_lon, tl_lat))
+
+
 def drawRaster(source, srs=None, ax=None, resolution=None, cutline=None, figsize=(12, 12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbar=True, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbax=None, cbargs=None, cutlineFillValue=-9999, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0, zorder=0, **kwargs):
     """Draw a raster as an image on a matplotlib canvas
 
