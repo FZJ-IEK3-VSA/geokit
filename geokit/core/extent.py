@@ -4,6 +4,7 @@ from glob import glob
 import warnings
 from collections import namedtuple
 import smopy
+from os.path import isfile
 
 from . import util as UTIL
 from . import srs as SRS
@@ -644,7 +645,7 @@ class Extent(object):
         sourceExtent = Extent.load(source)
         return self.overlaps(sourceExtent)
 
-    def filterSources(self, sources):
+    def filterSources(self, sources, error_on_missing=True):
         """Filter a list of sources by those whose's envelope overlaps the Extent.
 
         Note:
@@ -661,6 +662,11 @@ class Extent(object):
             * A glob string which will generate a list of source paths
                 - see glob.glob for more info
 
+        error_on_missing : bool, optional
+            If True, then if a file path is given which does not exist, a RunTime
+                error is raised. Otherwise a warning is given
+            Only performs check when input is a string
+
         Returns:
         --------
         filter
@@ -668,9 +674,21 @@ class Extent(object):
         """
         # create list of searchable files
         if isinstance(sources, str):
-            directoryList = glob(sources)
+            _directoryList = glob(sources)
         else:
-            directoryList = sources
+            _directoryList = sources
+
+        # Ensure all files exist (only check if input is a string)
+        directoryList = []
+        for source in _directoryList:
+            if isinstance(source, str) and not isfile( source ):
+                if error_on_missing:
+                    raise RuntimeError("Cannot find file: "+source)
+                else:
+                    warnings.warn("Skipping missing file: "+source)
+            else:
+                directoryList.append(source)
+
 
         return filter(self.inSourceExtent, directoryList)
 
