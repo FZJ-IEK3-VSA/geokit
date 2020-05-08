@@ -53,10 +53,10 @@ conda env create --file requirements.yml
 conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
 ```
 
-3. Now install GeoKit via pip as follows (remove the '-e' if you do not want to install GeoKit in 'editable' mode)
+2. (Alternative) If you want to install GeoKit in editable mode, and also with jupyter notebook and with testing functionalities use:
 
 ```
-pip install -e .
+conda env create --file requirements-dev.yml
 ```
 
 ## Examples
