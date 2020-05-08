@@ -2,7 +2,14 @@ name: geokit
 channels:
   - conda-forge
 dependencies:
-  - python
+  # - python
+  # - pytest
+  # - pytest-cov
+  # - pylint
+  # - autopep8
+  # - jupyter
+  # - notebook
+  # - jupyterlab
   - pip
   - matplotlib
   - descartes
@@ -13,3 +20,4 @@ dependencies:
   - gdal>2.2.0,<3.0.0
   - pip:
       - smopy
+      - .
