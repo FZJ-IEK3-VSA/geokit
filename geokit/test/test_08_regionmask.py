@@ -270,8 +270,8 @@ def test_RegionMask_applyMask():
     assert data2.sum() == 3183264630
     assert np.isclose(data2.std(), 27182.1342973)
 
-    # rm.createRaster(output=result("regionMask_applyMask_1.tif"), data=data1, overwrite=True)
-    # rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
+    #rm.createRaster(output=result("regionMask_applyMask_1.tif"), data=data1, overwrite=True)
+    #rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
 
 
 @pytest.mark.skip("No test implemented")
@@ -284,13 +284,13 @@ def test_RegionMask_indicateValues():
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
 
     # Testing valueMin (with srs change)
-    res1 = rm.indicateValues(CLC_RASTER_PATH, value="[20-]")
+    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None))
 
     assert np.isclose(res1.sum(), 30969.6796875, 1e-6)
     assert np.isclose(res1.std(), 0.3489773, 1e-6)
 
     # Testing valueMax (with srs change)
-    res2 = rm.indicateValues(CLC_RASTER_PATH, value="[-24]")
+    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None, 24))
     assert np.isclose(res2.sum(), 82857.5078125, 1e-6)
     assert np.isclose(res2.std(), 0.4867994, 1e-6)
 
@@ -300,32 +300,23 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res3.std(), 0.0500924, 1e-6)
 
     # Testing range
-    res4 = rm.indicateValues(CLC_RASTER_PATH, value="[20-24]")
+    res4 = rm.indicateValues(CLC_RASTER_PATH, value=(20, 24))
 
     combi = np.logical_and(res1 > 0.5, res2 > 0.5)
     # Some pixels will not end up the same due to warping issues
     assert ((res4 > 0.5) != combi).sum() < res4.size * 0.001
 
     # Testing buffering
-    res5 = rm.indicateValues(
-        CLC_RASTER_PATH,
-        value="[1-2]",
-        buffer=0.01,
-        resolutionDiv=2,
-        forceMaskShape=True)
+    res5 = rm.indicateValues(CLC_RASTER_PATH, value=(
+        1, 2), buffer=0.01, resolutionDiv=2, forceMaskShape=True)
     assert np.isclose(res5.sum(), 65030.75000000, 1e-4)
 
     # make sure we get an empty mask when nothing is indicated
-    res6 = rm.indicateValues(
-        CLC_RASTER_PATH,
-        value="2000",
-        buffer=0.01,
-        resolutionDiv=2,
-        forceMaskShape=True,
-        noData=-1)
+    res6 = rm.indicateValues(CLC_RASTER_PATH, value=2000, buffer=0.01,
+                             resolutionDiv=2, forceMaskShape=True, noData=-1)
     assert np.isclose(res6.sum(), -113526.0, 1e-4)
 
-    # make sure we get an empty mask when nothing is indicated
+    # Test set exclusion
     res7 = rm.indicateValues(
         CLC_RASTER_PATH,
         value="[-2),[5-7),12,(22-26],29,33,[40-]")
@@ -338,25 +329,25 @@ def test_RegionMask_indicateFeatures():
 
     # Simple case
     res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
-    # print("%.7f"%res.sum(), "%.7f"%res.std())
+    #print("%.7f"%res.sum(), "%.7f"%res.std())
     assert np.isclose(res.sum(), 649, 1e-6)
     assert np.isclose(res.std(), 0.0646270, 1e-6)
 
     # Buffered Cases
     res2 = rm.indicateFeatures(
         NATURA_PATH, where="SITETYPE='B'", buffer=300, resolutionDiv=3, forceMaskShape=True)
-    # print("%.7f"%res2.sum(), "%.7f"%res2.std())
+    #print("%.7f"%res2.sum(), "%.7f"%res2.std())
     assert np.isclose(res2.sum(), 13670.5555556, 1e-6)
 
     res3 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='B'", buffer=300,
                                bufferMethod='area', resolutionDiv=5, forceMaskShape=True)
-    # print("%.7f"%res3.sum(), "%.7f"%res3.std())
+    #print("%.7f"%res3.sum(), "%.7f"%res3.std())
     assert np.isclose(res3.sum(), 13807.320000, 1e-6)
 
     # No indication case
     res4 = rm.indicateFeatures(NATURA_PATH, where="SITETYPE='D'", buffer=300,
                                bufferMethod='area', resolutionDiv=2, forceMaskShape=True, noData=-1)
-    # print("%.7f"%res4.sum(), "%.7f"%res4.std())
+    #print("%.7f"%res4.sum(), "%.7f"%res4.std())
 
     assert np.isclose(res4.sum(), -83792, 1e-6)
 
@@ -451,7 +442,7 @@ def test_RegionMask_warp():
     assert warped_1.shape == rm_3035.mask.shape
     assert np.isclose(warped_1.sum(), 88128)
     assert np.isclose(warped_1.std(), 9.52214123991)
-    # rm_3035.createRaster(data=warped_1, output=result("regionMask_warp_1.tif"), overwrite=True)
+    #rm_3035.createRaster(data=warped_1, output=result("regionMask_warp_1.tif"), overwrite=True)
 
     # basic warp Raster (FLIP CHECK!)
     warped_1f = rm_3035.warp(CLC_FLIPCHECK_PATH)
@@ -460,7 +451,7 @@ def test_RegionMask_warp():
     assert warped_1f.shape == rm_3035.mask.shape
     assert np.isclose(warped_1f.sum(), 88128)
     assert np.isclose(warped_1f.std(), 9.52214123991)
-    # rm_3035.createRaster(data=warped_1f, output=result("regionMask_warp_1f.tif"), overwrite=True)
+    #rm_3035.createRaster(data=warped_1f, output=result("regionMask_warp_1f.tif"), overwrite=True)
 
     assert (warped_1 == warped_1f).all()
 
@@ -470,7 +461,7 @@ def test_RegionMask_warp():
     assert warped_2.shape == rm.mask.shape
     assert np.isclose(warped_2.sum(), 449627)
     assert np.isclose(warped_2.std(), 9.07520801659)
-    # rm.createRaster(data=warped_2, output=result("regionMask_warp_2.tif"), overwrite=True)
+    #rm.createRaster(data=warped_2, output=result("regionMask_warp_2.tif"), overwrite=True)
 
     # Define resample alg and output type
     warped_3 = rm.warp(CLC_RASTER_PATH, dtype="float", resampleAlg='near')
@@ -479,7 +470,7 @@ def test_RegionMask_warp():
     assert warped_3.shape == rm.mask.shape
     assert np.isclose(warped_3.sum(), 449317.0)
     assert np.isclose(warped_3.std(), 9.37570375729)
-    # rm.createRaster(data=warped_3, output=result("regionMask_warp_3.tif"), overwrite=True)
+    #rm.createRaster(data=warped_3, output=result("regionMask_warp_3.tif"), overwrite=True)
 
     # define a resolution div
     warped_4 = rm.warp(CLC_RASTER_PATH, resolutionDiv=5,
@@ -489,7 +480,7 @@ def test_RegionMask_warp():
     assert warped_4.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(warped_4.sum(), 11240881)
     assert np.isclose(warped_4.std(), 9.37633272361)
-    # rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noData=0, overwrite=True)
+    #rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noData=0, overwrite=True)
 
 
 def test_RegionMask_rasterize():
@@ -503,7 +494,7 @@ def test_RegionMask_rasterize():
     assert rasterize_1.shape == rm.mask.shape
     assert np.isclose(rasterize_1.sum(), 47191)
     assert np.isclose(rasterize_1.std(), 0.42181050527)
-    # rm.createRaster(data=rasterize_1, output=result("regionMask_rasterize_1.tif"), overwrite=True)
+    #rm.createRaster(data=rasterize_1, output=result("regionMask_rasterize_1.tif"), overwrite=True)
 
     # attribute rasterizing
     rasterize_2 = rm.rasterize(AACHEN_ZONES, value="YEAR", dtype="int16")
@@ -512,7 +503,7 @@ def test_RegionMask_rasterize():
     assert rasterize_2.shape == rm.mask.shape
     assert np.isclose(rasterize_2.sum(), 94219640)
     assert np.isclose(rasterize_2.std(), 842.177748527)
-    # rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
+    #rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
 
     # where statement and resolution div
     rasterize_3 = rm.rasterize(
@@ -522,7 +513,7 @@ def test_RegionMask_rasterize():
     assert rasterize_3.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(rasterize_3.sum(), 4578070.0)
     assert np.isclose(rasterize_3.std(), 2.85958813405)
-    # rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
+    #rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
 
 @pytest.mark.skip("No test implemented")
