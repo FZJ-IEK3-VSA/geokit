@@ -319,8 +319,8 @@ def test_RegionMask_indicateValues():
     # Test set exclusion
     res7 = rm.indicateValues(
         CLC_RASTER_PATH,
-        value="[-2),[5-7),12,(22-26],29,33,[40-]")
-    assert np.isclose(res7.sum(), 45820.543, 1e-4)
+        value="[-.2),[5-7.00),12,(22-26],29,33.01,[40.-]")
+    assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
 def test_RegionMask_indicateFeatures():

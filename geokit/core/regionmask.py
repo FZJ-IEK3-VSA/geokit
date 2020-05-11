@@ -835,7 +835,7 @@ class RegionMask(object):
 
             # Indicate value elements
             output = np.zeros(data.shape, dtype="bool")
-            value_re = re.compile(r"(?P<range>(?P<open>[\[\(])(?P<low>[-+]?(\d*\.\d+|\d+))?-(?P<high>[-+]?(\d*\.\d+|\d+))?(?P<close>[\]\)]))|(?P<value>[-+]?(\d*\.\d+|\d+))")
+            value_re = re.compile(r"(?P<range>(?P<open>[\[\(])(?P<low>[-+]?(\d*\.\d+|\d+\.?))?-(?P<high>[-+]?(\d*\.\d+|\d+\.?))?(?P<close>[\]\)]))|(?P<value>[-+]?(\d*\.\d+|\d+\.?))")
             for element in value.split(","):
                 element = element.replace(" ", "")
                 if element == "":
