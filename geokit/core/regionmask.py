@@ -840,30 +840,28 @@ class RegionMask(object):
                 element = element.replace(" ", "")
                 if element == "":
                     continue
-                print("ELEMENT:", element)
+
                 m = value_re.match(element)
                 if m is None or (m['value'] is None and m['range'] is None):
                     raise RuntimeError('The element "{}" does not match an expected format'.format(element))
 
                 if m['value'] is not None:
                     update_sel = data == float(m['value'])
-                    print("  value ==", m['value'])
+
                 else:  # We are dealing with a range
                     update_sel = np.ones(data.shape, dtype="bool")
 
                     if m['low'] is not None and m['open'] == "[":
                         np.logical_and(data >= float(m['low']), update_sel, update_sel)
-                        print("  value >=", m['low'])
+
                     elif m['low'] is not None and m['open'] == "(":
                         np.logical_and(data > float(m['low']), update_sel, update_sel)
-                        print("  value > ", m['low'])
 
                     if m['high'] is not None and m['close'] == "]":
                         np.logical_and(data <= float(m['high']), update_sel, update_sel)
-                        print("  value <=", m['high'])
+
                     elif m['high'] is not None and m['close'] == ")":
                         np.logical_and(data < float(m['high']), update_sel, update_sel)
-                        print("  value < ", m['high'])
 
                 np.logical_or(update_sel, output, output)
 
