@@ -242,7 +242,7 @@ def vectorInfo(source):
 # Iterable to loop over vector items
 
 
-def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
+def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGeoms, ):
     # Do filtering
     source = loadVector(source)
     layer = source.GetLayer()
@@ -258,10 +258,23 @@ def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
 
     # Yield features and attributes
     for ftr in loopFeatures(layer):
-        oGeom = ftr.GetGeometryRef().Clone()
-        if (not trx is None):
-            oGeom.Transform(trx)
-        oItems = ftr.items().copy()
+        if not onlyAttr:
+            oGeom = ftr.GetGeometryRef()
+
+            if oGeom is None:
+                if skipMissingGeoms:
+                    continue
+            else:
+                oGeom = oGeom.Clone()
+                if (not trx is None):
+                    oGeom.Transform(trx)
+        else:
+            oGeom = None
+
+        if not onlyGeom:
+            oItems = ftr.items().copy()
+        else:
+            oItems = None
 
         if onlyGeom:
             yield oGeom
@@ -271,7 +284,7 @@ def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr):
             yield UTIL.Feature(oGeom, oItems)
 
 
-def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, asPandas=True, indexCol=None, **kwargs):
+def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, asPandas=True, indexCol=None, skipMissingGeoms=True, **kwargs):
     """Creates a generator which extract the features contained within the source
 
     * Iteratively returns (feature-geometry, feature-fields)    
@@ -323,6 +336,9 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
         The feature identifier to use as the DataFrams's index
         * Only useful when as DataFrame is True
 
+    skipMissingGeoms : bool; optional
+        If True, then the parser will not read a feature which are missing a geometry
+
     Returns:
     --------
     * If asPandas is True: pandas.DataFrame or pandas.Series
@@ -331,12 +347,26 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
     """
     # arrange output
     if not asPandas:
-        return _extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=onlyGeom, onlyAttr=onlyAttr)
+        return _extractFeatures(
+            source=source,
+            geom=geom,
+            where=where,
+            srs=srs,
+            onlyGeom=onlyGeom,
+            onlyAttr=onlyAttr,
+            skipMissingGeoms=skipMissingGeoms)
     else:
         fields = defaultdict(list)
         fields["geom"] = []
 
-        for g, a in _extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=False, onlyAttr=False):
+        for g, a in _extractFeatures(
+                source=source,
+                geom=geom,
+                where=where,
+                srs=srs,
+                onlyGeom=False,
+                onlyAttr=False,
+                skipMissingGeoms=skipMissingGeoms):
             fields["geom"].append(g.Clone())
             for k, v in a.items():
                 fields[k].append(v)
@@ -407,7 +437,7 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
     else:
         getter = _extractFeatures(source=source, geom=geom, where=where, srs=srs,
-                                  onlyGeom=onlyGeom, onlyAttr=onlyAttr,)
+                                  onlyGeom=onlyGeom, onlyAttr=onlyAttr, skipMissingGeoms=False)
 
         # Get first result
         res = next(getter)
@@ -480,6 +510,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     pandas.DataFrame
 
     """
+    warnings.warn("This function will be removed in favor of geokit.vector.extractFeatures", DeprecationWarning)
     return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
 
 
@@ -647,7 +678,7 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
         #  and then using 'CreateCopy' seems to work
         tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
         t = TemporaryDirectory()
-        tmp_dataSource = tmp_driver.Create(t.name+"tmp.shp", 0, 0)
+        tmp_dataSource = tmp_driver.Create(t.name + "tmp.shp", 0, 0)
 
         dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
         t.cleanup()
@@ -1140,8 +1171,8 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
         if(os.path.isfile(output)):
             if(overwrite == True):
                 os.remove(output)
-                if(os.path.isfile(output+".aux.xml")):  # Because QGIS....
-                    os.remove(output+".aux.xml")
+                if(os.path.isfile(output + ".aux.xml")):  # Because QGIS....
+                    os.remove(output + ".aux.xml")
             else:
                 raise RASTER.GeoKitRasterError(
                     "Output file already exists: %s" % output)
@@ -1158,10 +1189,10 @@ def rasterize(source, pixelWidth, pixelHeight, srs=None, bounds=None, where=None
             co = kwargs.pop("creationOptions")
 
         # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
-        bounds = (bounds[0]+0.001*pixelWidth,
-                  bounds[1]+0.001*pixelHeight,
-                  bounds[2]-0.001*pixelWidth,
-                  bounds[3]-0.001*pixelHeight, )
+        bounds = (bounds[0] + 0.001 * pixelWidth,
+                  bounds[1] + 0.001 * pixelHeight,
+                  bounds[2] - 0.001 * pixelWidth,
+                  bounds[3] - 0.001 * pixelHeight, )
 
         # Do rasterize
         tmp = gdal.Rasterize(output, source, outputBounds=bounds, xRes=pixelWidth, yRes=pixelHeight,
