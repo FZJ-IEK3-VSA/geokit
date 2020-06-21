@@ -180,15 +180,9 @@ class Extent(object):
         geokit.Extent
 
         """
-        srs = SRS.loadSRS(srs)
-        if not srs.IsSame(SRS.EPSG4326):
-            pt = SRS.xyTransform((x, y), fromSRS=srs,
-                                toSRS=SRS.EPSG4326, outputFormat="xy")
-            x, y = pt.x, pt.y
+        t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
 
-        xi, yi = smopy.deg2num(y, x, zoom)
-
-        return Extent.fromTile(xi,yi,zoom)
+        return Extent.fromTile(t.xi,t.yi,t.zoom)
 
     @staticmethod
     def fromVector(source, where=None, geom=None):
