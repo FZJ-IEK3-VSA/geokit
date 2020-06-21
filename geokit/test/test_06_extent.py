@@ -46,6 +46,23 @@ def test_Extent_fromTile():
     assert np.isclose(ext.yMax, 6476968.028773)
 
 
+def test_Extent_fromTileAt():
+    # fun func
+    tile = Extent.fromTileAt(6.083, 50.775, zoom=8, srs=EPSG4326)
+
+    assert np.isclose(tile.xMin, 626172.135712)
+    assert np.isclose(tile.xMax, 782715.169640)
+    assert np.isclose(tile.yMin, 6574807.424978)
+    assert np.isclose(tile.yMax, 6731350.458906)
+
+    tile = Extent.fromTileAt(
+        x=4101103, y=2978620, zoom=8, srs=EPSG3035)
+
+    assert np.isclose(tile.xMin, 626172.135712164)
+    assert np.isclose(tile.xMax, 782715.169640205)
+    assert np.isclose(tile.yMin, 6418264.3910496775)
+    assert np.isclose(tile.yMax, 6574807.4249777235)
+
 def test_Extent_fromVector():
 
     ex1 = Extent.fromVector(AACHEN_POINTS)
