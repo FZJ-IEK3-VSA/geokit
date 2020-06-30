@@ -579,6 +579,18 @@ class Extent(object):
 
         return (bl, br, tl, tr)
 
+    def center(self, srs=None):
+        """Get the Extent's center"""
+        x,y = (self.xMax+self.xMin)/2, (self.yMax+self.yMin)/2
+        if not srs is None:
+            srs=SRS.loadSRS(srs)
+            if not srs.IsSame(self.srs):
+                xy = SRS.xyTransform(x, y, fromSRS=self.srs, toSRS=srs, outputFormat="xy")
+
+                x = xy.x
+                y = xy.y
+        return x,y
+
     def castTo(self, srs, segments=100):
         """
         Creates a new Extent by transforming an extent from the original Extent's

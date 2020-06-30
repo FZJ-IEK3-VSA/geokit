@@ -434,6 +434,26 @@ def convertWKT(wkt, srs=None):
         geom.AssignSpatialReference(SRS.loadSRS(srs))  # Assign the given srs
     return geom
 
+
+def convertGeoJson(geojson, srs=3857):
+    """Make a geometry from a well known text (WKT) string
+    TODO: UPDATE!!!
+    Parameters:
+    -----------
+    wkt : str
+        The WKT string to convert
+
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the geometry to create
+    """
+    geom = ogr.CreateGeometryFromJson(
+        geojson)  # Create new geometry from string
+    if geom is None:  # test for success
+        raise GeoKitGeomError("Failed to create geometry")
+    if srs:
+        geom.AssignSpatialReference(SRS.loadSRS(srs))  # Assign the given srs
+    return geom
+
 # 3
 # Make a geometry from a matrix mask
 
