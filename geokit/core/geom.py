@@ -151,6 +151,34 @@ def tile(xi, yi, zoom):
 
     return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
+def tileAt(x, y, zoom, srs):
+    """Generates a box corresponding to a tile at the coordinates 'x' and 'y'
+     in the given srs,
+
+    Parameters:
+    -----------
+    x : float
+        The X coordinate to search for a tile around
+
+    y : float
+        The Y coordinate to search for a tile around
+
+    zoom : int
+        The tile's zoom index
+        - Range is between 0 and 18
+
+    srs : anything acceptable to SRS.loadSRS
+        The SRS of the given 'x' & 'y' coordinates 
+
+    Returns:
+    --------
+    ogr.Geometry
+
+    """
+    t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
+
+    return tile(t.xi,t.yi,t.zoom)
+
 
 Tile = namedtuple("Tile", "xi yi zoom")
 

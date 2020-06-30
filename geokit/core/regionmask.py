@@ -1,5 +1,6 @@
 import numpy as np
 from osgeo import ogr
+import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from collections import namedtuple
 from io import BytesIO
@@ -704,14 +705,38 @@ class RegionMask(object):
         source : str or gdal.Dataset
             The raster datasource to indicate from
 
-        value : float or tuple
-            The value or range of values to indicate
+        value : numeric, tuple, iterable or str
+            The value, range, or set of values to indicate on
             * If float : The exact value to accept
-              - Maybe cause issues due to float comparison issues. Using an 
-                integer is usually better
-            * If (float, float) : The inclusive Min and Max values to accept
-              - None refers to no bound
-              - Ex. (None, 5) -> "Indicate all values equal to and below 5"
+            * If tuple : The inclusive range to accept. Given as (low,high)
+              - Assumes exactly 2 values are present
+              - If either value is "None", then the range is assumed to be unbounded on that side
+            * If any other iterable : The list of exact values to accept 
+            * If str : The formatted set of elements to accept 
+              - Each element in the set is seperated by a "," 
+              - Each element must be either a singluar numeric value, or a range
+              - A range element begins with either "[" or "(", and ends with either "]" or ")"
+                and should have an '-' in between
+                - "[" and "]" imply inclusivity
+                - "(" and ")" imply exclusivity
+                - Numbers on either side can be omitted, impling no limit on that side
+                - Examples:
+                  - "[1-5]" -> Indicate values from 1 up to 5, inclusively
+                  - "[1-5)" -> Indicate values from 1 up to 5, but not including 5
+                  - "(1-]"  -> Indicate values above 1 (but not including 1) up to infinity
+                  - "[-5]"  -> Indicate values from negative infinity up to and including 5
+                  - "[-]"   -> Indicate values from negative infinity to positive infinity (dont do this..)
+              - All whitespaces will be ignored (so feel free to use them as you wish)
+              - Example:
+                - "[-2),[5-7),12,(22-26],29,33,[40-]" will indicate all of the following:
+                  - Everything below 2, but not including 2
+                  - Values between 5 up to 7, but not including 7
+                  - 12
+                  - Values above 22 up to and including 26
+                  - 29
+                  - 33
+                  - Everything above 40, including 40
+
 
         buffer : float; optional
             A buffer region to add around the indicated pixels
@@ -785,13 +810,22 @@ class RegionMask(object):
         """
         assert bufferMethod in ['area', 'contour']
 
-        # Unpack value
-        if isinstance(value, tuple):
-            valueMin, valueMax = value
-            valueEquals = None
+        # format value input
+        if isinstance(value, str):
+            pass
+        elif isinstance(value, tuple):  # Assume a range in implied
+            value = "[{}-{}]".format(
+                "" if value[0] is None else value[0],
+                "" if value[1] is None else value[1],
+            )
         else:
-            valueMin, valueMax = None, None
-            valueEquals = value
+            try:  # Try treating value as an iterable
+                _value = ""
+                for v in value:
+                    _value += "{},".format(v)
+                value = _value[:-1]
+            except TypeError:  # Value should be just a number
+                value = str(value)
 
         # make processor
         def processor(data):
@@ -799,16 +833,37 @@ class RegionMask(object):
             if(not noData is None):
                 nodat = np.isnan(data)
 
-            # Do processing
-            if(not valueEquals is None):
-                output = data == valueEquals
-            else:
-                output = np.ones(data.shape, dtype="bool")
+            # Indicate value elements
+            output = np.zeros(data.shape, dtype="bool")
+            value_re = re.compile(r"(?P<range>(?P<open>[\[\(])(?P<low>[-+]?(\d*\.\d+|\d+\.?))?-(?P<high>[-+]?(\d*\.\d+|\d+\.?))?(?P<close>[\]\)]))|(?P<value>[-+]?(\d*\.\d+|\d+\.?))")
+            for element in value.split(","):
+                element = element.replace(" ", "")
+                if element == "":
+                    continue
 
-                if(not valueMin is None):
-                    np.logical_and(data >= valueMin, output, output)
-                if(not valueMax is None):
-                    np.logical_and(data <= valueMax, output, output)
+                m = value_re.match(element)
+                if m is None or (m['value'] is None and m['range'] is None):
+                    raise RuntimeError('The element "{}" does not match an expected format'.format(element))
+
+                if m['value'] is not None:
+                    update_sel = data == float(m['value'])
+
+                else:  # We are dealing with a range
+                    update_sel = np.ones(data.shape, dtype="bool")
+
+                    if m['low'] is not None and m['open'] == "[":
+                        np.logical_and(data >= float(m['low']), update_sel, update_sel)
+
+                    elif m['low'] is not None and m['open'] == "(":
+                        np.logical_and(data > float(m['low']), update_sel, update_sel)
+
+                    if m['high'] is not None and m['close'] == "]":
+                        np.logical_and(data <= float(m['high']), update_sel, update_sel)
+
+                    elif m['high'] is not None and m['close'] == ")":
+                        np.logical_and(data < float(m['high']), update_sel, update_sel)
+
+                np.logical_or(update_sel, output, output)
 
             # Fill nan values, maybe
             if(not noData is None):
