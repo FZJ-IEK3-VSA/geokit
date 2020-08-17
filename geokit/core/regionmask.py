@@ -764,7 +764,7 @@ class RegionMask(object):
             If not given, then a default datatype is assumed based off `resampleAlg`:
                reampleAlg : assumed dtype
                ----------   -------------
-                   'near' : 'float32'
+                   'near' : 'uint8'
                'bilinear' : 'float32'
                   'cubic' : 'float32'
                 'average' : 'float32'
@@ -894,9 +894,9 @@ class RegionMask(object):
 
         # Warp onto region
         if warpDType is None:
-            if resampleAlg in ['near', 'bilinear', 'cubic', 'average']:
+            if resampleAlg in ['bilinear', 'cubic', 'average']:
                 warpDType = "float32"
-            elif resampleAlg in ['mode', 'max', 'min']:
+            elif resampleAlg in ['near', 'mode', 'max', 'min']:
                 warpDType = "uint8"
             else:
                 warpDType = "float32"
