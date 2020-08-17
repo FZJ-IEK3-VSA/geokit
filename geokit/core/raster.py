@@ -81,8 +81,7 @@ def gdalType(s):
 
     elif(isinstance(s, int)):
         return _gdalIntToType[s]  # If an int is given, it's probably
-        #  the GDAL type indicator (and not a
-        #  sample data value)
+        #  the GDAL type indicator (and not a sample data value)
     elif(isinstance(s, np.dtype)):
         return gdalType(str(s))
     elif(isinstance(s, np.generic)):
@@ -93,6 +92,8 @@ def gdalType(s):
         return _gdalType[int]
     elif(s is float):
         return _gdalType[float]
+    elif(isinstance(s, type)):  # Default to Numpy for all other 'types'
+        return gdalType(np.dtype(s))
     elif(isinstance(s, Iterable)):
         return gdalType(s[0])
     raise GeoKitRasterError("GDAL type could not be determined")
