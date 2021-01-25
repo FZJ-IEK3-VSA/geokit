@@ -6,9 +6,6 @@ stages:
 test:
   stage: test
 
-  tags:
-    - docker
-
   script: 
     - conda install mamba -c conda-forge
     - mamba env update -n geokit --file=requirements.yml
