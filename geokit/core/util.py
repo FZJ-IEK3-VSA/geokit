@@ -4,7 +4,7 @@ import os
 import sys
 import re
 import numpy as np
-from osgeo import gdal, ogr, osr
+import gdal, ogr, osr, osgeo
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from glob import glob
 import warnings
