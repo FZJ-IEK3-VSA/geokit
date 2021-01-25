@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from osgeo import osr
+from osgeo import osr, gdal
 import warnings
 from collections import namedtuple
 
@@ -101,6 +101,9 @@ def loadSRS(source):
         srs.ImportFromEPSG(source)
     else:
         raise GeoKitSRSError("Unknown srs source type: ", type(source))
+
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     return srs
 
