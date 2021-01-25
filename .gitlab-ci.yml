@@ -1,4 +1,4 @@
-image: continuum/miniconda3:latest
+image: continuumio/miniconda3:latest
 
 stages:
   - test
