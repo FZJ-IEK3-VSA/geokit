@@ -392,7 +392,7 @@ def test_contours():
     total_area = np.sum([geoms.geom[i].Area() for i in geoms.index])
 
     assert geoms.shape[0] == 114  # geom count
-    #assert np.isclose(geoms.geom[59].Area(), 0.022376976699986426)
+    #assert np.isclose(geoms.geom[59].Area(), 0.022376976699986426) # TODO Why is geom with same area returned at index 61 instead of 59 when utilizing gdal version >= 3.0.0 ?
     assert np.isclose(total_area, 0.20382200000004147)
     assert np.isclose(geoms.ID[59], 1)
     assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
