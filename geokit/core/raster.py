@@ -881,9 +881,9 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
             # Open and read from raster
             data = band.ReadAsArray(
                 xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
-            if info.scale != 1.0:
+            if (info.scale != None) and (info.scale != 1.0):
                 data = data * info.scale
-            if info.offset != 0.0:
+            if (info.offset != None) and (info.offset != 0.0):
                 data = data + info.offset
 
             # Look for nodata
