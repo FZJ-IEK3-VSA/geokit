@@ -134,6 +134,10 @@ def centeredLAEA(lon, lat):
     srs = osr.SpatialReference()
     srs.ImportFromProj4(
         '+proj=laea +lat_0={} +lon_0={} +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'.format(lat, lon))
+    
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        
     return srs
 
 ####################################################################
