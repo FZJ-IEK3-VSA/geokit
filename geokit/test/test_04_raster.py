@@ -49,7 +49,7 @@ def test_createRaster():
 
     assert not memRas is None  # creating raster in memory
 
-    mri = raster.rasterInfo(memRas)
+    mri = raster.rasterInfo(memRas) # memory raster info
     assert mri.bounds == inputBounds  # bounds
     assert mri.dx == inputPixelWidth  # pixel width
     assert mri.dy == inputPixelHeight  # pixel height
