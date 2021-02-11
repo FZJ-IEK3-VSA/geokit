@@ -67,6 +67,10 @@ def test_createRaster():
     bd = ds.GetRasterBand(1)
     srs = osr.SpatialReference()
     srs.ImportFromWkt(ds.GetProjection())
+
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
     assert srs.IsSame(EPSG4326)  # disk raster, srs mismatch
 
     arr = bd.ReadAsArray()
