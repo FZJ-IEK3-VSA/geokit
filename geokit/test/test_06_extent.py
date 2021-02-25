@@ -519,8 +519,8 @@ def test_Extent_contoursFromRaster():
 
     assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
     assert len(geoms) == 95
-    assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
-    assert geoms.iloc[61].ID == 1
+    assert np.isclose(geoms.iloc[63].geom.Area(), 0.08834775465377398) # index of geom changed from 61 to 63 with GDAL >= 3.0.0
+    assert geoms.iloc[63].ID == 1
 
 
 def test_Extent_subTiles():
