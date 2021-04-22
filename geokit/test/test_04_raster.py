@@ -49,7 +49,7 @@ def test_createRaster():
 
     assert not memRas is None  # creating raster in memory
 
-    mri = raster.rasterInfo(memRas)
+    mri = raster.rasterInfo(memRas) # memory raster info
     assert mri.bounds == inputBounds  # bounds
     assert mri.dx == inputPixelWidth  # pixel width
     assert mri.dy == inputPixelHeight  # pixel height
@@ -67,6 +67,10 @@ def test_createRaster():
     bd = ds.GetRasterBand(1)
     srs = osr.SpatialReference()
     srs.ImportFromWkt(ds.GetProjection())
+
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
     assert srs.IsSame(EPSG4326)  # disk raster, srs mismatch
 
     arr = bd.ReadAsArray()
@@ -385,8 +389,11 @@ def test_contours():
 
     ri = raster.rasterInfo(AACHEN_ELIGIBILITY_RASTER)
 
+    total_area = np.sum([geoms.geom[i].Area() for i in geoms.index])
+
     assert geoms.shape[0] == 114  # geom count
-    assert np.isclose(geoms.geom[59].Area(), 0.022376976699986426)
+    #assert np.isclose(geoms.geom[59].Area(), 0.022376976699986426) # TODO Why is geom with same area returned at index 61 instead of 59 when utilizing gdal version >= 3.0.0 ?
+    assert np.isclose(total_area, 0.20382200000004147)
     assert np.isclose(geoms.ID[59], 1)
     assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
 
