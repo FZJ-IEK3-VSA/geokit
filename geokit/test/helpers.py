@@ -14,9 +14,13 @@ def result(s): return join(dirname(__file__), RESULT, s)
 
 ### make working items
 EPSG4326 = osr.SpatialReference()
+if gdal.__version__ >= '3.0.0':
+        EPSG4326.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 EPSG4326.ImportFromEPSG(4326)
 
 EPSG3035 = osr.SpatialReference()
+if gdal.__version__ >= '3.0.0':
+        EPSG3035.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 EPSG3035.ImportFromEPSG(3035)
 
 

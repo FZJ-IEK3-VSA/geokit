@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from osgeo import osr
+from osgeo import osr, gdal
 import warnings
 from collections import namedtuple
 import smopy
@@ -104,6 +104,9 @@ def loadSRS(source):
     else:
         raise GeoKitSRSError("Unknown srs source type: ", type(source))
 
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
     return srs
 
 
@@ -133,6 +136,10 @@ def centeredLAEA(lon, lat):
     srs = osr.SpatialReference()
     srs.ImportFromProj4(
         '+proj=laea +lat_0={} +lon_0={} +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'.format(lat, lon))
+    
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        
     return srs
 
 ####################################################################
