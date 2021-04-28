@@ -523,8 +523,8 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
     Parameters:
     -----------
     geoms : ogr.Geometry or [ogr.Geometry, ] or pandas.DataFrane
-        The geometries to write into the raster file
-        * If a DataFRame is given, it must have a column called 'geom'
+        The geometries to write into the vector file
+        * If a DataFrame is given, it must have a column called 'geom'
         * All geometries must share the same type (point, line, polygon, ect...)
         * All geometries must share the same SRS
         * If geometry SRS differs from the 'srs' input, then all geometries will 
