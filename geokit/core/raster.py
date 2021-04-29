@@ -2005,3 +2005,125 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     if not cutline is None:
         del tempdir
     return destRas
+
+#--------------------------------------------------------------------------------------------
+# Sieve raster datasets
+#--------------------------------------------------------------------------------------------
+
+def sieve(source, threshold=100, connectedness=8, mask='none', quiet_flag=False, output=None, **kwargs):
+    
+    """
+    Removes raster polygons smaller than a provided threshold size (in pixels) and 
+    replaces them with the pixel value of the largest neighbour polygon. 
+    It is useful if you have a large amount of small areas on your raster map.
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+    
+    threshold (int): minimum polygon size (number of pixels) to retain.
+
+    connectedness (int): either 4 indicating that diagonal pixels are not considered directly 
+                         adjacent for polygon membership purposes or 8 indicating they are.
+
+    mask (str): 'none' or 'default'. An optional mask band. All pixels in the mask band with a 
+                value other than zero will be considered suitable for inclusion in polygons. 
+
+    quiet_flag (bool): 0 or 1. Callback for reporting algorithm progress
+
+    output : str; optional
+        The path on disk where the new raster should be created
+
+    **kwargs:
+        * All kwargs are passed on to SieveFilter()
+        * See gdal.SieveFilter for more details
+
+    Returns
+    -------
+    * If 'output' is None: gdal.Dataset
+    * If 'output' is a string: The path to the output is returned (for easy opening)
+
+    """
+    
+    gdal.AllRegister() 
+
+    try: 
+        gdal.SieveFilter 
+    except: 
+        print('') 
+        print('gdal.SieveFilter() not available.  You are likely using "old gen"') 
+        print('bindings or an older version of the next gen bindings.') 
+        print('') 
+    
+    ### Open source file
+    # if output is None: 
+    #     src_ds = gdal.Open( source, gdal.GA_Update ) 
+    # else: 
+    #     src_ds = gdal.Open( source, gdal.GA_ReadOnly )
+
+    src_ds = loadRaster(source)
+
+    if src_ds is None: 
+        print('Unable to open %s ' % source) 
+     
+
+    srcband = src_ds.GetRasterBand(1) 
+
+    if mask is 'default': 
+        maskband = srcband.GetMaskBand() 
+    elif mask is 'none': 
+        maskband = None 
+    else: 
+        mask_ds = gdal.Open( mask ) 
+        maskband = mask_ds.GetRasterBand(1) 
+
+    ### Create output file if one is specified.
+
+    if dst_filename is not None: 
+
+        format = 'GTiff' 
+        driver = gdal.GetDriverByName(format) 
+        dst_ds = driver.Create( dst_filename, src_ds.RasterXSize, src_ds.RasterYSize, 1, 
+                             srcband.DataType, COMPRESSION_OPTION) # ["COMPRESS=LZW"]
+
+    else:
+
+        format='Mem' 
+        driver = gdal.GetDriverByName(format)  # create a raster in memory
+        dst_ds = driver.Create( '', src_ds.RasterXSize, src_ds.RasterYSize, 1, 
+                             srcband.DataType, COMPRESSION_OPTION) # ["COMPRESS=LZW"]
+
+    wkt = src_ds.GetProjection() 
+    if wkt != '': 
+        dst_ds.SetProjection( wkt ) 
+    dst_ds.SetGeoTransform( src_ds.GetGeoTransform() ) 
+    dstband = dst_ds.GetRasterBand(1)
+
+    if quiet_flag: 
+        prog_func = None 
+    else: 
+        prog_func = gdal.TermProgress_nocb 
+
+    result = gdal.SieveFilter(
+                              srcband, 
+                              maskband, 
+                              dstband, 
+                              threshold, 
+                              connectedness, 
+                              callback = prog_func,
+                              **kwargs 
+                             ) 
+
+    dst_ds.FlushCache()
+
+    # Return raster if in memory
+    if output is None:
+        return dst_ds
+
+    # Return output path to raster on disk
+    else:
+        src_ds = None 
+        dst_ds = None 
+        mask_ds = None
+        return dst_filename
+
