@@ -2079,11 +2079,11 @@ def sieve(source, threshold=100, connectedness=8, mask='none', quiet_flag=False,
 
     ### Create output file if one is specified.
 
-    if dst_filename is not None: 
+    if output is not None: 
 
         format = 'GTiff' 
         driver = gdal.GetDriverByName(format) 
-        dst_ds = driver.Create( dst_filename, src_ds.RasterXSize, src_ds.RasterYSize, 1, 
+        dst_ds = driver.Create( output, src_ds.RasterXSize, src_ds.RasterYSize, 1, 
                              srcband.DataType, COMPRESSION_OPTION) # ["COMPRESS=LZW"]
 
     else:
@@ -2120,10 +2120,10 @@ def sieve(source, threshold=100, connectedness=8, mask='none', quiet_flag=False,
     if output is None:
         return dst_ds
 
-    # Return output path to raster on disk
+    # Return output path to raster if on disk
     else:
         src_ds = None 
         dst_ds = None 
         mask_ds = None
-        return dst_filename
+        return output
 
