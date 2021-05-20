@@ -39,3 +39,22 @@ def test_loadSRS():
 def test_centeredLAEA():
     s1 = srs.centeredLAEA(6.8, 50.0775)
     assert isinstance(s1, osr.SpatialReference)
+
+def test_tileIndexAt():
+    tile = srs.tileIndexAt(6.083, 50.775, zoom=8, srs=srs.EPSG4326)
+    assert tile.xi == 132
+    assert tile.yi == 85
+    assert tile.zoom == 8
+
+    tile = srs.tileIndexAt(x=4101103, y=2978620, zoom=12, srs=srs.EPSG3035)
+    assert tile.xi == 2126
+    assert tile.yi == 1391
+    assert tile.zoom == 12
+
+    tiles = srs.tileIndexAt(x=[4101103, 4101000, 4103000], 
+                            y=[2978620, 2978620, 2978620], 
+                            zoom=12, 
+                            srs=srs.EPSG3035)
+    assert np.isclose(tiles.xi, [2126, 2126, 2127]).all()
+    assert np.isclose(tiles.yi, [1391, 1391, 1391]).all()
+    assert np.isclose(tiles.zoom, 12).all()

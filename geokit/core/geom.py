@@ -151,6 +151,34 @@ def tile(xi, yi, zoom):
 
     return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
+def tileAt(x, y, zoom, srs):
+    """Generates a box corresponding to a tile at the coordinates 'x' and 'y'
+     in the given srs,
+
+    Parameters:
+    -----------
+    x : float
+        The X coordinate to search for a tile around
+
+    y : float
+        The Y coordinate to search for a tile around
+
+    zoom : int
+        The tile's zoom index
+        - Range is between 0 and 18
+
+    srs : anything acceptable to SRS.loadSRS
+        The SRS of the given 'x' & 'y' coordinates 
+
+    Returns:
+    --------
+    ogr.Geometry
+
+    """
+    t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
+
+    return tile(t.xi,t.yi,t.zoom)
+
 
 Tile = namedtuple("Tile", "xi yi zoom")
 
@@ -428,6 +456,26 @@ def convertWKT(wkt, srs=None):
         The srs of the geometry to create
     """
     geom = ogr.CreateGeometryFromWkt(wkt)  # Create new geometry from string
+    if geom is None:  # test for success
+        raise GeoKitGeomError("Failed to create geometry")
+    if srs:
+        geom.AssignSpatialReference(SRS.loadSRS(srs))  # Assign the given srs
+    return geom
+
+
+def convertGeoJson(geojson, srs=3857):
+    """Make a geometry from a well known text (WKT) string
+    TODO: UPDATE!!!
+    Parameters:
+    -----------
+    wkt : str
+        The WKT string to convert
+
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the geometry to create
+    """
+    geom = ogr.CreateGeometryFromJson(
+        geojson)  # Create new geometry from string
     if geom is None:  # test for success
         raise GeoKitGeomError("Failed to create geometry")
     if srs:

@@ -1,8 +1,10 @@
 import os
 import numpy as np
-from osgeo import osr
+from osgeo import osr, gdal
 import warnings
 from collections import namedtuple
+import smopy
+from typing import Iterable
 
 from . import util as UTIL
 
@@ -102,6 +104,9 @@ def loadSRS(source):
     else:
         raise GeoKitSRSError("Unknown srs source type: ", type(source))
 
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
     return srs
 
 
@@ -131,6 +136,10 @@ def centeredLAEA(lon, lat):
     srs = osr.SpatialReference()
     srs.ImportFromProj4(
         '+proj=laea +lat_0={} +lon_0={} +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'.format(lat, lon))
+    
+    if gdal.__version__ >= '3.0.0':
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        
     return srs
 
 ####################################################################
@@ -206,3 +215,33 @@ def xyTransform(*args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
 
         TransformedPoints = namedtuple("TransformedPoints", "x y z")
         return TransformedPoints(x, y, z)
+
+
+Tile = namedtuple("Tile", "xi yi zoom")
+def tileIndexAt(x, y, zoom, srs):
+    """Get the "slippy tile" index at the given zoom, around the 
+    coordinates ('x', 'y') within the specified 'srs'
+    """
+    srs = loadSRS(srs)
+
+    iterable_input = isinstance(x,Iterable) or isinstance(y,Iterable)
+
+    if not srs.IsSame(EPSG4326):
+        pt = xyTransform(x,y, 
+                fromSRS=srs,
+                toSRS=EPSG4326, 
+                outputFormat="xy")
+        
+        if iterable_input:
+            x, y = pt.x, pt.y
+        else:
+            x, y = pt.x[0], pt.y[0]
+
+    if iterable_input:
+        x = np.array(x)
+        y = np.array(y)
+
+    xi, yi = smopy.deg2num(y, x, zoom)
+
+    return Tile(xi, yi, zoom)
+
