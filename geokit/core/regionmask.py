@@ -690,7 +690,7 @@ class RegionMask(object):
 
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True,
                        noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None,
-                       **kwargs):
+                       warpDType=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
