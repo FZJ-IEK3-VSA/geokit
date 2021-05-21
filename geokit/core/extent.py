@@ -540,7 +540,7 @@ class Extent(object):
 
         return True
 
-    def fit(self, unit, start_raster=None, dtype=None):
+    def fit(self, unit, dtype=None, start_raster=None):
         """Fit the extent to a given pixel resolution
 
         Note:
