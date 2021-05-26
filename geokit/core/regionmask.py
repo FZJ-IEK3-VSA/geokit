@@ -683,7 +683,7 @@ class RegionMask(object):
 
         return geoms
 
-    def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None, **kwargs):
+    def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True, noData=None, resampleAlg='bilinear', warpDType=None, bufferMethod='area', preBufferSimplification=None, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -752,9 +752,25 @@ class RegionMask(object):
 
         resampleAlg : str; optional
             The resampling algorithm to use when warping values
+            * Options are: 'near', 'bilinear', 'cubic', 'average', 'mode', 'max', 'min'
             * Knowing which option to use can have significant impacts!
-            * Options are: 'nearesampleAlg=resampleAlg, r', 'bilinear', 'cubic', 
-              'average'
+                When indicating from a low resolution raster (relative to the region mask),
+                then it is best to use one of 'near', 'bilinear', or 'cubic'. However, 
+                when indicating from a high resolution raster file (again, relative to the region 
+                mask) then one of 'average', 'mode', 'max', or 'min' is likely better.
+
+        warpDType : str or None; optional 
+            If given, this controls the raster datatype of the warped indication matrix.
+            If not given, then a default datatype is assumed based off `resampleAlg`:
+               reampleAlg : assumed dtype
+               ----------   -------------
+                   'near' : 'uint8'
+               'bilinear' : 'float32'
+                  'cubic' : 'float32'
+                'average' : 'float32'
+                   'mode' : 'uint8'
+                    'max' : 'uint8'
+                    'min' : 'uint8'
 
         forceMaskShape : bool 
             If True, forces the returned matrix to have the same dimension as 
@@ -874,10 +890,18 @@ class RegionMask(object):
 
         # Do processing
         newDS = self.extent.mutateRaster(
-            source, processor=processor, dtype="bool", noData=noData, matchContext=False)
+            source, processor=processor, dtype="uint8", noData=noData, matchContext=False)
 
         # Warp onto region
-        final = self.warp(newDS, dtype="float32", resolutionDiv=resolutionDiv, resampleAlg=resampleAlg,
+        if warpDType is None:
+            if resampleAlg in ['bilinear', 'cubic', 'average']:
+                warpDType = "float32"
+            elif resampleAlg in ['near', 'mode', 'max', 'min']:
+                warpDType = "uint8"
+            else:
+                warpDType = "float32"
+
+        final = self.warp(newDS, dtype=warpDType, resolutionDiv=resolutionDiv, resampleAlg=resampleAlg,
                           applyMask=False, noData=noData, returnMatrix=True, **kwargs)
 
         # Check for results

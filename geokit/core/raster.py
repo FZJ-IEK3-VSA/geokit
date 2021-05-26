@@ -81,8 +81,7 @@ def gdalType(s):
 
     elif(isinstance(s, int)):
         return _gdalIntToType[s]  # If an int is given, it's probably
-        #  the GDAL type indicator (and not a
-        #  sample data value)
+        #  the GDAL type indicator (and not a sample data value)
     elif(isinstance(s, np.dtype)):
         return gdalType(str(s))
     elif(isinstance(s, np.generic)):
@@ -93,6 +92,8 @@ def gdalType(s):
         return _gdalType[int]
     elif(s is float):
         return _gdalType[float]
+    elif(isinstance(s, type)):  # Default to Numpy for all other 'types'
+        return gdalType(np.dtype(s))
     elif(isinstance(s, Iterable)):
         return gdalType(s[0])
     raise GeoKitRasterError("GDAL type could not be determined")
@@ -881,9 +882,9 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
             # Open and read from raster
             data = band.ReadAsArray(
                 xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
-            if info.scale != 1.0:
+            if (info.scale != None) and (info.scale != 1.0):
                 data = data * info.scale
-            if info.offset != 0.0:
+            if (info.offset != None) and (info.offset != 0.0):
                 data = data + info.offset
 
             # Look for nodata

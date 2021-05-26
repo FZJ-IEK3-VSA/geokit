@@ -156,6 +156,35 @@ class Extent(object):
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
     @staticmethod
+    def fromTileAt(x, y, zoom, srs):
+        """Generates an Extent corresponding to tiles used for "slippy maps" 
+        at the coordinates ('x','y') in the 'srs' reference system
+
+        Parameters:
+        -----------
+        x : float
+            The X coordinate to search for a tile around
+
+        y : float
+            The Y coordinate to search for a tile around
+
+        zoom : int
+            The tile's zoom index
+            - Range is between 0 and 18
+
+        srs : anything acceptable to SRS.loadSRS
+            The SRS of the given 'x' & 'y' coordinates 
+
+        Returns:
+        --------
+        geokit.Extent
+
+        """
+        t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
+
+        return Extent.fromTile(t.xi,t.yi,t.zoom)
+
+    @staticmethod
     def fromVector(source, where=None, geom=None):
         """Create extent around the contemts of a vector source
 
@@ -578,6 +607,18 @@ class Extent(object):
             tr = (self.xMax, self.yMax)
 
         return (bl, br, tl, tr)
+
+    def center(self, srs=None):
+        """Get the Extent's center"""
+        x,y = (self.xMax+self.xMin)/2, (self.yMax+self.yMin)/2
+        if not srs is None:
+            srs=SRS.loadSRS(srs)
+            if not srs.IsSame(self.srs):
+                xy = SRS.xyTransform(x, y, fromSRS=self.srs, toSRS=srs, outputFormat="xy")
+
+                x = xy.x
+                y = xy.y
+        return x,y
 
     def castTo(self, srs, segments=100):
         """
