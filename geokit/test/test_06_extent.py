@@ -189,16 +189,32 @@ def test_Extent___add__():
 
 
 def test_Extent_exportWKT():
-    # setup
-    ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG4326)
-    s = ex1.exportWKT("|||")
-    s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
-    assert s == s2
 
-    ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG3857)
-    s = ex1.exportWKT("|||")
-    s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]'
-    assert s == s2
+    if gdal.__version__ >= '3.0.0':
+
+        # setup
+        ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG4326)
+        s = ex1.exportWKT("|||")
+        s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
+        assert s == s2
+
+        ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG3857)
+        s = ex1.exportWKT("|||")
+        s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]'
+        assert s == s2
+
+    elif (gdal.__version__ > '2.2.0') and (gdal.__version__ < '3.0.0'): 
+
+        # setup
+        ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG4326)
+        s = ex1.exportWKT("|||")
+        s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]'
+        assert s == s2
+
+        ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG3857)
+        s = ex1.exportWKT("|||")
+        s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]'
+        assert s == s2
 
 
 def test_Extent_pad():
@@ -530,14 +546,28 @@ def test_Extent_clipRaster():
 
 
 def test_Extent_contoursFromRaster():
-    ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-    geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
-                                   contourEdges=[1, 2, 3], transformGeoms=True)
 
-    assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
-    assert len(geoms) == 95
-    assert np.isclose(geoms.iloc[63].geom.Area(), 0.08834775465377398) # index of geom changed from 61 to 63 with GDAL >= 3.0.0
-    assert geoms.iloc[63].ID == 1
+    if gdal.__version__ >= '3.0.0':
+
+        ext = Extent.fromVector(AACHEN_SHAPE_PATH)
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
+                                       contourEdges=[1, 2, 3], transformGeoms=True)
+
+        assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
+        assert len(geoms) == 95
+        assert np.isclose(geoms.iloc[63].geom.Area(), 0.08834775465377398) # index of geom changed from 61 to 63 with GDAL >= 3.0.0
+        assert geoms.iloc[63].ID == 1
+
+    elif (gdal.__version__ > '2.2.0') and (gdal.__version__ < '3.0.0'):
+
+        ext = Extent.fromVector(AACHEN_SHAPE_PATH)
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
+                                       contourEdges=[1, 2, 3], transformGeoms=True)
+
+        assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
+        assert len(geoms) == 95
+        assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
+        assert geoms.iloc[61].ID == 1
 
 
 def test_Extent_subTiles():
