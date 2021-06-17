@@ -248,6 +248,7 @@ def test_Extent_fit():
     # setup
     ex1 = Extent(3, -4, -5, 10, srs=EPSG4326)
     ex2 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
+    ex3 = Extent(3.1, 2, 7.4, 10, srs=EPSG4326)
 
     # Fiting
     ex_fit1 = ex1.fit(2, float)
@@ -255,6 +256,12 @@ def test_Extent_fit():
 
     ex_fit2 = ex2.fit(0.01)
     assert np.isclose(ex_fit2.xyXY, (6.21, 48.86, 7.79, 49.94)).all()
+
+    ex_fit3 = ex3.fit(2, float, start_raster="left")
+    assert np.isclose(ex_fit3.xyXY, (3.1, 2.0, 9.1, 10.0)).all()
+
+    ex_fit4 = ex3.fit(2, float, start_raster="right")
+    assert np.isclose(ex_fit4.xyXY, (1.4, 2.0, 7.4, 10.0)).all()
 
 
 def test_Extent_corners():
