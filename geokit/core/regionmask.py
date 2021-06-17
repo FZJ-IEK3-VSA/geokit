@@ -276,7 +276,7 @@ class RegionMask(object):
         # set extent (if not given)
         if extent is None:
             extent = Extent.fromGeom(geom).castTo(
-                srs).pad(padExtent).fit(pixelRes, start_raster)
+                srs).pad(padExtent).fit(unit=pixelRes, start_raster=start_raster)
         else:
             if not extent.srs.IsSame(srs):
                 raise GeoKitRegionMaskError(
@@ -1052,7 +1052,7 @@ class RegionMask(object):
                 return {'geom': geom.Buffer(buffer)}
 
             source = self.mutateVector(source, where=where, processor=doBuffer,
-                                       matchContext=True, keepAttributes=False, _slim=True)
+                                       matchContext=True, keepAttributes=False, _slim=True, **kwargs)
 
             where = None  # Set where to None since the filtering has already been done
 
@@ -1466,7 +1466,7 @@ class RegionMask(object):
         """
         return VECTOR.extractFeatures(source=source, geom=self.geometry, **kwargs)
 
-    def mutateVector(self, source, matchContext=False, **kwargs):
+    def mutateVector(self, source, matchContext=False, regionPad=0, **kwargs):
         """Convenience wrapper for geokit.vector.mutateVector which automatically
         sets 'srs' and 'geom' inputs to the RegionMask's srs and geometry
 
@@ -1506,7 +1506,7 @@ class RegionMask(object):
             ext = self.extent
 
         # mutate the source
-        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry, **kwargs)
+        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry.Buffer(regionPad), **kwargs)
 
     def mutateRaster(self, source, matchContext=True, warpArgs=None, applyMask=True, processor=None,
                      resampleAlg="bilinear", **mutateArgs):
