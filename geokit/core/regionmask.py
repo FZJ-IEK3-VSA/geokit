@@ -1506,6 +1506,8 @@ class RegionMask(object):
             ext = self.extent
 
         # mutate the source
+        if regionPad==None: #cannot calculate with none, so use 0
+            regionPad=0    
         return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry.Buffer(regionPad), **kwargs)
 
     def mutateRaster(self, source, matchContext=True, warpArgs=None, applyMask=True, processor=None,
