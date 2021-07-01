@@ -1,7 +1,11 @@
 from geokit.core.regionmask import *
 from os.path import basename
 from json import dumps
-
+import gdal
+import glob
+from geokit.error import *
+from geokit.core.raster import *
+import os
 
 def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
     """Combines several similar rasters into one"""
