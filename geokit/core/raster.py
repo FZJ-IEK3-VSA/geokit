@@ -305,7 +305,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, **kwargs):
+def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -321,6 +321,9 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
 
     if not isinstance(source, RasterInfo):
         raise GeoKitRasterError("Could not understand source")
+        
+    if copyMetadata and not metadata is None:
+        raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
     bounds = kwargs.pop("bounds", source.bounds)
     pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
@@ -332,7 +335,7 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
     if copyMetadata:
         meta = kwargs.pop("meta", source.meta)
     else:
-        meta = None
+        meta = metadata
 
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
