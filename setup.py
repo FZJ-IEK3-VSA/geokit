@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='geokit',
-    version='1.2.8',
-    author='David Severin Ryberg',
+    version='1.2.9',
+    author='GeoKit Developer Team',
     url='https://github.com/FZJ-IEK3-VSA/geokit',
     packages=find_packages(),
     include_package_data=True,
