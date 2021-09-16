@@ -690,7 +690,7 @@ class RegionMask(object):
 
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True,
                        noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None,
-                       warpDType=None, **kwargs):
+                       warpDType=None, prunePatchSize=0, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -817,11 +817,19 @@ class RegionMask(object):
               - This method can be made more accurate by increasing the 
                 'resolutionDiv' input
 
-        preBufferSimplification: numeric
+        preBufferSimplification: numeric; optional
             If given, then geometries will be simplified (using ogr.Geometry.Simplify)
             using the specified value before being buffered
             - Using this can drastically decrease the time it takes to perform the 
               bufferring procedure, but can decrease accuracy if it is too high
+        
+        prunePatchSize: numeric; optional
+            If given, then isolated non-indicated patches below the given size
+            will be removed. The given value corresponds to the minimum area in
+            the unit of the regionmask SRS that will not be removed. Defaults 
+            to 0, i.e. no patches will be removed.
+            Note: This is applied to the geoms after buffer application and can
+            deviate from the patch size after final rasterization.
 
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
@@ -832,6 +840,7 @@ class RegionMask(object):
         numpy.ndarray
         """
         assert bufferMethod in ['area', 'contour']
+        assert isinstance(prunePatchSize, int)
 
         # format value input
         if isinstance(value, str):
@@ -930,6 +939,46 @@ class RegionMask(object):
 
             if len(geoms) > 0:
                 geoms = [g.Buffer(buffer) for g in geoms]
+                if not prunePatchSize ==0:
+                    # create Union of all geoms, this will merge overlapping
+                    # TODO speed up via cascaded union or better sieve raster or even inverted raster (approximate exclusions based on geoms directly)!
+                    union=geoms[0]
+                    if len(geoms)>1:
+                        for g in geoms:
+                            union=union.Union(g)
+                    
+                    # create a new empty list of geoms that will be filled with manipulated shapes partly without holes
+                    geoms=[]
+                    # if regionmask extent contains only a single polygon, make it a single-entry list to make it iterable
+                    if union.GetGeometryName()=='POLYGON':
+                        union=[union]
+                    # iterate over union first to separate independent polygons
+                    for polygon in union:
+                        # check if the independent iteration polygon has more than one geometry, if so has holes/inner rings
+                        NoIndivPol=polygon.GetGeometryCount()
+                        if NoIndivPol>1:
+                            print('inner polygons found')
+                            # create a new base polygon containing the outer ring
+                            newpolygon = ogr.Geometry(ogr.wkbPolygon)
+                            newpolygon.AddGeometry(polygon.GetGeometryRef(0))
+                            # then iterate through the other geometries = inner rings
+                            for i in range(1,NoIndivPol):
+                                # only if the area of the inner ring exceeds the prunePatchSize criterion, add back as inner ring
+                                # else do nothing i.e. drop the inner ring
+                                if polygon.GetGeometryRef(i).Area()>=prunePatchSize:
+                                    # TODO this part might be faster with polygon.RemoveGeometry() without creating a 'newpolygon' above
+                                    newpolygon.AddGeometry(polygon.GetGeometryRef(i))
+                                else:
+                                    print('a innerring was dropped!')
+                            # add the new polygon with possibly less holes back to geoms
+                            geoms.append(newpolygon)
+
+                        # if the polygon has only one geometry, it has no inner ring and can be added to geom list as such
+                        else:
+                            geoms.append(polygon)
+
+
+
                 areaDS = VECTOR.createVector(geoms)
                 final = self.rasterize(areaDS, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv,
                                        applyMask=False, noData=noData)
