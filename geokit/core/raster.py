@@ -910,6 +910,11 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
         # Append to values
         values.append(data)
 
+        #check if not inbounds, then replace values with nan
+        for i in range(len(values)):
+            if not inBounds[i]:
+                values[i] = np.nan * np.ones_like(values[i])
+
     # Done!
     if asSingle:  # A single point was given, so return a single result
         if _onlyValues:
