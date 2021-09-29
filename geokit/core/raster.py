@@ -868,7 +868,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     inBounds = inBounds & (yStarts + window < info.yWinSize)
 
     if (~inBounds).any():
-        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
+        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
         warnings.warn(msg, UserWarning)
 
     # Read values
