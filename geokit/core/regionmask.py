@@ -1538,6 +1538,11 @@ class RegionMask(object):
               mutating
             * If False, only selects the geometries which touch the RegionMask
 
+        regionPad: int, optional
+            Will buffer the regionmask geometry by a value (in the unit of the 
+            regionmask srs) before mutating the source vector onto it. Defaults
+            to 0.
+
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
 
