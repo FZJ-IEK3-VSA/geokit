@@ -1175,12 +1175,14 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     # Check Geometry SRS
     if not srs is None:
         srs = SRS.loadSRS(srs)
+        transformed_geoms = []
         for gi, g in enumerate(geoms):
             gsrs = g.GetSpatialReference()
             if gsrs is None:
                 continue  # Skip it if we don't know it...
             if not gsrs.IsSame(srs):
-                geoms[gi] = transform(geoms[gi], srs)
+                transformed_geoms.append(transform(geoms[gi], srs))
+        geoms = np.asarray(transformed_geoms)
 
     # Apply simplifications if required
     if not simplificationFactor is None:
