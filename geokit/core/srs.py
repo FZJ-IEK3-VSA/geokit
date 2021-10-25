@@ -1,13 +1,13 @@
 import os
 import numpy as np
-from osgeo import osr, gdal
+from osgeo import osr, gdal, ogr
 import warnings
 from collections import namedtuple
 import smopy
 from typing import Iterable
 
 from . import util as UTIL
-
+from . import geom as GEOM
 
 class GeoKitSRSError(UTIL.GeoKitError):
     pass
