@@ -240,14 +240,42 @@ def vectorInfo(source):
     return vecInfo(**info)
 
 ####################################################################
+# List layers within a multi-layer vector dataset e.g. a geopackage
+def listLayers(source,):
+    """Returns the layer names for each layer that is stored in a geopackage.
+
+    Parameters
+    ----------
+    source :  Anything acceptable by loadVector()
+        The vector datasource to read from
+
+    Returns
+    -------
+    list
+        A list of layer names for the source geopackage.
+    """
+    layer_names = []
+    ds = loadVector(source)
+    
+    # Loop over the layers to get their names.
+    for i in range(ds.GetLayerCount()):
+        name = ds.GetLayer(i).GetName()
+        layer_names.append(name)
+    return layer_names
+
+####################################################################
 # Iterable to loop over vector items
 
 
-def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGeoms, ):
+def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGeoms, layerName):
     # Do filtering
     source = loadVector(source)
-    layer = source.GetLayer()
-    filterLayer(layer, geom, where)
+    if not layerName is None:
+        layer = source.GetLayerByName(layerName)
+        filterLayer(layer, geom, where)
+    else:
+        layer = source.GetLayer()
+        filterLayer(layer, geom, where)
 
     # Make a transformer
     trx = None
@@ -285,7 +313,7 @@ def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGe
             yield UTIL.Feature(oGeom, oItems)
 
 
-def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, asPandas=True, indexCol=None, skipMissingGeoms=True, **kwargs):
+def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, asPandas=True, indexCol=None, skipMissingGeoms=True, layerName=None, **kwargs):
     """Creates a generator which extract the features contained within the source
 
     * Iteratively returns (feature-geometry, feature-fields)    
@@ -355,7 +383,8 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
             srs=srs,
             onlyGeom=onlyGeom,
             onlyAttr=onlyAttr,
-            skipMissingGeoms=skipMissingGeoms)
+            skipMissingGeoms=skipMissingGeoms,
+            layerName=layerName)
     else:
         fields = defaultdict(list)
         fields["geom"] = []
@@ -367,7 +396,9 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
                 srs=srs,
                 onlyGeom=False,
                 onlyAttr=False,
-                skipMissingGeoms=skipMissingGeoms):
+                skipMissingGeoms=skipMissingGeoms,
+                layerName=layerName
+                ):
             fields["geom"].append(g.Clone())
             for k, v in a.items():
                 fields[k].append(v)

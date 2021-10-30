@@ -8,4 +8,5 @@ from geokit.core.vector import (   loadVector,
                                     createVector, 
                                     createGeoJson,
                                     mutateVector, 
-                                    rasterize )
+                                    rasterize,
+                                    listLayers)
