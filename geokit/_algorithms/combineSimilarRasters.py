@@ -3,33 +3,38 @@ from geokit.core.util import GeoKitError
 from geokit.raster import rasterInfo, createRaster, extractMatrix
 from os.path import basename
 import os
+import sys
 from json import dumps
 from glob import glob
 from osgeo import gdal
+from warnings import warn
 
 
 
-def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
-    '''Combines several similar raster files into one output file 'master'
+def combineSimilarRasters(datasets, master=None, combiningFunc=None, verbose=True, updateMeta=False, output=None, **kwargs):
+    """
+    Combines several similar raster files into one single raster file.
 
     Parameters
     ----------
-    master : [string]
-        [folder path to output. If it is a file, datasets will be added to master, but dont use that, its buggy. Just write to an new file.]
-    datasets : [string]
-        [glob string for datasets to combine. Or lsit of gdal.Datasets or iterable object with paths]
+    datasets : string or list
+        glob string path describing datasets to combine, alternatively list of gdal.Datasets or iterable object with paths.
+    master : string, optional
+        Filepath to master raster file. If it is an existing file, datasets will be added to master. Recommended to create a new file everytime though. If None, no master dataset will be loaded or created on disk and master dataset kept in memory only, by default None
     combiningFunc : [type], optional
-        [description], by default None
+        Allows customized functions to combine matrices, by default None
     verbose : bool, optional
-        [description], by default True
+        If True, additional status print stamenets will be issued, by default True
     updateMeta : bool, optional
-        [description], by default False
+        If True, metadata of master dataset will be a combination of all input rasters, by default False
+    output : str, optional
+        Filepath to output of combined rasters on disk, by default None, i.e. results will only be returned and not saved to disk.
 
-    Raises
-    ------
-    GeoKitError
-        [Oops, something went wrong]
-    '''    
+    Returns:
+    ----------
+    master dataset: osgeo.gdal.Dataset
+        Raster file containing the combined matrices of all input datasets.
+    """ 
 
 
     # Ensure we have a list of raster datasets
@@ -62,14 +67,34 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     dataYMax = max([i.yMax for i in infoSet])
     
     # Maybe create a new master dataset
-    if not (os.path.isfile(master)): # we will need to create a master source
-        #check if geokit has to create a folder:
-        if not os.path.isdir(os.path.dirname(master)):
-            os.mkdir(os.path.dirname(master))
-        
+    if isinstance(master, str):
+        if not os.path.isfile(master): # we will need to create a master source
+            #check if geokit has to create a folder:
+            if not os.path.isdir(os.path.dirname(master)):
+                os.mkdir(os.path.dirname(master))
+            
+            # Determine no data value
+            noDataValue = kwargs.pop("noData", None)
+    
+            if noDataValue is None:
+                noDataSet = set([i.noData for i in infoSet])
+                if len(noDataSet)==1: noDataValue = noDataSet.pop()
+                
+            # Create Raster
+            dx = infoSet[0].dx
+            dy = infoSet[0].dy
+            dtype = infoSet[0].dtype
+            srs = infoSet[0].srs
+            
+            createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=master, 
+                         dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
+                         srs=srs, fill=noDataValue, **kwargs)
+        else:
+            warn('WARNING: Overwriting existing master file. Sometimes writing to an non empty master fails. Recommended to write to a non existing location instead and include maser into datasets.')
+    elif master is None:
         # Determine no data value
         noDataValue = kwargs.pop("noData", None)
-
+  
         if noDataValue is None:
             noDataSet = set([i.noData for i in infoSet])
             if len(noDataSet)==1: noDataValue = noDataSet.pop()
@@ -80,14 +105,15 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         dtype = infoSet[0].dtype
         srs = infoSet[0].srs
         
-        createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=master, 
+        masterDS = createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), 
                      dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
                      srs=srs, fill=noDataValue, **kwargs)
     else:
-        print('Warning, sometimes writing to an non empty master fails. Write to a non existing location instead and include maser into datasets.')
-
-    # Open master dataset and check parameters
-    masterDS = gdal.Open(master, gdal.GA_Update)
+        sys.exist("master must be None or a str formatted file path to an existing master file or a file to be created.")
+    print(type(masterDS), masterDS) #TODO remove
+    # Open master dataset if required and check parameters
+    if not master is None:
+        masterDS = gdal.Open(master, gdal.GA_Update)
     mInfo = rasterInfo(masterDS)
     mExtent = Extent(mInfo.bounds, srs=mInfo.srs)
 
@@ -106,8 +132,8 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     # Add each dataset to master
     for i in range(len(datasets)):
         if verbose: 
-            if isinstance(datasets[i], str): print(i, basename(datasets[i]))
-            else: print(i)
+            if isinstance(datasets[i], str): print(f"{i+1}/{len(datasets)} ({basename(datasets[i])})")
+            else: print(f"{i+1}/{len(datasets)}")
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 
@@ -147,4 +173,4 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     masterBand.ComputeRasterMinMax(0)
     masterBand.ComputeBandStats(0)
 
-    return
+    return masterDS
