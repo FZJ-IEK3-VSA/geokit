@@ -11,7 +11,7 @@ from warnings import warn
 
 
 
-def combineSimilarRasters(datasets, master=None, combiningFunc=None, verbose=True, updateMeta=False, output=None, **kwargs):
+def combineSimilarRasters(datasets, master=None, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
     """
     Combines several similar raster files into one single raster file.
 
@@ -27,8 +27,6 @@ def combineSimilarRasters(datasets, master=None, combiningFunc=None, verbose=Tru
         If True, additional status print stamenets will be issued, by default True
     updateMeta : bool, optional
         If True, metadata of master dataset will be a combination of all input rasters, by default False
-    output : str, optional
-        Filepath to output of combined rasters on disk, by default None, i.e. results will only be returned and not saved to disk.
 
     Returns:
     ----------
