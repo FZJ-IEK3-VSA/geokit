@@ -340,6 +340,36 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
+def saveRasterAsTif(source, output, dstSRS=None):
+    '''Write a gdal tiff file to disk
+
+    Parameters
+    ----------
+    source : osgeo.gdal.Dataset 
+        'RESKit Raster ovject type'
+    output : str
+        filepath where file will be saved
+    dstSRS : str or osgeo.osr.SpatialReference, optional
+        coordinate system whre outputs hould be in, by default 'EPSG:4326'
+
+    Returns
+    -------
+    [type]
+        [description]
+    '''
+    assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
+    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specefied, use *.tif or *.tiff!'
+
+    #get srs
+    if dstSRS == None:
+        dstSRS = rasterInfo(source).srs
+    #write to raster
+    out = gdal.Warp(output, source, dstSRS=dstSRS, format='GTiff')
+
+    if out != None:
+        return True
+    else:
+        return False
 
 ####################################################################
 # extract the raster as a matrix
