@@ -340,17 +340,16 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
-def saveRasterAsTif(source, output):
-    '''Write a gdal tiff file to disk
+def saveRasterAsTif(source, output, **kwargs):
+    
+    '''Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
 
     Parameters
     ----------
     source : osgeo.gdal.Dataset 
-        'RESKit Raster ovject type'
+
     output : str
         filepath where file will be saved
-    dstSRS : str or osgeo.osr.SpatialReference, optional
-        coordinate system whre outputs hould be in, by default 'EPSG:4326'
 
     Returns
     -------
@@ -360,18 +359,14 @@ def saveRasterAsTif(source, output):
     assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
     assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specefied, use *.tif or *.tiff!'
 
-    #write to raster
-    kwargs = {
-        'data': extractMatrix(source)
-        'output': output
-    }
-    createRasterLike(source, copyMetadata=True, metadata=None, kwargs)
-    #out = gdal.Warp(output, source, dstSRS=dstSRS, format='GTiff')
+    sourceInfo = rasterInfo(source)
+    data = extractMatrix(source)
 
-    if out != None:
-        return True
-    else:
-        return False
+    output = createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
+                          noData=sourceInfo.noData, dtype=sourceInfo.dtype, srs=sourceInfo.srs, 
+                          data=data, **kwargs)
+    
+    return output
 
 ####################################################################
 # extract the raster as a matrix
