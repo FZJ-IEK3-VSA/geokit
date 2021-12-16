@@ -349,24 +349,22 @@ def saveRasterAsTif(source, output, **kwargs):
     source : osgeo.gdal.Dataset 
 
     output : str
-        filepath where file will be saved
+        A path to an output file
 
     Returns
     -------
-    [type]
-        [description]
+    str
+        Path to the saved file on disk.
     '''
-    assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
-    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specefied, use *.tif or *.tiff!'
+    # assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
+    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specified, use *.tif or *.tiff'
 
     sourceInfo = rasterInfo(source)
     data = extractMatrix(source)
 
-    output = createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
+    return createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
                           noData=sourceInfo.noData, dtype=sourceInfo.dtype, srs=sourceInfo.srs, 
-                          data=data, **kwargs)
-    
-    return output
+                          data=data, output=output, **kwargs)
 
 ####################################################################
 # extract the raster as a matrix
