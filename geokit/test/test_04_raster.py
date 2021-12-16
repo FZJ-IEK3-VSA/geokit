@@ -314,47 +314,7 @@ def test_createRasterLike():
     # From rasterInfo, no output
     newRaster = raster.createRasterLike(sourceInfo, data=data*4)
     newdata = raster.extractMatrix(newRaster)
-    assert np.isclose(data, newdata/4).all()
-
-def test_saveRasterAsTif():
-    source = gdal.Open(CLC_RASTER_PATH)
-
-    outputpath = os.path.join(os.path.dirname(__file__),'test_saveRasterAsTif.tif')
-    out = raster.saveRasterAsTif(
-        source=source,
-        output=outputpath,
-    )
-    
-    assert os.path.isfile(outputpath)
-    source2 = gdal.Open(outputpath)
-    os.remove(outputpath)
-
-    info1 = raster.rasterInfo(source)
-    info2 = raster.rasterInfo(source2)
-
-    assert out
-    assert (raster.extractMatrix(source) == raster.extractMatrix(source2)).all()
-    assert info1.srs.IsSame(info2.srs)
-    assert np.isclose(info1.dx, info2.dx)
-    assert np.isclose(info1.dy, info2.dy)
-    assert np.isclose(info1.dtype, info2.dtype)
-    assert np.isclose(info1.flipY, info2.flipY)
-    assert np.isclose(info1.yAtTop, info2.yAtTop)
-    assert np.isclose(info1.bounds, info2.bounds).all()
-    assert np.isclose(info1.xMin, info2.xMin)
-    assert np.isclose(info1.xMax, info2.xMax)
-    assert np.isclose(info1.yMin, info2.yMin)
-    assert np.isclose(info1.yMax, info2.yMax)
-    assert np.isclose(info1.pixelWidth, info2.pixelWidth)
-    assert np.isclose(info1.pixelHeight, info2.pixelHeight)
-    assert np.isclose(info1.noData, info2.noData)
-    assert np.isclose(info1.xWinSize, info2.xWinSize)
-    assert np.isclose(info1.yWinSize, info2.yWinSize)
-    assert info2.source == outputpath
-    assert info1.meta == info2.meta
-    assert info1.scale == info2.scale
-    assert info1.offset == info2.offset
-    
+    assert np.isclose(data, newdata/4).all()    
 
 def test_rasterStats():
     result = raster.rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
