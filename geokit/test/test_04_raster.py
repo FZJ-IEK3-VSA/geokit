@@ -383,6 +383,16 @@ def test_polygonizeRaster():
     assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(),
                       120529999.18190208)  # geom area
 
+    geoms = raster.polygonizeRaster(RASTER_GDAL_244, flat=True)
+    assert np.equal(geoms.shape[0], 2) # geom count
+
+    # geom areas
+    assert np.isclose(geoms.loc[0, "geom"].Area(),  949049962.3788521)
+    assert np.isclose(geoms.loc[1, "geom"].Area(),  5584949959.933687)
+    assert np.isclose(geoms.geom.apply(lambda x: x.Area()).sum(), 6533999922.312539)
+
+    # geom validity
+    assert geoms.geom.map(lambda g: g.IsValid()).all()
 
 def test_contours():
     geoms = raster.contours(AACHEN_ELIGIBILITY_RASTER, contourEdges=[0.5])
