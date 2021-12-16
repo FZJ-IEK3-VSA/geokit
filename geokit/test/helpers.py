@@ -88,6 +88,7 @@ EUR_STATS_FILE = source("Europe_with_H2MobilityData_GermanyClip.shp")
 
 CLC_RASTER_PATH = source("clc-aachen_clipped.tif")
 CLC_FLIPCHECK_PATH = source("clc-aachen_clipped-unflipped.tif")
+RASTER_GDAL_244 = source("raster_gdal_244.tif")
 
 SINGLE_HILL_PATH = source("elevation_singleHill.tif")
 ELEVATION_PATH = source("elevation.tif")
