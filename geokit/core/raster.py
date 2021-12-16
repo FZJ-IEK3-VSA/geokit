@@ -340,7 +340,7 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
-def saveRasterAsTif(source, output, dstSRS=None):
+def saveRasterAsTif(source, output):
     '''Write a gdal tiff file to disk
 
     Parameters
@@ -360,11 +360,13 @@ def saveRasterAsTif(source, output, dstSRS=None):
     assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
     assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specefied, use *.tif or *.tiff!'
 
-    #get srs
-    if dstSRS == None:
-        dstSRS = rasterInfo(source).srs
     #write to raster
-    out = gdal.Warp(output, source, dstSRS=dstSRS, format='GTiff')
+    kwargs = {
+        'data': extractMatrix(source)
+        'output': output
+    }
+    createRasterLike(source, copyMetadata=True, metadata=None, kwargs)
+    #out = gdal.Warp(output, source, dstSRS=dstSRS, format='GTiff')
 
     if out != None:
         return True
