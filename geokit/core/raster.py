@@ -81,8 +81,7 @@ def gdalType(s):
 
     elif(isinstance(s, int)):
         return _gdalIntToType[s]  # If an int is given, it's probably
-        #  the GDAL type indicator (and not a
-        #  sample data value)
+        #  the GDAL type indicator (and not a sample data value)
     elif(isinstance(s, np.dtype)):
         return gdalType(str(s))
     elif(isinstance(s, np.generic)):
@@ -93,6 +92,8 @@ def gdalType(s):
         return _gdalType[int]
     elif(s is float):
         return _gdalType[float]
+    elif(isinstance(s, type)):  # Default to Numpy for all other 'types'
+        return gdalType(np.dtype(s))
     elif(isinstance(s, Iterable)):
         return gdalType(s[0])
     raise GeoKitRasterError("GDAL type could not be determined")
@@ -304,7 +305,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, **kwargs):
+def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -320,6 +321,9 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
 
     if not isinstance(source, RasterInfo):
         raise GeoKitRasterError("Could not understand source")
+        
+    if copyMetadata and not metadata is None:
+        raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
     bounds = kwargs.pop("bounds", source.bounds)
     pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
@@ -331,7 +335,7 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
     if copyMetadata:
         meta = kwargs.pop("meta", source.meta)
     else:
-        meta = None
+        meta = metadata
 
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
@@ -867,7 +871,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     inBounds = inBounds & (yStarts + window < info.yWinSize)
 
     if (~inBounds).any():
-        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
+        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
         warnings.warn(msg, UserWarning)
 
     # Read values
@@ -908,6 +912,11 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
         # Append to values
         values.append(data)
+
+        #check if not inbounds, then replace values with nan
+        for i in range(len(values)):
+            if not inBounds[i]:
+                values[i] = np.nan * np.ones_like(values[i])
 
     # Done!
     if asSingle:  # A single point was given, so return a single result

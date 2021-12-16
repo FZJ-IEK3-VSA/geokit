@@ -23,6 +23,26 @@ def test_tile():
     assert np.isclose(envelope[2], 6457400.14953169)
     assert np.isclose(envelope[3], 6462292.119341941)
 
+def test_tileAt():
+    tile = geom.tileAt(x=6,y=50, zoom=7, srs=EPSG4326)
+
+    a = np.array(tile.Boundary().GetPoints())
+    assert np.isclose(a,
+            np.array([[ 626172.13571216, 6261721.35712164,       0.        ],
+                        [ 939258.20356825, 6261721.35712164,       0.        ],
+                        [ 939258.20356825, 6574807.42497772,       0.        ],
+                        [ 626172.13571216, 6574807.42497772,       0.        ],
+                        [ 626172.13571216, 6261721.35712164,       0.        ]])).all()
+
+    tile = geom.tileAt(x=4101103, y=2978620, zoom=7, srs=EPSG3035)
+
+    a = np.array(tile.Boundary().GetPoints())
+    assert np.isclose(a,
+            np.array([[ 626172.13571216, 6261721.35712164,       0.        ],
+                        [ 939258.20356825, 6261721.35712164,       0.        ],
+                        [ 939258.20356825, 6574807.42497772,       0.        ],
+                        [ 626172.13571216, 6574807.42497772,       0.        ],
+                        [ 626172.13571216, 6261721.35712164,       0.        ]])).all()
 
 def test_subTiles():
     tiles = list(geom.subTiles(GEOM,

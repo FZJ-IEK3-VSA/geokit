@@ -1,10 +1,36 @@
 from geokit.core.regionmask import *
+from geokit.core.util import GeoKitError
+from geokit.raster import rasterInfo, createRaster, extractMatrix
 from os.path import basename
+import os
 from json import dumps
+from glob import glob
+from osgeo import gdal
+
 
 
 def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
-    """Combines several similar rasters into one"""
+    '''Combines several similar raster files into one output file 'master'
+
+    Parameters
+    ----------
+    master : [string]
+        [folder path to output. If it is a file, datasets will be added to master, but dont use that, its buggy. Just write to an new file.]
+    datasets : [string]
+        [glob string for datasets to combine. Or lsit of gdal.Datasets or iterable object with paths]
+    combiningFunc : [type], optional
+        [description], by default None
+    verbose : bool, optional
+        [description], by default True
+    updateMeta : bool, optional
+        [description], by default False
+
+    Raises
+    ------
+    GeoKitError
+        [Oops, something went wrong]
+    '''    
+
 
     # Ensure we have a list of raster datasets
     if isinstance(datasets, str):
@@ -37,6 +63,10 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     
     # Maybe create a new master dataset
     if not (os.path.isfile(master)): # we will need to create a master source
+        #check if geokit has to create a folder:
+        if not os.path.isdir(os.path.dirname(master)):
+            os.mkdir(os.path.dirname(master))
+        
         # Determine no data value
         noDataValue = kwargs.pop("noData", None)
 
@@ -53,6 +83,8 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=master, 
                      dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
                      srs=srs, fill=noDataValue, **kwargs)
+    else:
+        print('Warning, sometimes writing to an non empty master fails. Write to a non existing location instead and include maser into datasets.')
 
     # Open master dataset and check parameters
     masterDS = gdal.Open(master, gdal.GA_Update)
@@ -116,4 +148,3 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     masterBand.ComputeBandStats(0)
 
     return
-
