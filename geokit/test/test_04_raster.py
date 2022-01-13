@@ -1,10 +1,10 @@
 from .helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 from geokit import raster, geom, util
 from osgeo import gdal
+import os
 import pytest
 
 # gdalType
-
 
 def test_gdalType():
     assert raster.gdalType(bool) == "GDT_Byte"
@@ -29,7 +29,6 @@ def test_rasterInfo():
     assert (info.flipY == True)  # flipY
 
 # createRaster
-
 
 def test_createRaster():
     ######################
@@ -81,7 +80,6 @@ def test_createRaster():
     assert meta["TIM"] == "TIMMY"  # dist raster, data mismatch
 
 # Get values directly from a raster
-
 
 def test_extractValues():
     points = [(6.06590, 50.51939), (6.02141, 50.61491), (6.371634, 50.846025)]
@@ -292,7 +290,6 @@ def test_loadRaster():
     s3 = util.isRaster(raster.loadRaster(CLC_RASTER_PATH))
     assert s3 == True
 
-
 def test_createRasterLike():
     source = gdal.Open(CLC_RASTER_PATH)
     sourceInfo = raster.rasterInfo(source)
@@ -313,13 +310,23 @@ def test_createRasterLike():
     # From rasterInfo, no output
     newRaster = raster.createRasterLike(sourceInfo, data=data*4)
     newdata = raster.extractMatrix(newRaster)
-    assert np.isclose(data, newdata/4).all()
+    assert np.isclose(data, newdata/4).all()   
 
+def test_saveRasterAsTif():
+    
+    source = gdal.Open(CLC_RASTER_PATH)
+    data = raster.extractMatrix(source)
+    
+    # Saving from osgeo.gdal.Dataset, with output
+    raster.saveRasterAsTif(source,
+                           output=result("saveRasterAsTif.tif"))
+    
+    newdata = raster.extractMatrix(result("saveRasterAsTif.tif"))
+    assert np.isclose(data, newdata).all()
 
 def test_rasterStats():
     result = raster.rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
     assert np.isclose(result.mean, 15.711518944519621)
-
 
 def test_indexToCoord():
     rasterSource = gdal.Open(CLC_RASTER_PATH)

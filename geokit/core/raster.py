@@ -340,6 +340,31 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
+def saveRasterAsTif(source, output, **kwargs):
+    
+    '''Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
+
+    Parameters
+    ----------
+    source : osgeo.gdal.Dataset 
+
+    output : str
+        A path to an output file
+
+    Returns
+    -------
+    str
+        Path to the saved file on disk.
+    '''
+    # assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
+    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specified, use *.tif or *.tiff'
+
+    sourceInfo = rasterInfo(source)
+    data = extractMatrix(source)
+
+    return createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
+                          noData=sourceInfo.noData, dtype=sourceInfo.dtype, srs=sourceInfo.srs, 
+                          data=data, output=output, **kwargs)
 
 ####################################################################
 # extract the raster as a matrix
