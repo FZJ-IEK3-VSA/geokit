@@ -159,6 +159,9 @@ def centeredLAEA(lon=None, lat=None, geom=None):
     
     if gdal.__version__ >= '3.0.0':
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
+    # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
+    assert srs.Validate()==0, f"Created srs is invalid."
         
     return srs
 
