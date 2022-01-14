@@ -179,7 +179,7 @@ class RegionMask(object):
                 raise GeoKitRegionMaskError("geom does not have an srs")
 
             if not gSRS.IsSame(self.srs):
-                GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
+                self._geometry = GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
         else:
             self._geometry = None
 
@@ -270,8 +270,10 @@ class RegionMask(object):
         # make sure we have a geometry with an srs
         if (isinstance(geom, str)):
             geom = GEOM.convertWKT(geom, srs)
-
-        geom = geom.Clone()  # clone to make sure we're free of outside dependencies
+        
+        # clone to make sure we're free of outside dependencies
+        # convert to regionmask srs to ensure that rm.geometry.GetSpatialReference() is equal to rm.srs
+        geom = GEOM.transform(geom.Clone(), toSRS=srs)  
 
         # set extent (if not given)
         if extent is None:
