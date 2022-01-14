@@ -441,7 +441,7 @@ def test_RegionMask_warp():
     assert warped_1.dtype == np.uint8
     assert warped_1.shape == rm_3035.mask.shape
     assert np.isclose(warped_1.sum(), 88128)
-    assert np.isclose(warped_1.std(), 9.52214123991)
+    assert np.isclose(warped_1.std(), 9.400516136589552)
     #rm_3035.createRaster(data=warped_1, output=result("regionMask_warp_1.tif"), overwrite=True)
 
     # basic warp Raster (FLIP CHECK!)
@@ -450,7 +450,7 @@ def test_RegionMask_warp():
     assert warped_1f.dtype == np.uint8
     assert warped_1f.shape == rm_3035.mask.shape
     assert np.isclose(warped_1f.sum(), 88128)
-    assert np.isclose(warped_1f.std(), 9.52214123991)
+    assert np.isclose(warped_1f.std(), 9.400516136589552)
     #rm_3035.createRaster(data=warped_1f, output=result("regionMask_warp_1f.tif"), overwrite=True)
 
     assert (warped_1 == warped_1f).all()
