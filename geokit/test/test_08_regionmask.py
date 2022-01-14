@@ -73,7 +73,7 @@ def test_RegionMask_fromGeom():
     # fromGeom with wkt
     rm1 = RegionMask.fromGeom(geom.convertWKT(
         POLY, srs='latlon'), pixelRes=1000)
-    assert (rm1.extent.xXyY == (4329000.0, 4771000.0, 835000.0, 1682000.0))
+    assert (rm1.extent.xXyY == (4330000.0, 4728000.0, 835000.0, 1682000.0))
     assert (rm1.extent.srs.IsSame(EPSG3035))
     assert rm1.mask.sum() == 79274
 
