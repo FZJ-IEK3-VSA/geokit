@@ -9,9 +9,13 @@ test:
   #   - linux
 
   script:
+    # Install Mamba for faster installation
     - conda install mamba -c conda-forge
+    # Install dependecies from environment file
     - mamba env create -n geokit --file=requirements-dev.yml
     - conda info --envs
-    - conda activate geokit
+    - source activate geokit
+    # Install geokit with no --no-deps flag to create a reproducible environment
     - python -m pip install -e . --no-deps
+    # Test Environment
     - python -m pytest --cov=geokit geokit/test/
