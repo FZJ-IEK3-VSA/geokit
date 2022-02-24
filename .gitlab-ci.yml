@@ -8,11 +8,10 @@ test:
   # tags: 
   #   - linux
 
-  script: 
+  script:
     - conda install mamba -c conda-forge
-    - mamba env update -n geokit --file=requirements.yml
-    - mamba env update -n geokit --file=requirements-dev.yml
-    - mamba info --envs
-    - source activate geokit
-    - python -m pip install -e .
+    - mamba env create -n geokit --file=requirements-dev.yml
+    - conda info --envs
+    - conda activate geokit
+    - python -m pip install -e . --no-deps
     - python -m pytest --cov=geokit geokit/test/
