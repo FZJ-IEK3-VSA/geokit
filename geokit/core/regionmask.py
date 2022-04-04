@@ -1412,6 +1412,9 @@ class RegionMask(object):
 
         # Apply mask, maybe
         if (applyMask):
+            # set matrix datatype to float if float noData value (like e.g. nan) is passed
+            if isinstance(noData, float):
+                final=final.astype(np.float)
             final = self.applyMask(final, noData)
 
         # Return
