@@ -45,18 +45,24 @@ git checkout dev
 
 ```
 conda env create --file requirements.yml
+conda activate geokit
+pip install . --no-deps
 ```
 
 2. (Alternative) Or into an existing environment with:
 
 ```
 conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
+conda activate geokit
+pip install . --no-deps
 ```
 
 2. (Alternative) If you want to install GeoKit in editable mode, and also with jupyter notebook and with testing functionalities use:
 
 ```
 conda env create --file requirements-dev.yml
+conda activate geokit
+pip install . --no-deps -e
 ```
 
 ## Examples
