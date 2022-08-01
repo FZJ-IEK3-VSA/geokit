@@ -890,10 +890,10 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     yStarts = yIndexes - winRange
     window = 2 * winRange + 1
 
-    inBounds = xStarts > 0
-    inBounds = inBounds & (yStarts > 0)
-    inBounds = inBounds & (xStarts + window < info.xWinSize)
-    inBounds = inBounds & (yStarts + window < info.yWinSize)
+    inBounds = xStarts >= 0
+    inBounds = inBounds & (yStarts >= 0)
+    inBounds = inBounds & (xStarts + window <= info.xWinSize)
+    inBounds = inBounds & (yStarts + window <= info.yWinSize)
 
     if (~inBounds).any():
         msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
@@ -905,7 +905,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     for xi, yi, ib in zip(xStarts, yStarts, inBounds):
         if not ib:
-            data = np.empty((window, window))
+            data = np.ones((window, window)) * np.nan
         else:
             # Open and read from raster
             data = band.ReadAsArray(
