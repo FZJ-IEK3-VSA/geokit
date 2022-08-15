@@ -202,6 +202,10 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
             else:
                 raise GeoKitRasterError(
                     "Output file already exists: %s" % output)
+    
+        #check if writeable:
+        if not os.access(os.path.dirname(output), os.W_OK):
+            raise PermissionError(f"Writing permission error for path: {os.path.dirname(output)}")
 
     # Ensure bounds is okay
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
@@ -239,7 +243,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
                                getattr(gdal, dtype), opts)
 
     if(raster is None):
-        raise GeoKitRasterError("Failed to create raster")
+        raise GeoKitRasterError(f"Failed to create raster")
 
     # Do the rest in a "try" statement so that a failure wont bind the source
     try:
