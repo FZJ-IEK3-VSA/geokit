@@ -6,6 +6,7 @@ import warnings
 from collections import namedtuple, defaultdict, OrderedDict
 from collections.abc import Iterable
 import pandas as pd
+from binascii import hexlify
 
 from . import util as UTIL
 from . import srs as SRS
@@ -605,9 +606,10 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
         raise GeoKitVectorError("Empty geometry list given")
 
     # Test if the first geometry is an ogr-Geometry type
-    if(isinstance(geoms[0], ogr.Geometry)):
-        #  (Assume all geometries in the array have the same type)
+    if all([isinstance(g, ogr.Geometry) for g in geoms]):
+        #  Extract first SRS and check if all other geoms have the same SRS
         geomSRS = geoms[0].GetSpatialReference()
+        assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
 
         # Set up some variables for the upcoming loop
         doTransform = False
@@ -881,9 +883,6 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=''):
         else:
             pass  # We already wrote to the file!
         return None
-
-####################################################################
-# mutuate a vector
 
 
 def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldDef=None, output=None, keepAttributes=True, _slim=False, **kwargs):
