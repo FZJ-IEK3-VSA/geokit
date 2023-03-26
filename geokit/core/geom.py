@@ -342,7 +342,7 @@ def line(points, srs=4326):
     # Make the complete geometry
     g = ogr.Geometry(ogr.wkbLineString)
     if not srs is None:
-        g.AssignSpatialReference(srs)
+        g.AssignSpatialReference(SRS.loadSRS(srs))
 
     # Make the line
     [g.AddPoint(x, y) for x, y in points]
