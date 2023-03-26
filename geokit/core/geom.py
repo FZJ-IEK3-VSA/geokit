@@ -532,7 +532,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
         matrix = np.array(matrix)
-    if matrix.dtype == np.bool or matrix.dtype == np.uint8:
+    if matrix.dtype == np.bool_ or matrix.dtype == np.uint8:
         dtype = "GDT_Byte"
     elif np.issubdtype(matrix.dtype, np.integer):
         dtype = "GDT_Int32"
@@ -708,7 +708,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
 
-    if not (mask.dtype == np.bool or mask.dtype == np.uint8):
+    if not (mask.dtype == np.bool_ or mask.dtype == np.uint8):
         raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
 
     # Do vectorization

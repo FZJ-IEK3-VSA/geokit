@@ -116,7 +116,7 @@ def test_polygonizeMatrix():
                           [0, 1, 1, 1, 0],
                           [0, 1, 0, 1, 0],
                           [0, 1, 1, 1, 0],
-                          [0, 0, 0, 0, 0]], dtype=np.int)
+                          [0, 0, 0, 0, 0]], dtype=int)
 
     g1 = geom.polygonizeMatrix(boxmatrix, shrink=None)
     assert np.isclose(g1.geom[0].Area(), 8.0)  # polygonizeMatrix: simple area
@@ -134,7 +134,7 @@ def test_polygonizeMatrix():
                               [2, 2, 0, 1, 0],
                               [0, 0, 0, 1, 1],
                               [1, 1, 0, 1, 0],
-                              [3, 1, 0, 0, 0]], dtype=np.int)
+                              [3, 1, 0, 0, 0]], dtype=int)
 
     g2 = geom.polygonizeMatrix(complexmatrix, shrink=None)
     assert np.isclose(g2.shape[0], 4)  # polygonizeMatrix: geometry count
@@ -163,7 +163,7 @@ def test_polygonizeMask():
                         [0, 1, 1, 1, 0],
                         [0, 1, 0, 1, 0],
                         [0, 1, 1, 1, 0],
-                        [0, 0, 0, 0, 0]], dtype=np.bool)
+                        [0, 0, 0, 0, 0]], dtype=bool)
 
     g1 = geom.polygonizeMask(boxmask, shrink=None)
     assert np.isclose(g1.Area(), 8.0)  # polygonizeMask: simple area
@@ -178,7 +178,7 @@ def test_polygonizeMask():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     g2 = geom.polygonizeMask(complexmask, shrink=None, flat=False)
     assert np.isclose(len(g2), 3)  # polygonizeMask: geometry count
@@ -229,7 +229,7 @@ def test_transform():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     polygons = geom.polygonizeMask(complexmask, bounds=(
         6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
