@@ -100,6 +100,20 @@ def test_point():
     assert p2.GetSpatialReference().IsSame(EPSG3035)
 
 
+def test_line():
+
+    # test input as list of tuples
+    l1 = geom.line(pointsInAachen4326, srs=4326)
+    assert np.isclose([(p[0], p[1]) for p in l1.GetPoints()], pointsInAachen4326).all()
+    assert l1.GetSpatialReference().IsSame(EPSG4326)
+
+    # test input as list of osgeo.ogr.Geometry point objects
+    points = [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326]
+    l2 = geom.line(points, srs=4326)
+    assert np.isclose([(p[0], p[1]) for p in l2.GetPoints()], pointsInAachen4326).all()
+    assert l2.GetSpatialReference().IsSame(EPSG4326)
+
+
 @pytest.mark.skip("No test implemented for: geom.empty")
 def test_empty(): assert False
 
