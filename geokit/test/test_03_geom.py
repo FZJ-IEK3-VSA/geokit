@@ -5,8 +5,6 @@ import pytest
 import pandas as pd
 
 # box
-
-
 def test_box():
     # fun func
     b1 = geom.box(0, 0, 5, 10, srs=EPSG3035)
@@ -99,30 +97,43 @@ def test_point():
     assert np.isclose(p2.GetY(), y)
     assert p2.GetSpatialReference().IsSame(EPSG3035)
 
-
-def test_line():
+@pytest.mark.parametrize(
+    "points_input, srs, output_length, output_bounds",
+    [
+        (
+            # test input as list of tuples
+            pointsInAachen4326,
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as nx2 np.array
+            np.array([[tup[0], tup[1]] for tup in pointsInAachen4326]),
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as list of osgeo.ogr.Geometry point objects
+            [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326],
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+    ]
+)
+def test_line(points_input, srs, output_length, output_bounds):
 
     # test input as list of tuples
-    l1 = geom.line(pointsInAachen4326, srs=4326)
-    assert np.isclose([(p[0], p[1]) for p in l1.GetPoints()], pointsInAachen4326).all()
-    assert l1.GetSpatialReference().IsSame(EPSG4326)
-
-    # test input as nx2 np.array
-    points2 = np.array([[tup[0], tup[1]] for tup in pointsInAachen4326])
-    l2 = geom.line(points2, srs=4326)
-    assert np.isclose([(p[0], p[1]) for p in l2.GetPoints()], pointsInAachen4326).all()
-    assert l2.GetSpatialReference().IsSame(EPSG4326)
-
-    # test input as list of osgeo.ogr.Geometry point objects
-    points3 = [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326]
-    l3 = geom.line(points3, srs=4326)
-    assert np.isclose([(p[0], p[1]) for p in l3.GetPoints()], pointsInAachen4326).all()
-    assert l3.GetSpatialReference().IsSame(EPSG4326)
-
+    l = geom.line(points_input, srs=srs)
+    
+    assert l.GetSpatialReference().IsSame(EPSG4326)
+    assert np.isclose(l.Length(), output_length)
+    assert np.isclose(l.GetEnvelope(), output_bounds).all()
 
 @pytest.mark.skip("No test implemented for: geom.empty")
 def test_empty(): assert False
-
 
 def test_convertWKT():
     g1 = geom.convertWKT(POLY, srs=EPSG4326)
