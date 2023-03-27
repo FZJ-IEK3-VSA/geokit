@@ -459,3 +459,99 @@ def test_warp():
                     output=result("warp6.tif"))
     v6 = raster.extractMatrix(d)
     assert np.isclose(v1, v6).all()
+
+@pytest.fixture()
+def sieve_ds():
+    
+    data_arr = np.array([[0,0,1,1,1,0,0],
+                         [1,0,0,0,0,0,1],
+                         [1,0,0,1,1,1,0],
+                         [0,0,0,1,0,1,0],
+                         [1,0,0,1,1,1,1],])
+    
+    
+    data_raster = raster.createRaster(
+                                    bounds=(0,0,7,5),
+                                    pixelHeight=1,
+                                    pixelWidth=1,
+                                    srs=3035,
+                                    data=data_arr,
+                                )
+
+    return data_raster
+
+@pytest.fixture()
+def sieve_mask():
+    mask_arr = np.array([[1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 0, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1]])
+        
+    mask_raster = raster.createRaster(
+                                        bounds=(0,0,7,5),
+                                        pixelHeight=1,
+                                        pixelWidth=1,
+                                        srs=3035,
+                                        data=mask_arr,
+                                        noData=0,
+                                    )
+    return mask_raster
+    
+@pytest.mark.parametrize("source, threshold, connectedness, mask, expected_output",
+                         
+                         [
+                            (   
+                                "sieve_ds",
+                                2,
+                                4,
+                                "none",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                         [1, 0, 0, 0, 0, 0, 0],
+                                         [1, 0, 0, 1, 1, 1, 0],
+                                         [0, 0, 0, 1, 1, 1, 0],
+                                         [0, 0, 0, 1, 1, 1, 1]],)
+                                
+                            ),
+                            
+                            (   
+                                "sieve_ds",
+                                2,
+                                8,
+                                "none",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                        [1, 0, 0, 0, 0, 0, 1],
+                                        [1, 0, 0, 1, 1, 1, 0],
+                                        [0, 0, 0, 1, 1, 1, 0],
+                                        [0, 0, 0, 1, 1, 1, 1]],)
+                            ),
+                            
+                            (   
+                                "sieve_ds",
+                                2,
+                                8,
+                                "sieve_mask",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                          [1, 0, 0, 0, 0, 0, 1],
+                                          [1, 0, 0, 1, 1, 1, 0],
+                                          [0, 0, 0, 1, 0, 1, 0],
+                                          [0, 0, 0, 1, 1, 1, 1]],)
+                            )
+                            
+                            
+                        ]
+)
+def test_sieve(source, threshold, connectedness, mask, expected_output, request):
+    
+    if mask == "none":
+        arr_out = raster.extractMatrix(raster.sieve(source=request.getfixturevalue(source), 
+                                                    threshold=threshold, 
+                                                    connectedness=connectedness, 
+                                                    mask=mask))
+    else:
+        arr_out = raster.extractMatrix(raster.sieve(source=request.getfixturevalue(source), 
+                                                    threshold=threshold, 
+                                                    connectedness=connectedness, 
+                                                    mask=request.getfixturevalue(mask)))
+
+    assert (arr_out == expected_output).all()

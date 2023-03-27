@@ -18,4 +18,5 @@ from geokit.core.raster import (GeoKitRasterError,
                                 drawRaster,
                                 warp,
                                 saveRasterAsTif,
+                                sieve,
                                 )
