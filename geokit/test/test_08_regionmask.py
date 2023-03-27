@@ -262,9 +262,9 @@ def test_RegionMask_applyMask():
                       * 3).reshape((rm.mask.shape[0] * 3, rm.mask.shape[1] * 3))
 
     # test applying
-    data1 = rm.applyMask(data1)
-    assert data1.sum() == 39296070
-    assert np.isclose(data1.std(), 3020.0893432)
+    data1 = rm.applyMask(data1, noData=np.nan)
+    assert np.nansum(data1) == 39296070
+    assert np.isclose(np.nanstd(data1), 2501.063544487093)
 
     data2 = rm.applyMask(data2.astype('int64'))
     assert data2.sum() == 3183264630

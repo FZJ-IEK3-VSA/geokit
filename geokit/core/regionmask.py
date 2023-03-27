@@ -595,7 +595,7 @@ class RegionMask(object):
 
         # set matrix datatype to float if float noData value (like e.g. nan) is passed
         if isinstance(noData, float):
-            mat=mat.astype(np.float)
+            mat=mat.astype(np.float64)
 
         # Get size
         Y, X = mat.shape
