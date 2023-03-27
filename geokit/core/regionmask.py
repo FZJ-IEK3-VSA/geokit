@@ -179,7 +179,7 @@ class RegionMask(object):
                 raise GeoKitRegionMaskError("geom does not have an srs")
 
             if not gSRS.IsSame(self.srs):
-                GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
+                self._geometry = GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
         else:
             self._geometry = None
 
@@ -270,8 +270,10 @@ class RegionMask(object):
         # make sure we have a geometry with an srs
         if (isinstance(geom, str)):
             geom = GEOM.convertWKT(geom, srs)
-
-        geom = geom.Clone()  # clone to make sure we're free of outside dependencies
+        
+        # clone to make sure we're free of outside dependencies
+        # convert to regionmask srs to ensure that rm.geometry.GetSpatialReference() is equal to rm.srs
+        geom = GEOM.transform(geom.Clone(), toSRS=srs)  
 
         # set extent (if not given)
         if extent is None:
@@ -454,7 +456,7 @@ class RegionMask(object):
 
         self._mask = None
         self._mask = self.rasterize(self.vectorPath, applyMask=False,
-                                    **kwargs).astype(np.bool)
+                                    **kwargs).astype(np.bool_)
         self.height, self.width = self._mask.shape
 
     @property
@@ -592,6 +594,11 @@ class RegionMask(object):
         """
         if (noData is None):
             noData = 0
+
+        # set matrix datatype to float if float noData value (like e.g. nan) is passed
+        if isinstance(noData, float):
+            mat=mat.astype(np.float64)
+
         # Get size
         Y, X = mat.shape
 

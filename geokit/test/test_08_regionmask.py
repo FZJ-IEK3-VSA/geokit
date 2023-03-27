@@ -73,7 +73,7 @@ def test_RegionMask_fromGeom():
     # fromGeom with wkt
     rm1 = RegionMask.fromGeom(geom.convertWKT(
         POLY, srs='latlon'), pixelRes=1000)
-    assert (rm1.extent.xXyY == (4329000.0, 4771000.0, 835000.0, 1682000.0))
+    assert (rm1.extent.xXyY == (4330000.0, 4728000.0, 835000.0, 1682000.0))
     assert (rm1.extent.srs.IsSame(EPSG3035))
     assert rm1.mask.sum() == 79274
 
@@ -262,9 +262,9 @@ def test_RegionMask_applyMask():
                       * 3).reshape((rm.mask.shape[0] * 3, rm.mask.shape[1] * 3))
 
     # test applying
-    data1 = rm.applyMask(data1)
-    assert data1.sum() == 39296070
-    assert np.isclose(data1.std(), 3020.0893432)
+    data1 = rm.applyMask(data1, noData=np.nan)
+    assert np.nansum(data1) == 39296070
+    assert np.isclose(np.nanstd(data1), 2501.063544487093)
 
     data2 = rm.applyMask(data2.astype('int64'))
     assert data2.sum() == 3183264630
@@ -441,7 +441,7 @@ def test_RegionMask_warp():
     assert warped_1.dtype == np.uint8
     assert warped_1.shape == rm_3035.mask.shape
     assert np.isclose(warped_1.sum(), 88128)
-    assert np.isclose(warped_1.std(), 9.52214123991)
+    assert np.isclose(warped_1.std(), 9.400516136589552)
     #rm_3035.createRaster(data=warped_1, output=result("regionMask_warp_1.tif"), overwrite=True)
 
     # basic warp Raster (FLIP CHECK!)
@@ -450,7 +450,7 @@ def test_RegionMask_warp():
     assert warped_1f.dtype == np.uint8
     assert warped_1f.shape == rm_3035.mask.shape
     assert np.isclose(warped_1f.sum(), 88128)
-    assert np.isclose(warped_1f.std(), 9.52214123991)
+    assert np.isclose(warped_1f.std(), 9.400516136589552)
     #rm_3035.createRaster(data=warped_1f, output=result("regionMask_warp_1f.tif"), overwrite=True)
 
     assert (warped_1 == warped_1f).all()

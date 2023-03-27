@@ -1,13 +1,13 @@
 import os
 import numpy as np
-from osgeo import osr, gdal
+from osgeo import osr, gdal, ogr
 import warnings
 from collections import namedtuple
 import smopy
 from typing import Iterable
 
 from . import util as UTIL
-
+from . import geom as GEOM
 
 class GeoKitSRSError(UTIL.GeoKitError):
     pass
@@ -116,23 +116,44 @@ EPSG4326 = loadSRS(4326)
 EPSG3857 = loadSRS(3857)
 
 
-def centeredLAEA(lon, lat):
+def centeredLAEA(lon=None, lat=None, geom=None):
     """
-    Load a Lambert-Azimuthal-Equal_Area spatial reference system (SRS) centered on a given set of latitude and longitude coordinates.
+    Load a Lambert-Azimuthal-Equal_Area spatial reference system (SRS) centered
+    on a given set of latitude and longitude coordinates. Alternatively, a geom
+    can be passed to center the LAEA on.
 
     Parameters:
     -----------
     lon : float
-        The longitude of the projection's center
+        The longitude of the projection's center. Required if no geom is given.
 
     lat : float
-        The latitude of the projection's center
+        The latitude of the projection's center. Required if no geom is given.
+
+    geom: osgeo.ogr.Geometry
+        The region shape to center the LAEA in. If given, lat and lon must not 
+        be given, instead they will be defined automatically as the coordinates
+        of the region centroid.
 
     Returns:
     --------
     osr.SpatialReference
 
     """
+    if geom is None:
+        assert isinstance(lat, float) and isinstance(lon, float), "If geom is not passed, lat and lon must be given as float values."
+    else:
+        assert isinstance(geom, ogr.Geometry), "geom must be given as osgeo.ogr.Geometry class object if not None."
+        assert lat is None and lon is None, "If geom is given, lat and lon must not be given."
+    
+    # check if lat/lon can be used or if it must be extracted from geom first
+    if not geom is None:
+        # transform to EPSG:4326 in case it not already is lat/lon projection
+        geom = GEOM.transform(geom, toSRS=4326)
+        # extract lat/lon centroid coordinates to center LAEA upon
+        lon = geom.Centroid().GetX()
+        lat = geom.Centroid().GetY()
+
     srs = osr.SpatialReference()
     srs.ImportFromWkt('PROJCS["unnamed",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(lat, lon))
     
