@@ -697,7 +697,7 @@ class RegionMask(object):
 
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True,
                        noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None,
-                       warpDType=None, prunePatchSize=0, **kwargs):
+                       warpDType=None, prunePatchSize=0, threshold=0.5, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -838,6 +838,10 @@ class RegionMask(object):
             Note: This is applied to the geoms after buffer application and can
             deviate from the patch size after final rasterization.
 
+        threshold: float; optional
+            The cell value ABOVE which cells count as positively indicated, 
+            relevant for partial overlaps with buffer method 'area'. Defaults to 0.5.
+
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
 
@@ -939,7 +943,12 @@ class RegionMask(object):
             if bufferMethod == 'contour':
                 geoms = self.contoursFromMask(final)
             elif bufferMethod == 'area':
-                geoms = self.polygonizeMask(final > 0.5, flat=False)
+                # Check for results
+                if not (final > threshold).any(): 
+                    # no cells > threshold exist that would be buffered, so return empty
+                    return self._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape,
+                                            applyMask=applyMask, noData=noData)
+                geoms = self.polygonizeMask(final > threshold, flat=False)
 
             if preBufferSimplification is not None:
                 geoms = [g.Simplify(preBufferSimplification) for g in geoms]

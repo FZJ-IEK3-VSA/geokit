@@ -6,6 +6,7 @@ import warnings
 from collections import namedtuple, defaultdict, OrderedDict
 from collections.abc import Iterable
 import pandas as pd
+from binascii import hexlify
 
 from . import util as UTIL
 from . import srs as SRS
@@ -516,7 +517,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
 
 ####################################################################
 # Create a vector
-def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, overwrite=True):
+def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, checkAllGeoms=False, overwrite=True):
     """
     Create a vector on disk from geometries or a DataFrame with 'geom' column
 
@@ -562,6 +563,11 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
         * The ogrType() function can be used to map typical python and numpy types
           to appropriate ogr types
 
+    checkAllGeoms : bool, optional
+        If True, all geoms will be asserted in object type and exact srs. Else, only
+        the first geom in the geom column/iterable will be checked fpr performance reasons.
+        By default False.
+
     overwrite : bool; optional
         Determines whether the prexisting files should be overwritten
         * Only used when output is not None
@@ -605,10 +611,12 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ov
         raise GeoKitVectorError("Empty geometry list given")
 
     # Test if the first geometry is an ogr-Geometry type
-    if(isinstance(geoms[0], ogr.Geometry)):
+    if isinstance(geoms[0], ogr.Geometry):
         #  (Assume all geometries in the array have the same type)
         geomSRS = geoms[0].GetSpatialReference()
-
+        if checkAllGeoms:
+            # check if all other geoms have the same SRS
+            assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
         # Set up some variables for the upcoming loop
         doTransform = False
         setSRS = False
@@ -881,9 +889,6 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=''):
         else:
             pass  # We already wrote to the file!
         return None
-
-####################################################################
-# mutuate a vector
 
 
 def mutateVector(source, processor=None, srs=None, geom=None, where=None, fieldDef=None, output=None, keepAttributes=True, _slim=False, **kwargs):
