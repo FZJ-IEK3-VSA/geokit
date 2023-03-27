@@ -711,7 +711,12 @@ def rasterInfo(sourceDS):
     sourceDS = loadRaster(sourceDS)
 
     # get srs
-    srs = SRS.loadSRS(sourceDS.GetProjectionRef())
+    if sourceDS.GetProjectionRef() == '':
+        # return None directly if raster has no srs
+        srs=None
+    else:
+        # generate an srs object if we have srs information
+        srs = SRS.loadSRS(sourceDS.GetProjectionRef())
     output['srs'] = srs
 
     # get extent and resolution

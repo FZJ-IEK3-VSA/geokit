@@ -1,6 +1,6 @@
 from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, AACHEN_SHAPE_PATH, osr
 from geokit import srs, vector
-
+import pytest
 
 def test_xyTransform():
 
@@ -34,6 +34,10 @@ def test_loadSRS():
 
     # Are they the same?
     assert s1.IsSame(s2)
+
+    # test an invalid srs, must raise error
+    with pytest.raises(AssertionError):
+        s3 = srs.loadSRS(1000)
 
 
 def test_centeredLAEA():
