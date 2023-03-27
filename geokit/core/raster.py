@@ -2111,7 +2111,7 @@ def sieve(source, threshold=100, connectedness=8, mask='none', quiet_flag=False,
     elif mask == 'none': 
         maskband = None 
     else: 
-        mask_ds = gdal.Open( mask ) 
+        mask_ds = loadRaster( mask )
         maskband = mask_ds.GetRasterBand(1).GetMaskBand() 
 
     ### Create output file if one is specified.
