@@ -328,8 +328,8 @@ def line(points, srs=4326):
 
     Parameters:
     -----------
-    Points : [(x,y), ] or Nx2 numpy.ndarray
-        The point defining the line
+    Points : [(x,y), ], Nx2 numpy.ndarray or list of osgeo.ogr.Geometry points.
+        The points defining the line
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the line to create
@@ -345,6 +345,9 @@ def line(points, srs=4326):
         g.AssignSpatialReference(SRS.loadSRS(srs))
 
     # Make the line
+    if all([isinstance(p, ogr.Geometry) for p in points]):
+        # convert points into a list of coordinate tuples in correct srs
+        points=[(transform(p, toSRS=srs).GetX(), transform(p, toSRS=srs).GetY()) for p in points]
     [g.AddPoint(x, y) for x, y in points]
     # g.AddGeometry(otr)
 

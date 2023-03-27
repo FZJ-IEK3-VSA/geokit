@@ -107,11 +107,17 @@ def test_line():
     assert np.isclose([(p[0], p[1]) for p in l1.GetPoints()], pointsInAachen4326).all()
     assert l1.GetSpatialReference().IsSame(EPSG4326)
 
-    # test input as list of osgeo.ogr.Geometry point objects
-    points = [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326]
-    l2 = geom.line(points, srs=4326)
+    # test input as nx2 np.array
+    points2 = np.array([[tup[0], tup[1]] for tup in pointsInAachen4326])
+    l2 = geom.line(points2, srs=4326)
     assert np.isclose([(p[0], p[1]) for p in l2.GetPoints()], pointsInAachen4326).all()
     assert l2.GetSpatialReference().IsSame(EPSG4326)
+
+    # test input as list of osgeo.ogr.Geometry point objects
+    points3 = [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326]
+    l3 = geom.line(points3, srs=4326)
+    assert np.isclose([(p[0], p[1]) for p in l3.GetPoints()], pointsInAachen4326).all()
+    assert l3.GetSpatialReference().IsSame(EPSG4326)
 
 
 @pytest.mark.skip("No test implemented for: geom.empty")
