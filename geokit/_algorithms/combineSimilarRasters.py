@@ -1,10 +1,38 @@
 from geokit.core.regionmask import *
+from geokit.core.util import GeoKitError
+from geokit.raster import rasterInfo, createRaster, extractMatrix
 from os.path import basename
+import os
+import sys
 from json import dumps
+from glob import glob
+from osgeo import gdal
+from warnings import warn
 
 
-def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
-    """Combines several similar rasters into one"""
+def combineSimilarRasters(datasets, output=None, combiningFunc=None, verbose=True, updateMeta=False, **kwargs):
+    """
+    Combines several similar raster files into one single raster file.
+
+    Parameters
+    ----------
+    datasets : string or list
+        glob string path describing datasets to combine, alternatively list of gdal.Datasets or iterable object with paths.
+    output : string, optional
+        Filepath to output raster file. If it is an existing file, datasets will be added to output. Recommended to create a new file everytime though. If None, no output dataset will be loaded or created on disk and output dataset kept in memory only, by default None
+    combiningFunc : [type], optional
+        Allows customized functions to combine matrices, by default None
+    verbose : bool, optional
+        If True, additional status print stamenets will be issued, by default True
+    updateMeta : bool, optional
+        If True, metadata of output dataset will be a combination of all input rasters, by default False
+
+    Returns:
+    ----------
+    output dataset: osgeo.gdal.Dataset
+        Raster file containing the combined matrices of all input datasets.
+    """ 
+
 
     # Ensure we have a list of raster datasets
     if isinstance(datasets, str):
@@ -35,11 +63,32 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
     dataYMin = min([i.yMin for i in infoSet])
     dataYMax = max([i.yMax for i in infoSet])
     
-    # Maybe create a new master dataset
-    if not (os.path.isfile(master)): # we will need to create a master source
+    # Maybe create a new output dataset
+    if isinstance(output, str):
+        if not os.path.isfile(output): # we will need to create a output source
+            
+            # Determine no data value
+            noDataValue = kwargs.pop("noData", None)
+    
+            if noDataValue is None:
+                noDataSet = set([i.noData for i in infoSet])
+                if len(noDataSet)==1: noDataValue = noDataSet.pop()
+                
+            # Create Raster
+            dx = infoSet[0].dx
+            dy = infoSet[0].dy
+            dtype = infoSet[0].dtype
+            srs = infoSet[0].srs
+            
+            createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=output, 
+                         dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
+                         srs=srs, fill=noDataValue, **kwargs)
+        else:
+            warn('WARNING: Overwriting existing output file. Sometimes writing to an non empty output fails. Recommended to write to a non existing location instead and include maser into datasets.')
+    elif output is None:
         # Determine no data value
         noDataValue = kwargs.pop("noData", None)
-
+  
         if noDataValue is None:
             noDataSet = set([i.noData for i in infoSet])
             if len(noDataSet)==1: noDataValue = noDataSet.pop()
@@ -50,32 +99,35 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         dtype = infoSet[0].dtype
         srs = infoSet[0].srs
         
-        createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), output=master, 
+        outputDS = createRaster(bounds=(dataXMin, dataYMin, dataXMax, dataYMax), 
                      dtype=dtype, pixelWidth=dx, pixelHeight=dy, noData=noDataValue, 
                      srs=srs, fill=noDataValue, **kwargs)
+    else:
+        sys.exist("output must be None or a str formatted file path to an existing output file or a file to be created.")
 
-    # Open master dataset and check parameters
-    masterDS = gdal.Open(master, gdal.GA_Update)
-    mInfo = rasterInfo(masterDS)
+    # Open output dataset if required and check parameters
+    if not output is None:
+        outputDS = gdal.Open(output, gdal.GA_Update)
+    mInfo = rasterInfo(outputDS)
     mExtent = Extent(mInfo.bounds, srs=mInfo.srs)
 
     if not mInfo.srs.IsSame(infoSet[0].srs):
-        raise GeoKitError("SRS's do not match master dataset")
+        raise GeoKitError("SRS's do not match output dataset")
     if not (mInfo.dx == infoSet[0].dx and mInfo.dy == infoSet[0].dy) :
-        raise GeoKitError("Resolution's do not match master dataset")
+        raise GeoKitError("Resolution's do not match output dataset")
     if not (mInfo.dtype == infoSet[0].dtype) :
-        raise GeoKitError("Datatype's do not match master dataset")
+        raise GeoKitError("Datatype's do not match output dataset")
     
-    masterBand = masterDS.GetRasterBand(1)
+    outputBand = outputDS.GetRasterBand(1)
     
     # Make a meta container
-    if updateMeta: meta = masterDS.GetMetadata_Dict()
+    if updateMeta: meta = outputDS.GetMetadata_Dict()
 
-    # Add each dataset to master
+    # Add each dataset to output
     for i in range(len(datasets)):
         if verbose: 
-            if isinstance(datasets[i], str): print(i, basename(datasets[i]))
-            else: print(i)
+            if isinstance(datasets[i], str): print(f"{i+1}/{len(datasets)} ({basename(datasets[i])})")
+            else: print(f"{i+1}/{len(datasets)}")
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 
@@ -87,8 +139,8 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         # Calculate starting indicies
         idx = mExtent.findWithin(dExtent, (mInfo.dx, mInfo.dy), yAtTop=mInfo.yAtTop)
 
-        # Get master data
-        mMatrix = masterBand.ReadAsArray(xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin)
+        # Get output data
+        mMatrix = outputBand.ReadAsArray(xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin)
         if mMatrix is None: raise GeoKitError("mMatrix is None")
 
         # create selector
@@ -101,19 +153,18 @@ def combineSimilarRasters(master, datasets, combiningFunc=None, verbose=True, up
         else: 
             writeMatrix = dMatrix
 
-        # Add to master
-        masterBand.WriteArray(writeMatrix, idx.xStart, idx.yStart)
-        masterBand.FlushCache()
+        # Add to output
+        outputBand.WriteArray(writeMatrix, idx.xStart, idx.yStart)
+        outputBand.FlushCache()
 
         # update metaData, maybe
         if updateMeta: meta.update(infoSet[i].meta)
     
-    if updateMeta: masterDS.SetMetadata( meta  )
+    if updateMeta: outputDS.SetMetadata( meta  )
 
     # Write final raster
-    masterDS.FlushCache()
-    masterBand.ComputeRasterMinMax(0)
-    masterBand.ComputeBandStats(0)
+    outputDS.FlushCache()
+    outputBand.ComputeRasterMinMax(0)
+    outputBand.ComputeBandStats(0)
 
-    return
-
+    return outputDS

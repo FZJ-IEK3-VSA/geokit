@@ -5,8 +5,6 @@ import pytest
 import pandas as pd
 
 # box
-
-
 def test_box():
     # fun func
     b1 = geom.box(0, 0, 5, 10, srs=EPSG3035)
@@ -99,10 +97,43 @@ def test_point():
     assert np.isclose(p2.GetY(), y)
     assert p2.GetSpatialReference().IsSame(EPSG3035)
 
+@pytest.mark.parametrize(
+    "points_input, srs, output_length, output_bounds",
+    [
+        (
+            # test input as list of tuples
+            pointsInAachen4326,
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as nx2 np.array
+            np.array([[tup[0], tup[1]] for tup in pointsInAachen4326]),
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as list of osgeo.ogr.Geometry point objects
+            [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326],
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+    ]
+)
+def test_line(points_input, srs, output_length, output_bounds):
+
+    # test input as list of tuples
+    l = geom.line(points_input, srs=srs)
+    
+    assert l.GetSpatialReference().IsSame(EPSG4326)
+    assert np.isclose(l.Length(), output_length)
+    assert np.isclose(l.GetEnvelope(), output_bounds).all()
 
 @pytest.mark.skip("No test implemented for: geom.empty")
 def test_empty(): assert False
-
 
 def test_convertWKT():
     g1 = geom.convertWKT(POLY, srs=EPSG4326)
@@ -116,7 +147,7 @@ def test_polygonizeMatrix():
                           [0, 1, 1, 1, 0],
                           [0, 1, 0, 1, 0],
                           [0, 1, 1, 1, 0],
-                          [0, 0, 0, 0, 0]], dtype=np.int)
+                          [0, 0, 0, 0, 0]], dtype=int)
 
     g1 = geom.polygonizeMatrix(boxmatrix, shrink=None)
     assert np.isclose(g1.geom[0].Area(), 8.0)  # polygonizeMatrix: simple area
@@ -134,7 +165,7 @@ def test_polygonizeMatrix():
                               [2, 2, 0, 1, 0],
                               [0, 0, 0, 1, 1],
                               [1, 1, 0, 1, 0],
-                              [3, 1, 0, 0, 0]], dtype=np.int)
+                              [3, 1, 0, 0, 0]], dtype=int)
 
     g2 = geom.polygonizeMatrix(complexmatrix, shrink=None)
     assert np.isclose(g2.shape[0], 4)  # polygonizeMatrix: geometry count
@@ -163,7 +194,7 @@ def test_polygonizeMask():
                         [0, 1, 1, 1, 0],
                         [0, 1, 0, 1, 0],
                         [0, 1, 1, 1, 0],
-                        [0, 0, 0, 0, 0]], dtype=np.bool)
+                        [0, 0, 0, 0, 0]], dtype=bool)
 
     g1 = geom.polygonizeMask(boxmask, shrink=None)
     assert np.isclose(g1.Area(), 8.0)  # polygonizeMask: simple area
@@ -178,7 +209,7 @@ def test_polygonizeMask():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     g2 = geom.polygonizeMask(complexmask, shrink=None, flat=False)
     assert np.isclose(len(g2), 3)  # polygonizeMask: geometry count
@@ -229,7 +260,7 @@ def test_transform():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     polygons = geom.polygonizeMask(complexmask, bounds=(
         6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)

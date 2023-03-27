@@ -1,5 +1,5 @@
-from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, osr
-from geokit import srs
+from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, AACHEN_SHAPE_PATH, osr
+from geokit import srs, vector
 
 
 def test_xyTransform():
@@ -37,8 +37,13 @@ def test_loadSRS():
 
 
 def test_centeredLAEA():
+    # first test procedure using lat and lon coordinates
     s1 = srs.centeredLAEA(6.8, 50.0775)
     assert isinstance(s1, osr.SpatialReference)
+    # then test procedure using a geom
+    Aachen_geom = vector.extractFeatures(AACHEN_SHAPE_PATH).geom[0]
+    s2 = srs.centeredLAEA(geom=Aachen_geom)
+    assert isinstance(s2, osr.SpatialReference)
 
 def test_tileIndexAt():
     tile = srs.tileIndexAt(6.083, 50.775, zoom=8, srs=srs.EPSG4326)

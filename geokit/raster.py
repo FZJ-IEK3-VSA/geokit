@@ -17,5 +17,6 @@ from geokit.core.raster import (GeoKitRasterError,
                                 drawSmopyMap,
                                 drawRaster,
                                 warp,
-                                sieve
+                                saveRasterAsTif,
+                                sieve,
                                 )

@@ -5,14 +5,17 @@ stages:
 
 test:
   stage: test
-  tags: 
-    - linux
+  # tags: 
+  #   - linux
 
-  script: 
+  script:
+    # Install Mamba for faster installation
     - conda install mamba -c conda-forge
-    - mamba env update -n geokit --file=requirements.yml
-    - mamba env update -n geokit --file=requirements-dev.yml
-    - mamba info --envs
+    # Install dependecies from environment file
+    - mamba env create -n geokit --file=requirements-dev.yml
+    - conda info --envs
     - source activate geokit
-    - python -m pip install -e .
+    # Install geokit with no --no-deps flag to create a reproducible environment
+    - python -m pip install -e . --no-deps
+    # Test Environment
     - python -m pytest --cov=geokit geokit/test/

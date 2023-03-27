@@ -202,6 +202,10 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
             else:
                 raise GeoKitRasterError(
                     "Output file already exists: %s" % output)
+    
+        #check if writeable:
+        if not os.access(os.path.dirname(output), os.W_OK):
+            raise PermissionError(f"Writing permission error for path: {os.path.dirname(output)}")
 
     # Ensure bounds is okay
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
@@ -239,7 +243,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
                                getattr(gdal, dtype), opts)
 
     if(raster is None):
-        raise GeoKitRasterError("Failed to create raster")
+        raise GeoKitRasterError(f"Failed to create raster")
 
     # Do the rest in a "try" statement so that a failure wont bind the source
     try:
@@ -305,7 +309,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, **kwargs):
+def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -321,6 +325,9 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
 
     if not isinstance(source, RasterInfo):
         raise GeoKitRasterError("Could not understand source")
+        
+    if copyMetadata and not metadata is None:
+        raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
     bounds = kwargs.pop("bounds", source.bounds)
     pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
@@ -332,11 +339,36 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
     if copyMetadata:
         meta = kwargs.pop("meta", source.meta)
     else:
-        meta = None
+        meta = metadata
 
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
+def saveRasterAsTif(source, output, **kwargs):
+    
+    '''Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
+
+    Parameters
+    ----------
+    source : osgeo.gdal.Dataset 
+
+    output : str
+        A path to an output file
+
+    Returns
+    -------
+    str
+        Path to the saved file on disk.
+    '''
+    # assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
+    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specified, use *.tif or *.tiff'
+
+    sourceInfo = rasterInfo(source)
+    data = extractMatrix(source)
+
+    return createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
+                          noData=sourceInfo.noData, dtype=sourceInfo.dtype, srs=sourceInfo.srs, 
+                          data=data, output=output, **kwargs)
 
 ####################################################################
 # extract the raster as a matrix
@@ -464,7 +496,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     # Correct 'nodata' values
     if autocorrect:
         noData = sourceBand.GetNoDataValue()
-        data = data.astype(np.float)
+        data = data.astype(np.float64)
         data[data == noData] = np.nan
 
     # make sure we are returing data in the 'flipped-y' orientation
@@ -862,13 +894,13 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     yStarts = yIndexes - winRange
     window = 2 * winRange + 1
 
-    inBounds = xStarts > 0
-    inBounds = inBounds & (yStarts > 0)
-    inBounds = inBounds & (xStarts + window < info.xWinSize)
-    inBounds = inBounds & (yStarts + window < info.yWinSize)
+    inBounds = xStarts >= 0
+    inBounds = inBounds & (yStarts >= 0)
+    inBounds = inBounds & (xStarts + window <= info.xWinSize)
+    inBounds = inBounds & (yStarts + window <= info.yWinSize)
 
     if (~inBounds).any():
-        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
+        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
         warnings.warn(msg, UserWarning)
 
     # Read values
@@ -877,7 +909,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     for xi, yi, ib in zip(xStarts, yStarts, inBounds):
         if not ib:
-            data = np.empty((window, window))
+            data = np.ones((window, window)) * np.nan
         else:
             # Open and read from raster
             data = band.ReadAsArray(
@@ -909,6 +941,11 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
         # Append to values
         values.append(data)
+
+        #check if not inbounds, then replace values with nan
+        for i in range(len(values)):
+            if not inBounds[i]:
+                values[i] = np.nan * np.ones_like(values[i])
 
     # Done!
     if asSingle:  # A single point was given, so return a single result
