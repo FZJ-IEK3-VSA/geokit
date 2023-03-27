@@ -492,7 +492,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     # Correct 'nodata' values
     if autocorrect:
         noData = sourceBand.GetNoDataValue()
-        data = data.astype(np.float)
+        data = data.astype(np.float64)
         data[data == noData] = np.nan
 
     # make sure we are returing data in the 'flipped-y' orientation
