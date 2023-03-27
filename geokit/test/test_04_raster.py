@@ -459,3 +459,58 @@ def test_warp():
                     output=result("warp6.tif"))
     v6 = raster.extractMatrix(d)
     assert np.isclose(v1, v6).all()
+
+def test_sieve():
+    # create an input test raster from a given array
+    mx_in = np.array([
+        [1,1,1,1,1,1,1,1,2,1,1,1],
+        [1,1,0,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,0,1,1,1,1,2,1],
+        [1,1,0,0,0,1,1,1,1,1,2,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,1,1,1,0,1,1,2,1,1,1],
+        [2,2,0,1,1,1,0,1,1,1,0,0],
+        [0,2,2,1,1,1,1,1,1,1,0,1],
+    ])
+    # define a true data matrix for connectedness = 4
+    mx_check4 = np.array([
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,2,1],
+        [1,1,0,0,0,1,1,1,1,1,2,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,1,1,1,1,1,1,1,1,1,1],
+        [2,2,1,1,1,1,1,1,1,1,0,0],
+        [2,2,2,1,1,1,1,1,1,1,0,0],
+    ])
+    # similar matrix for connectedness = 8
+    mx_check8 = np.array([ 
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,0,1,1,1,1,2,1],
+        [1,1,0,0,0,1,1,1,1,1,2,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,1,1,1,0,1,1,1,1,1,1],
+        [2,2,1,1,1,1,0,1,1,1,0,0],
+        [2,2,2,1,1,1,1,1,1,1,0,0],
+    ])
+
+    # now create a raster based on input np.array
+    rstr = raster.createRaster(
+        bounds=(0,0,1200,800),
+        pixelWidth=100,
+        pixelHeight=100,
+        srs=3035,
+        data=mx_in,
+    )
+    
+    # sieve the raster with connectedness = 4 and extract matrix/array
+    mx_out4 = raster.extractMatrix(raster.sieve(source=rstr, threshold=2, connectedness=4))
+    # ensure result matches check data
+    assert (mx_out4==mx_check4).all(), "connectedness = 4 failed"
+
+    # repeat the same process for connectedness = 8 (diagonal cell connection)
+    mx_out8 = raster.extractMatrix(raster.sieve(source=rstr, threshold=2, connectedness=8))
+    # assert results are as expected
+    assert (mx_out8==mx_check8).all(), "mx_out8 failed"
+    
