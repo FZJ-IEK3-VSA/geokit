@@ -328,8 +328,8 @@ def line(points, srs=4326):
 
     Parameters:
     -----------
-    Points : [(x,y), ] or Nx2 numpy.ndarray
-        The point defining the line
+    Points : [(x,y), ], Nx2 numpy.ndarray or list of osgeo.ogr.Geometry points.
+        The points defining the line
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the line to create
@@ -342,9 +342,12 @@ def line(points, srs=4326):
     # Make the complete geometry
     g = ogr.Geometry(ogr.wkbLineString)
     if not srs is None:
-        g.AssignSpatialReference(srs)
+        g.AssignSpatialReference(SRS.loadSRS(srs))
 
     # Make the line
+    if all([isinstance(p, ogr.Geometry) for p in points]):
+        # convert points into a list of coordinate tuples in correct srs
+        points=[(transform(p, toSRS=srs).GetX(), transform(p, toSRS=srs).GetY()) for p in points]
     [g.AddPoint(x, y) for x, y in points]
     # g.AddGeometry(otr)
 
@@ -532,7 +535,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
         matrix = np.array(matrix)
-    if matrix.dtype == np.bool or matrix.dtype == np.uint8:
+    if matrix.dtype == np.bool_ or matrix.dtype == np.uint8:
         dtype = "GDT_Byte"
     elif np.issubdtype(matrix.dtype, np.integer):
         dtype = "GDT_Int32"
@@ -708,7 +711,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
 
-    if not (mask.dtype == np.bool or mask.dtype == np.uint8):
+    if not (mask.dtype == np.bool_ or mask.dtype == np.uint8):
         raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
 
     # Do vectorization
