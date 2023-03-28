@@ -318,11 +318,13 @@ def test_drawGeoms():
     r = geom.drawGeoms(SUB_GEOMS, fc='r', srs=3035)
     plt.savefig(result("drawGeoms-5.png"), dpi=100)
 
-    # Draw from a dataframe
+    # Draw from a dataframe, once without and once with SRS adaptation
     df = pd.DataFrame(dict(geom=SUB_GEOMS, hats=[1, 2, 3]))
 
-    r = geom.drawGeoms(df, srs=3035)
+    r = geom.drawGeoms(df)
     plt.savefig(result("drawGeoms-6.png"), dpi=100)
+    r = geom.drawGeoms(df, srs=3035)
+    plt.savefig(result("drawGeoms-6b.png"), dpi=100)
 
     # Set individual mpl args
     df["MPL:hatch"] = ["//", "+", None]
