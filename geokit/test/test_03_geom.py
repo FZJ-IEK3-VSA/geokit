@@ -301,6 +301,7 @@ def test_drawGeoms():
     # Draw single polygon
     r = geom.drawGeoms(SUB_GEOM)
     plt.savefig(result("drawGeoms-1.png"), dpi=100)
+    assert SUB_GEOM.GetSpatialReference().IsSame(EPSG4326)
 
     # Draw single linestring
     r = geom.drawGeoms(SUB_GEOM.Boundary())
@@ -317,12 +318,16 @@ def test_drawGeoms():
     # Change projection systems
     r = geom.drawGeoms(SUB_GEOMS, fc='r', srs=3035)
     plt.savefig(result("drawGeoms-5.png"), dpi=100)
-
-    # Draw from a dataframe
+    assert SUB_GEOMS[0].GetSpatialReference().IsSame(EPSG4326)
+    
+    # Draw from a dataframe, once without and once with SRS adaptation
     df = pd.DataFrame(dict(geom=SUB_GEOMS, hats=[1, 2, 3]))
 
-    r = geom.drawGeoms(df, srs=3035)
+    r = geom.drawGeoms(df)
     plt.savefig(result("drawGeoms-6.png"), dpi=100)
+    r = geom.drawGeoms(df, srs=3035)
+    plt.savefig(result("drawGeoms-6b.png"), dpi=100)
+    assert df.geom[0].GetSpatialReference().IsSame(EPSG4326)
 
     # Set individual mpl args
     df["MPL:hatch"] = ["//", "+", None]

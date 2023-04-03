@@ -1185,6 +1185,8 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
                 continue  # Skip it if we don't know it...
             if not gsrs.IsSame(srs):
                 transformed_geoms.append(transform(geoms[gi], srs))
+            else:
+                transformed_geoms.append(geoms[gi])
         geoms = np.asarray(transformed_geoms)
 
     # Apply simplifications if required
