@@ -13,55 +13,7 @@ class GeoKitSRSError(UTIL.GeoKitError):
     pass
 
 
-######################################################################################
-# Common SRS library
-
-# Some other srs shortcuts
-
-
-class _SRSCOMMON:
-    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
-
-    * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
-        1: SRSCOMMON.<srs>
-        2: SRSCOMMON["<srs>"]
-    """
-    # basic latitude and longitude
-    _latlon = osr.SpatialReference()
-    _latlon.ImportFromEPSG(4326)
-
-    @property
-    def latlon(self):
-        """Basic SRS for unprojected latitude and longitude coordinates
-
-        Units: Degrees"""
-        return self._latlon
-    # basic latitude and longitude
-    _europe_m = osr.SpatialReference()
-    _europe_m.ImportFromEPSG(3035)
-
-    @property
-    def europe_m(self):
-        """Equal-Area projection centered around Europe.
-
-        * Good for relational operations within Europe
-
-        Units: Meters"""
-        return self._europe_m
-
-    # basic getter
-    def __getitem__(self, name):
-        if not hasattr(self, name):
-            raise ValueError("SRS \"%s\" not found" % name)
-        return getattr(self, "_"+name)
-
-
-# Initialize
-SRSCOMMON = _SRSCOMMON()
-
-################################################
 # Basic loader
-
 
 def loadSRS(source):
     """
@@ -119,7 +71,7 @@ EPSG4326 = loadSRS(4326)
 EPSG3857 = loadSRS(3857)
 
 
-def centeredLAEA(lon=None, lat=None, geom=None):
+def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
     """
     Load a Lambert-Azimuthal-Equal_Area spatial reference system (SRS) centered
     on a given set of latitude and longitude coordinates. Alternatively, a geom
@@ -158,7 +110,7 @@ def centeredLAEA(lon=None, lat=None, geom=None):
         lat = geom.Centroid().GetY()
 
     srs = osr.SpatialReference()
-    srs.ImportFromWkt('PROJCS["unnamed",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(lat, lon))
+    srs.ImportFromWkt('PROJCS["{}",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(name, lat, lon))
     
     if gdal.__version__ >= '3.0.0':
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
@@ -271,3 +223,74 @@ def tileIndexAt(x, y, zoom, srs):
 
     return Tile(xi, yi, zoom)
 
+######################################################################################
+# Common SRS library
+
+# Some other srs shortcuts
+
+
+class _SRSCOMMON:
+    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
+
+    * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
+        1: SRSCOMMON.<srs>
+        2: SRSCOMMON["<srs>"]
+    """
+    # basic latitude and longitude
+    _latlon = osr.SpatialReference()
+    _latlon.ImportFromEPSG(4326)
+
+    @property
+    def latlon(self):
+        """Basic SRS for unprojected latitude and longitude coordinates
+
+        Units: Degrees"""
+        return self._latlon
+    # basic latitude and longitude
+    _europe_m = osr.SpatialReference()
+    _europe_m.ImportFromEPSG(3035)
+
+    @property
+    def europe_m(self):
+        """Equal-Area projection centered around Europe.
+
+        * Good for relational operations within Europe
+
+        Units: Meters"""
+        return self._europe_m
+
+    # define a centered LAEA on the centroid lat/lon of ECOWAS region
+    _ecowas_m = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="ecowas_m")
+    
+    @property
+    def ecowas_m(self):
+        """Equal-Area projection centered around ECOWAS (Western Africa).
+
+        * Good for relational operations within Western Africa
+
+        Units: Meters"""
+        return self._ecowas_m
+    
+    # define a centered LAEA on the centroid lat/lon of SADC region
+    _sadc_m = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="sadc_m")
+    
+    @property
+    def sadc_m(self):
+        """Equal-Area projection centered around ECOWAS (Western Africa).
+
+        * Good for relational operations within Western Africa
+
+        Units: Meters"""
+        return self._sadc_m
+
+    # basic getter
+    def __getitem__(self, name):
+        if not hasattr(self, name):
+            raise ValueError("SRS \"%s\" not found" % name)
+        return getattr(self, "_"+name)
+
+
+# Initialize
+SRSCOMMON = _SRSCOMMON()
+
+################################################
