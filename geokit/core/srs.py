@@ -12,6 +12,7 @@ from . import geom as GEOM
 class GeoKitSRSError(UTIL.GeoKitError):
     pass
 
+warnings.filterwarnings("always", category=DeprecationWarning)
 
 # Basic loader
 
@@ -247,48 +248,62 @@ class _SRSCOMMON:
         Units: Degrees"""
         return self._latlon
     # basic latitude and longitude
-    _europe_m = osr.SpatialReference()
-    _europe_m.ImportFromEPSG(3035)
+    _europe_laea = osr.SpatialReference()
+    _europe_laea.ImportFromEPSG(3035)
+    _europe_m = _europe_laea.Clone()
 
     @property
     def europe_m(self):
+        
+        warnings.warn(
+            "SRSCOMMON.europe_m is deprecated and will be removed in a future release. \
+            use SRSCOMMON.europe_laea instead.",
+            DeprecationWarning,
+        )
+         
+        return self._europe_m
+
+    @property
+    def europe_laea(self):
         """Equal-Area projection centered around Europe.
 
         * Good for relational operations within Europe
 
         Units: Meters"""
-        return self._europe_m
-
+        return self._europe_laea
+    
     # define a centered LAEA on the centroid lat/lon of ECOWAS region
-    _ecowas_m = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="ecowas_m")
+    _ecowas_laea = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS")
     
     @property
-    def ecowas_m(self):
+    def ecowas_laea(self):
         """Equal-Area projection centered around ECOWAS (Western Africa).
 
         * Good for relational operations within Western Africa
 
         Units: Meters"""
-        return self._ecowas_m
+        return self._ecowas_laea
     
     # define a centered LAEA on the centroid lat/lon of SADC region
-    _sadc_m = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="sadc_m")
+    _sadc_laea = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC")
     
     @property
-    def sadc_m(self):
+    def sadc_laea(self):
         """Equal-Area projection centered around ECOWAS (Western Africa).
 
         * Good for relational operations within Western Africa
 
         Units: Meters"""
-        return self._sadc_m
+        return self._sadc_laea
 
     # basic getter
     def __getitem__(self, name):
+        
         if not hasattr(self, name):
+            
             raise ValueError("SRS \"%s\" not found" % name)
-        return getattr(self, "_"+name)
-
+        
+        return getattr(self, f"_{name}")
 
 # Initialize
 SRSCOMMON = _SRSCOMMON()

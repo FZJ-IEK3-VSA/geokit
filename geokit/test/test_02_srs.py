@@ -7,7 +7,7 @@ import pytest
                             (
                                 pointsInAachen4326, 
                                 "latlon", 
-                                "europe_m", 
+                                "europe_laea", 
                                 [(4042131.1581, 3052769.5385, 0.0), 
                                 (4039553.1900, 3063551.9478, 0.0), 
                                 (4065568.415, 3087947.743, 0.0)]
@@ -15,14 +15,14 @@ import pytest
                              
                             (   
                                 pointInAccraEcowasM, 
-                                "ecowas_m", 
+                                "ecowas_laea", 
                                 "latlon", 
                                 (5.562, -0.1389, 0.0)
                             ), 
                             
                             (
                                 pointInWindhoekSadcM, 
-                                "sadc_m", 
+                                "sadc_laea", 
                                 "latlon", 
                                 (-22.389, 17.398, 0.0)
                             )
