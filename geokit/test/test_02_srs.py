@@ -1,37 +1,61 @@
-from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, AACHEN_SHAPE_PATH, osr
+from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, pointInAccraEcowasM, pointInWindhoekSadcM, AACHEN_SHAPE_PATH, osr
 from geokit import srs, vector
 import pytest
 
-def test_xyTransform():
+@pytest.mark.parametrize("points, fromSRS, toSRS, expected", 
+                         [
+                            (
+                                pointsInAachen4326, 
+                                "latlon", 
+                                "europe_m", 
+                                [(4042131.1581, 3052769.5385, 0.0), 
+                                (4039553.1900, 3063551.9478, 0.0), 
+                                (4065568.415, 3087947.743, 0.0)]
+                            ),
+                             
+                            (   
+                                pointInAccraEcowasM, 
+                                "ecowas_m", 
+                                "latlon", 
+                                (5.562, -0.1389, 0.0)
+                            ), 
+                            
+                            (
+                                pointInWindhoekSadcM, 
+                                "sadc_m", 
+                                "latlon", 
+                                (-22.389, 17.398, 0.0)
+                            )
+                          ]
+                        )
 
-    # test single point
-    p1 = srs.xyTransform(
-        pointInAachen3035, fromSRS='europe_m', toSRS='latlon')[0]
-    real = (6.313298792067333, 50.905105969570265)
-    assert np.isclose(p1[0], real[0], 1e-6)
-    assert np.isclose(p1[1], real[1], 1e-6)
+def test_xyTransform(points, fromSRS, toSRS, expected):
 
-    # test multiple points
-    p2 = srs.xyTransform(pointsInAachen4326,
-                         fromSRS='latlon', toSRS='europe_m')
-    real = [(4042131.1581, 3052769.5385), (4039553.1900,
-                                           3063551.9478), (4065568.415, 3087947.743)]
-
-    assert np.isclose(p2[0][0], real[0][0], 1e-6)
-    assert np.isclose(p2[0][1], real[0][1], 1e-6)
-    assert np.isclose(p2[1][0], real[1][0], 1e-6)
-    assert np.isclose(p2[1][1], real[1][1], 1e-6)
-    assert np.isclose(p2[2][0], real[2][0], 1e-6)
-    assert np.isclose(p2[2][1], real[2][1], 1e-6)
-
+    if isinstance(points, tuple):
+        # test single point
+        p = srs.xyTransform(
+            points, fromSRS=fromSRS, toSRS=toSRS, outputFormat="raw")[0]
+        assert np.isclose(p[0], expected[0], 1e-3)
+        assert np.isclose(p[1], expected[1], 1e-3)
+    
+    else:
+        
+        # test multiple points
+        p = srs.xyTransform(
+            points, fromSRS=fromSRS, toSRS=toSRS, outputFormat="raw")
+        
+        assert np.isclose(p[0][0], expected[0][0], 1e-6)
+        assert np.isclose(p[0][1], expected[0][1], 1e-6)
+        assert np.isclose(p[1][0], expected[1][0], 1e-6)
+        assert np.isclose(p[1][1], expected[1][1], 1e-6)
+        assert np.isclose(p[2][0], expected[2][0], 1e-6)
+        assert np.isclose(p[2][1], expected[2][1], 1e-6)
 
 def test_loadSRS():
     # Test creating an osr SRS object
     s1 = srs.loadSRS(srs.EPSG4326)
-
     # Test an EPSG identifier
     s2 = srs.loadSRS(4326)
-
     # Are they the same?
     assert s1.IsSame(s2)
 
@@ -44,6 +68,7 @@ def test_centeredLAEA():
     # first test procedure using lat and lon coordinates
     s1 = srs.centeredLAEA(6.8, 50.0775)
     assert isinstance(s1, osr.SpatialReference)
+
     # then test procedure using a geom
     Aachen_geom = vector.extractFeatures(AACHEN_SHAPE_PATH).geom[0]
     s2 = srs.centeredLAEA(geom=Aachen_geom)
