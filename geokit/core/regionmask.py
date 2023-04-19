@@ -954,7 +954,7 @@ class RegionMask(object):
                 geoms = [g.Simplify(preBufferSimplification) for g in geoms]
 
             if len(geoms) > 0:
-                geoms = [g.Buffer(buffer) for g in geoms]
+                geoms = [g.Buffer(float(buffer)) for g in geoms]
                 if not prunePatchSize ==0:
                     # create Union of all geoms, this will merge overlapping
                     # TODO speed up via cascaded union or better sieve raster or even inverted raster (approximate exclusions based on geoms directly)!
@@ -1114,7 +1114,7 @@ class RegionMask(object):
                     geom = ftr.geom.Simplify(preBufferSimplification)
                 else:
                     geom = ftr.geom
-                return {'geom': geom.Buffer(buffer)}
+                return {'geom': geom.Buffer(float(buffer))}
 
             source = self.mutateVector(source, where=where, processor=doBuffer,
                                        matchContext=True, keepAttributes=False, _slim=True, **kwargs)
@@ -1145,7 +1145,7 @@ class RegionMask(object):
                 geoms = [g.Simplify(preBufferSimplification) for g in geoms]
 
             if len(geoms) > 0:
-                geoms = [g.Buffer(buffer) for g in geoms]
+                geoms = [g.Buffer(float(buffer)) for g in geoms]
                 dataSet = VECTOR.createVector(geoms)
                 final = self.rasterize(dataSet, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv,
                                        applyMask=False, noData=noData)
@@ -1578,7 +1578,7 @@ class RegionMask(object):
         # mutate the source
         if regionPad==None: #cannot calculate with none, so use 0
             regionPad=0    
-        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry.Buffer(regionPad), **kwargs)
+        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry.Buffer(float(regionPad)), **kwargs)
 
     def mutateRaster(self, source, matchContext=True, warpArgs=None, applyMask=True, processor=None,
                      resampleAlg="bilinear", **mutateArgs):
