@@ -250,15 +250,15 @@ def makeBox(*args, **kwargs):
     return box(*args, **kwargs)
 
 
-def polygon(outerRing, *args, srs=4326):
+def polygon(outerRing, *args, srs=None):
     """Creates an OGR Polygon obect from a given set of points
 
     Parameters:
     -----------
-    outerRing : [(x,y), ] or Nx2 numpy.ndarray
+    outerRing : [(x,y), ] or [ogr.Geometry, ] or Nx2 numpy.ndarray
         The polygon's outer edge
 
-    *args : [(x,y), ] or Nx2 numpy.ndarray
+    *args : [(x,y), ] or [ogr.Geometry, ] or Nx2 numpy.ndarray
         The inner edges of the polygon
           * Each input forms a single edge
           * Inner rings cannot interset the outer ring or one another 
@@ -267,8 +267,9 @@ def polygon(outerRing, *args, srs=4326):
             counterclockwise)
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
-        The srs of the polygon to create
-          * If not given, longitude/latitude is assumed
+        The srs of the polygon to create. If point geometries are passed, 
+        srs will be extracted from first point and 'srs' input must be None.
+          * If not given and no geometry objects, no srs will be assigned
 
     Returns:
     --------
@@ -283,7 +284,13 @@ def polygon(outerRing, *args, srs=4326):
 
       geom = polygon( box, diamond )
     """
-    if not srs is None:
+    # check if we have all point geometries
+    pointGeometries=all([isinstance(_p, ogr.Geometry) for _p in outerRing])
+    if pointGeometries:
+        assert srs is None, f"srs is extracted automatically and cannot be set when geometry objects are passed as outerRing."
+        # set srs to first srs in list for efficiency reasons
+        srs = outerRing[0].GetSpatialReference()
+    elif not srs is None:
         srs = SRS.loadSRS(srs)
 
     # Make the complete geometry
@@ -295,6 +302,9 @@ def polygon(outerRing, *args, srs=4326):
     otr = ogr.Geometry(ogr.wkbLinearRing)
     if not srs is None:
         otr.AssignSpatialReference(srs)
+    # convert to tuples if we have point geometries at hand
+    if pointGeometries:
+        outerRing=[(_p.GetX(), _p.GetY()) for _p in outerRing]
     [otr.AddPoint(float(x), float(y)) for x, y in outerRing]
     g.AddGeometry(otr)
 
