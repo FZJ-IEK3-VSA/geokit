@@ -583,6 +583,8 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ch
 
     # Search for file
     if(output):
+        if not os.path.isdir(os.path.dirname(output)):
+            raise FileNotFoundError(f"Output folder must exist: {os.path.dirname(output)}")
         exists = os.path.isfile(output)
         if (exists and overwrite):
             os.remove(output)

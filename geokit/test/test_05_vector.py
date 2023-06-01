@@ -1,5 +1,7 @@
 from .helpers import *
 from geokit import vector, raster, geom, util
+from os.path import join, dirname
+import pytest
 
 # ogrType
 
@@ -111,8 +113,16 @@ def test_createVector():
     ######################
     # run and check
 
+    # assure that check for directory works as expected
+    with pytest.raises(FileNotFoundError):
+        vector.createVector(
+            geoms=POLY, 
+            output=join(dirname(__file__), "nonexisting_folder", "util_shape1.shp"), 
+            srs=EPSG4326, 
+            overwrite=True)
+
     # Single WKT feature, no attributes
-    vector.createVector(POLY, out1, srs=EPSG4326, overwrite=True)
+    vector.createVector(geoms=POLY, output=out1, srs=EPSG4326, overwrite=True)
 
     ds = ogr.Open(out1)
     ly = ds.GetLayer()
