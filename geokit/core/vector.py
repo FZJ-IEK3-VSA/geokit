@@ -267,7 +267,7 @@ def listLayers(source,):
 # Iterable to loop over vector items
 
 
-def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGeoms, layerName):
+def _extractFeatures(source, geom, where, srs, onlyGeom, onlyAttr, skipMissingGeoms, layerName=None):
     # Do filtering
     source = loadVector(source)
     if not layerName is None:
@@ -548,7 +548,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
 
 ####################################################################
 # Create a vector
-def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, checkAllGeoms=False, overwrite=True):
+def createVector(geoms, output=None, srs=None, driverName="ESRI Shapefile", layerName="default", fieldVals=None, fieldDef=None, checkAllGeoms=False, overwrite=True):
     """
     Create a vector on disk from geometries or a DataFrame with 'geom' column
 
@@ -611,17 +611,6 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ch
     """
     if(srs):
         srs = SRS.loadSRS(srs)
-
-    # Search for file
-    if(output):
-        if not os.path.isdir(os.path.dirname(output)):
-            raise FileNotFoundError(f"Output folder must exist: {os.path.dirname(output)}")
-        exists = os.path.isfile(output)
-        if (exists and overwrite):
-            os.remove(output)
-        elif(exists and not overwrite):
-            raise GeoKitVectorError(
-                "%s exists but 'overwrite' is not True" % output)
 
     # make geom or wkt list into a list of ogr.Geometry objects
     finalGeoms = []
@@ -706,34 +695,44 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ch
         raise RuntimeError("Could not determine output shape's geometry type")
 
     # Create a driver and datasource
-    #driver = ogr.GetDriverByName("ESRI Shapefile")
-    #dataSource = driver.CreateDataSource( output )
-    if output:
-        driver = gdal.GetDriverByName("ESRI Shapefile")
-        dataSource = driver.Create(output, 0, 0)
+    # driver = gdal.GetDriverByName("ESRI Shapefile")
+    # dataSource = driver.Create(output, 0, 0)
+
+    if (output is not None and overwrite):
+        
+        # Search for file
+        if not os.path.isdir(os.path.dirname(output)):
+            raise FileNotFoundError(f"Output folder must exist: {os.path.dirname(output)}")
+        # Remove file if it exists
+        if os.path.isfile(output):
+            os.remove(output)
+        
+        driver = ogr.GetDriverByName(driverName)
+        dataSource = driver.CreateDataSource( output )
+        
+    elif output is not None and overwrite == False:
+        
+        warnings.warn("Overwriting existing file")
+        dataSource = ogr.Open(output, 1)
+        assert dataSource is not None, f"Could not open {output}"
+        
     else:
-        driver = gdal.GetDriverByName("Memory")
-
-        # Using 'Create' from a Memory driver leads to an error. But creating
-        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
-        #  and then using 'CreateCopy' seems to work
-        tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
-        t = TemporaryDirectory()
-        tmp_dataSource = tmp_driver.Create(t.name + "tmp.shp", 0, 0)
-
-        dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
-        t.cleanup()
-        del tmp_dataSource, tmp_driver, t
-
+        driver = ogr.GetDriverByName("Memory")
+        dataSource = driver.CreateDataSource("")
+        
     # Wrap the whole writing function in a 'try' statement in case it fails
     try:
         # Create the layer
-        if(output):
-            layerName = os.path.splitext(os.path.basename(output))[0]
+        if output is not None and overwrite == False:
+            
+            layerName = layerName
+            assert layerName not in listLayers(output), f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."
+            
         else:
-            layerName = "Layer"
-
+            layerName = layerName
+                       
         layer = dataSource.CreateLayer(layerName, srs, geomType)
+        assert layer is not None, "Could not create layer!"
 
         # Setup fieldVals and fieldDef dicts
         if(not fieldVals is None):
@@ -817,7 +816,7 @@ def createVector(geoms, output=None, srs=None, fieldVals=None, fieldDef=None, ch
 
     # Delete the datasource in case it failed
     except Exception as e:
-        dataSource is None
+        dataSource=None
         raise e
 
 
