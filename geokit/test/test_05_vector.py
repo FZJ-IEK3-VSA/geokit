@@ -171,7 +171,7 @@ def test_createVector(tmpdir):
         assert ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i])
         
     # Multiple points, save to shapefile 
-    output_shp = tmpdir.mkdir("sub").join("mpoints_temp.shp").__str__()
+    output_shp = tmpdir.mkdir("temp_1").join("mpoints_temp.shp").__str__()
     
     # create a vector in memory
     vec_shp = vector.extractFeatures(vector.createVector(POINT_SET, srs=EPSG4326))
@@ -187,30 +187,30 @@ def test_createVector(tmpdir):
     assert all(test_equal_shp) 
     assert all([g.IsValid() for g in vec_shp_disk["geom"]]) 
     
-    # # Multiple point layers, save to geopackage 
-    # output_gpkg = tmpdir.mkdir("sub").join("mpoints_temp.gpkg").__str__()
+    # Multiple point layers, save to geopackage 
+    output_gpkg = tmpdir.mkdir("temp_2").join("mpoints_temp.gpkg").__str__()
 
-    # ## create new vector layer in memory
-    # vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
+    # create new vector layer in memory
+    vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
     
-    # ## create new geopackage on disk
-    # vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
+    # create new geopackage on disk
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
     
-    # ## append new layer to existing geopackage
-    # # vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_2", srs=EPSG4326, overwrite=False)
+    # append new layer to existing geopackage
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_2", srs=EPSG4326, overwrite=False)
     
-    # n_lyrs = vector.listLayers(output_gpkg)
-    # assert len(n_lyrs) == 1
+    layers = vector.listLayers(output_gpkg)
+    assert len(layers) == 2
+    assert "layer_1" in layers
+    assert "layer_2" in layers
     
-    # vec_gpkg_lyr_1_disk = vector.extractFeatures(output_gpkg, layerName="layer_1")
+    vec_gpkg_lyr_1_disk = vector.extractFeatures(output_gpkg, layerName="layer_1")
     
-    # assert len(vector.extractFeatures(vec_gpkg_lyr_1)) == len(vec_gpkg_lyr_1_disk)
-    # test_equal_gpkg = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
-    # assert all(test_equal_gpkg) 
-    # equal = reduce(lambda x, y: x and y, test_equal)
-    
-    # assert equal
-    # assert all([g.IsValid() for g in vec_gpkg_lyr_1_disk["geom"]]) 
+    assert len(vec_gpkg_lyr_1) == len(vec_gpkg_lyr_1_disk)
+    test_equal_gpkg = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
+    assert all(test_equal_gpkg) 
+
+    assert all([g.IsValid() for g in vec_gpkg_lyr_1_disk["geom"]]) 
 
 def test_mutateVector():
     # Setup
