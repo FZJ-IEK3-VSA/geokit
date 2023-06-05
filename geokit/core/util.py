@@ -617,3 +617,18 @@ def drawImage(matrix, ax=None, xlim=None, ylim=None, yAtTop=True, scaling=1, fon
 
     # Done!
     return AxHands(ax, h, cbar)
+
+def compare_geoms(geoms_1, geoms_2):
+    
+    """Compare two lists of geometries and return a list of booleans indicating whether each pair of geometries are equal.  
+    The order of the lists is important, as the first geometry in the first list will be compared to the first geometry in the second list, and so on.
+
+    Returns
+    -------
+    list    
+        A list of booleans indicating whether each pair of geometries are equal.
+    """
+    
+    equal = map(lambda g1, g2: g1.Equals(g2), geoms_1, geoms_2)
+    
+    return list(equal)
