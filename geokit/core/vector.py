@@ -717,9 +717,22 @@ def createVector(geoms, output=None, srs=None, driverName="ESRI Shapefile", laye
         assert dataSource is not None, f"Could not open {output}"
         
     else:
-        driver = ogr.GetDriverByName("Memory")
-        dataSource = driver.CreateDataSource("")
+        # driver = ogr.GetDriverByName("Memory")
+        # dataSource = driver.CreateDataSource("")
         
+        driver = gdal.GetDriverByName("Memory")
+
+        # Using 'Create' from a Memory driver leads to an error. But creating
+        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
+        #  and then using 'CreateCopy' seems to work
+        tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
+        t = TemporaryDirectory()
+        tmp_dataSource = tmp_driver.Create(t.name + "tmp.shp", 0, 0)
+
+        dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
+        t.cleanup()
+        del tmp_dataSource, tmp_driver, t
+
     # Wrap the whole writing function in a 'try' statement in case it fails
     try:
         # Create the layer
