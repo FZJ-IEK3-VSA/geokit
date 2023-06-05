@@ -700,9 +700,13 @@ def createVector(geoms, output=None, srs=None, driverName="ESRI Shapefile", laye
 
     if (output is not None and overwrite):
         
-        # Search for file
-        if not os.path.isdir(os.path.dirname(output)):
-            raise FileNotFoundError(f"Output folder must exist: {os.path.dirname(output)}")
+        # Search for directory
+        if os.path.dirname(output) == '': # If no directory is given, assume current directory
+            output = os.path.join(os.getcwd(), output)
+            
+        elif not os.path.isdir(os.path.dirname(output)): # If directory does not exist, raise error
+            raise FileNotFoundError(f"Directory {os.path.dirname(output)} does not exist")
+        
         # Remove file if it exists
         if os.path.isfile(output):
             os.remove(output)
