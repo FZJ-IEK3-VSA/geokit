@@ -19,3 +19,8 @@ test:
     - python -m pip install -e . --no-deps
     # Test Environment
     - python -m pytest --cov=geokit geokit/test/
+
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never 
+    - when: always
