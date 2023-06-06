@@ -367,6 +367,9 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
 
     skipMissingGeoms : bool; optional
         If True, then the parser will not read a feature which are missing a geometry
+        
+    layerName : str; optional
+        The name of the layer to extract from the source vector dataset (only applicable in case of a geopackage).
 
     Returns:
     --------
@@ -573,6 +576,18 @@ def createVector(geoms, output=None, srs=None, driverName="ESRI Shapefile", laye
           * If not given, the geometries' inherent srs is used
           * If srs does not match the inherent srs, all geometries will be 
             transformed
+            
+    driverName : str; optional
+        The name of the driver to use when creating the vector. 
+        Currently supported options are:
+            - ESRI Shapefile
+            - GPKG
+            
+        For a list of all supported vector drivers by OGR, see: https://gdal.org/drivers/vector/index.html
+
+    layerName : str; optional
+        The name of the layer to create within the vector. (Only applicable for GeoPackages)
+        * If the layer already exists, it will be overwritten
 
     fieldVals : dict of lists or pandas.DataFrame; optional
         Explicit attribute values to assign to each geometry
