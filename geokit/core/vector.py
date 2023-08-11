@@ -549,7 +549,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
 
 
-def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, asPandas=True, indexCol=None, skipMissingGeoms=True, layerName=None, scaleAttrs=None, **kwargs):
+def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, indexCol=None, skipMissingGeoms=True, layerName=None, scaleAttrs=None, **kwargs):
     """
     #TODO
     """
@@ -585,6 +585,8 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, a
     for _attr in scaleAttrs:
         if not _attr in list(df.columns):
             raise AttributeError(f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe.")
+        if not all([isinstance(_val, numbers.Number) for _val in df[_attr]]):
+            raise TypeError(f"All values in column '{_attr}' in scaleAttrs must be numeric.")
 
     
     # check if we have any features to clip at all
@@ -594,7 +596,7 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, a
     assert not 'areaShare' in list(df.columns), f"source data must not contain a 'areaShare' attribute."
     df['areaShare']=1.0
     # check if we need to clip the geometries at all
-    if df.geom.iloc[0][:5] == 'POINT':
+    if df.geom.iloc[0].GetGeometryName()[:5] == 'POINT':
         # we have only points and no further clipping is needed
         return df
 
@@ -628,8 +630,6 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, a
         _areaShares.append(_areaShare)
         _clippedIDs.append(i)
     
-    # add area share information
-    df['areaShare']=1.0
     if len(_clippedIDs)==0:
         # we have not clipped any feature at all, return df
         return df.drop(columns='clippingID')
