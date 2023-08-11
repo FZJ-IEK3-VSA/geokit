@@ -570,7 +570,11 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, a
     elif not isinstance(source, gdal.Dataset):
         raise TypeError(f"source must either be a pd.DataFrame, a gdal.Dataset vector instance or a str formatted shapefile path.")
     
-    # extract only the overlapping geoms
+    # extract only the overlapping geoms, first define srs
+    if srs is None:
+        srs=geom.GetSpatialReference()
+    else:
+        geom=geom.transform(geom, toSRS=srs)
     df = extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=onlyGeom, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
     if scaleAttrs is None:
         scaleAttrs=[]
