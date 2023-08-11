@@ -326,7 +326,7 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
     * Sometimes they may only overlap
     * Sometimes they are only in the geometry's envelope
     * To be sure an extracted geometry fits the selection criteria, you may 
-      still need to do further processing
+      still need to do further processing or use extractAndClipFeatures()
 
     Parameters:
     -----------
@@ -552,7 +552,53 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
 
 def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, indexCol=None, skipMissingGeoms=True, layerName=None, scaleAttrs=None, **kwargs):
     """
-    #TODO
+    Extracts features from a source and clips them to the boundaries of a given geom.
+    Optionally scales numeric attribute values linearly to the overlapping area share.
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadVector()
+        The vector data source to read from
+
+    geom : ogr.Geometry
+        The geometry to search with
+        * All features touching this geometry are extracted and clipped to the geometry boundaries.
+
+    where : str; optional
+        An SQL-like where statement to apply to the source
+        * Feature attribute name do not need quotes
+        * String values should be wrapped in 'single quotes'
+        Example: If the source vector has a string attribute called "ISO" and 
+                 a integer attribute called "POP", you could use....
+
+            where = "ISO='DEU' AND POP>1000"
+
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the geometries to extract
+          * If not given, the geom's inherent srs is used
+          * If srs does not match the inherent srs, all geometries will be 
+            transformed
+
+    onlyGeom : bool; optional
+        If True, only feature geometries will be returned
+
+    indexCol : str; optional
+        The feature identifier to use as the DataFrams's index
+        * Only useful when as DataFrame is True
+
+    skipMissingGeoms : bool; optional
+        If True, then the parser will not read a feature which are missing a geometry
+        
+    layerName : str; optional
+        The name of the layer to extract from the source vector dataset (only applicable in case of a geopackage).
+
+    scaleAttrs : str or list, optional
+        attribute names of the source with numeric values. The values will be scaled linearly with the 
+        area share of the feature overlapping the geom.
+
+    Returns:
+    --------
+    * pandas.DataFrame or pandas.Series
     """
     # assert and preprocess input source
     if isinstance(source, pd.DataFrame):
@@ -630,7 +676,7 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, i
         _clippedGeoms.append(_clipped)
         _areaShares.append(_areaShare)
         _clippedIDs.append(i)
-    
+
     if len(_clippedIDs)==0:
         # we have not clipped any feature at all, return df
         return df.drop(columns='clippingID')
