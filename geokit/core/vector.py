@@ -549,6 +549,98 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
 
 
+def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, asPandas=True, indexCol=None, skipMissingGeoms=True, layerName=None, scaleAttrs=None, **kwargs):
+    """
+    #TODO
+    """
+    # assert and preprocess input source
+    if isinstance(source, pd.DataFrame):
+        # check validity of input dataframe
+        if not 'geom' in source.columns:
+            raise AttributeError(f"source is given as a pd.DataFrame but has not 'geom' column.")
+        if not isinstance(source.geom.iloc[0], ogr.Geometry):
+            raise TypeError(f"source is given as a pd.DataFrame but value in 'geom' column is not of type osgeo.ogr.Geometry.")
+        # generate a vector from source dataframe
+        source = createVector(source)
+    elif isinstance(source, str):
+        if not os.path.isfile(source):
+            raise FileNotFoundError(f"source is given as a string but is not an existing filepath: {source}")
+        # load as vector file
+        source=loadVector(source)
+    elif not isinstance(source, gdal.Dataset):
+        raise TypeError(f"source must either be a pd.DataFrame, a gdal.Dataset vector instance or a str formatted shapefile path.")
+    
+    # extract only the overlapping geoms
+    df = extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=onlyGeom, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
+    if scaleAttrs is None:
+        scaleAttrs=[]
+    elif isinstance(scaleAttrs, str):
+        scaleAttrs=[scaleAttrs]
+    else:
+        assert isinstance(scaleAttrs, list), f"scaleAttrs must be a str or a list thereof if not None."
+    for _attr in scaleAttrs:
+        if not _attr in list(df.columns):
+            raise AttributeError(f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe.")
+
+    
+    # check if we have any features to clip at all
+    if len(df)==0:
+        return df
+    # else add the expected areaShare column
+    assert not 'areaShare' in list(df.columns), f"source data must not contain a 'areaShare' attribute."
+    df['areaShare']=1.0
+    # check if we need to clip the geometries at all
+    if df.geom.iloc[0][:5] == 'POINT':
+        # we have only points and no further clipping is needed
+        return df
+
+    # else we need to add an ID column and generate a new vector
+    assert not 'clippingID' in list(df.columns), f"source data must not contain a 'clippingID' attribute."
+    df['clippingID']=range(len(df))
+    _vec = createVector(df)
+    # extract only these features intersected by the outer geom boundary
+    outer_df = extractFeatures(source=_vec, geom=geom.Boundary(), where=where, srs=srs, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
+    del _vec
+    if len(outer_df)==0:
+        # we have no features intersecting with the geom boundary, return all included features
+
+        return df.drop(columns='clippingID')
+    
+    # else clip these features that are intersected by the geom
+    _clippedIDs = list()
+    _clippedGeoms = list()
+    _areaShares = list()
+    for i, feat in zip(outer_df.clippingID, outer_df.geom):
+        _clipped = feat.Intersection(geom)
+        _areaShare = _clipped.Area()/feat.Area()
+        if _areaShare==1.0:
+            # the feature is only touched by the boundary but not reduced
+            continue
+        elif _areaShare==0.0:
+            # the feature is fully outside the geom and only touches the geom boundary
+            # set clipped feature geometry to np.nan to filter out later
+            _clipped=np.nan
+        _clippedGeoms.append(_clipped)
+        _areaShares.append(_areaShare)
+        _clippedIDs.append(i)
+    
+    # add area share information
+    df['areaShare']=1.0
+    if len(_clippedIDs)==0:
+        # we have not clipped any feature at all, return df
+        return df.drop(columns='clippingID')
+    
+    # else replace the original feature geometries with the clipped ones where needed and add area shares
+    df.loc[df.clippingID.isin(_clippedIDs), 'geom'] = _clippedGeoms
+    df.loc[df.clippingID.isin(_clippedIDs), 'areaShare'] = _areaShares
+    for _attr in scaleAttrs:
+        df[_attr]=df.apply(lambda x : x[_attr]*x.areaShare, axis=1)
+
+    # return the adapted dataframe
+    return df.drop(columns='clippingID')
+    
+
+
 ####################################################################
 # Create a vector
 def createVector(geoms, output=None, srs=None, driverName="ESRI Shapefile", layerName="default", fieldVals=None, fieldDef=None, checkAllGeoms=False, overwrite=True):
