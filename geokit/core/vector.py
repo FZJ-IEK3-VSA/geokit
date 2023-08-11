@@ -7,6 +7,7 @@ from collections import namedtuple, defaultdict, OrderedDict
 from collections.abc import Iterable
 import pandas as pd
 from binascii import hexlify
+import numbers
 
 from . import util as UTIL
 from . import srs as SRS
