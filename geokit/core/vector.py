@@ -607,6 +607,10 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, i
             raise AttributeError(f"source is given as a pd.DataFrame but has not 'geom' column.")
         if not isinstance(source.geom.iloc[0], ogr.Geometry):
             raise TypeError(f"source is given as a pd.DataFrame but value in 'geom' column is not of type osgeo.ogr.Geometry.")
+        # return empty dataframe with empty expected "areaShare" column if no geometries contained since vector cannot be created without geometries
+        if len(source)==0:
+            source['areaShare']=None
+            return source
         # generate a vector from source dataframe
         source = createVector(source)
     elif isinstance(source, str):
@@ -621,7 +625,7 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, i
     if srs is None:
         srs=geom.GetSpatialReference()
     else:
-        geom=geom.transform(geom, toSRS=srs)
+        geom=GEOM.transform(geom, toSRS=srs)
     df = extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=onlyGeom, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
     if scaleAttrs is None:
         scaleAttrs=[]
@@ -638,6 +642,8 @@ def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, i
     
     # check if we have any features to clip at all
     if len(df)==0:
+        # if not, add the mandatory areaShare column in case that it is not there already and return empty dataframe
+        df['areaShare']=None
         return df
     # else add the expected areaShare column
     assert not 'areaShare' in list(df.columns), f"source data must not contain a 'areaShare' attribute."
