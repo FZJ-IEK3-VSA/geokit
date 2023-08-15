@@ -7,7 +7,7 @@ stages:
   stage: test
   before_script:
     # create environment
-    - micromamba create -y -n geokit --file=requirements_dev.yml
+    - micromamba create -y -n geokit --file=requirements-dev.yml
     - eval "$(micromamba shell hook --shell bash)"
     - micromamba activate geokit
     # Install geokit with no --no-deps flag to create a reproducible environment
