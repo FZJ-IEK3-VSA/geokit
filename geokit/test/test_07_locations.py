@@ -270,18 +270,18 @@ def test_LocationSet_splitKMeans():
 
     sublocs = list(sublocsGen)
 
-    assert sublocs[0].count == 3
-    assert sublocs[0][0] == (2, -1)
-    assert sublocs[0][1] == (2, -1.5)
-    assert sublocs[0][2] == (2, -1.25)
-
-    assert sublocs[1].count == 2
-    assert sublocs[1][0] == (-1, -1)
-    assert sublocs[1][1] == (-1, -1.5)
+    assert sublocs[0].count == 2
+    assert sublocs[0][0] == (2, 1)
+    assert sublocs[0][1] == (2, 1.5)
+    
+    assert sublocs[1].count == 3
+    assert sublocs[1][0] == (2, -1)
+    assert sublocs[1][1] == (2, -1.5)
+    assert sublocs[1][2] == (2, -1.25)
 
     assert sublocs[2].count == 2
-    assert sublocs[2][0] == (2, 1)
-    assert sublocs[2][1] == (2, 1.5)
+    assert sublocs[2][0] == (-1, -1)
+    assert sublocs[2][1] == (-1, -1.5)
 
 
 def test_LocationSet_bisect():
