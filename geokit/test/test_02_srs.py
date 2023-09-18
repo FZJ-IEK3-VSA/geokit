@@ -56,8 +56,11 @@ def test_loadSRS():
     s1 = srs.loadSRS(srs.EPSG4326)
     # Test an EPSG identifier
     s2 = srs.loadSRS(4326)
+    # Test an EPSG code
+    s3 = srs.loadSRS("epsg:4326")
     # Are they the same?
     assert s1.IsSame(s2)
+    assert s1.IsSame(s3)
 
     # test an invalid srs, must raise error
     with pytest.raises(AssertionError):
