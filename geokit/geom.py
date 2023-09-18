@@ -22,4 +22,5 @@ from geokit.core.geom import (GeoKitGeomError,
                               drawGeoms,
                               partition,
                               extractVerticies,
+                              shift,
                               )

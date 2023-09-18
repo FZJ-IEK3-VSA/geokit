@@ -1464,3 +1464,65 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
 
     # Done!
     return output
+
+
+def shift(geom, lonShift=0, latShift=0):
+    """Shift a polygon in longitudinal and/or latitudinal direction.
+
+    Inputs:
+        geom : The geometry to be shifted
+            - a single ogr Geometry object of POINT, LINESTRING, POLYGON or MULTIPOLYGON type
+            - NOTE: Accepts only 2D geometries, z value must be zero.
+
+        lonShift - (int, float) : The shift in longitudinal direction in units of the geom srs, may be positive or negative
+
+        latShift - (int, float) : The shift in latitudinal direction in units of the geom srs, may be positive or negative
+
+    Returns :
+    --------
+    osgeo.ogr.Geometry object of the input type with shifted coordinates
+    """
+    if not isinstance(geom, ogr.Geometry):
+        raise TypeError(f"geom must be of type osgeo.ogr.Geometry")
+    # first get srs of input geom
+    _srs=geom.GetSpatialReference()
+
+    # define sub method to shift collection of single points
+    def _movePoints(pointCollection, lonShift, latShift):
+        """Auxiliary function shifting individual points"""
+        points=list()
+        for i in range(len(str(pointCollection).split(","))):
+            points.append(pointCollection.GetPoint(i))
+        # shift the points individually
+        points_shifted=list()
+        for p in points:
+            assert p[2]==0, f"All z-values must be zero!"
+            points_shifted.append((p[0]+lonShift, p[1]+latShift))
+        return points_shifted
+
+    # first check if geom is a point and shift
+    if "POINT" in geom.GetGeometryName():
+        p=geom.GetPoint()
+        return point((p[0]+lonShift, p[1]+latShift), srs=_srs)
+    # else check if line and adapt
+    elif "LINESTRING" in geom.GetGeometryName() and not "MULTILINE" in geom.GetGeometryName():
+        return line(_movePoints(pointCollection=geom, lonShift=lonShift, latShift=latShift), srs=_srs)
+    # else check if we have a (multi)polygon
+    elif "POLYGON" in geom.GetGeometryName():
+        if not "MULTIPOLYGON" in geom.GetGeometryName():
+            # only a simple polygon, generate single entry list to allow iteration
+            geom=[geom]
+        # iterate over individual polygons
+        for ip, poly in enumerate(geom):
+            assert "POLYGON" in poly.GetGeometryName(), f"MULTIPOLYGON is not composed of only POLYGONS"
+            # iterate over sub linear rings
+            for ir, ring in enumerate(poly):
+                assert "LINEARRING" in ring.GetGeometryName(), f"POLYGON (or sub polygon of MULTIPOLYGON) is not composed of only LINEARRINGS"
+                poly_shifted=polygon(_movePoints(pointCollection=ring, lonShift=lonShift, latShift=latShift), srs=_srs)
+                if ip==0 and ir==0:
+                    multi_shifted=poly_shifted
+                else:
+                    multi_shifted=multi_shifted.Union(poly_shifted)
+        return multi_shifted
+    else:
+        raise TypeError(f"geom must be a 'POINT', 'LINESTRING', 'POLYGON' or 'MULTIPOLYGON' osgeo.ogr.Geometry")
