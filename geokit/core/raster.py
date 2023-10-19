@@ -202,6 +202,10 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
             else:
                 raise GeoKitRasterError(
                     "Output file already exists: %s" % output)
+    
+        #check if writeable:
+        if not os.access(os.path.dirname(output), os.W_OK):
+            raise PermissionError(f"Writing permission error for path: {os.path.dirname(output)}")
 
     # Ensure bounds is okay
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
@@ -239,7 +243,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
                                getattr(gdal, dtype), opts)
 
     if(raster is None):
-        raise GeoKitRasterError("Failed to create raster")
+        raise GeoKitRasterError(f"Failed to create raster")
 
     # Do the rest in a "try" statement so that a failure wont bind the source
     try:
@@ -305,7 +309,7 @@ def createRaster(bounds, output=None, pixelWidth=100, pixelHeight=100, dtype=Non
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, **kwargs):
+def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -321,6 +325,9 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
 
     if not isinstance(source, RasterInfo):
         raise GeoKitRasterError("Could not understand source")
+        
+    if copyMetadata and not metadata is None:
+        raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
     bounds = kwargs.pop("bounds", source.bounds)
     pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
@@ -332,11 +339,36 @@ def createRasterLike(source, copyMetadata=True, **kwargs):
     if copyMetadata:
         meta = kwargs.pop("meta", source.meta)
     else:
-        meta = None
+        meta = metadata
 
     return createRaster(bounds=bounds, pixelWidth=pixelWidth, pixelHeight=pixelHeight, dtype=dtype, srs=srs,
                         noData=noData, meta=meta, **kwargs)
 
+def saveRasterAsTif(source, output, **kwargs):
+    
+    '''Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
+
+    Parameters
+    ----------
+    source : osgeo.gdal.Dataset 
+
+    output : str
+        A path to an output file
+
+    Returns
+    -------
+    str
+        Path to the saved file on disk.
+    '''
+    # assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
+    assert output.split('.')[-1] in['tif', 'tiff'], 'Wrong type specified, use *.tif or *.tiff'
+
+    sourceInfo = rasterInfo(source)
+    data = extractMatrix(source)
+
+    return createRaster(bounds=sourceInfo.bounds, pixelWidth=sourceInfo.dx, pixelHeight=sourceInfo.dy,
+                          noData=sourceInfo.noData, dtype=sourceInfo.dtype, srs=sourceInfo.srs, 
+                          data=data, output=output, **kwargs)
 
 ####################################################################
 # extract the raster as a matrix
@@ -464,7 +496,7 @@ def extractMatrix(source, bounds=None, boundsSRS='latlon', maskBand=False, autoc
     # Correct 'nodata' values
     if autocorrect:
         noData = sourceBand.GetNoDataValue()
-        data = data.astype(np.float)
+        data = data.astype(np.float64)
         data[data == noData] = np.nan
 
     # make sure we are returing data in the 'flipped-y' orientation
@@ -679,7 +711,12 @@ def rasterInfo(sourceDS):
     sourceDS = loadRaster(sourceDS)
 
     # get srs
-    srs = SRS.loadSRS(sourceDS.GetProjectionRef())
+    if sourceDS.GetProjectionRef() == '':
+        # return None directly if raster has no srs
+        srs=None
+    else:
+        # generate an srs object if we have srs information
+        srs = SRS.loadSRS(sourceDS.GetProjectionRef())
     output['srs'] = srs
 
     # get extent and resolution
@@ -862,13 +899,13 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
     yStarts = yIndexes - winRange
     window = 2 * winRange + 1
 
-    inBounds = xStarts > 0
-    inBounds = inBounds & (yStarts > 0)
-    inBounds = inBounds & (xStarts + window < info.xWinSize)
-    inBounds = inBounds & (yStarts + window < info.yWinSize)
+    inBounds = xStarts >= 0
+    inBounds = inBounds & (yStarts >= 0)
+    inBounds = inBounds & (xStarts + window <= info.xWinSize)
+    inBounds = inBounds & (yStarts + window <= info.yWinSize)
 
     if (~inBounds).any():
-        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits"
+        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
         warnings.warn(msg, UserWarning)
 
     # Read values
@@ -877,7 +914,7 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
     for xi, yi, ib in zip(xStarts, yStarts, inBounds):
         if not ib:
-            data = np.empty((window, window))
+            data = np.ones((window, window)) * np.nan
         else:
             # Open and read from raster
             data = band.ReadAsArray(
@@ -909,6 +946,11 @@ def extractValues(source, points, pointSRS='latlon', winRange=0, noDataOkay=True
 
         # Append to values
         values.append(data)
+
+        #check if not inbounds, then replace values with nan
+        for i in range(len(values)):
+            if not inBounds[i]:
+                values[i] = np.nan * np.ones_like(values[i])
 
     # Done!
     if asSingle:  # A single point was given, so return a single result
@@ -2005,3 +2047,125 @@ def warp(source, resampleAlg='bilinear', cutline=None, output=None, pixelHeight=
     if not cutline is None:
         del tempdir
     return destRas
+
+#--------------------------------------------------------------------------------------------
+# Sieve raster datasets
+#--------------------------------------------------------------------------------------------
+
+def sieve(source, threshold=100, connectedness=8, mask='none', quiet_flag=False, output=None, **kwargs):
+    
+    """
+    Removes raster polygons smaller than a provided threshold size (in pixels) and 
+    replaces them with the pixel value of the largest neighbour polygon. 
+    It is useful if you have a large amount of small areas on your raster map.
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadRaster()
+    
+    threshold (int): minimum polygon size (number of pixels) to retain.
+
+    connectedness (int): either 4 indicating that diagonal pixels are not considered directly 
+                         adjacent for polygon membership purposes or 8 indicating they are.
+
+    mask (str): 'none' or 'default'. An optional mask band. All pixels in the mask band with a 
+                value other than zero will be considered suitable for inclusion in polygons. 
+
+    quiet_flag (bool): 0 or 1. Callback for reporting algorithm progress
+
+    output : str; optional
+        The path on disk where the new raster should be created
+
+    **kwargs:
+        * All kwargs are passed on to SieveFilter()
+        * See gdal.SieveFilter for more details
+
+    Returns
+    -------
+    * If 'output' is None: gdal.Dataset
+    * If 'output' is a string: The path to the output is returned (for easy opening)
+
+    """
+    
+    gdal.AllRegister() 
+
+    try: 
+        gdal.SieveFilter 
+    except: 
+        print('') 
+        print('gdal.SieveFilter() not available.  You are likely using "old gen"') 
+        print('bindings or an older version of the next gen bindings.') 
+        print('') 
+    
+    ### Open source file
+    # if output is None: 
+    #     src_ds = gdal.Open( source, gdal.GA_Update ) 
+    # else: 
+    #     src_ds = gdal.Open( source, gdal.GA_ReadOnly )
+
+    src_ds = loadRaster(source)
+
+    if src_ds is None: 
+        print('Unable to open %s ' % source) 
+     
+
+    srcband = src_ds.GetRasterBand(1) 
+
+    if mask == 'default': 
+        maskband = srcband.GetMaskBand() 
+    elif mask == 'none': 
+        maskband = None 
+    else: 
+        mask_ds = loadRaster( mask )
+        maskband = mask_ds.GetRasterBand(1).GetMaskBand() 
+
+    ### Create output file if one is specified.
+
+    if output is not None: 
+
+        format = 'GTiff' 
+        driver = gdal.GetDriverByName(format) 
+        dst_ds = driver.Create( output, src_ds.RasterXSize, src_ds.RasterYSize, 1, 
+                             srcband.DataType, COMPRESSION_OPTION) # ["COMPRESS=LZW"]
+
+    else:
+
+        format='Mem' 
+        driver = gdal.GetDriverByName(format)  # create a raster in memory
+        dst_ds = driver.Create( '', src_ds.RasterXSize, src_ds.RasterYSize, 1, 
+                             srcband.DataType, COMPRESSION_OPTION) # ["COMPRESS=LZW"]
+
+    wkt = src_ds.GetProjection() 
+    if wkt != '': 
+        dst_ds.SetProjection( wkt ) 
+    dst_ds.SetGeoTransform( src_ds.GetGeoTransform() ) 
+    dstband = dst_ds.GetRasterBand(1)
+
+    if quiet_flag: 
+        prog_func = None 
+    else: 
+        prog_func = gdal.TermProgress_nocb 
+
+    result = gdal.SieveFilter(
+                              srcband, 
+                              maskband, 
+                              dstband, 
+                              threshold, 
+                              connectedness, 
+                              callback = prog_func,
+                              **kwargs 
+                             ) 
+
+    dst_ds.FlushCache()
+
+    # Return raster if in memory
+    if output is None:
+        return dst_ds
+
+    # Return output path to raster if on disk
+    else:
+        src_ds = None 
+        dst_ds = None 
+        mask_ds = None
+        return output
+

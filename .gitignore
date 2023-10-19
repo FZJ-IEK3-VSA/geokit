@@ -20,6 +20,16 @@ testing/results/*.cpg
 testing/results/*.csv
 testing/results/eligibility_plots
 
+# Example results
+Examples/*.tif
+Examples/*.shp
+Examples/*.dbf
+Examples/*.shx
+Examples/*.prj
+Examples/*.cpg
+Examples/*.csv
+Examples/*.gpkg
+
 # Extras
 .vscode/settings.json
 .vscode/launch.json
@@ -27,3 +37,5 @@ testing/results/eligibility_plots
 .pytest
 .cache/v/cache/lastfailed
 .pytest_cache/*
+
+

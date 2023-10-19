@@ -4,4 +4,4 @@
 # 							   isVector, isRaster, scaleMatrix, KernelProcessor, drawImage)
 
 from geokit.core.util import (
-    GeoKitError, isVector, isRaster, scaleMatrix, KernelProcessor, drawImage)
+    GeoKitError, isVector, isRaster, scaleMatrix, KernelProcessor, drawImage, compare_geoms)

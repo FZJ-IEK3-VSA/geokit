@@ -27,7 +27,8 @@ EPSG3035.ImportFromEPSG(3035)
 pointsInAachen4326 = [(6.06590,50.51939), (6.02141,50.61491), (6.371634,50.846025)]
 pointsInAachen3035 = [(4042131.15813425, 3052769.53854268),(4039553.19006358, 3063551.94787756),(4065568.41552701, 3087947.74365965),]
 pointInAachen3035 = (4061794.7,3094718.4)
-
+pointInAccraEcowasM = (535733.2772457143, -1508102.6643880515)
+pointInWindhoekSadcM = (-5255934.573657837, 3239007.1380184838)
 
 POLY = "POLYGON ((10.1 32, 10.9 35.1, 12 36, 14.6 38.1, 13.5 35, 12.9 35.1, 11.1 33, 10.6 32.2, 10.5 30.5, 10.1 32))"
 SUB_POLY1 = "POLYGON ((7 49.7, 7 49.9, 7.4 49.75, 7 49.7))"
@@ -88,6 +89,7 @@ EUR_STATS_FILE = source("Europe_with_H2MobilityData_GermanyClip.shp")
 
 CLC_RASTER_PATH = source("clc-aachen_clipped.tif")
 CLC_FLIPCHECK_PATH = source("clc-aachen_clipped-unflipped.tif")
+RASTER_GDAL_244 = source("raster_gdal_244.tif")
 
 SINGLE_HILL_PATH = source("elevation_singleHill.tif")
 ELEVATION_PATH = source("elevation.tif")

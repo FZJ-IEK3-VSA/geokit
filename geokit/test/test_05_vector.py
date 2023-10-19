@@ -1,6 +1,8 @@
 from .helpers import *
 from geokit import vector, raster, geom, util
-
+from os.path import join, dirname
+import pytest
+from functools import reduce
 # ogrType
 
 
@@ -99,10 +101,21 @@ def test_extractFeature():
     else:
         assert False
 
+def test_extractAndClipFeatures():
+    multiFeatures = vector.extractFeatures(MULTI_FTR_SHAPE_PATH)
+    multiFeatures['testAttr']=100
+    box = geom.box((6.6, 49.0, 7.6, 50.0), srs=4326)
+
+    clipped = vector.extractAndClipFeatures(source=multiFeatures, geom=box, where="id < 4", scaleAttrs='testAttr')
+
+    assert len(clipped)==2
+    assert all(np.isclose(clipped.areaShare.values, np.array([0.827164, 1.0])))
+    assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
+
 # Create shape file
 
 
-def test_createVector():
+def test_createVector(tmpdir):
     # Setup
     out1 = result("util_shape1.shp")
     out2 = result("util_shape2.shp")
@@ -111,8 +124,16 @@ def test_createVector():
     ######################
     # run and check
 
+    # assure that check for directory works as expected
+    with pytest.raises(FileNotFoundError):
+        vector.createVector(
+            geoms=POLY, 
+            output=join(dirname(__file__), "nonexisting_folder", "util_shape1.shp"), 
+            srs=EPSG4326, 
+            overwrite=True)
+
     # Single WKT feature, no attributes
-    vector.createVector(POLY, out1, srs=EPSG4326, overwrite=True)
+    vector.createVector(geoms=POLY, output=out1, srs=EPSG4326, overwrite=True)
 
     ds = ogr.Open(out1)
     ly = ds.GetLayer()
@@ -159,7 +180,48 @@ def test_createVector():
     for i in range(len(POINT_SET)):
         ftr = ly.GetFeature(i)
         assert ftr.GetGeometryRef() != ogr.CreateGeometryFromWkt(POINT_SET[i])
+        
+    # Multiple points, save to shapefile 
+    output_shp = tmpdir.mkdir("temp_1").join("mpoints_temp.shp").__str__()
+    
+    # create a vector in memory
+    vec_shp = vector.extractFeatures(vector.createVector(POINT_SET, srs=EPSG4326))
+    
+    # create a vector on disk
+    vector.createVector(POINT_SET, output=output_shp, srs=EPSG4326)
+    
+    vec_shp_disk = vector.extractFeatures(output_shp)
+    
+    assert len(vec_shp) == len(vec_shp_disk)
+    test_equal_shp = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
+    
+    assert all(test_equal_shp) 
+    assert all([g.IsValid() for g in vec_shp_disk["geom"]]) 
+    
+    # Multiple point layers, save to geopackage 
+    output_gpkg = tmpdir.mkdir("temp_2").join("mpoints_temp.gpkg").__str__()
 
+    # create new vector layer in memory
+    vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
+    
+    # create new geopackage on disk
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
+    
+    # append new layer to existing geopackage
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_2", srs=EPSG4326, overwrite=False)
+    
+    layers = vector.listLayers(output_gpkg)
+    assert len(layers) == 2
+    assert "layer_1" in layers
+    assert "layer_2" in layers
+    
+    vec_gpkg_lyr_1_disk = vector.extractFeatures(output_gpkg, layerName="layer_1")
+    
+    assert len(vec_gpkg_lyr_1) == len(vec_gpkg_lyr_1_disk)
+    test_equal_gpkg = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
+    assert all(test_equal_gpkg) 
+
+    assert all([g.IsValid() for g in vec_gpkg_lyr_1_disk["geom"]]) 
 
 def test_mutateVector():
     # Setup

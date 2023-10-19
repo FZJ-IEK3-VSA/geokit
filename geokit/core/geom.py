@@ -328,8 +328,8 @@ def line(points, srs=4326):
 
     Parameters:
     -----------
-    Points : [(x,y), ] or Nx2 numpy.ndarray
-        The point defining the line
+    Points : [(x,y), ], Nx2 numpy.ndarray or list of osgeo.ogr.Geometry points.
+        The points defining the line
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the line to create
@@ -342,9 +342,12 @@ def line(points, srs=4326):
     # Make the complete geometry
     g = ogr.Geometry(ogr.wkbLineString)
     if not srs is None:
-        g.AssignSpatialReference(srs)
+        g.AssignSpatialReference(SRS.loadSRS(srs))
 
     # Make the line
+    if all([isinstance(p, ogr.Geometry) for p in points]):
+        # convert points into a list of coordinate tuples in correct srs
+        points=[(transform(p, toSRS=srs).GetX(), transform(p, toSRS=srs).GetY()) for p in points]
     [g.AddPoint(x, y) for x, y in points]
     # g.AddGeometry(otr)
 
@@ -532,7 +535,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
         matrix = np.array(matrix)
-    if matrix.dtype == np.bool or matrix.dtype == np.uint8:
+    if matrix.dtype == np.bool_ or matrix.dtype == np.uint8:
         dtype = "GDT_Byte"
     elif np.issubdtype(matrix.dtype, np.integer):
         dtype = "GDT_Int32"
@@ -708,7 +711,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
     if not isinstance(mask, np.ndarray):
         mask = np.array(mask)
 
-    if not (mask.dtype == np.bool or mask.dtype == np.uint8):
+    if not (mask.dtype == np.bool_ or mask.dtype == np.uint8):
         raise GeoKitGeomError("Mask must be a 2D boolean numpy ndarray")
 
     # Do vectorization
@@ -1175,12 +1178,16 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     # Check Geometry SRS
     if not srs is None:
         srs = SRS.loadSRS(srs)
+        transformed_geoms = []
         for gi, g in enumerate(geoms):
             gsrs = g.GetSpatialReference()
             if gsrs is None:
                 continue  # Skip it if we don't know it...
             if not gsrs.IsSame(srs):
-                geoms[gi] = transform(geoms[gi], srs)
+                transformed_geoms.append(transform(geoms[gi], srs))
+            else:
+                transformed_geoms.append(geoms[gi])
+        geoms = np.asarray(transformed_geoms)
 
     # Apply simplifications if required
     if not simplificationFactor is None:
@@ -1457,3 +1464,65 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
 
     # Done!
     return output
+
+
+def shift(geom, lonShift=0, latShift=0):
+    """Shift a polygon in longitudinal and/or latitudinal direction.
+
+    Inputs:
+        geom : The geometry to be shifted
+            - a single ogr Geometry object of POINT, LINESTRING, POLYGON or MULTIPOLYGON type
+            - NOTE: Accepts only 2D geometries, z value must be zero.
+
+        lonShift - (int, float) : The shift in longitudinal direction in units of the geom srs, may be positive or negative
+
+        latShift - (int, float) : The shift in latitudinal direction in units of the geom srs, may be positive or negative
+
+    Returns :
+    --------
+    osgeo.ogr.Geometry object of the input type with shifted coordinates
+    """
+    if not isinstance(geom, ogr.Geometry):
+        raise TypeError(f"geom must be of type osgeo.ogr.Geometry")
+    # first get srs of input geom
+    _srs=geom.GetSpatialReference()
+
+    # define sub method to shift collection of single points
+    def _movePoints(pointCollection, lonShift, latShift):
+        """Auxiliary function shifting individual points"""
+        points=list()
+        for i in range(len(str(pointCollection).split(","))):
+            points.append(pointCollection.GetPoint(i))
+        # shift the points individually
+        points_shifted=list()
+        for p in points:
+            assert p[2]==0, f"All z-values must be zero!"
+            points_shifted.append((p[0]+lonShift, p[1]+latShift))
+        return points_shifted
+
+    # first check if geom is a point and shift
+    if "POINT" in geom.GetGeometryName():
+        p=geom.GetPoint()
+        return point((p[0]+lonShift, p[1]+latShift), srs=_srs)
+    # else check if line and adapt
+    elif "LINESTRING" in geom.GetGeometryName() and not "MULTILINE" in geom.GetGeometryName():
+        return line(_movePoints(pointCollection=geom, lonShift=lonShift, latShift=latShift), srs=_srs)
+    # else check if we have a (multi)polygon
+    elif "POLYGON" in geom.GetGeometryName():
+        if not "MULTIPOLYGON" in geom.GetGeometryName():
+            # only a simple polygon, generate single entry list to allow iteration
+            geom=[geom]
+        # iterate over individual polygons
+        for ip, poly in enumerate(geom):
+            assert "POLYGON" in poly.GetGeometryName(), f"MULTIPOLYGON is not composed of only POLYGONS"
+            # iterate over sub linear rings
+            for ir, ring in enumerate(poly):
+                assert "LINEARRING" in ring.GetGeometryName(), f"POLYGON (or sub polygon of MULTIPOLYGON) is not composed of only LINEARRINGS"
+                poly_shifted=polygon(_movePoints(pointCollection=ring, lonShift=lonShift, latShift=latShift), srs=_srs)
+                if ip==0 and ir==0:
+                    multi_shifted=poly_shifted
+                else:
+                    multi_shifted=multi_shifted.Union(poly_shifted)
+        return multi_shifted
+    else:
+        raise TypeError(f"geom must be a 'POINT', 'LINESTRING', 'POLYGON' or 'MULTIPOLYGON' osgeo.ogr.Geometry")

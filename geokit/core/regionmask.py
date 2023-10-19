@@ -179,7 +179,7 @@ class RegionMask(object):
                 raise GeoKitRegionMaskError("geom does not have an srs")
 
             if not gSRS.IsSame(self.srs):
-                GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
+                self._geometry = GEOM.transform(self._geometry, toSRS=self.srs, fromSRS=gSRS)
         else:
             self._geometry = None
 
@@ -270,13 +270,15 @@ class RegionMask(object):
         # make sure we have a geometry with an srs
         if (isinstance(geom, str)):
             geom = GEOM.convertWKT(geom, srs)
-
-        geom = geom.Clone()  # clone to make sure we're free of outside dependencies
+        
+        # clone to make sure we're free of outside dependencies
+        # convert to regionmask srs to ensure that rm.geometry.GetSpatialReference() is equal to rm.srs
+        geom = GEOM.transform(geom.Clone(), toSRS=srs)  
 
         # set extent (if not given)
         if extent is None:
             extent = Extent.fromGeom(geom).castTo(
-                srs).pad(padExtent).fit(pixelRes, start_raster)
+                srs).pad(padExtent).fit(unit=pixelRes, start_raster=start_raster)
         else:
             if not extent.srs.IsSame(srs):
                 raise GeoKitRegionMaskError(
@@ -454,7 +456,7 @@ class RegionMask(object):
 
         self._mask = None
         self._mask = self.rasterize(self.vectorPath, applyMask=False,
-                                    **kwargs).astype(np.bool)
+                                    **kwargs).astype(np.bool_)
         self.height, self.width = self._mask.shape
 
     @property
@@ -592,6 +594,11 @@ class RegionMask(object):
         """
         if (noData is None):
             noData = 0
+
+        # set matrix datatype to float if float noData value (like e.g. nan) is passed
+        if isinstance(noData, float):
+            mat=mat.astype(np.float64)
+
         # Get size
         Y, X = mat.shape
 
@@ -690,7 +697,7 @@ class RegionMask(object):
 
     def indicateValues(self, source, value, buffer=None, resolutionDiv=1, forceMaskShape=False, applyMask=True,
                        noData=None, resampleAlg='bilinear', bufferMethod='area', preBufferSimplification=None,
-                       warpDType=None, **kwargs):
+                       warpDType=None, prunePatchSize=0, threshold=0.5, **kwargs):
         """
         Indicates those pixels in the RegionMask which correspond to a particular 
         value, or range of values, from a given raster datasource
@@ -817,11 +824,23 @@ class RegionMask(object):
               - This method can be made more accurate by increasing the 
                 'resolutionDiv' input
 
-        preBufferSimplification: numeric
+        preBufferSimplification: numeric; optional
             If given, then geometries will be simplified (using ogr.Geometry.Simplify)
             using the specified value before being buffered
             - Using this can drastically decrease the time it takes to perform the 
               bufferring procedure, but can decrease accuracy if it is too high
+        
+        prunePatchSize: numeric; optional
+            If given, then isolated non-indicated patches below the given size
+            will be removed. The given value corresponds to the minimum area in
+            the unit of the regionmask SRS that will not be removed. Defaults 
+            to 0, i.e. no patches will be removed.
+            Note: This is applied to the geoms after buffer application and can
+            deviate from the patch size after final rasterization.
+
+        threshold: float; optional
+            The cell value ABOVE which cells count as positively indicated, 
+            relevant for partial overlaps with buffer method 'area'. Defaults to 0.5.
 
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
@@ -832,6 +851,7 @@ class RegionMask(object):
         numpy.ndarray
         """
         assert bufferMethod in ['area', 'contour']
+        assert isinstance(prunePatchSize, int)
 
         # format value input
         if isinstance(value, str):
@@ -923,13 +943,58 @@ class RegionMask(object):
             if bufferMethod == 'contour':
                 geoms = self.contoursFromMask(final)
             elif bufferMethod == 'area':
-                geoms = self.polygonizeMask(final > 0.5, flat=False)
+                # Check for results
+                if not (final > threshold).any(): 
+                    # no cells > threshold exist that would be buffered, so return empty
+                    return self._returnBlank(resolutionDiv=resolutionDiv, forceMaskShape=forceMaskShape,
+                                            applyMask=applyMask, noData=noData)
+                geoms = self.polygonizeMask(final > threshold, flat=False)
 
             if preBufferSimplification is not None:
                 geoms = [g.Simplify(preBufferSimplification) for g in geoms]
 
             if len(geoms) > 0:
                 geoms = [g.Buffer(buffer) for g in geoms]
+                if not prunePatchSize ==0:
+                    # create Union of all geoms, this will merge overlapping
+                    # TODO speed up via cascaded union or better sieve raster or even inverted raster (approximate exclusions based on geoms directly)!
+                    union=geoms[0]
+                    if len(geoms)>1:
+                        for g in geoms:
+                            union=union.Union(g)
+                    
+                    # create a new empty list of geoms that will be filled with manipulated shapes partly without holes
+                    geoms=[]
+                    # if regionmask extent contains only a single polygon, make it a single-entry list to make it iterable
+                    if union.GetGeometryName()=='POLYGON':
+                        union=[union]
+                    # iterate over union first to separate independent polygons
+                    for polygon in union:
+                        # check if the independent iteration polygon has more than one geometry, if so has holes/inner rings
+                        NoIndivPol=polygon.GetGeometryCount()
+                        if NoIndivPol>1:
+                            print('inner polygons found')
+                            # create a new base polygon containing the outer ring
+                            newpolygon = ogr.Geometry(ogr.wkbPolygon)
+                            newpolygon.AddGeometry(polygon.GetGeometryRef(0))
+                            # then iterate through the other geometries = inner rings
+                            for i in range(1,NoIndivPol):
+                                # only if the area of the inner ring exceeds the prunePatchSize criterion, add back as inner ring
+                                # else do nothing i.e. drop the inner ring
+                                if polygon.GetGeometryRef(i).Area()>=prunePatchSize:
+                                    # TODO this part might be faster with polygon.RemoveGeometry() without creating a 'newpolygon' above
+                                    newpolygon.AddGeometry(polygon.GetGeometryRef(i))
+                                else:
+                                    print('a innerring was dropped!')
+                            # add the new polygon with possibly less holes back to geoms
+                            geoms.append(newpolygon)
+
+                        # if the polygon has only one geometry, it has no inner ring and can be added to geom list as such
+                        else:
+                            geoms.append(polygon)
+
+
+
                 areaDS = VECTOR.createVector(geoms)
                 final = self.rasterize(areaDS, dtype="float32", bands=[1], burnValues=[1], resolutionDiv=resolutionDiv,
                                        applyMask=False, noData=noData)
@@ -1052,7 +1117,7 @@ class RegionMask(object):
                 return {'geom': geom.Buffer(buffer)}
 
             source = self.mutateVector(source, where=where, processor=doBuffer,
-                                       matchContext=True, keepAttributes=False, _slim=True)
+                                       matchContext=True, keepAttributes=False, _slim=True, **kwargs)
 
             where = None  # Set where to None since the filtering has already been done
 
@@ -1466,7 +1531,7 @@ class RegionMask(object):
         """
         return VECTOR.extractFeatures(source=source, geom=self.geometry, **kwargs)
 
-    def mutateVector(self, source, matchContext=False, **kwargs):
+    def mutateVector(self, source, matchContext=False, regionPad=0, **kwargs):
         """Convenience wrapper for geokit.vector.mutateVector which automatically
         sets 'srs' and 'geom' inputs to the RegionMask's srs and geometry
 
@@ -1489,6 +1554,11 @@ class RegionMask(object):
               mutating
             * If False, only selects the geometries which touch the RegionMask
 
+        regionPad: int, optional
+            Will buffer the regionmask geometry by a value (in the unit of the 
+            regionmask srs) before mutating the source vector onto it. Defaults
+            to 0.
+
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
 
@@ -1506,7 +1576,9 @@ class RegionMask(object):
             ext = self.extent
 
         # mutate the source
-        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry, **kwargs)
+        if regionPad==None: #cannot calculate with none, so use 0
+            regionPad=0    
+        return VECTOR.mutateVector(source, srs=ext.srs, geom=self.geometry.Buffer(regionPad), **kwargs)
 
     def mutateRaster(self, source, matchContext=True, warpArgs=None, applyMask=True, processor=None,
                      resampleAlg="bilinear", **mutateArgs):

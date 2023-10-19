@@ -1,10 +1,10 @@
 from .helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 from geokit import raster, geom, util
 from osgeo import gdal
+import os
 import pytest
 
 # gdalType
-
 
 def test_gdalType():
     assert raster.gdalType(bool) == "GDT_Byte"
@@ -29,7 +29,6 @@ def test_rasterInfo():
     assert (info.flipY == True)  # flipY
 
 # createRaster
-
 
 def test_createRaster():
     ######################
@@ -81,7 +80,6 @@ def test_createRaster():
     assert meta["TIM"] == "TIMMY"  # dist raster, data mismatch
 
 # Get values directly from a raster
-
 
 def test_extractValues():
     points = [(6.06590, 50.51939), (6.02141, 50.61491), (6.371634, 50.846025)]
@@ -292,7 +290,6 @@ def test_loadRaster():
     s3 = util.isRaster(raster.loadRaster(CLC_RASTER_PATH))
     assert s3 == True
 
-
 def test_createRasterLike():
     source = gdal.Open(CLC_RASTER_PATH)
     sourceInfo = raster.rasterInfo(source)
@@ -313,13 +310,23 @@ def test_createRasterLike():
     # From rasterInfo, no output
     newRaster = raster.createRasterLike(sourceInfo, data=data*4)
     newdata = raster.extractMatrix(newRaster)
-    assert np.isclose(data, newdata/4).all()
+    assert np.isclose(data, newdata/4).all()   
 
+def test_saveRasterAsTif():
+    
+    source = gdal.Open(CLC_RASTER_PATH)
+    data = raster.extractMatrix(source)
+    
+    # Saving from osgeo.gdal.Dataset, with output
+    raster.saveRasterAsTif(source,
+                           output=result("saveRasterAsTif.tif"))
+    
+    newdata = raster.extractMatrix(result("saveRasterAsTif.tif"))
+    assert np.isclose(data, newdata).all()
 
 def test_rasterStats():
     result = raster.rasterStats(CLC_RASTER_PATH, AACHEN_SHAPE_PATH)
     assert np.isclose(result.mean, 15.711518944519621)
-
 
 def test_indexToCoord():
     rasterSource = gdal.Open(CLC_RASTER_PATH)
@@ -383,6 +390,16 @@ def test_polygonizeRaster():
     assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(),
                       120529999.18190208)  # geom area
 
+    geoms = raster.polygonizeRaster(RASTER_GDAL_244, flat=True)
+    assert np.equal(geoms.shape[0], 2) # geom count
+
+    # geom areas
+    assert np.isclose(geoms.loc[0, "geom"].Area(),  949049962.3788521)
+    assert np.isclose(geoms.loc[1, "geom"].Area(),  5584949959.933687)
+    assert np.isclose(geoms.geom.apply(lambda x: x.Area()).sum(), 6533999922.312539)
+
+    # geom validity
+    assert geoms.geom.map(lambda g: g.IsValid()).all()
 
 def test_contours():
     geoms = raster.contours(AACHEN_ELIGIBILITY_RASTER, contourEdges=[0.5])
@@ -442,3 +459,99 @@ def test_warp():
                     output=result("warp6.tif"))
     v6 = raster.extractMatrix(d)
     assert np.isclose(v1, v6).all()
+
+@pytest.fixture()
+def sieve_ds():
+    
+    data_arr = np.array([[0,0,1,1,1,0,0],
+                         [1,0,0,0,0,0,1],
+                         [1,0,0,1,1,1,0],
+                         [0,0,0,1,0,1,0],
+                         [1,0,0,1,1,1,1],])
+    
+    
+    data_raster = raster.createRaster(
+                                    bounds=(0,0,7,5),
+                                    pixelHeight=1,
+                                    pixelWidth=1,
+                                    srs=3035,
+                                    data=data_arr,
+                                )
+
+    return data_raster
+
+@pytest.fixture()
+def sieve_mask():
+    mask_arr = np.array([[1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 0, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1]])
+        
+    mask_raster = raster.createRaster(
+                                        bounds=(0,0,7,5),
+                                        pixelHeight=1,
+                                        pixelWidth=1,
+                                        srs=3035,
+                                        data=mask_arr,
+                                        noData=0,
+                                    )
+    return mask_raster
+    
+@pytest.mark.parametrize("source, threshold, connectedness, mask, expected_output",
+                         
+                         [
+                            (   
+                                "sieve_ds",
+                                2,
+                                4,
+                                "none",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                         [1, 0, 0, 0, 0, 0, 0],
+                                         [1, 0, 0, 1, 1, 1, 0],
+                                         [0, 0, 0, 1, 1, 1, 0],
+                                         [0, 0, 0, 1, 1, 1, 1]],)
+                                
+                            ),
+                            
+                            (   
+                                "sieve_ds",
+                                2,
+                                8,
+                                "none",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                        [1, 0, 0, 0, 0, 0, 1],
+                                        [1, 0, 0, 1, 1, 1, 0],
+                                        [0, 0, 0, 1, 1, 1, 0],
+                                        [0, 0, 0, 1, 1, 1, 1]],)
+                            ),
+                            
+                            (   
+                                "sieve_ds",
+                                2,
+                                8,
+                                "sieve_mask",
+                                np.array([[0, 0, 1, 1, 1, 0, 0],
+                                          [1, 0, 0, 0, 0, 0, 1],
+                                          [1, 0, 0, 1, 1, 1, 0],
+                                          [0, 0, 0, 1, 0, 1, 0],
+                                          [0, 0, 0, 1, 1, 1, 1]],)
+                            )
+                            
+                            
+                        ]
+)
+def test_sieve(source, threshold, connectedness, mask, expected_output, request):
+    
+    if mask == "none":
+        arr_out = raster.extractMatrix(raster.sieve(source=request.getfixturevalue(source), 
+                                                    threshold=threshold, 
+                                                    connectedness=connectedness, 
+                                                    mask=mask))
+    else:
+        arr_out = raster.extractMatrix(raster.sieve(source=request.getfixturevalue(source), 
+                                                    threshold=threshold, 
+                                                    connectedness=connectedness, 
+                                                    mask=request.getfixturevalue(mask)))
+
+    assert (arr_out == expected_output).all()

@@ -5,8 +5,6 @@ import pytest
 import pandas as pd
 
 # box
-
-
 def test_box():
     # fun func
     b1 = geom.box(0, 0, 5, 10, srs=EPSG3035)
@@ -99,10 +97,43 @@ def test_point():
     assert np.isclose(p2.GetY(), y)
     assert p2.GetSpatialReference().IsSame(EPSG3035)
 
+@pytest.mark.parametrize(
+    "points_input, srs, output_length, output_bounds",
+    [
+        (
+            # test input as list of tuples
+            pointsInAachen4326,
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as nx2 np.array
+            np.array([[tup[0], tup[1]] for tup in pointsInAachen4326]),
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+        (   
+            # test input as list of osgeo.ogr.Geometry point objects
+            [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326],
+            4326,
+            0.52498095,
+            (6.02141, 6.371634, 50.51939, 50.846025)
+        ),
+    ]
+)
+def test_line(points_input, srs, output_length, output_bounds):
+
+    # test input as list of tuples
+    l = geom.line(points_input, srs=srs)
+    
+    assert l.GetSpatialReference().IsSame(EPSG4326)
+    assert np.isclose(l.Length(), output_length)
+    assert np.isclose(l.GetEnvelope(), output_bounds).all()
 
 @pytest.mark.skip("No test implemented for: geom.empty")
 def test_empty(): assert False
-
 
 def test_convertWKT():
     g1 = geom.convertWKT(POLY, srs=EPSG4326)
@@ -116,7 +147,7 @@ def test_polygonizeMatrix():
                           [0, 1, 1, 1, 0],
                           [0, 1, 0, 1, 0],
                           [0, 1, 1, 1, 0],
-                          [0, 0, 0, 0, 0]], dtype=np.int)
+                          [0, 0, 0, 0, 0]], dtype=int)
 
     g1 = geom.polygonizeMatrix(boxmatrix, shrink=None)
     assert np.isclose(g1.geom[0].Area(), 8.0)  # polygonizeMatrix: simple area
@@ -134,7 +165,7 @@ def test_polygonizeMatrix():
                               [2, 2, 0, 1, 0],
                               [0, 0, 0, 1, 1],
                               [1, 1, 0, 1, 0],
-                              [3, 1, 0, 0, 0]], dtype=np.int)
+                              [3, 1, 0, 0, 0]], dtype=int)
 
     g2 = geom.polygonizeMatrix(complexmatrix, shrink=None)
     assert np.isclose(g2.shape[0], 4)  # polygonizeMatrix: geometry count
@@ -163,7 +194,7 @@ def test_polygonizeMask():
                         [0, 1, 1, 1, 0],
                         [0, 1, 0, 1, 0],
                         [0, 1, 1, 1, 0],
-                        [0, 0, 0, 0, 0]], dtype=np.bool)
+                        [0, 0, 0, 0, 0]], dtype=bool)
 
     g1 = geom.polygonizeMask(boxmask, shrink=None)
     assert np.isclose(g1.Area(), 8.0)  # polygonizeMask: simple area
@@ -178,7 +209,7 @@ def test_polygonizeMask():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     g2 = geom.polygonizeMask(complexmask, shrink=None, flat=False)
     assert np.isclose(len(g2), 3)  # polygonizeMask: geometry count
@@ -229,7 +260,7 @@ def test_transform():
                             [1, 1, 0, 1, 0],
                             [0, 0, 0, 1, 1],
                             [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=np.bool)
+                            [0, 1, 0, 0, 0]], dtype=bool)
 
     polygons = geom.polygonizeMask(complexmask, bounds=(
         6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
@@ -270,6 +301,7 @@ def test_drawGeoms():
     # Draw single polygon
     r = geom.drawGeoms(SUB_GEOM)
     plt.savefig(result("drawGeoms-1.png"), dpi=100)
+    assert SUB_GEOM.GetSpatialReference().IsSame(EPSG4326)
 
     # Draw single linestring
     r = geom.drawGeoms(SUB_GEOM.Boundary())
@@ -286,12 +318,16 @@ def test_drawGeoms():
     # Change projection systems
     r = geom.drawGeoms(SUB_GEOMS, fc='r', srs=3035)
     plt.savefig(result("drawGeoms-5.png"), dpi=100)
-
-    # Draw from a dataframe
+    assert SUB_GEOMS[0].GetSpatialReference().IsSame(EPSG4326)
+    
+    # Draw from a dataframe, once without and once with SRS adaptation
     df = pd.DataFrame(dict(geom=SUB_GEOMS, hats=[1, 2, 3]))
 
-    r = geom.drawGeoms(df, srs=3035)
+    r = geom.drawGeoms(df)
     plt.savefig(result("drawGeoms-6.png"), dpi=100)
+    r = geom.drawGeoms(df, srs=3035)
+    plt.savefig(result("drawGeoms-6b.png"), dpi=100)
+    assert df.geom[0].GetSpatialReference().IsSame(EPSG4326)
 
     # Set individual mpl args
     df["MPL:hatch"] = ["//", "+", None]
@@ -303,3 +339,26 @@ def test_drawGeoms():
     plt.savefig(result("drawGeoms-8.png"), dpi=100)
 
     assert True
+
+def test_shift():
+    # test point, no srs
+    assert geom.shift(geom=geom.point((0,1)), lonShift=5).Equals(geom.point((5,1)))
+
+    # test line, epsg 3035
+    l1=geom.line([(0,0), (1,1)], srs=3035)
+    l1_check=geom.line([(0,-10), (1,-9)], srs=3035)
+    assert geom.shift(l1, latShift=-10).Equals(l1_check)
+
+    # test polygon, srs 4326
+    b1 = geom.box(-170, 60, -160, 70, srs=4326)
+    b1_check=geom.box(10,-30,20,-20, srs=4326)
+    assert geom.shift(geom=b1, lonShift=180, latShift=-90).Equals(b1_check)
+
+    # test multipolygon
+    b2 = geom.box(-120, 10, -100, 30, srs=4326)
+    b2_check=geom.box(60,-80,80,-60, srs=4326)
+    b_multi=b1.Union(b2)
+    b_multi_check=b1_check.Union(b2_check)
+    assert geom.shift(geom=b_multi, lonShift=180, latShift=-90).Equals(b_multi_check)
+
+

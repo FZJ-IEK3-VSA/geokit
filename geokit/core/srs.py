@@ -1,67 +1,20 @@
 import os
 import numpy as np
-from osgeo import osr, gdal
+from osgeo import osr, gdal, ogr
 import warnings
 from collections import namedtuple
 import smopy
 from typing import Iterable
 
 from . import util as UTIL
-
+from . import geom as GEOM
 
 class GeoKitSRSError(UTIL.GeoKitError):
     pass
 
+warnings.filterwarnings("always", category=DeprecationWarning)
 
-######################################################################################
-# Common SRS library
-
-# Some other srs shortcuts
-
-
-class _SRSCOMMON:
-    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
-
-    * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
-        1: SRSCOMMON.<srs>
-        2: SRSCOMMON["<srs>"]
-    """
-    # basic latitude and longitude
-    _latlon = osr.SpatialReference()
-    _latlon.ImportFromEPSG(4326)
-
-    @property
-    def latlon(self):
-        """Basic SRS for unprojected latitude and longitude coordinates
-
-        Units: Degrees"""
-        return self._latlon
-    # basic latitude and longitude
-    _europe_m = osr.SpatialReference()
-    _europe_m.ImportFromEPSG(3035)
-
-    @property
-    def europe_m(self):
-        """Equal-Area projection centered around Europe.
-
-        * Good for relational operations within Europe
-
-        Units: Meters"""
-        return self._europe_m
-
-    # basic getter
-    def __getitem__(self, name):
-        if not hasattr(self, name):
-            raise ValueError("SRS \"%s\" not found" % name)
-        return getattr(self, "_"+name)
-
-
-# Initialize
-SRSCOMMON = _SRSCOMMON()
-
-################################################
 # Basic loader
-
 
 def loadSRS(source):
     """
@@ -75,6 +28,7 @@ def loadSRS(source):
         Example of acceptable objects are...
           * osr.SpatialReference object
           * An EPSG integer ID
+          * A standardized srs str definition such as 'EPSG:4326' or 'ESRI:53003'
           * a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
           * a WKT string
 
@@ -98,7 +52,13 @@ def loadSRS(source):
             # assume a name for one of the common SRS's was given
             srs = SRSCOMMON[source]
         else:
-            srs.ImportFromWkt(source)  # assume a Wkt string was input
+            try:
+                # try handling as a standardized epsg or esri etc. code
+                srs = osr.SpatialReference()
+                _val = srs.SetFromUserInput(source)
+                assert _val==0
+            except:
+                srs.ImportFromWkt(source)  # assume a Wkt string was input
     elif(isinstance(source, int)):
         srs.ImportFromEPSG(source)
     else:
@@ -106,6 +66,9 @@ def loadSRS(source):
 
     if gdal.__version__ >= '3.0.0':
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
+    # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
+    assert srs.Validate()==0, f"Created srs is invalid."
 
     return srs
 
@@ -116,29 +79,52 @@ EPSG4326 = loadSRS(4326)
 EPSG3857 = loadSRS(3857)
 
 
-def centeredLAEA(lon, lat):
+def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
     """
-    Load a Lambert-Azimuthal-Equal_Area spatial reference system (SRS) centered on a given set of latitude and longitude coordinates.
+    Load a Lambert-Azimuthal-Equal_Area spatial reference system (SRS) centered
+    on a given set of latitude and longitude coordinates. Alternatively, a geom
+    can be passed to center the LAEA on.
 
     Parameters:
     -----------
     lon : float
-        The longitude of the projection's center
+        The longitude of the projection's center. Required if no geom is given.
 
     lat : float
-        The latitude of the projection's center
+        The latitude of the projection's center. Required if no geom is given.
+
+    geom: osgeo.ogr.Geometry
+        The region shape to center the LAEA in. If given, lat and lon must not 
+        be given, instead they will be defined automatically as the coordinates
+        of the region centroid.
 
     Returns:
     --------
     osr.SpatialReference
 
     """
+    if geom is None:
+        assert isinstance(lat, float) and isinstance(lon, float), "If geom is not passed, lat and lon must be given as float values."
+    else:
+        assert isinstance(geom, ogr.Geometry), "geom must be given as osgeo.ogr.Geometry class object if not None."
+        assert lat is None and lon is None, "If geom is given, lat and lon must not be given."
+    
+    # check if lat/lon can be used or if it must be extracted from geom first
+    if not geom is None:
+        # transform to EPSG:4326 in case it not already is lat/lon projection
+        geom = GEOM.transform(geom, toSRS=4326)
+        # extract lat/lon centroid coordinates to center LAEA upon
+        lon = geom.Centroid().GetX()
+        lat = geom.Centroid().GetY()
+
     srs = osr.SpatialReference()
-    srs.ImportFromProj4(
-        '+proj=laea +lat_0={} +lon_0={} +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'.format(lat, lon))
+    srs.ImportFromWkt('PROJCS["{}",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(name, lat, lon))
     
     if gdal.__version__ >= '3.0.0':
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
+    # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
+    assert srs.Validate()==0, f"Created srs is invalid."
         
     return srs
 
@@ -245,3 +231,88 @@ def tileIndexAt(x, y, zoom, srs):
 
     return Tile(xi, yi, zoom)
 
+######################################################################################
+# Common SRS library
+
+# Some other srs shortcuts
+
+
+class _SRSCOMMON:
+    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
+
+    * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
+        1: SRSCOMMON.<srs>
+        2: SRSCOMMON["<srs>"]
+    """
+    # basic latitude and longitude
+    _latlon = osr.SpatialReference()
+    _latlon.ImportFromEPSG(4326)
+
+    @property
+    def latlon(self):
+        """Basic SRS for unprojected latitude and longitude coordinates
+
+        Units: Degrees"""
+        return self._latlon
+    # basic latitude and longitude
+    _europe_laea = osr.SpatialReference()
+    _europe_laea.ImportFromEPSG(3035)
+    _europe_m = _europe_laea.Clone()
+
+    @property
+    def europe_m(self):
+        
+        warnings.warn(
+            "SRSCOMMON.europe_m is deprecated and will be removed in a future release. \
+            use SRSCOMMON.europe_laea instead.",
+            DeprecationWarning,
+        )
+         
+        return self._europe_m
+
+    @property
+    def europe_laea(self):
+        """Equal-Area projection centered around Europe.
+
+        * Good for relational operations within Europe
+
+        Units: Meters"""
+        return self._europe_laea
+    
+    # define a centered LAEA on the centroid lat/lon of ECOWAS region
+    _ecowas_laea = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS")
+    
+    @property
+    def ecowas_laea(self):
+        """Equal-Area projection centered around ECOWAS (Western Africa).
+
+        * Good for relational operations within Western Africa
+
+        Units: Meters"""
+        return self._ecowas_laea
+    
+    # define a centered LAEA on the centroid lat/lon of SADC region
+    _sadc_laea = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC")
+    
+    @property
+    def sadc_laea(self):
+        """Equal-Area projection centered around ECOWAS (Western Africa).
+
+        * Good for relational operations within Western Africa
+
+        Units: Meters"""
+        return self._sadc_laea
+
+    # basic getter
+    def __getitem__(self, name):
+        
+        if not hasattr(self, name):
+            
+            raise ValueError("SRS \"%s\" not found" % name)
+        
+        return getattr(self, f"_{name}")
+
+# Initialize
+SRSCOMMON = _SRSCOMMON()
+
+################################################

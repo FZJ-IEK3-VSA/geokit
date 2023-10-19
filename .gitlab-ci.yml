@@ -1,18 +1,25 @@
-image: continuumio/miniconda3:latest
+image: mambaorg/micromamba
 
 stages:
   - test
 
-test:
+.test_template:
   stage: test
-  tags: 
-    - linux
+  before_script:
+    # create environment
+    - micromamba create -y -n geokit --file=requirements-dev.yml
+    - eval "$(micromamba shell hook --shell bash)"
+    - micromamba activate geokit
+    # Install geokit with no --no-deps flag to create a reproducible environment
+    - python -m pip install -e . --no-deps
 
-  script: 
-    - conda install mamba -c conda-forge
-    - mamba env update -n geokit --file=requirements.yml
-    - mamba env update -n geokit --file=requirements-dev.yml
-    - mamba info --envs
-    - source activate geokit
-    - python -m pip install -e .
+test-code:
+  extends: .test_template
+  script:
+    # Test code
     - python -m pytest --cov=geokit geokit/test/
+
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: always
