@@ -28,6 +28,7 @@ def loadSRS(source):
         Example of acceptable objects are...
           * osr.SpatialReference object
           * An EPSG integer ID
+          * A standardized srs str definition such as 'EPSG:4326' or 'ESRI:53003'
           * a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
           * a WKT string
 
@@ -51,7 +52,13 @@ def loadSRS(source):
             # assume a name for one of the common SRS's was given
             srs = SRSCOMMON[source]
         else:
-            srs.ImportFromWkt(source)  # assume a Wkt string was input
+            try:
+                # try handling as a standardized epsg or esri etc. code
+                srs = osr.SpatialReference()
+                _val = srs.SetFromUserInput(source)
+                assert _val==0
+            except:
+                srs.ImportFromWkt(source)  # assume a Wkt string was input
     elif(isinstance(source, int)):
         srs.ImportFromEPSG(source)
     else:
