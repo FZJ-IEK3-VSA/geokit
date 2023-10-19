@@ -339,3 +339,26 @@ def test_drawGeoms():
     plt.savefig(result("drawGeoms-8.png"), dpi=100)
 
     assert True
+
+def test_shift():
+    # test point, no srs
+    assert geom.shift(geom=geom.point((0,1)), lonShift=5).Equals(geom.point((5,1)))
+
+    # test line, epsg 3035
+    l1=geom.line([(0,0), (1,1)], srs=3035)
+    l1_check=geom.line([(0,-10), (1,-9)], srs=3035)
+    assert geom.shift(l1, latShift=-10).Equals(l1_check)
+
+    # test polygon, srs 4326
+    b1 = geom.box(-170, 60, -160, 70, srs=4326)
+    b1_check=geom.box(10,-30,20,-20, srs=4326)
+    assert geom.shift(geom=b1, lonShift=180, latShift=-90).Equals(b1_check)
+
+    # test multipolygon
+    b2 = geom.box(-120, 10, -100, 30, srs=4326)
+    b2_check=geom.box(60,-80,80,-60, srs=4326)
+    b_multi=b1.Union(b2)
+    b_multi_check=b1_check.Union(b2_check)
+    assert geom.shift(geom=b_multi, lonShift=180, latShift=-90).Equals(b_multi_check)
+
+
