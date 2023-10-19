@@ -101,6 +101,17 @@ def test_extractFeature():
     else:
         assert False
 
+def test_extractAndClipFeatures():
+    multiFeatures = vector.extractFeatures(MULTI_FTR_SHAPE_PATH)
+    multiFeatures['testAttr']=100
+    box = geom.box((6.6, 49.0, 7.6, 50.0), srs=4326)
+
+    clipped = vector.extractAndClipFeatures(source=multiFeatures, geom=box, where="id < 4", scaleAttrs='testAttr')
+
+    assert len(clipped)==2
+    assert all(np.isclose(clipped.areaShare.values, np.array([0.827164, 1.0])))
+    assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
+
 # Create shape file
 
 

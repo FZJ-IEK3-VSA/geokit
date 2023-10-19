@@ -7,6 +7,7 @@ from collections import namedtuple, defaultdict, OrderedDict
 from collections.abc import Iterable
 import pandas as pd
 from binascii import hexlify
+import numbers
 
 from . import util as UTIL
 from . import srs as SRS
@@ -325,7 +326,7 @@ def extractFeatures(source, where=None, geom=None, srs=None, onlyGeom=False, onl
     * Sometimes they may only overlap
     * Sometimes they are only in the geometry's envelope
     * To be sure an extracted geometry fits the selection criteria, you may 
-      still need to do further processing
+      still need to do further processing or use extractAndClipFeatures()
 
     Parameters:
     -----------
@@ -547,6 +548,154 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     """
     warnings.warn("This function will be removed in favor of geokit.vector.extractFeatures", DeprecationWarning)
     return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
+
+
+def extractAndClipFeatures(source, geom, where=None, srs=None, onlyGeom=False, indexCol=None, skipMissingGeoms=True, layerName=None, scaleAttrs=None, **kwargs):
+    """
+    Extracts features from a source and clips them to the boundaries of a given geom.
+    Optionally scales numeric attribute values linearly to the overlapping area share.
+
+    Parameters:
+    -----------
+    source : Anything acceptable by loadVector()
+        The vector data source to read from
+
+    geom : ogr.Geometry
+        The geometry to search with
+        * All features touching this geometry are extracted and clipped to the geometry boundaries.
+
+    where : str; optional
+        An SQL-like where statement to apply to the source
+        * Feature attribute name do not need quotes
+        * String values should be wrapped in 'single quotes'
+        Example: If the source vector has a string attribute called "ISO" and 
+                 a integer attribute called "POP", you could use....
+
+            where = "ISO='DEU' AND POP>1000"
+
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
+        The srs of the geometries to extract
+          * If not given, the geom's inherent srs is used
+          * If srs does not match the inherent srs, all geometries will be 
+            transformed
+
+    onlyGeom : bool; optional
+        If True, only feature geometries will be returned
+
+    indexCol : str; optional
+        The feature identifier to use as the DataFrams's index
+        * Only useful when as DataFrame is True
+
+    skipMissingGeoms : bool; optional
+        If True, then the parser will not read a feature which are missing a geometry
+        
+    layerName : str; optional
+        The name of the layer to extract from the source vector dataset (only applicable in case of a geopackage).
+
+    scaleAttrs : str or list, optional
+        attribute names of the source with numeric values. The values will be scaled linearly with the 
+        area share of the feature overlapping the geom.
+
+    Returns:
+    --------
+    * pandas.DataFrame or pandas.Series
+    """
+    # assert and preprocess input source
+    if isinstance(source, pd.DataFrame):
+        # check validity of input dataframe
+        if not 'geom' in source.columns:
+            raise AttributeError(f"source is given as a pd.DataFrame but has not 'geom' column.")
+        if not isinstance(source.geom.iloc[0], ogr.Geometry):
+            raise TypeError(f"source is given as a pd.DataFrame but value in 'geom' column is not of type osgeo.ogr.Geometry.")
+        # return empty dataframe with empty expected "areaShare" column if no geometries contained since vector cannot be created without geometries
+        if len(source)==0:
+            source['areaShare']=None
+            return source
+        # generate a vector from source dataframe
+        source = createVector(source)
+    elif isinstance(source, str):
+        if not os.path.isfile(source):
+            raise FileNotFoundError(f"source is given as a string but is not an existing filepath: {source}")
+        # load as vector file
+        source=loadVector(source)
+    elif not isinstance(source, gdal.Dataset):
+        raise TypeError(f"source must either be a pd.DataFrame, a gdal.Dataset vector instance or a str formatted shapefile path.")
+    
+    # extract only the overlapping geoms, first define srs
+    if srs is None:
+        srs=geom.GetSpatialReference()
+    else:
+        geom=GEOM.transform(geom, toSRS=srs)
+    df = extractFeatures(source=source, geom=geom, where=where, srs=srs, onlyGeom=onlyGeom, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
+    if scaleAttrs is None:
+        scaleAttrs=[]
+    elif isinstance(scaleAttrs, str):
+        scaleAttrs=[scaleAttrs]
+    else:
+        assert isinstance(scaleAttrs, list), f"scaleAttrs must be a str or a list thereof if not None."
+    for _attr in scaleAttrs:
+        if not _attr in list(df.columns):
+            raise AttributeError(f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe.")
+        if not all([isinstance(_val, numbers.Number) for _val in df[_attr]]):
+            raise TypeError(f"All values in column '{_attr}' in scaleAttrs must be numeric.")
+
+    
+    # check if we have any features to clip at all
+    if len(df)==0:
+        # if not, add the mandatory areaShare column in case that it is not there already and return empty dataframe
+        df['areaShare']=None
+        return df
+    # else add the expected areaShare column
+    assert not 'areaShare' in list(df.columns), f"source data must not contain a 'areaShare' attribute."
+    df['areaShare']=1.0
+    # check if we need to clip the geometries at all
+    if df.geom.iloc[0].GetGeometryName()[:5] == 'POINT':
+        # we have only points and no further clipping is needed
+        return df
+
+    # else we need to add an ID column and generate a new vector
+    assert not 'clippingID' in list(df.columns), f"source data must not contain a 'clippingID' attribute."
+    df['clippingID']=range(len(df))
+    _vec = createVector(df)
+    # extract only these features intersected by the outer geom boundary
+    outer_df = extractFeatures(source=_vec, geom=geom.Boundary(), where=where, srs=srs, indexCol=indexCol, skipMissingGeoms=skipMissingGeoms, layerName=layerName, **kwargs)
+    del _vec
+    if len(outer_df)==0:
+        # we have no features intersecting with the geom boundary, return all included features
+
+        return df.drop(columns='clippingID')
+    
+    # else clip these features that are intersected by the geom
+    _clippedIDs = list()
+    _clippedGeoms = list()
+    _areaShares = list()
+    for i, feat in zip(outer_df.clippingID, outer_df.geom):
+        _clipped = feat.Intersection(geom)
+        _areaShare = _clipped.Area()/feat.Area()
+        if _areaShare==1.0:
+            # the feature is only touched by the boundary but not reduced
+            continue
+        elif _areaShare==0.0:
+            # the feature is fully outside the geom and only touches the geom boundary
+            # set clipped feature geometry to np.nan to filter out later
+            _clipped=np.nan
+        _clippedGeoms.append(_clipped)
+        _areaShares.append(_areaShare)
+        _clippedIDs.append(i)
+
+    if len(_clippedIDs)==0:
+        # we have not clipped any feature at all, return df
+        return df.drop(columns='clippingID')
+    
+    # else replace the original feature geometries with the clipped ones where needed and add area shares
+    df.loc[df.clippingID.isin(_clippedIDs), 'geom'] = _clippedGeoms
+    df.loc[df.clippingID.isin(_clippedIDs), 'areaShare'] = _areaShares
+    for _attr in scaleAttrs:
+        df[_attr]=df.apply(lambda x : x[_attr]*x.areaShare, axis=1)
+
+    # return the adapted dataframe
+    return df.drop(columns='clippingID')
+    
 
 
 ####################################################################
