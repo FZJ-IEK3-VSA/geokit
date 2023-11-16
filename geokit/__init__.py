@@ -5,14 +5,19 @@ __version__ = "1.4.0"
 # maybe set GDAL_DATA variable
 from os import environ as _environ
 from os.path import join as _join, dirname as _dirname, basename as _basename
+
 # from warnings import warn as _warn
 
 if not "GDAL_DATA" in _environ:
     from os.path import isdir as _isdir
     from sys import executable as _executable
 
-    for d in [_join(_dirname(_executable), "Library", "share", "gdal"),  # Common location on windows
-              _join(_dirname(_executable), "..", "share", "gdal")]:  # Common location on linux
+    for d in [
+        _join(
+            _dirname(_executable), "Library", "share", "gdal"
+        ),  # Common location on windows
+        _join(_dirname(_executable), "..", "share", "gdal"),
+    ]:  # Common location on linux
         if _isdir(d):
             # _warn("Setting GDAL_DATA to: "+d, UserWarning)
             _environ["GDAL_DATA"] = d
@@ -20,7 +25,8 @@ if not "GDAL_DATA" in _environ:
 
     if not "GDAL_DATA" in _environ:
         raise RuntimeError(
-            "Could not locate GDAL_DATA folder. Please set this as an environment variable pointing to the GDAL static files")
+            "Could not locate GDAL_DATA folder. Please set this as an environment variable pointing to the GDAL static files"
+        )
 
 
 # import the utilities
@@ -46,6 +52,7 @@ import geokit.algorithms
 # Add useful paths for testing and stuff
 from collections import OrderedDict as _OrderedDict
 from glob import glob as _glob
+
 _test_data_ = _OrderedDict()
 
 for f in _glob(_join(_dirname(__file__), "test", "data", "*")):
