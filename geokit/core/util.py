@@ -658,7 +658,8 @@ def drawImage(
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
-        interpolation="none" ** kwargs,
+        interpolation="none",
+        **kwargs,
     )
 
     # Draw Colorbar
