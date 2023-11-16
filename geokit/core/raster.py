@@ -1591,6 +1591,7 @@ def drawRaster(
     topMargin=0,
     bottomMargin=0,
     zorder=0,
+    resampleAlg="med",
     **kwargs,
 ):
     """Draw a raster as an image on a matplotlib canvas
@@ -1688,6 +1689,9 @@ def drawRaster(
     bottomMargin : float; optional
         Additional margin to add to the left of the figure
           * Before using this, try adjusting the 'figsize'
+
+    resampleAlg : str, optional
+        The resampleAlg passed on to a call of warp() if needed, by default "med"
 
     **kwargs : Passed on to a call to warp()
         * Determines how the warping is carried out
@@ -1797,6 +1801,7 @@ def drawRaster(
             bounds=bounds,
             fill=cutlineFillValue,
             noData=cutlineFillValue,
+            resampleAlg=resampleAlg,
             **kwargs,
         )
 
