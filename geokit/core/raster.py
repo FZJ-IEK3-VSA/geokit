@@ -1814,7 +1814,15 @@ def drawRaster(
         info.yMin,
         info.yMax,
     )
-    h = ax.imshow(data, extent=ext, vmin=vmin, vmax=vmax, cmap=cmap, zorder=zorder)
+    h = ax.imshow(
+        data,
+        extent=ext,
+        vmin=vmin,
+        vmax=vmax,
+        cmap=cmap,
+        zorder=zorder,
+        interpolation="none",
+    )
 
     # Draw Colorbar
     if cbar:
