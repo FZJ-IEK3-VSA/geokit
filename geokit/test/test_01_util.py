@@ -11,28 +11,28 @@ def test_scaleMatrix():
 
     # Equal down scale
     scaledMatrix1 = util.scaleMatrix(MASK_DATA, -2)
-    assert np.isclose(scaledMatrix1.sum()*2*2, sumCheck)
+    assert np.isclose(scaledMatrix1.sum() * 2 * 2, sumCheck)
 
     # Unequal down scale
     scaledMatrix2 = util.scaleMatrix(MASK_DATA, (-2, -4))
-    assert np.isclose(scaledMatrix2.sum()*2*4, sumCheck)
+    assert np.isclose(scaledMatrix2.sum() * 2 * 4, sumCheck)
 
     # Unequal up scale
     scaledMatrix3 = util.scaleMatrix(MASK_DATA, (2, 4))
-    assert np.isclose(scaledMatrix3.sum()/2/4, sumCheck)
+    assert np.isclose(scaledMatrix3.sum() / 2 / 4, sumCheck)
 
     # Strict downscale fail
     try:
         util.scaleMatrix(MASK_DATA, -3)
-        assert(False)
+        assert False
     except util.GeoKitError:
-        assert(True)
+        assert True
     else:
-        assert(False)
+        assert False
 
     # non-strict downscale
     scaledMatrix5 = util.scaleMatrix(MASK_DATA, -3, strict=False)
-    assert(scaledMatrix5.sum()/2/4 != sumCheck)
+    assert scaledMatrix5.sum() / 2 / 4 != sumCheck
 
 
 def test_isRaster():
@@ -52,16 +52,20 @@ def test_isVector():
 
 
 @pytest.mark.skip("No test implemented for: util.quickVector")
-def test_quickVector(): assert False
+def test_quickVector():
+    assert False
 
 
 @pytest.mark.skip("No test implemented for: util.quickRaster")
-def test_quickRaster(): assert False
+def test_quickRaster():
+    assert False
 
 
 @pytest.mark.skip("No test implemented for: util.drawImage")
-def test_drawImage(): assert False
+def test_drawImage():
+    assert False
 
 
 @pytest.mark.skip("No test implemented for: util.KernelProcessor")
-def test_KernelProcessor(): assert False
+def test_KernelProcessor():
+    assert False

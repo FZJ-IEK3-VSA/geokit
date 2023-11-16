@@ -1,8 +1,21 @@
-from .helpers import MASK_DATA, np, pointInAachen3035, pointsInAachen4326, EPSG3035, EPSG4326, POLY, GEOM, SUB_GEOMS, SUB_GEOM, result
+from .helpers import (
+    MASK_DATA,
+    np,
+    pointInAachen3035,
+    pointsInAachen4326,
+    EPSG3035,
+    EPSG4326,
+    POLY,
+    GEOM,
+    SUB_GEOMS,
+    SUB_GEOM,
+    result,
+)
 from geokit import geom
 import matplotlib.pyplot as plt
 import pytest
 import pandas as pd
+
 
 # box
 def test_box():
@@ -21,32 +34,43 @@ def test_tile():
     assert np.isclose(envelope[2], 6457400.14953169)
     assert np.isclose(envelope[3], 6462292.119341941)
 
+
 def test_tileAt():
-    tile = geom.tileAt(x=6,y=50, zoom=7, srs=EPSG4326)
+    tile = geom.tileAt(x=6, y=50, zoom=7, srs=EPSG4326)
 
     a = np.array(tile.Boundary().GetPoints())
-    assert np.isclose(a,
-            np.array([[ 626172.13571216, 6261721.35712164,       0.        ],
-                        [ 939258.20356825, 6261721.35712164,       0.        ],
-                        [ 939258.20356825, 6574807.42497772,       0.        ],
-                        [ 626172.13571216, 6574807.42497772,       0.        ],
-                        [ 626172.13571216, 6261721.35712164,       0.        ]])).all()
+    assert np.isclose(
+        a,
+        np.array(
+            [
+                [626172.13571216, 6261721.35712164, 0.0],
+                [939258.20356825, 6261721.35712164, 0.0],
+                [939258.20356825, 6574807.42497772, 0.0],
+                [626172.13571216, 6574807.42497772, 0.0],
+                [626172.13571216, 6261721.35712164, 0.0],
+            ]
+        ),
+    ).all()
 
     tile = geom.tileAt(x=4101103, y=2978620, zoom=7, srs=EPSG3035)
 
     a = np.array(tile.Boundary().GetPoints())
-    assert np.isclose(a,
-            np.array([[ 626172.13571216, 6261721.35712164,       0.        ],
-                        [ 939258.20356825, 6261721.35712164,       0.        ],
-                        [ 939258.20356825, 6574807.42497772,       0.        ],
-                        [ 626172.13571216, 6574807.42497772,       0.        ],
-                        [ 626172.13571216, 6261721.35712164,       0.        ]])).all()
+    assert np.isclose(
+        a,
+        np.array(
+            [
+                [626172.13571216, 6261721.35712164, 0.0],
+                [939258.20356825, 6261721.35712164, 0.0],
+                [939258.20356825, 6574807.42497772, 0.0],
+                [626172.13571216, 6574807.42497772, 0.0],
+                [626172.13571216, 6261721.35712164, 0.0],
+            ]
+        ),
+    ).all()
+
 
 def test_subTiles():
-    tiles = list(geom.subTiles(GEOM,
-                               zoom=5,
-                               checkIntersect=False,
-                               asGeom=False))
+    tiles = list(geom.subTiles(GEOM, zoom=5, checkIntersect=False, asGeom=False))
     assert len(tiles) == 4
 
     assert tiles[0] == (16, 12, 5)
@@ -54,10 +78,7 @@ def test_subTiles():
     assert tiles[2] == (17, 12, 5)
     assert tiles[3] == (17, 13, 5)
 
-    tiles = list(geom.subTiles(GEOM,
-                               zoom=7,
-                               checkIntersect=True,
-                               asGeom=False))
+    tiles = list(geom.subTiles(GEOM, zoom=7, checkIntersect=True, asGeom=False))
 
     assert len(tiles) == 7
 
@@ -97,6 +118,7 @@ def test_point():
     assert np.isclose(p2.GetY(), y)
     assert p2.GetSpatialReference().IsSame(EPSG3035)
 
+
 @pytest.mark.parametrize(
     "points_input, srs, output_length, output_bounds",
     [
@@ -105,35 +127,37 @@ def test_point():
             pointsInAachen4326,
             4326,
             0.52498095,
-            (6.02141, 6.371634, 50.51939, 50.846025)
+            (6.02141, 6.371634, 50.51939, 50.846025),
         ),
-        (   
+        (
             # test input as nx2 np.array
             np.array([[tup[0], tup[1]] for tup in pointsInAachen4326]),
             4326,
             0.52498095,
-            (6.02141, 6.371634, 50.51939, 50.846025)
+            (6.02141, 6.371634, 50.51939, 50.846025),
         ),
-        (   
+        (
             # test input as list of osgeo.ogr.Geometry point objects
             [geom.point(tup, srs=EPSG4326) for tup in pointsInAachen4326],
             4326,
             0.52498095,
-            (6.02141, 6.371634, 50.51939, 50.846025)
+            (6.02141, 6.371634, 50.51939, 50.846025),
         ),
-    ]
+    ],
 )
 def test_line(points_input, srs, output_length, output_bounds):
-
     # test input as list of tuples
     l = geom.line(points_input, srs=srs)
-    
+
     assert l.GetSpatialReference().IsSame(EPSG4326)
     assert np.isclose(l.Length(), output_length)
     assert np.isclose(l.GetEnvelope(), output_bounds).all()
 
+
 @pytest.mark.skip("No test implemented for: geom.empty")
-def test_empty(): assert False
+def test_empty():
+    assert False
+
 
 def test_convertWKT():
     g1 = geom.convertWKT(POLY, srs=EPSG4326)
@@ -143,11 +167,16 @@ def test_convertWKT():
 
 def test_polygonizeMatrix():
     # test a simple box
-    boxmatrix = np.array([[0, 0, 0, 0, 0],
-                          [0, 1, 1, 1, 0],
-                          [0, 1, 0, 1, 0],
-                          [0, 1, 1, 1, 0],
-                          [0, 0, 0, 0, 0]], dtype=int)
+    boxmatrix = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=int,
+    )
 
     g1 = geom.polygonizeMatrix(boxmatrix, shrink=None)
     assert np.isclose(g1.geom[0].Area(), 8.0)  # polygonizeMatrix: simple area
@@ -161,16 +190,20 @@ def test_polygonizeMatrix():
     assert np.isclose(g1b.geom[0].Area(), 7.99984000)
 
     # test a more complex area
-    complexmatrix = np.array([[0, 2, 0, 0, 0],
-                              [2, 2, 0, 1, 0],
-                              [0, 0, 0, 1, 1],
-                              [1, 1, 0, 1, 0],
-                              [3, 1, 0, 0, 0]], dtype=int)
+    complexmatrix = np.array(
+        [
+            [0, 2, 0, 0, 0],
+            [2, 2, 0, 1, 0],
+            [0, 0, 0, 1, 1],
+            [1, 1, 0, 1, 0],
+            [3, 1, 0, 0, 0],
+        ],
+        dtype=int,
+    )
 
     g2 = geom.polygonizeMatrix(complexmatrix, shrink=None)
     assert np.isclose(g2.shape[0], 4)  # polygonizeMatrix: geometry count
-    assert np.isclose(sum([g.Area() for g in g2.geom]),
-                      11.0)  # polygonizeMatrix: area"
+    assert np.isclose(sum([g.Area() for g in g2.geom]), 11.0)  # polygonizeMatrix: area"
     assert np.isclose(g2.value[0], 2)  # polygonizeMatrix: Value retention
 
     # flatten the complex area
@@ -181,20 +214,27 @@ def test_polygonizeMatrix():
 
     # set a boundary and srs context
     g4 = geom.polygonizeMatrix(
-        complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
+        complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None
+    )
     # polygonizeMatrix: contexted area
     assert np.isclose(g4.geom[0].Area(), 175.0)
-    assert g4.geom[0].GetSpatialReference().IsSame(
-        EPSG3035)  # polygonizeMatrix: contexted srs
+    assert (
+        g4.geom[0].GetSpatialReference().IsSame(EPSG3035)
+    )  # polygonizeMatrix: contexted srs
 
 
 def test_polygonizeMask():
     # test a simple box
-    boxmask = np.array([[0, 0, 0, 0, 0],
-                        [0, 1, 1, 1, 0],
-                        [0, 1, 0, 1, 0],
-                        [0, 1, 1, 1, 0],
-                        [0, 0, 0, 0, 0]], dtype=bool)
+    boxmask = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        dtype=bool,
+    )
 
     g1 = geom.polygonizeMask(boxmask, shrink=None)
     assert np.isclose(g1.Area(), 8.0)  # polygonizeMask: simple area
@@ -205,16 +245,20 @@ def test_polygonizeMask():
     assert np.isclose(g1b.Area(), 7.99984000)  # polygonizeMask: shrunk area
 
     # test a more complex area
-    complexmask = np.array([[0, 1, 0, 0, 0],
-                            [1, 1, 0, 1, 0],
-                            [0, 0, 0, 1, 1],
-                            [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=bool)
+    complexmask = np.array(
+        [
+            [0, 1, 0, 0, 0],
+            [1, 1, 0, 1, 0],
+            [0, 0, 0, 1, 1],
+            [1, 1, 0, 1, 0],
+            [0, 1, 0, 0, 0],
+        ],
+        dtype=bool,
+    )
 
     g2 = geom.polygonizeMask(complexmask, shrink=None, flat=False)
     assert np.isclose(len(g2), 3)  # polygonizeMask: geometry count
-    assert np.isclose(sum([g.Area() for g in g2]),
-                      10.0)  # polygonizeMask: area
+    assert np.isclose(sum([g.Area() for g in g2]), 10.0)  # polygonizeMask: area
 
     # flatten the complex area
     g3 = geom.polygonizeMask(complexmask, flat=True, shrink=None)
@@ -222,14 +266,15 @@ def test_polygonizeMask():
 
     # set a boundary and srs context
     g4 = geom.polygonizeMask(
-        complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
+        complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None
+    )
     assert np.isclose(g4.Area(), 250.0)  # polygonizeMask: contexted area
     assert g4.GetSpatialReference().IsSame(
-        EPSG3035)  # error("polygonizeMask: contexted srs
+        EPSG3035
+    )  # error("polygonizeMask: contexted srs
 
 
 def test_flatten():
-
     # Overlapping polygons
     bounds = [(i, i, i + 2, i + 2) for i in range(5)]
     # test basic combination
@@ -256,20 +301,25 @@ def test_transform():
     assert np.isclose(t1.GetY(), 2769703.15423898)
 
     # make a collection of polygons using polygonizeMask
-    complexmask = np.array([[0, 1, 0, 0, 0],
-                            [1, 1, 0, 1, 0],
-                            [0, 0, 0, 1, 1],
-                            [1, 1, 0, 1, 0],
-                            [0, 1, 0, 0, 0]], dtype=bool)
+    complexmask = np.array(
+        [
+            [0, 1, 0, 0, 0],
+            [1, 1, 0, 1, 0],
+            [0, 0, 0, 1, 1],
+            [1, 1, 0, 1, 0],
+            [0, 1, 0, 0, 0],
+        ],
+        dtype=bool,
+    )
 
-    polygons = geom.polygonizeMask(complexmask, bounds=(
-        6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
+    polygons = geom.polygonizeMask(
+        complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None
+    )
 
-    t2 = geom.transform(polygons, toSRS='europe_m', segment=0.1)
-    assert (len(t2) == 3)  # "Transform Count
+    t2 = geom.transform(polygons, toSRS="europe_m", segment=0.1)
+    assert len(t2) == 3  # "Transform Count
     assert t2[0].GetSpatialReference().IsSame(EPSG3035)  # "Transform srs
-    assert np.isclose(sum([t.Area() for t in t2]),
-                      83747886418.48529)  # "Transform Area
+    assert np.isclose(sum([t.Area() for t in t2]), 83747886418.48529)  # "Transform Area
 
 
 def test_extractVerticies():
@@ -312,14 +362,14 @@ def test_drawGeoms():
     plt.savefig(result("drawGeoms-3.png"), dpi=100)
 
     # Draw a list of polygons and set an MPL argument
-    r = geom.drawGeoms(SUB_GEOMS, fc='b')
+    r = geom.drawGeoms(SUB_GEOMS, fc="b")
     plt.savefig(result("drawGeoms-4.png"), dpi=100)
 
     # Change projection systems
-    r = geom.drawGeoms(SUB_GEOMS, fc='r', srs=3035)
+    r = geom.drawGeoms(SUB_GEOMS, fc="r", srs=3035)
     plt.savefig(result("drawGeoms-5.png"), dpi=100)
     assert SUB_GEOMS[0].GetSpatialReference().IsSame(EPSG4326)
-    
+
     # Draw from a dataframe, once without and once with SRS adaptation
     df = pd.DataFrame(dict(geom=SUB_GEOMS, hats=[1, 2, 3]))
 
@@ -340,25 +390,24 @@ def test_drawGeoms():
 
     assert True
 
+
 def test_shift():
     # test point, no srs
-    assert geom.shift(geom=geom.point((0,1)), lonShift=5).Equals(geom.point((5,1)))
+    assert geom.shift(geom=geom.point((0, 1)), lonShift=5).Equals(geom.point((5, 1)))
 
     # test line, epsg 3035
-    l1=geom.line([(0,0), (1,1)], srs=3035)
-    l1_check=geom.line([(0,-10), (1,-9)], srs=3035)
+    l1 = geom.line([(0, 0), (1, 1)], srs=3035)
+    l1_check = geom.line([(0, -10), (1, -9)], srs=3035)
     assert geom.shift(l1, latShift=-10).Equals(l1_check)
 
     # test polygon, srs 4326
     b1 = geom.box(-170, 60, -160, 70, srs=4326)
-    b1_check=geom.box(10,-30,20,-20, srs=4326)
+    b1_check = geom.box(10, -30, 20, -20, srs=4326)
     assert geom.shift(geom=b1, lonShift=180, latShift=-90).Equals(b1_check)
 
     # test multipolygon
     b2 = geom.box(-120, 10, -100, 30, srs=4326)
-    b2_check=geom.box(60,-80,80,-60, srs=4326)
-    b_multi=b1.Union(b2)
-    b_multi_check=b1_check.Union(b2_check)
+    b2_check = geom.box(60, -80, 80, -60, srs=4326)
+    b_multi = b1.Union(b2)
+    b_multi_check = b1_check.Union(b2_check)
     assert geom.shift(geom=b_multi, lonShift=180, latShift=-90).Equals(b_multi_check)
-
-
