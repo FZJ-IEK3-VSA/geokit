@@ -385,16 +385,18 @@ def quickVector(geom, output=None):
         return dataSource
 
 
-def fitBoundsTo(bounds, dx, dy):
+def fitBoundsTo(bounds, dx, dy, enforce=False):
     try:
         xMin, yMin, xMax, yMax = bounds
     except TypeError:
         xMin, yMin, xMax, yMax = bounds.xyXY
 
-    xMin = np.round(bounds[0] / dx) * dx
-    yMin = np.round(bounds[1] / dy) * dy
-    xMax = np.round(bounds[2] / dx) * dx
-    yMax = np.round(bounds[3] / dy) * dy
+    if enforce or not (bounds[2] - bounds[0]) % dx == 0:
+        xMin = np.round(bounds[0] / dx) * dx
+        xMax = np.round(bounds[2] / dx) * dx
+    if enforce or not (bounds[3] - bounds[1]) % dy == 0:
+        yMin = np.round(bounds[1] / dy) * dy
+        yMax = np.round(bounds[3] / dy) * dy
 
     return xMin, yMin, xMax, yMax
 
