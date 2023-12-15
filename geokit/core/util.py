@@ -654,7 +654,15 @@ def drawImage(
     else:
         extent = None
 
-    h = ax.imshow(matrix, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+    h = ax.imshow(
+        matrix,
+        extent=extent,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        interpolation="none",
+        **kwargs,
+    )
 
     # Draw Colorbar
     if cbar:
