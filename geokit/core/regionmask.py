@@ -14,6 +14,14 @@ from . import vector as VECTOR
 # from .location import Location, LocationSet
 from .extent import Extent
 
+import psutil
+import os
+
+
+def usage():
+    process = psutil.Process(os.getpid())
+    return process.memory_info()[0] / float(2**20)
+
 
 class GeoKitRegionMaskError(UTIL.GeoKitError):
     pass
@@ -250,7 +258,7 @@ class RegionMask(object):
         extent=None,
         padExtent=DEFAULT_PAD,
         attributes=None,
-        **k
+        **k,
     ):
         """Make a RasterMask from a given geometry
 
@@ -326,7 +334,7 @@ class RegionMask(object):
         extent=None,
         padExtent=DEFAULT_PAD,
         limitOne=True,
-        **kwargs
+        **kwargs,
     ):
         """Make a RasterMask from a given vector source
 
@@ -413,7 +421,7 @@ class RegionMask(object):
             attributes=attr,
             padExtent=padExtent,
             srs=srs,
-            **kwargs
+            **kwargs,
         )
 
     @staticmethod
@@ -686,7 +694,7 @@ class RegionMask(object):
         forceMaskShape=False,
         applyMask=True,
         noData=None,
-        **kwargs
+        **kwargs,
     ):
         # make output
         if not forceMaskShape and resolutionDiv > 1:
@@ -754,6 +762,44 @@ class RegionMask(object):
 
         return geoms
 
+    def indicateValuesMultiprocess(
+        self,
+        source,
+        value,
+        buffer=None,
+        resolutionDiv=1,
+        forceMaskShape=False,
+        applyMask=True,
+        noData=None,
+        resampleAlg="bilinear",
+        bufferMethod="area",
+        preBufferSimplification=None,
+        warpDType=None,
+        prunePatchSize=0,
+        sharedDict=None,
+        **kwargs,
+    ):
+        assert not sharedDict is None
+
+        indications = self.indicateValues(
+            source=source,
+            value=value,
+            buffer=buffer,
+            resolutionDiv=resolutionDiv,
+            forceMaskShape=forceMaskShape,
+            applyMask=applyMask,
+            noData=noData,
+            resampleAlg=resampleAlg,
+            bufferMethod=bufferMethod,
+            preBufferSimplification=preBufferSimplification,
+            warpDType=warpDType,
+            prunePatchSize=prunePatchSize,
+            **kwargs,
+        )
+
+        sharedDict["indications"] = indications
+        return
+
     def indicateValues(
         self,
         source,
@@ -769,7 +815,7 @@ class RegionMask(object):
         warpDType=None,
         prunePatchSize=0,
         threshold=0.5,
-        **kwargs
+        **kwargs,
     ):
         """
         Indicates those pixels in the RegionMask which correspond to a particular
@@ -1002,6 +1048,7 @@ class RegionMask(object):
             noData=noData,
             matchContext=False,
         )
+        print(f"Memory useage during calc:", str(usage()), "MB")
 
         # Warp onto region
         if warpDType is None:
@@ -1020,7 +1067,7 @@ class RegionMask(object):
             applyMask=False,
             noData=noData,
             returnMatrix=True,
-            **kwargs
+            **kwargs,
         )
 
         # Check for results
@@ -1128,6 +1175,38 @@ class RegionMask(object):
         # Return result
         return final
 
+    def indicateFeaturesMultiprocess(
+        self,
+        source,
+        where=None,
+        buffer=None,
+        bufferMethod="geom",
+        resolutionDiv=1,
+        forceMaskShape=False,
+        applyMask=True,
+        noData=0,
+        preBufferSimplification=None,
+        sharedDict=None,
+        **kwargs,
+    ):
+        assert not sharedDict is None
+
+        indicationMatrix = self.indicateFeatures(
+            source=source,
+            where=where,
+            buffer=buffer,
+            bufferMethod=bufferMethod,
+            resolutionDiv=resolutionDiv,
+            forceMaskShape=forceMaskShape,
+            applyMask=applyMask,
+            noData=noData,
+            preBufferSimplification=preBufferSimplification,
+            **kwargs,
+        )
+
+        sharedDict["indications"] = indicationMatrix
+        return
+
     #######################################################################################
     # Vector feature indicator
     def indicateFeatures(
@@ -1141,7 +1220,7 @@ class RegionMask(object):
         applyMask=True,
         noData=0,
         preBufferSimplification=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Indicates the RegionMask pixels which are found within the features (or
@@ -1222,7 +1301,7 @@ class RegionMask(object):
         """
         assert bufferMethod in ["geom", "area", "contour"]
         # Ensure path to dataSet exists
-        source = VECTOR.loadVector(source)
+        source = VECTOR.loadVector(source)  # small ram increase
 
         # Do we need to buffer?
         if buffer == 0:
@@ -1243,8 +1322,9 @@ class RegionMask(object):
                 matchContext=True,
                 keepAttributes=False,
                 _slim=True,
-                **kwargs
-            )
+                **kwargs,
+            )  # big ram increase, much bigger than actual file size. wont bereleased either!!!
+            print(f"Memory useage during calc:", str(usage()), "MB")
 
             where = None  # Set where to None since the filtering has already been done
 
@@ -1254,7 +1334,7 @@ class RegionMask(object):
                     forceMaskShape=forceMaskShape,
                     applyMask=applyMask,
                     noData=noData,
-                    **kwargs
+                    **kwargs,
                 )
 
         # Do rasterize
@@ -1266,7 +1346,7 @@ class RegionMask(object):
             resolutionDiv=resolutionDiv,
             applyMask=False,
             noData=noData,
-        )
+        )  # no ram incrreas. final is a "small" np.array
         # Check for results
         if not (final > 0).any():
             # no results were found
@@ -1519,7 +1599,7 @@ class RegionMask(object):
         applyMask=True,
         noData=None,
         resampleAlg="bilinear",
-        **kwargs
+        **kwargs,
     ):
         """Convenience wrapper for geokit.raster.warp() which automatically sets
         'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
@@ -1580,7 +1660,7 @@ class RegionMask(object):
                 resampleAlg=resampleAlg,
                 output=output,
                 noData=noData,
-                **kwargs
+                **kwargs,
             )
         else:
             if applyMask:
@@ -1596,7 +1676,7 @@ class RegionMask(object):
                     cutline=self.vectorPath,
                     output=output,
                     noData=noData,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 newDS = self.extent.warp(
@@ -1606,7 +1686,7 @@ class RegionMask(object):
                     resampleAlg=resampleAlg,
                     output=output,
                     noData=noData,
-                    **kwargs
+                    **kwargs,
                 )
 
         if not returnMatrix:
@@ -1635,7 +1715,7 @@ class RegionMask(object):
         returnMatrix=True,
         applyMask=True,
         noData=None,
-        **kwargs
+        **kwargs,
     ):
         """Convenience wrapper for geokit.vector.rasterize() which automatically
         sets the 'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
@@ -1689,7 +1769,7 @@ class RegionMask(object):
                 pixelHeight=pH,
                 output=output,
                 noData=noData,
-                **kwargs
+                **kwargs,
             )
         else:
             if applyMask:
@@ -1704,7 +1784,7 @@ class RegionMask(object):
                     cutline=self.vectorPath,
                     output=output,
                     noData=noData,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 newDS = self.extent.rasterize(
@@ -1713,7 +1793,7 @@ class RegionMask(object):
                     pixelHeight=pH,
                     output=output,
                     noData=noData,
-                    **kwargs
+                    **kwargs,
                 )
 
         if not returnMatrix:
@@ -1813,7 +1893,7 @@ class RegionMask(object):
         applyMask=True,
         processor=None,
         resampleAlg="bilinear",
-        **mutateArgs
+        **mutateArgs,
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
         sets 'bounds'. It also warps the raster to the RegionMask's area
@@ -1878,7 +1958,7 @@ class RegionMask(object):
                 returnMatrix=False,
                 applyMask=applyMask,
                 resampleAlg=resampleAlg,
-                **warpArgs
+                **warpArgs,
             )
 
             if processor is None:
@@ -1899,7 +1979,7 @@ class RegionMask(object):
                 matchContext=False,
                 warpArgs=warpArgs,
                 resampleAlg=resampleAlg,
-                **mutateArgs
+                **mutateArgs,
             )
 
     def polygonizeMatrix(self, matrix, flat=False, shrink=True, _raw=False):

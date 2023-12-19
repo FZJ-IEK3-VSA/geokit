@@ -12,6 +12,9 @@ stages:
     - micromamba activate geokit
     # Install geokit with no --no-deps flag to create a reproducible environment
     - python -m pip install -e . --no-deps
+    # the following 2 imports are not part of the requirements but needed to test gpd conversions
+    - micromamba install shapely --channel conda-forge
+    - micromamba install geopandas --channel conda-forge 
 
 test-code:
   extends: .test_template

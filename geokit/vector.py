@@ -11,5 +11,6 @@ from geokit.core.vector import (
     createGeoJson,
     mutateVector,
     rasterize,
+    createGeoDataFrame,
     listLayers,
 )
