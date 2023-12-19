@@ -26,3 +26,15 @@ test-code:
     - if: $CI_COMMIT_TAG
       when: never
     - when: always
+
+test-formatting:
+  stage: test
+  image: pyfound/black:latest_release
+  script:
+  # Dry-run black auto-formatter. If the code needs reformatting this test
+  # will fail.
+  - black --version
+  - black --check geokit
+  - black --check docs
+  - black --check Examples
+
