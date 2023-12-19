@@ -1229,6 +1229,64 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
         return None
 
 
+####################################################################
+# mutuate a vector
+
+
+def createGeoDataFrame(dfGeokit: pd.DataFrame):
+    """Creates a gdf from an Reskit shape pd.DataFrame
+
+    Parameters
+    ----------
+    dfGeokit : pd.DataFrame
+        Reskit shape pd.DataFrame, need a 'geom' column.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Same as the previos, just as an GeodataFrame
+    """
+    assert isinstance(dfGeokit, pd.DataFrame)
+    assert "geom" in dfGeokit.columns
+
+    # import the required external packages - these are not part of the requirements.yml and are possibly not installed
+    try:
+        import shapely
+    except:
+        raise ImportError(
+            "'shapely' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+        )
+
+    try:
+        import geopandas as gpd
+    except:
+        raise ImportError(
+            "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+        )
+
+    # get values
+    values = {}
+    for col in dfGeokit.columns:
+        # geoms need to be converted to shapely
+        if col == "geom":
+            values["geometry"] = [
+                shapely.wkt.loads(g.ExportToWkt()) for g in dfGeokit.geom
+            ]  # this takes some time :/
+        # other values are just stored as they are
+        else:
+            values[col] = list(dfGeokit[col])
+
+    # get srs as Well knwon text
+    crs = dfGeokit.geom.iloc[0].GetSpatialReference().ExportToWkt()
+
+    # create gdf and set index
+    gdf = gpd.GeoDataFrame(values, crs=crs)
+    gdf = gdf.set_index(dfGeokit.index, drop=True)
+
+    # over and out!
+    return gdf
+
+
 def mutateVector(
     source,
     processor=None,

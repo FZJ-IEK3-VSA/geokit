@@ -1,6 +1,7 @@
 from .helpers import *
 from geokit import vector, raster, geom, util
 from os.path import join, dirname
+import pandas as pd
 import pytest
 from functools import reduce
 
@@ -455,3 +456,21 @@ def test_rasterize():
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
     assert np.isclose(np.nanmean(mat), 2004.96384743)
+
+
+def test_createGeoDataFrame():
+    import geopandas as gpd
+
+    dfIn = pd.DataFrame()
+    dfIn["geom"] = [geom.point(7, 51, srs=3857), geom.point(7.5, 52, srs=3857)]
+    dfIn["data_column"] = ["abc", 123]
+
+    dfOut = vector.createGeoDataFrame(dfGeokit=dfIn)
+
+    assert "data_column" in dfOut.columns
+    assert (dfOut["data_column"] == dfIn["data_column"]).all()
+    assert (
+        gpd.points_from_xy([7, 7.5], [51, 52], [0, 0], crs="EPSG:3857")
+        == dfOut["geometry"]
+    ).all()
+    assert dfOut["geometry"].crs.to_epsg() == 3857

@@ -330,6 +330,24 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
+def test_indicateValuesMultiprocess():
+    # Setup
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
+
+    # make sure that sharedDict is mandatory
+    with pytest.raises(AssertionError) as e:
+        rm.indicateValuesMultiprocess(source=CLC_RASTER_PATH, value=(20, None))
+
+    # Testing valueMin (with srs change)
+    testresults = dict()
+    rm.indicateValuesMultiprocess(
+        source=CLC_RASTER_PATH, value=(20, None), sharedDict=testresults
+    )
+
+    assert np.isclose(testresults["indications"].sum(), 30969.6796875, 1e-6)
+    assert np.isclose(testresults["indications"].std(), 0.3489773, 1e-6)
+
+
 def test_RegionMask_indicateFeatures():
     # setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
@@ -375,6 +393,26 @@ def test_RegionMask_indicateFeatures():
     # print("%.7f"%res4.sum(), "%.7f"%res4.std())
 
     assert np.isclose(res4.sum(), -83792, 1e-6)
+
+
+def test_indicateFeaturesMultiprocess():
+    # Setup
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+
+    # make sure that sharedDict is mandatory
+    with pytest.raises(AssertionError) as e:
+        rm.indicateFeaturesMultiprocess(
+            source=NATURA_PATH, where="SITECODE='DE5404303'"
+        )
+
+    # Testing valueMin (with srs change)
+    testresults = dict()
+    rm.indicateFeaturesMultiprocess(
+        NATURA_PATH, where="SITECODE='DE5404303'", sharedDict=testresults
+    )
+
+    assert np.isclose(testresults["indications"].sum(), 649, 1e-6)
+    assert np.isclose(testresults["indications"].std(), 0.0646270, 1e-6)
 
 
 @pytest.mark.skip("No test implemented")
