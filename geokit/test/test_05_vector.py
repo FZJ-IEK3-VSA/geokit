@@ -327,7 +327,7 @@ def test_mutateVector():
     # Simple grower func in a new srs
     def growByWordLength(ftr):
         size = len(ftr["word"]) * 10
-        newGeom = ftr.geom.Buffer(size)
+        newGeom = ftr.geom.Buffer(float(size))
 
         return {"geom": newGeom, "size": size}
 

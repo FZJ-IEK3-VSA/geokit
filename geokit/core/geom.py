@@ -643,7 +643,7 @@ def polygonizeMatrix(
     if shrink:
         # Compute shrink factor
         shrinkFactor = -0.00001 * (xMax - xMin) / matrix.shape[1]
-        geoms = [g.Buffer(shrinkFactor) for g in geoms]
+        geoms = [g.Buffer(float(shrinkFactor)) for g in geoms]
 
     # Do flatten, maybe
     if flat:
@@ -1453,7 +1453,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     start = point(xStart, yStart, srs=geom.GetSpatialReference())
 
     # start searching
-    tmp = start.Buffer(growStep)
+    tmp = start.Buffer(float(growStep))
     tmp.Simplify(growStep)
     searchGeom = tmp.Intersection(geom)
     sgArea = searchGeom.Area()
@@ -1468,7 +1468,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
         workingTarget = targetArea
 
     while sgArea < workingTarget:
-        tmp = searchGeom.Buffer(growStep)
+        tmp = searchGeom.Buffer(float(growStep))
         tmp.Simplify(growStep)
         newGeom = tmp.Intersection(geom)
         newArea = newGeom.Area()
@@ -1477,7 +1477,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
             dA = (newArea - sgArea) / growStep
             weightedGrowStep = (workingTarget - sgArea) / dA
 
-            tmp = start.Buffer(weightedGrowStep)
+            tmp = start.Buffer(float(weightedGrowStep))
             tmp.Simplify(growStep)
             searchGeom = tmp.Intersection(geom)
             break
