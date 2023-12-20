@@ -20,7 +20,7 @@ import os
 
 def usage():
     process = psutil.Process(os.getpid())
-    return process.memory_info()[0] / float(2**20)
+    return process.memory_info()[0] / float(2 ** 20)
 
 
 class GeoKitRegionMaskError(UTIL.GeoKitError):
@@ -2194,9 +2194,7 @@ class RegionMask(object):
         """
         geomDF = self.contoursFromMatrix(
             matrix=mask,
-            contourEdges=[
-                truthThreshold,
-            ],
+            contourEdges=[truthThreshold,],
             createRasterKwargs=createRasterKwargs,
             contoursKwargs=contoursKwargs,
         )

@@ -471,11 +471,7 @@ def test_Extent_rasterize():
     assert np.isclose(mat1.mean(), 0.22881653)
 
     # Simple vectorization to mem
-    r = ex.rasterize(
-        source=AACHEN_ZONES,
-        pixelWidth=250,
-        pixelHeight=250,
-    )
+    r = ex.rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250,)
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2, mat1).all()
 
@@ -513,10 +509,7 @@ def test_Extent_mutateVector():
     assert info.srs.IsSame(EPSG3035)
 
     # clip and convert
-    vi = ex.mutateVector(
-        AACHEN_ZONES,
-        matchContext=True,
-    )
+    vi = ex.mutateVector(AACHEN_ZONES, matchContext=True,)
     info = vector.vectorInfo(vi)
     assert np.isclose(info.count, 101)
     assert info.srs.IsSame(EPSG4326)
@@ -671,8 +664,7 @@ def test_Extent_tileBox():
 def test_Extent_mosiacTiles():
     ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
     ras = ext.tileMosaic(
-        join(_test_data_["prior_tiles"], "osm_roads_minor.{z}.{x}.{y}.tif"),
-        9,
+        join(_test_data_["prior_tiles"], "osm_roads_minor.{z}.{x}.{y}.tif"), 9,
     )
     rasmat = raster.extractMatrix(ras)
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)

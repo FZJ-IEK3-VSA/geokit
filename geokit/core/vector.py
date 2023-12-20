@@ -256,9 +256,7 @@ def vectorInfo(source):
 
 ####################################################################
 # List layers within a multi-layer vector dataset e.g. a geopackage
-def listLayers(
-    source,
-):
+def listLayers(source,):
     """Returns the layer names for each layer that is stored in a geopackage.
 
     Parameters
