@@ -21,7 +21,7 @@ def test_Location___eq__():
 
     assert l1 == l2
 
-    l3 = Location(xy[0], xy[1]+0.001)
+    l3 = Location(xy[0], xy[1] + 0.001)
     assert (l1 == l3) == False
 
     # test against tuple
@@ -36,25 +36,27 @@ def test_Location___eq__():
 
 def test_Location___ne__():
     l1 = Location(*xy)
-    l3 = Location(xy[0], xy[1]+0.001)
+    l3 = Location(xy[0], xy[1] + 0.001)
     assert l1 != l3
 
 
 def test_Location___str__():
     l1 = Location(*xy)
-    assert str(l1) == '(9.00000,5.00000)'
+    assert str(l1) == "(9.00000,5.00000)"
 
 
 def test_Location_fromString():
     l1 = Location(*xy)
 
-    okay = ['( 9.00000,5.00000)',
-            ' (9.00000,5.00000)',
-            '(9.00000,5.00000) ',
-            ' ( 9.00000,5.00000) ',
-            ' qweqdada( 9.00000,5.00000)adfafdq ',
-            ' ( 9.00,  5) ',
-            ' ( 9.00000,  5.00000) ']
+    okay = [
+        "( 9.00000,5.00000)",
+        " (9.00000,5.00000)",
+        "(9.00000,5.00000) ",
+        " ( 9.00000,5.00000) ",
+        " qweqdada( 9.00000,5.00000)adfafdq ",
+        " ( 9.00,  5) ",
+        " ( 9.00000,  5.00000) ",
+    ]
 
     for p in okay:
         assert l1 == Location.fromString(p)
@@ -149,7 +151,9 @@ def test_Location_load():
     assert l1 == Location.load(xy)
 
     # From str
-    assert l1 == Location.load(' ( 9.00000,5.00000) ',)
+    assert l1 == Location.load(
+        " ( 9.00000,5.00000) ",
+    )
 
     # From xy with srs
     xy_3035 = pt.GetX(), pt.GetY()
@@ -181,17 +185,20 @@ def test_LocationSet___init__():
     assert ls3[0] == ls4[0]
 
     # From many geoms
-    pts = [geom.point(x, y, srs=4326)
-           for x, y in np.random.random(size=(10, 2))]
+    pts = [geom.point(x, y, srs=4326) for x, y in np.random.random(size=(10, 2))]
     ls5 = LocationSet(pts)
     assert ls5.count == 10
 
 
 def test_LocationSet___getitem__():
-    ls = LocationSet([[1, 1],
-                      [1, 2],
-                      [2, 2.5],
-                      [2, 3], ])
+    ls = LocationSet(
+        [
+            [1, 1],
+            [1, 2],
+            [2, 2.5],
+            [2, 3],
+        ]
+    )
 
     assert ls[2] == (2, 2.5)
 
@@ -262,31 +269,29 @@ def test_LocationSet_asHash():
 
 
 def test_LocationSet_splitKMeans():
-    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5),
-           (2, -1), (2, -1.5), (2, -1.25)]
+    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5), (2, -1), (2, -1.5), (2, -1.25)]
     locs = LocationSet(pts)
 
     sublocsGen = locs.splitKMeans(groups=3, random_state=0)
 
     sublocs = list(sublocsGen)
 
-    assert sublocs[0].count == 3
-    assert sublocs[0][0] == (2, -1)
-    assert sublocs[0][1] == (2, -1.5)
-    assert sublocs[0][2] == (2, -1.25)
+    assert sublocs[0].count == 2
+    assert sublocs[0][0] == (2, 1)
+    assert sublocs[0][1] == (2, 1.5)
 
-    assert sublocs[1].count == 2
-    assert sublocs[1][0] == (-1, -1)
-    assert sublocs[1][1] == (-1, -1.5)
+    assert sublocs[1].count == 3
+    assert sublocs[1][0] == (2, -1)
+    assert sublocs[1][1] == (2, -1.5)
+    assert sublocs[1][2] == (2, -1.25)
 
     assert sublocs[2].count == 2
-    assert sublocs[2][0] == (2, 1)
-    assert sublocs[2][1] == (2, 1.5)
+    assert sublocs[2][0] == (-1, -1)
+    assert sublocs[2][1] == (-1, -1.5)
 
 
 def test_LocationSet_bisect():
-    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5),
-           (2, -1), (2, -1.5), (2, -1.25)]
+    pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5), (2, -1), (2, -1.5), (2, -1.25)]
     locs = LocationSet(pts)
 
     # Lon Only
@@ -314,7 +319,7 @@ def test_LocationSet_bisect():
     assert sublocs[0][0] == (-1, -1.5)
     assert sublocs[0][1] == (2, -1.5)
     assert sublocs[0][2] == (2, -1.25)
-    
+
     assert sublocs[1].count == 4
     assert sublocs[1][0] == (-1, -1)
     assert sublocs[1][1] == (2, 1)

@@ -24,7 +24,7 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 # Geometry convenience functions
 
 
-def point(*args, srs='latlon'):
+def point(*args, srs="latlon"):
     """Make a simple point geometry
 
     Parameters:
@@ -54,7 +54,8 @@ def point(*args, srs='latlon'):
         y = args[1]
     else:
         raise GeoKitGeomError(
-            "Too many positional inputs. Did you mean to specify \"srs=\"?")
+            'Too many positional inputs. Did you mean to specify "srs="?'
+        )
 
     """make a point geometry from given coordinates (x,y) and srs"""
     pt = ogr.Geometry(ogr.wkbPoint)
@@ -93,13 +94,14 @@ def box(*args, srs=4326):
     box(xMin, yMin, xMax, yMax [, srs])
     box( (xMin, yMin, xMax, yMax) [, srs])
     """
-    if (len(args) == 1):
+    if len(args) == 1:
         xMin, yMin, xMax, yMax = args[0]
-    elif (len(args) == 4):
+    elif len(args) == 4:
         xMin, yMin, xMax, yMax = args
     else:
         raise GeoKitGeomError(
-            "Incorrect number positional inputs (only accepts 1 or 4). Did you mean to specify \"srs=\"?")
+            'Incorrect number positional inputs (only accepts 1 or 4). Did you mean to specify "srs="?'
+        )
 
     # make sure inputs are good
     xMin = float(xMin)
@@ -115,7 +117,7 @@ def box(*args, srs=4326):
         ring.AddPoint(x, y)
 
     outBox.AddGeometry(ring)
-    if(not srs is None):
+    if not srs is None:
         srs = SRS.loadSRS(srs)
         outBox.AssignSpatialReference(srs)
     return outBox
@@ -146,10 +148,12 @@ def tile(xi, yi, zoom):
     tl = smopy.num2deg(xi - 0.0, yi + 1.0, zoom)[::-1]
     br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
-    o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326,
-                        toSRS=SRS.EPSG3857, outputFormat='xy')
+    o = SRS.xyTransform(
+        [tl, br], fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat="xy"
+    )
 
     return box(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
+
 
 def tileAt(x, y, zoom, srs):
     """Generates a box corresponding to a tile at the coordinates 'x' and 'y'
@@ -168,7 +172,7 @@ def tileAt(x, y, zoom, srs):
         - Range is between 0 and 18
 
     srs : anything acceptable to SRS.loadSRS
-        The SRS of the given 'x' & 'y' coordinates 
+        The SRS of the given 'x' & 'y' coordinates
 
     Returns:
     --------
@@ -177,7 +181,7 @@ def tileAt(x, y, zoom, srs):
     """
     t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
 
-    return tile(t.xi,t.yi,t.zoom)
+    return tile(t.xi, t.yi, t.zoom)
 
 
 Tile = namedtuple("Tile", "xi yi zoom")
@@ -219,7 +223,6 @@ def subTiles(geom, zoom, checkIntersect=True, asGeom=False):
 
     for xi in range(tl_xi, br_xi + 1):
         for yi in range(tl_yi, br_yi + 1):
-
             if checkIntersect or asGeom:
                 gtile = tile(xi, yi, zoom)
 
@@ -261,9 +264,9 @@ def polygon(outerRing, *args, srs=4326):
     *args : [(x,y), ] or Nx2 numpy.ndarray
         The inner edges of the polygon
           * Each input forms a single edge
-          * Inner rings cannot interset the outer ring or one another 
-          * NOTE! For proper drawing in matplotlib, inner rings must be given in 
-            the opposite orientation as the outer ring (clockwise vs 
+          * Inner rings cannot interset the outer ring or one another
+          * NOTE! For proper drawing in matplotlib, inner rings must be given in
+            the opposite orientation as the outer ring (clockwise vs
             counterclockwise)
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -347,7 +350,10 @@ def line(points, srs=4326):
     # Make the line
     if all([isinstance(p, ogr.Geometry) for p in points]):
         # convert points into a list of coordinate tuples in correct srs
-        points=[(transform(p, toSRS=srs).GetX(), transform(p, toSRS=srs).GetY()) for p in points]
+        points = [
+            (transform(p, toSRS=srs).GetX(), transform(p, toSRS=srs).GetY())
+            for p in points
+        ]
     [g.AddPoint(x, y) for x, y in points]
     # g.AddGeometry(otr)
 
@@ -443,6 +449,7 @@ def extractVerticies(geom):
         out = out[:, :2]
     return out
 
+
 # 3
 # Make a geometry from a WKT string
 
@@ -477,19 +484,21 @@ def convertGeoJson(geojson, srs=3857):
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometry to create
     """
-    geom = ogr.CreateGeometryFromJson(
-        geojson)  # Create new geometry from string
+    geom = ogr.CreateGeometryFromJson(geojson)  # Create new geometry from string
     if geom is None:  # test for success
         raise GeoKitGeomError("Failed to create geometry")
     if srs:
         geom.AssignSpatialReference(SRS.loadSRS(srs))  # Assign the given srs
     return geom
 
+
 # 3
 # Make a geometry from a matrix mask
 
 
-def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _raw=False):
+def polygonizeMatrix(
+    matrix, bounds=None, srs=None, flat=False, shrink=True, _raw=False
+):
     """Create a geometry set from a matrix of integer values
 
     Each unique-valued group of pixels will be converted to a geometry
@@ -504,9 +513,9 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     bounds : (xMin, yMin, xMax, yMax) or geokit.Extent
         Determines the boundary context for the given matrix and will scale
         the resulting geometry's coordinates accordingly
-          * If a boundary is not given, the geometry coordinates will 
+          * If a boundary is not given, the geometry coordinates will
             correspond to the mask's indicies
-          * If the boundary is given as an Extent object, an srs input is not 
+          * If the boundary is given as an Extent object, an srs input is not
             required
 
 
@@ -518,10 +527,10 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
         value into a single geometry object
 
     shrink : bool
-        If True, shrink all geoms by a tiny amount in order to avoid geometry 
+        If True, shrink all geoms by a tiny amount in order to avoid geometry
         overlapping issues
           * The total amount shrunk should be very very small
-          * Generally this should be left as True unless it is ABSOLUTELY 
+          * Generally this should be left as True unless it is ABSOLUTELY
             necessary to maintain the same area
 
     Returns:
@@ -540,8 +549,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     elif np.issubdtype(matrix.dtype, np.integer):
         dtype = "GDT_Int32"
     else:
-        raise GeoKitGeomError(
-            "matrix must be a 2D boolean or integer numpy ndarray")
+        raise GeoKitGeomError("matrix must be a 2D boolean or integer numpy ndarray")
 
     # Make boundaries if not given
     if bounds is None:
@@ -574,14 +582,15 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     originY = yMax  # Always use the "Y-at-Top" orientation
 
     # Open the driver
-    driver = gdal.GetDriverByName('Mem')  # create a raster in memory
-    raster = driver.Create('', cols, rows, 1, getattr(gdal, dtype))
+    driver = gdal.GetDriverByName("Mem")  # create a raster in memory
+    raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype))
 
-    if(raster is None):
+    if raster is None:
         raise GeoKitGeomError("Failed to create temporary raster")
 
     raster.SetGeoTransform(
-        (originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
+        (originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight))
+    )
 
     # Set the SRS
     if not srs is None:
@@ -596,14 +605,13 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     band.FlushCache()
     raster.FlushCache()
 
-    #rasDS = createRaster(bounds=bounds, data=matrix, noDataValue=0, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=srs)
+    # rasDS = createRaster(bounds=bounds, data=matrix, noDataValue=0, pixelWidth=pixelWidth, pixelHeight=pixelHeight, srs=srs)
 
     # Do a polygonize
     rasBand = raster.GetRasterBand(1)
     maskBand = rasBand.GetMaskBand()
 
-    vecDS = gdal.GetDriverByName("Memory").Create(
-        '', 0, 0, 0, gdal.GDT_Unknown)
+    vecDS = gdal.GetDriverByName("Memory").Create("", 0, 0, 0, gdal.GDT_Unknown)
     vecLyr = vecDS.CreateLayer("mem", srs=srs)
 
     field = ogr.FieldDefn("DN", ogr.OFTInteger)
@@ -611,14 +619,14 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
 
     # Polygonize geometry
     result = gdal.Polygonize(rasBand, maskBand, vecLyr, 0)
-    if(result != 0):
+    if result != 0:
         raise GeoKitGeomError("Failed to polygonize geometry")
 
     # Check how many features were created
     ftrN = vecLyr.GetFeatureCount()
 
-    if(ftrN == 0):
-        #raise GlaesError("No features in created in temporary layer")
+    if ftrN == 0:
+        # raise GlaesError("No features in created in temporary layer")
         msg = "No features in created in temporary layer"
         warnings.warn(msg, UserWarning)
         return
@@ -646,8 +654,9 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
         finalRID = []
         for _rid in set(rid):
             smallGeomSet = geoms[rid == _rid]
-            finalGeoms.append(flatten(smallGeomSet) if len(
-                smallGeomSet) > 1 else smallGeomSet[0])
+            finalGeoms.append(
+                flatten(smallGeomSet) if len(smallGeomSet) > 1 else smallGeomSet[0]
+            )
             finalRID.append(_rid)
     else:
         finalGeoms = geoms
@@ -683,9 +692,9 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
     bounds : (xMin, yMin, xMax, yMax) or geokit.Extent
         Determines the boundary context for the given mask and will scale
         the resulting geometry's coordinates accordingly
-          * If a boundary is not given, the geometry coordinates will 
+          * If a boundary is not given, the geometry coordinates will
             correspond to the mask's indicies
-          * If the boundary is given as an Extent object, an srs input is not 
+          * If the boundary is given as an Extent object, an srs input is not
             required
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
@@ -695,10 +704,10 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
         If True, flattens the resulting geometries into a single geometry
 
     shrink : bool
-        If True, shrink all geoms by a tiny amount in order to avoid geometry 
+        If True, shrink all geoms by a tiny amount in order to avoid geometry
         overlapping issues
           * The total amount shrunk should be very very small
-          * Generally this should be left as True unless it is ABSOLUTELY 
+          * Generally this should be left as True unless it is ABSOLUTELY
             neccessary to maintain the same area
 
     Returns:
@@ -716,17 +725,19 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 
     # Do vectorization
     result = polygonizeMatrix(
-        matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, _raw=True)[0]
+        matrix=mask, bounds=bounds, srs=srs, flat=flat, shrink=shrink, _raw=True
+    )[0]
     if flat:
         result = result[0]
 
     # Done!
     return result
 
+
 # geometry transformer
 
 
-def transform(geoms, toSRS='europe_m', fromSRS=None, segment=None):
+def transform(geoms, toSRS="europe_m", fromSRS=None, segment=None):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:
@@ -746,7 +757,7 @@ def transform(geoms, toSRS='europe_m', fromSRS=None, segment=None):
 
     segment : float; optional
         An optional segmentation length to apply to the input geometries BEFORE
-        transformation occurs. The input geometries will be segmented such that 
+        transformation occurs. The input geometries will be segmented such that
         no line segment is longer than the given segment size
           * Units are in the input geometry's native unit
           * Use this for a more detailed transformation!
@@ -765,7 +776,9 @@ def transform(geoms, toSRS='europe_m', fromSRS=None, segment=None):
     # make sure geoms is a list
     if isinstance(geoms, ogr.Geometry):
         returnSingle = True
-        geoms = [geoms, ]
+        geoms = [
+            geoms,
+        ]
     else:  # assume geoms is iterable
         returnSingle = False
         try:
@@ -805,16 +818,25 @@ def transform(geoms, toSRS='europe_m', fromSRS=None, segment=None):
 
 
 def boundsToBounds(bounds, boundsSRS, outputSRS):
-    pts = flatten([point(bounds[0], bounds[1], srs=boundsSRS),
-                   point(bounds[0], bounds[3], srs=boundsSRS),
-                   point(bounds[2], bounds[1], srs=boundsSRS),
-                   point(bounds[2], bounds[3], srs=boundsSRS)])
+    pts = flatten(
+        [
+            point(bounds[0], bounds[1], srs=boundsSRS),
+            point(bounds[0], bounds[3], srs=boundsSRS),
+            point(bounds[2], bounds[1], srs=boundsSRS),
+            point(bounds[2], bounds[3], srs=boundsSRS),
+        ]
+    )
     pts.TransformTo(outputSRS)
     pts = extractVerticies(pts)
 
-    bounds = (pts[:, 0].min(), pts[:, 1].min(),
-              pts[:, 0].max(), pts[:, 1].max(), )
+    bounds = (
+        pts[:, 0].min(),
+        pts[:, 1].min(),
+        pts[:, 0].max(),
+        pts[:, 1].max(),
+    )
     return bounds
+
 
 # 3
 # Flatten a list of geometries
@@ -829,7 +851,7 @@ def flatten(geoms):
           [  AB    CD    EF    GH    IJ  ]
           [    ABCD        EFGH      IJ  ]
           [        ABCDEFGH          IJ  ]
-          [               ABCDEFGHIJ     ]  <- This becomes the resulting geometry  
+          [               ABCDEFGHIJ     ]  <- This becomes the resulting geometry
 
     Example:
     --------
@@ -848,17 +870,14 @@ def flatten(geoms):
         return None
 
     # Begin flattening
-    while(len(geoms) > 1):
+    while len(geoms) > 1:
         newGeoms = []
         for gi in range(0, len(geoms), 2):
-
             try:
                 if not geoms[gi].IsValid():
-                    warnings.warn(
-                        "WARNING: Invalid Geometry encountered", UserWarning)
+                    warnings.warn("WARNING: Invalid Geometry encountered", UserWarning)
                 if not geoms[gi + 1].IsValid():
-                    warnings.warn(
-                        "WARNING: Invalid Geometry encountered", UserWarning)
+                    warnings.warn("WARNING: Invalid Geometry encountered", UserWarning)
 
                 newGeoms.append(geoms[gi].Union(geoms[gi + 1]))
             except IndexError:  # should only occur when length of geoms is odd
@@ -871,7 +890,7 @@ def flatten(geoms):
 ##########################################################################
 # Drawing functions
 def drawPoint(g, plotargs, ax, colorVal=None):
-    kwargs = dict(marker='o', color='#C32148', linestyle='None')
+    kwargs = dict(marker="o", color="#C32148", linestyle="None")
     if not colorVal is None:
         kwargs["color"] = colorVal
 
@@ -880,7 +899,7 @@ def drawPoint(g, plotargs, ax, colorVal=None):
 
 
 def drawMultiPoint(g, plotargs, ax, colorVal=None, skip=False):
-    kwargs = dict(marker='.', color='#C32148', linestyle='None')
+    kwargs = dict(marker=".", color="#C32148", linestyle="None")
     if not colorVal is None:
         kwargs["color"] = colorVal
     kwargs.update(plotargs)
@@ -893,7 +912,7 @@ def drawLine(g, plotargs, ax, colorVal=None, skip=False):
     if skip:
         kwargs = plotargs.copy()
     else:
-        kwargs = dict(marker='None', color='k', linestyle='-')
+        kwargs = dict(marker="None", color="k", linestyle="-")
         if not colorVal is None:
             kwargs["color"] = colorVal
         kwargs.update(plotargs)
@@ -903,7 +922,7 @@ def drawLine(g, plotargs, ax, colorVal=None, skip=False):
 
 
 def drawMultiLine(g, plotargs, ax, colorVal=None):
-    kwargs = dict(marker='None', color="#007959", linestyle='-')
+    kwargs = dict(marker="None", color="#007959", linestyle="-")
     if not colorVal is None:
         kwargs["color"] = colorVal
     kwargs.update(plotargs)
@@ -940,10 +959,12 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
             main = mainG.GetPoints()
         except AttributeError:
             return  # Geometry doesn't actually exist. skip it
-        holes = [boundaries.GetGeometryRef(i).GetPoints(
-        ) for i in range(1, boundaries.GetGeometryCount())]
+        holes = [
+            boundaries.GetGeometryRef(i).GetPoints()
+            for i in range(1, boundaries.GetGeometryCount())
+        ]
 
-    patchData = dict(type='Polygon', coordinates=[])
+    patchData = dict(type="Polygon", coordinates=[])
     patchData["coordinates"].append(main)
     for hole in holes:
         patchData["coordinates"].append(hole)
@@ -952,7 +973,7 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
     if skip:
         kwargs = plotargs.copy()
     else:
-        kwargs = dict(fc="#D9E9FF", ec="k", linestyle='-')
+        kwargs = dict(fc="#D9E9FF", ec="k", linestyle="-")
         if not colorVal is None:
             kwargs["fc"] = colorVal
         kwargs.update(plotargs)
@@ -963,7 +984,7 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
 
 
 def drawMultiPolygon(g, plotargs, ax, colorVal=None):
-    kwargs = dict(fc="#D9E9FF", ec="k", linestyle='-')
+    kwargs = dict(fc="#D9E9FF", ec="k", linestyle="-")
     if not colorVal is None:
         kwargs["fc"] = colorVal
     kwargs.update(plotargs)
@@ -974,20 +995,44 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
     return h
 
 
-def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None, figsize=(12, 12), xlim=None, ylim=None, fontsize=16, hideAxis=False, cbarPadding=0.01, cbarTitle=None, vmin=None, vmax=None, cmap="viridis", cbar=True, cbax=None, cbargs=None, leftMargin=0.01, rightMargin=0.01, topMargin=0.01, bottomMargin=0.01, **mplArgs):
+def drawGeoms(
+    geoms,
+    srs=4326,
+    ax=None,
+    simplificationFactor=5000,
+    colorBy=None,
+    figsize=(12, 12),
+    xlim=None,
+    ylim=None,
+    fontsize=16,
+    hideAxis=False,
+    cbarPadding=0.01,
+    cbarTitle=None,
+    vmin=None,
+    vmax=None,
+    cmap="viridis",
+    cbar=True,
+    cbax=None,
+    cbargs=None,
+    leftMargin=0.01,
+    rightMargin=0.01,
+    topMargin=0.01,
+    bottomMargin=0.01,
+    **mplArgs,
+):
     """Draw geometries onto a matplotlib figure
 
     * Each geometry type is displayed as an appropriate plotting type
         -> Points/ Multipoints are displayed as points using plt.plot(...)
         -> Lines/ MultiLines are displayed as lines using plt.plot(...)
-        -> Polygons/ MultiPolygons are displayed as patches using the descartes 
+        -> Polygons/ MultiPolygons are displayed as patches using the descartes
            library
     * Each geometry can be given its own set of matplotlib plotting parameters
 
     Notes:
     ------
     This function does not call plt.show() for the final display of the figure.
-    This must be done manually after calling this function. Otherwise 
+    This must be done manually after calling this function. Otherwise
     plt.savefig(...) can be called to save the output somewhere.
 
     Sometimes geometries will disappear because of the simplification procedure.
@@ -1069,11 +1114,11 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
     cbax : matplotlib axis; optional
         An explicitly given axis to use for drawing the colorbar
-          * If not given, but 'colorBy' is given, an axis for the colorbar is 
+          * If not given, but 'colorBy' is given, an axis for the colorbar is
             automatically generated
 
     cbargs : dict; optional
-        keyword arguments to pass on when creating the colorbar 
+        keyword arguments to pass on when creating the colorbar
 
     leftMargin : float; optional
         Additional margin to add to the left of the figure
@@ -1094,14 +1139,14 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     **mplArgs
         All other keyword arguments are passed on to the plotting functions called
         for each geometry
-          * Will be applied to ALL geometries. Be careful since this can cause 
+          * Will be applied to ALL geometries. Be careful since this can cause
             errors when plotting geometries of different types
 
     Returns:
     --------
     A namedtuple containing:
        'ax' -> The map axis
-       'handles' -> All geometry handles which were created in the order they were 
+       'handles' -> All geometry handles which were created in the order they were
                     drawn
        'cbar' -> The colorbar handle if it was drawn
 
@@ -1120,10 +1165,14 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
             if not hideAxis:
                 leftMargin += 0.07
 
-            ax = plt.axes([leftMargin,
-                           bottomMargin,
-                           1 - (rightMargin + leftMargin),
-                           1 - (topMargin + bottomMargin)])
+            ax = plt.axes(
+                [
+                    leftMargin,
+                    bottomMargin,
+                    1 - (rightMargin + leftMargin),
+                    1 - (topMargin + bottomMargin),
+                ]
+            )
             cbax = None
 
         else:  # We need a colorbar
@@ -1134,16 +1183,23 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
             cbarExtraPad = 0.05
             cbarWidth = 0.04
 
-            ax = plt.axes([leftMargin,
-                           bottomMargin,
-                           1 - (rightMargin + leftMargin +
-                                cbarWidth + cbarPadding),
-                           1 - (topMargin + bottomMargin)])
+            ax = plt.axes(
+                [
+                    leftMargin,
+                    bottomMargin,
+                    1 - (rightMargin + leftMargin + cbarWidth + cbarPadding),
+                    1 - (topMargin + bottomMargin),
+                ]
+            )
 
-            cbax = plt.axes([1 - (rightMargin + cbarWidth),
-                             bottomMargin + cbarExtraPad,
-                             cbarWidth,
-                             1 - (topMargin + bottomMargin + 2 * cbarExtraPad)])
+            cbax = plt.axes(
+                [
+                    1 - (rightMargin + cbarWidth),
+                    bottomMargin + cbarExtraPad,
+                    cbarWidth,
+                    1 - (topMargin + bottomMargin + 2 * cbarExtraPad),
+                ]
+            )
 
         if hideAxis:
             ax.axis("off")
@@ -1156,7 +1212,9 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
     pargs = None
     isFrame = False
     if isinstance(geoms, ogr.Geometry):
-        geoms = [geoms, ]
+        geoms = [
+            geoms,
+        ]
 
     elif isinstance(geoms, pd.DataFrame):  # We have a DataFrame with plotting arguments
         isFrame = True
@@ -1206,8 +1264,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         if not ylim is None:
             yMin, yMax = ylim
 
-        simplificationValue = max(
-            xMax - xMin, yMax - yMin) / simplificationFactor
+        simplificationValue = max(xMax - xMin, yMax - yMin) / simplificationFactor
 
         oGeoms = geoms
         geoms = []
@@ -1235,13 +1292,13 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
         if isinstance(cmap, str):
             from matplotlib import cm
+
             cmap = getattr(cm, cmap)
 
         cValMax = colorVals.max() if vmax is None else vmax
         cValMin = colorVals.min() if vmin is None else vmin
 
-        _colorVals = [cmap(v)
-                      for v in (colorVals - cValMin) / (cValMax - cValMin)]
+        _colorVals = [cmap(v) for v in (colorVals - cValMin) / (cValMax - cValMin)]
 
     # Do Plotting
     # make patches
@@ -1276,7 +1333,11 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         elif g.GetGeometryName() == "MULTIPOLYGON":
             h.append(drawMultiPolygon(g, plotargs, ax, colorVal))
         else:
-            msg = "Could not draw geometry of type:", pargs.index[gi], "->", g.GetGeometryName(
+            msg = (
+                "Could not draw geometry of type:",
+                pargs.index[gi],
+                "->",
+                g.GetGeometryName(),
             )
             warnings.warn(msg, UserWarning)
 
@@ -1286,19 +1347,20 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
         from matplotlib.colors import Normalize
 
         norm = Normalize(vmin=cValMin, vmax=cValMax)
-        tmp = dict(cmap=cmap, norm=norm, orientation='vertical')
+        tmp = dict(cmap=cmap, norm=norm, orientation="vertical")
         if not cbargs is None:
             tmp.update(cbargs)
         cbar = ColorbarBase(cbax, **tmp)
         cbar.ax.tick_params(labelsize=fontsize)
         cbar.set_label(
-            colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
+            colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2
+        )
     else:
         cbar = None
 
     # Do some formatting
     if newAxis:
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         ax.autoscale(enable=True)
 
     if not xlim is None:
@@ -1314,7 +1376,7 @@ def drawGeoms(geoms, srs=4326, ax=None, simplificationFactor=5000, colorBy=None,
 
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
-    """Partition a Polygon into some number of pieces whose areas should be close 
+    """Partition a Polygon into some number of pieces whose areas should be close
     to the targetArea
 
     WARNING: Not tested for several version. Will probably be removed later
@@ -1324,7 +1386,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
             - a single ogr Geometry object of POLYGON type
 
         targetArea - float : The ideal area of each partition
-            * Most of the geometries will be around this area, but they can also be anywhere in the range 0 and 2x 
+            * Most of the geometries will be around this area, but they can also be anywhere in the range 0 and 2x
 
         growStep - float : The incremental buffer to add while searching for a suitable partition
             * Choose carefully!
@@ -1341,19 +1403,19 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     elif geom.GetGeometryName() == "MULTIPOLYGON":
         results = []
         for gi in range(geom.GetGeometryCount()):
-            tmpResults = partition(
-                geom.GetGeometryRef(gi), targetArea, growStep)
+            tmpResults = partition(geom.GetGeometryRef(gi), targetArea, growStep)
             results.extend(tmpResults)
 
         return results
     else:
-        raise GeoKitGeomError(
-            "Geometry is not a polygon or multipolygon object")
+        raise GeoKitGeomError("Geometry is not a polygon or multipolygon object")
 
     # Check the geometry's size
     gArea = geom.Area()
     if gArea < 1.5 * targetArea:
-        return [geom.Clone(), ]
+        return [
+            geom.Clone(),
+        ]
 
     # Find the most starting boundary coordinate
     boundary = geom.Boundary()
@@ -1385,7 +1447,8 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
         yStart = y[x == xStart].min()
     else:
         raise GeoKitGeomError(
-            "Start point failure. There may be an infinite loop in one of the geometries")
+            "Start point failure. There may be an infinite loop in one of the geometries"
+        )
 
     start = point(xStart, yStart, srs=geom.GetSpatialReference())
 
@@ -1395,7 +1458,9 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     searchGeom = tmp.Intersection(geom)
     sgArea = searchGeom.Area()
 
-    if gArea < 2 * targetArea:  # use a slightly smalled target area when the whole geometry
+    if (
+        gArea < 2 * targetArea
+    ):  # use a slightly smalled target area when the whole geometry
         #  is close to twice the target area in order to increase the
         #  liklihood of a usable leftover
         workingTarget = 0.9 * targetArea
@@ -1445,8 +1510,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
     elif leftOvers.GetGeometryName() == "POLYGON":
         geomToDo.append(leftOvers)
     else:
-        raise GeoKitGeomError(
-            "FATAL ERROR: Difference did not result in a polygon")
+        raise GeoKitGeomError("FATAL ERROR: Difference did not result in a polygon")
 
     # make an output array
     if outputGeom.Area() < targetArea * 1.5:
@@ -1464,3 +1528,82 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
 
     # Done!
     return output
+
+
+def shift(geom, lonShift=0, latShift=0):
+    """Shift a polygon in longitudinal and/or latitudinal direction.
+
+    Inputs:
+        geom : The geometry to be shifted
+            - a single ogr Geometry object of POINT, LINESTRING, POLYGON or MULTIPOLYGON type
+            - NOTE: Accepts only 2D geometries, z value must be zero.
+
+        lonShift - (int, float) : The shift in longitudinal direction in units of the geom srs, may be positive or negative
+
+        latShift - (int, float) : The shift in latitudinal direction in units of the geom srs, may be positive or negative
+
+    Returns :
+    --------
+    osgeo.ogr.Geometry object of the input type with shifted coordinates
+    """
+    if not isinstance(geom, ogr.Geometry):
+        raise TypeError(f"geom must be of type osgeo.ogr.Geometry")
+    # first get srs of input geom
+    _srs = geom.GetSpatialReference()
+
+    # define sub method to shift collection of single points
+    def _movePoints(pointCollection, lonShift, latShift):
+        """Auxiliary function shifting individual points"""
+        points = list()
+        for i in range(len(str(pointCollection).split(","))):
+            points.append(pointCollection.GetPoint(i))
+        # shift the points individually
+        points_shifted = list()
+        for p in points:
+            assert p[2] == 0, f"All z-values must be zero!"
+            points_shifted.append((p[0] + lonShift, p[1] + latShift))
+        return points_shifted
+
+    # first check if geom is a point and shift
+    if "POINT" in geom.GetGeometryName():
+        p = geom.GetPoint()
+        return point((p[0] + lonShift, p[1] + latShift), srs=_srs)
+    # else check if line and adapt
+    elif (
+        "LINESTRING" in geom.GetGeometryName()
+        and not "MULTILINE" in geom.GetGeometryName()
+    ):
+        return line(
+            _movePoints(pointCollection=geom, lonShift=lonShift, latShift=latShift),
+            srs=_srs,
+        )
+    # else check if we have a (multi)polygon
+    elif "POLYGON" in geom.GetGeometryName():
+        if not "MULTIPOLYGON" in geom.GetGeometryName():
+            # only a simple polygon, generate single entry list to allow iteration
+            geom = [geom]
+        # iterate over individual polygons
+        for ip, poly in enumerate(geom):
+            assert (
+                "POLYGON" in poly.GetGeometryName()
+            ), f"MULTIPOLYGON is not composed of only POLYGONS"
+            # iterate over sub linear rings
+            for ir, ring in enumerate(poly):
+                assert (
+                    "LINEARRING" in ring.GetGeometryName()
+                ), f"POLYGON (or sub polygon of MULTIPOLYGON) is not composed of only LINEARRINGS"
+                poly_shifted = polygon(
+                    _movePoints(
+                        pointCollection=ring, lonShift=lonShift, latShift=latShift
+                    ),
+                    srs=_srs,
+                )
+                if ip == 0 and ir == 0:
+                    multi_shifted = poly_shifted
+                else:
+                    multi_shifted = multi_shifted.Union(poly_shifted)
+        return multi_shifted
+    else:
+        raise TypeError(
+            f"geom must be a 'POINT', 'LINESTRING', 'POLYGON' or 'MULTIPOLYGON' osgeo.ogr.Geometry"
+        )
