@@ -5,6 +5,7 @@ import warnings
 from collections import namedtuple
 import smopy
 from typing import Iterable
+import numbers
 
 from . import util as UTIL
 from . import geom as GEOM
@@ -107,8 +108,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 
     """
     if geom is None:
-        assert isinstance(lat, float) and isinstance(
-            lon, float
+        assert isinstance(lat, numbers.Number) and isinstance(
+            lon, numbers.Number
         ), "If geom is not passed, lat and lon must be given as float values."
     else:
         assert isinstance(
@@ -129,7 +130,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
     srs = osr.SpatialReference()
     srs.ImportFromWkt(
         'PROJCS["{}",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(
-            name, lat, lon
+            name, float(lat), float(lon)
         )
     )
 
