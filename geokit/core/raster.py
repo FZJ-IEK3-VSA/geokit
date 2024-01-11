@@ -1941,7 +1941,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     if shrink:
         # Compute shrink factor
         shrinkFactor = -0.00001
-        geoms = [g.Buffer(shrinkFactor) for g in geoms]
+        geoms = [g.Buffer(float(shrinkFactor)) for g in geoms]
 
     # Do flatten, maybe
     if flat:

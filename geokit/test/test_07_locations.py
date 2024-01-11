@@ -151,9 +151,7 @@ def test_Location_load():
     assert l1 == Location.load(xy)
 
     # From str
-    assert l1 == Location.load(
-        " ( 9.00000,5.00000) ",
-    )
+    assert l1 == Location.load(" ( 9.00000,5.00000) ",)
 
     # From xy with srs
     xy_3035 = pt.GetX(), pt.GetY()
@@ -191,14 +189,7 @@ def test_LocationSet___init__():
 
 
 def test_LocationSet___getitem__():
-    ls = LocationSet(
-        [
-            [1, 1],
-            [1, 2],
-            [2, 2.5],
-            [2, 3],
-        ]
-    )
+    ls = LocationSet([[1, 1], [1, 2], [2, 2.5], [2, 3],])
 
     assert ls[2] == (2, 2.5)
 
