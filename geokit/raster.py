@@ -19,4 +19,5 @@ from geokit.core.raster import (
     warp,
     saveRasterAsTif,
     sieve,
+    rasterCellNo,
 )
