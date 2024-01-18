@@ -2468,7 +2468,7 @@ def sieve(
 
 def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=None):
     """
-    Returns the raster cell number for one or multiple points defined by geometry or lon/lat. Cell numeration 
+    Returns the raster cell number for one or multiple points defined by geometry or lon/lat. Cell numeration
     starting in the top left corner cell of the raster with (0,0). Cells with (-1,-1) are out of bounds.
 
     Args:
@@ -2485,49 +2485,78 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
     # check and preprocess points inputs
     if isinstance(points, ogr.Geometry):
         points = [points]
-    elif isinstance(points, tuple) and len(points)==2:
-        points=[points]
-    assert hasattr(points, '__iter__'), f"points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
+    elif isinstance(points, tuple) and len(points) == 2:
+        points = [points]
+    assert hasattr(
+        points, "__iter__"
+    ), f"points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
     if isinstance(points[0], ogr.Geometry):
-        if not all([p.GetGeometryName()=="POINT" for p in points]):
+        if not all([p.GetGeometryName() == "POINT" for p in points]):
             raise TypeError(f"Only POINT geometries allowed")
         if not all([p.GetSpatialReference().IsSame(SRS.loadSRS(4326)) for p in points]):
             raise ValueError(f"SRS of all points must be EPSG:4326")
         # convert to lons and lats
         points = [(p.GetX(), p.GetY()) for p in points]
     else:
-        assert all([isinstance(x, tuple) and len(x)==2 and all([isinstance(_x, (int, float)) for _x in x]) for x in points]),\
-            f"All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
+        assert all(
+            [
+                isinstance(x, tuple)
+                and len(x) == 2
+                and all([isinstance(_x, (int, float)) for _x in x])
+                for x in points
+            ]
+        ), f"All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
 
     # get bounds, cellWidth and cellHeight from the inputs
     if source is not None:
         if not (bounds is None and cellWidth is None and cellHeight is None):
-            raise ValueError(f"bounds, cellWidth and cellHeight must be None when source raster is given.")
+            raise ValueError(
+                f"bounds, cellWidth and cellHeight must be None when source raster is given."
+            )
         if isinstance(source, str) and not os.path.isfile(source):
-            raise FileNotFoundError(f"source must be an existing raster file if given as string.")
+            raise FileNotFoundError(
+                f"source must be an existing raster file if given as string."
+            )
         try:
             sourceRasterInfo = rasterInfo(source)
-            bounds=sourceRasterInfo.bounds
-            cellWidth=sourceRasterInfo.pixelWidth
-            cellHeight=sourceRasterInfo.pixelHeight
-            rasterWidth=sourceRasterInfo.xWinSize
-            rasterHeight=sourceRasterInfo.yWinSize
+            bounds = sourceRasterInfo.bounds
+            cellWidth = sourceRasterInfo.pixelWidth
+            cellHeight = sourceRasterInfo.pixelHeight
+            rasterWidth = sourceRasterInfo.xWinSize
+            rasterHeight = sourceRasterInfo.yWinSize
         except:
-            raise TypeError(f"source must be path to a gdal.Dataset raster or a gdal.Dataset raster itself if not None.")
+            raise TypeError(
+                f"source must be path to a gdal.Dataset raster or a gdal.Dataset raster itself if not None."
+            )
         if not sourceRasterInfo.srs.IsSame(SRS.loadSRS(4326)):
             raise ValueError(f"raster source must be in epsg:4326")
     else:
         if bounds is None or cellWidth is None or cellHeight is None:
-            raise ValueError(f"If source is None, bounds, cellWidth and cellHeight must be given.")
-        assert isinstance(bounds, tuple) and len(bounds)==4 and all([isinstance(x, (int, float)) for x in bounds]) and bounds[0]<bounds[2] and bounds[1]<bounds[3],\
-            f"bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
-        assert isinstance(cellHeight, (int, float)), f"cellHeight must be an int or float."
-        assert isinstance(cellWidth, (int, float)), f"cellWidth must be an int or float."
+            raise ValueError(
+                f"If source is None, bounds, cellWidth and cellHeight must be given."
+            )
+        assert (
+            isinstance(bounds, tuple)
+            and len(bounds) == 4
+            and all([isinstance(x, (int, float)) for x in bounds])
+            and bounds[0] < bounds[2]
+            and bounds[1] < bounds[3]
+        ), f"bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
+        assert isinstance(
+            cellHeight, (int, float)
+        ), f"cellHeight must be an int or float."
+        assert isinstance(
+            cellWidth, (int, float)
+        ), f"cellWidth must be an int or float."
         # calculate the raster width and height in Nos of cells
-        rasterWidth = (bounds[2]-bounds[0])/cellWidth
-        rasterHeight = (bounds[3]-bounds[1])/cellHeight
-        assert np.isclose(rasterWidth%cellWidth, 0) or np.isclose(rasterWidth%cellWidth, cellWidth), f"rasterWidth {rasterWidth} is not a multiple of cellWidth {cellWidth}"
-        assert np.isclose(rasterHeight%cellHeight, 0) or np.isclose(rasterHeight%cellHeight, cellHeight), f"rasterHeight {rasterHeight} is not a multiple of cellHeight {cellHeight}"
+        rasterWidth = (bounds[2] - bounds[0]) / cellWidth
+        rasterHeight = (bounds[3] - bounds[1]) / cellHeight
+        assert np.isclose(rasterWidth % cellWidth, 0) or np.isclose(
+            rasterWidth % cellWidth, cellWidth
+        ), f"rasterWidth {rasterWidth} is not a multiple of cellWidth {cellWidth}"
+        assert np.isclose(rasterHeight % cellHeight, 0) or np.isclose(
+            rasterHeight % cellHeight, cellHeight
+        ), f"rasterHeight {rasterHeight} is not a multiple of cellHeight {cellHeight}"
 
     # calculate the cell Nos
     cellNos = list()
@@ -2547,7 +2576,7 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         warnings.warn(f"points contain out-of-bounds locations!")
 
     # return cellNos as tuple for single point, else as list of tuples
-    if len(cellNos)==1:
+    if len(cellNos) == 1:
         return cellNos[0]
     else:
         return cellNos

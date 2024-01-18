@@ -550,7 +550,11 @@ def sieve_ds():
     )
 
     data_raster = raster.createRaster(
-        bounds=(0, 0, 7, 5), pixelHeight=1, pixelWidth=1, srs=3035, data=data_arr,
+        bounds=(0, 0, 7, 5),
+        pixelHeight=1,
+        pixelWidth=1,
+        srs=3035,
+        data=data_arr,
     )
 
     return data_raster
@@ -654,56 +658,60 @@ def test_sieve(source, threshold, connectedness, mask, expected_output, request)
 
 def test_rasterCellNo():
     # define some base inputs
-    bounds=(-180, -90, 180, 90)
-    cellWidth=0.1
-    cellHeight=0.1
+    bounds = (-180, -90, 180, 90)
+    cellWidth = 0.1
+    cellHeight = 0.1
 
     # define list of input tuples
-    points_tups = [(6.2,50.8), (6.35,50.55)]
+    points_tups = [(6.2, 50.8), (6.35, 50.55)]
     # generate geoms from points
-    points_geoms=[geom.point(tup[0], tup[1], srs=4326) for tup in points_tups]
+    points_geoms = [geom.point(tup[0], tup[1], srs=4326) for tup in points_tups]
 
     # first make sure that safety checks against "wrong" coordinate systems work
     points_geoms_3857 = [geom.transform(p, toSRS=3857) for p in points_geoms]
     with pytest.raises(ValueError):
         # must raise error due to "wrong" points SRS
         raster.rasterCellNo(
-            points=points_geoms_3857, #this is EPSG:3857
-            source=AACHEN_ELIGIBILITY_RASTER, #this is EPSG:4326
+            points=points_geoms_3857,  # this is EPSG:3857
+            source=AACHEN_ELIGIBILITY_RASTER,  # this is EPSG:4326
         )
     with pytest.raises(ValueError):
         # make sure only EPSG:3857 coordinate system rasters are accepted
         raster.rasterCellNo(
-            points=points_geoms, # this is EPSG:4326
-            source=CLC_RASTER_PATH, # the CLC_RASTER_PATH example is EPSG:3035
+            points=points_geoms,  # this is EPSG:4326
+            source=CLC_RASTER_PATH,  # the CLC_RASTER_PATH example is EPSG:3035
         )
 
     # now test single location first
     cellNo_tup = raster.rasterCellNo(
         points=points_tups[0],
-        bounds=bounds, cellWidth=cellWidth, cellHeight=cellHeight,
-        )
-    assert cellNo_tup==(1861, 392) # must be tuple type return and value match
+        bounds=bounds,
+        cellWidth=cellWidth,
+        cellHeight=cellHeight,
+    )
+    assert cellNo_tup == (1861, 392)  # must be tuple type return and value match
 
     # then test multiple
     cellNos_tup = raster.rasterCellNo(
         points=points_tups,
-        bounds=bounds, cellWidth=cellWidth, cellHeight=cellHeight,
-        )
-    assert cellNos_tup==[(1861, 392), (1863, 394)] # list of tuples with values
+        bounds=bounds,
+        cellWidth=cellWidth,
+        cellHeight=cellHeight,
+    )
+    assert cellNos_tup == [(1861, 392), (1863, 394)]  # list of tuples with values
 
     # test with geoms generated based on tuples
     cellNos_geoms = raster.rasterCellNo(
         points=points_geoms,
-        bounds=bounds, cellWidth=cellWidth, cellHeight=cellHeight,
-        )
-    assert cellNos_geoms==cellNos_tup # must be the same as tuple inputs
+        bounds=bounds,
+        cellWidth=cellWidth,
+        cellHeight=cellHeight,
+    )
+    assert cellNos_geoms == cellNos_tup  # must be the same as tuple inputs
 
     # test again with source raster input to determine cells
     cellNos_geoms_rstr = raster.rasterCellNo(
         points=points_geoms,
-        source=AACHEN_ELIGIBILITY_RASTER, # use the Aachen eligibility raster as epsg:4326 example
-        )
-    assert cellNos_geoms_rstr==[(225, 151), (375, 401)]
-
-    
+        source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
+    )
+    assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
