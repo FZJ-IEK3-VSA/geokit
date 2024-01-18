@@ -12,8 +12,7 @@ class GeoKitLocationError(UTIL.GeoKitError):
     pass
 
 
-LocationMatcher = re.compile(
-    r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
+LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 
 
 class Location(object):
@@ -39,6 +38,7 @@ class Location(object):
     >>> Location.fromPointGeom( pointGeometryObject )
 
     """
+
     _TYPE_KEY_ = "Location"
     _e = 1e-5
 
@@ -62,21 +62,23 @@ class Location(object):
         self.lon = lon
         self._geom = None
 
-    def __hash__(self):  # I need this to make pandas indexing work when location objects are used as columns and indexes
-        return hash((int(self.lon/self._e), int(self.lat/self._e)))
+    def __hash__(
+        self,
+    ):  # I need this to make pandas indexing work when location objects are used as columns and indexes
+        return hash((int(self.lon / self._e), int(self.lat / self._e)))
 
     def __eq__(self, o):
         if isinstance(o, Location):
-            return abs(self.lon-o.lon) < self._e and abs(self.lat-o.lat) < self._e
+            return abs(self.lon - o.lon) < self._e and abs(self.lat - o.lat) < self._e
         elif isinstance(o, ogr.Geometry):
             return self == Location.fromPointGeom(o)
         elif isinstance(o, tuple) and len(o) == 2:
-            return abs(self.lon-o[0]) < self._e and abs(self.lat-o[1]) < self._e
+            return abs(self.lon - o[0]) < self._e and abs(self.lat - o[1]) < self._e
         else:
             return False
 
     def __ne__(self, o):
-        return not(self == o)
+        return not (self == o)
 
     def __str__(self):
         return "(%.5f,%.5f)" % (self.lon, self.lat)
@@ -106,8 +108,7 @@ class Location(object):
         """
         m = LocationMatcher.search(self)
         if m is None:
-            raise GeoKitLocationError(
-                "string does not match Location specification")
+            raise GeoKitLocationError("string does not match Location specification")
         lon, lat = m.groups()
         if srs is None:
             return Location(lon=float(lon), lat=float(lat))
@@ -160,9 +161,10 @@ class Location(object):
         return Location.fromPointGeom(g)
 
     @property
-    def latlon(self): return self.lat, self.lon
+    def latlon(self):
+        return self.lat, self.lon
 
-    def asGeom(self, srs='latlon'):
+    def asGeom(self, srs="latlon"):
         """Extract the Location as an ogr.Geometry object in an arbitrary SRS
 
         Parameters
@@ -206,7 +208,7 @@ class Location(object):
 
     @staticmethod
     def load(loc, srs=4326):
-        """Tries to load a Location object in the correct manner by inferring 
+        """Tries to load a Location object in the correct manner by inferring
         from the input type
 
         * Ends up calling one of the Location.from??? initializers
@@ -233,20 +235,25 @@ class Location(object):
         elif isinstance(loc, UTIL.Feature):
             output = Location.fromPointGeom(loc.geom)
 
-        elif ((isinstance(loc, tuple) or isinstance(loc, list) or isinstance(loc, np.ndarray))) and len(loc) == 2:
-            if srs is None or srs == 4326 or srs == 'latlon':
+        elif (
+            (
+                isinstance(loc, tuple)
+                or isinstance(loc, list)
+                or isinstance(loc, np.ndarray)
+            )
+        ) and len(loc) == 2:
+            if srs is None or srs == 4326 or srs == "latlon":
                 output = Location(lon=loc[0], lat=loc[1])
             else:
                 output = Location.fromXY(x=loc[0], y=loc[1], srs=srs)
         else:  # Assume iteratable
-            raise GeoKitLocationError(
-                "Could not understand location input:", loc)
+            raise GeoKitLocationError("Could not understand location input:", loc)
 
         return output
 
 
 class LocationSet(object):
-    """Represents a collection of location using lat/lon as a base coordinate 
+    """Represents a collection of location using lat/lon as a base coordinate
     system
 
     Note:
@@ -258,6 +265,7 @@ class LocationSet(object):
     ----------------
     >>> LocationSet( iterable )
     """
+
     _TYPE_KEY_ = "LocationSet"
 
     def __init__(self, locations, srs=4326, _skip_check=False):
@@ -278,8 +286,7 @@ class LocationSet(object):
         """
         if not _skip_check:
             if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
-                self._locations = np.array(
-                    [Location.load(locations, srs=srs), ])
+                self._locations = np.array([Location.load(locations, srs=srs),])
             elif isinstance(locations, LocationSet):
                 self._locations = locations[:]
             elif isinstance(locations, pd.DataFrame):
@@ -287,12 +294,12 @@ class LocationSet(object):
             else:
                 try:  # Try loading all locations one at a time
                     self._locations = np.array(
-                        [Location.load(l, srs=srs) for l in locations])
+                        [Location.load(l, srs=srs) for l in locations]
+                    )
                 except GeoKitLocationError as err:
                     try:
                         # Try loading the input as as single Location
-                        self._locations = np.array(
-                            [Location.load(locations, srs=srs), ])
+                        self._locations = np.array([Location.load(locations, srs=srs),])
                     except GeoKitLocationError:
                         raise err
         else:
@@ -304,9 +311,11 @@ class LocationSet(object):
         self.count = len(self._locations)
         self.shape = (self.count,)
 
-    def __len__(self): return self.count
+    def __len__(self):
+        return self.count
 
-    def __getitem__(self, i): return self._locations[i]
+    def __getitem__(self, i):
+        return self._locations[i]
 
     def __repr__(self):
         out = " , Lon      , Lat\n"
@@ -315,8 +324,11 @@ class LocationSet(object):
                 out += "%d, %-9.5f, %-9.5f\n" % (i, self[i].lon, self[i].lat)
             out += "...\n"
             for i in range(5):
-                out += "%d, %-9.5f, %-9.5f\n" % (self.count -
-                                                 6+i, self[-6+i].lon, self[-6+i].lat)
+                out += "%d, %-9.5f, %-9.5f\n" % (
+                    self.count - 6 + i,
+                    self[-6 + i].lon,
+                    self[-6 + i].lat,
+                )
         else:
             for i in range(self.count):
                 out += "%d, %-9.5f, %-9.5f\n" % (i, self[i].lon, self[i].lat)
@@ -335,18 +347,23 @@ class LocationSet(object):
 
         Returns:
         --------
-        tuple -> (xMin, yMin, xMax, yMax) 
+        tuple -> (xMin, yMin, xMax, yMax)
 
         """
         if srs == 4326 and not self._bounds4326 is None:
             return self._bounds4326
         elif srs == 4326:
-            self._bounds4326 = (self.lons.min(), self.lats.min(),
-                                self.lons.max(), self.lats.max())
+            self._bounds4326 = (
+                self.lons.min(),
+                self.lats.min(),
+                self.lons.max(),
+                self.lats.max(),
+            )
             return self._bounds4326
         else:
-            geoms = GEOM.transform([l.geom for l in self._locations],
-                                   fromSRS=SRS.EPSG4326, toSRS=srs)
+            geoms = GEOM.transform(
+                [l.geom for l in self._locations], fromSRS=SRS.EPSG4326, toSRS=srs
+            )
 
             yVals = np.array([g.GetY() for g in geoms])
             xVals = np.array([g.GetX() for g in geoms])
@@ -376,14 +393,14 @@ class LocationSet(object):
         return [str(l) for l in self._locations]
 
     def makePickleable(self):
-        """Clears OGR objects from all individual Location's internals so that 
+        """Clears OGR objects from all individual Location's internals so that
         they become "pickleable"
         """
         for l in self._locations:
             l.makePickleable()
 
     def asGeom(self, srs=4326):
-        """Create a list of ogr.Geometry representations of all locations in the 
+        """Create a list of ogr.Geometry representations of all locations in the
         set
 
         Parameters
@@ -423,11 +440,11 @@ class LocationSet(object):
             return np.column_stack([self.lons, self.lats])
         else:
             geoms4326 = [l.geom for l in self._locations]
-            geomsSRS = GEOM.transform(
-                geoms4326, fromSRS=SRS.EPSG4326, toSRS=srs)
+            geomsSRS = GEOM.transform(geoms4326, fromSRS=SRS.EPSG4326, toSRS=srs)
             return np.array([(g.GetX(), g.GetY()) for g in geomsSRS])
 
-    def asHash(self): return [hash(l) for l in self._locations]
+    def asHash(self):
+        return [hash(l) for l in self._locations]
 
     def splitKMeans(self, groups=2, **kwargs):
         """Split the locations into groups according to KMEans clustering
@@ -439,7 +456,7 @@ class LocationSet(object):
         groups : int
             The number of groups to split the locations into
 
-        kwargs : 
+        kwargs :
             All other keyword arguments are passed on to sklearn.cluster.KMeans
 
         Yields:
@@ -457,7 +474,7 @@ class LocationSet(object):
             yield LocationSet(self[sel], _skip_check=True)
 
     def bisect(self, lon=True, lat=True, delta=0.005):
-        """Cluster the locations by finding a bisecting line in lat/lon 
+        """Cluster the locations by finding a bisecting line in lat/lon
         coordinates in either (or both) directions
 
         * An equal count of locations in each group is not guaranteed
@@ -471,7 +488,7 @@ class LocationSet(object):
         lat : bool
             Split locations in the latitude direction
 
-        delta : float 
+        delta : float
             The search speed
             * Smaller values will take longer to converge on the true bisector
 
@@ -486,10 +503,18 @@ class LocationSet(object):
         latDiv = np.median(self.lats)
 
         if lon and lat:
-            yield LocationSet(self[(self.lons < lonDiv) & (self.lats < latDiv)], _skip_check=True)
-            yield LocationSet(self[(self.lons >= lonDiv) & (self.lats < latDiv)], _skip_check=True)
-            yield LocationSet(self[(self.lons < lonDiv) & (self.lats >= latDiv)], _skip_check=True)
-            yield LocationSet(self[(self.lons >= lonDiv) & (self.lats >= latDiv)], _skip_check=True)
+            yield LocationSet(
+                self[(self.lons < lonDiv) & (self.lats < latDiv)], _skip_check=True
+            )
+            yield LocationSet(
+                self[(self.lons >= lonDiv) & (self.lats < latDiv)], _skip_check=True
+            )
+            yield LocationSet(
+                self[(self.lons < lonDiv) & (self.lats >= latDiv)], _skip_check=True
+            )
+            yield LocationSet(
+                self[(self.lons >= lonDiv) & (self.lats >= latDiv)], _skip_check=True
+            )
 
         elif lon and not lat:
             yield LocationSet(self[(self.lons < lonDiv)], _skip_check=True)

@@ -1,21 +1,40 @@
-image: continuumio/miniconda3:latest
+image: mambaorg/micromamba
 
 stages:
   - test
 
-test:
+.test_template:
   stage: test
-  # tags: 
-  #   - linux
-
-  script:
-    # Install Mamba for faster installation
-    - conda install mamba -c conda-forge
-    # Install dependecies from environment file
-    - mamba env create -n geokit --file=requirements-dev.yml
-    - conda info --envs
-    - source activate geokit
+  before_script:
+    # create environment
+    - micromamba create -y -n geokit --file=requirements-dev.yml
+    - eval "$(micromamba shell hook --shell bash)"
+    - micromamba activate geokit
     # Install geokit with no --no-deps flag to create a reproducible environment
     - python -m pip install -e . --no-deps
-    # Test Environment
+    # the following 2 imports are not part of the requirements but needed to test gpd conversions
+    - micromamba install shapely --channel conda-forge
+    - micromamba install geopandas --channel conda-forge 
+
+test-code:
+  extends: .test_template
+  script:
+    # Test code
     - python -m pytest --cov=geokit geokit/test/
+
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: always
+
+test-formatting:
+  stage: test
+  image: pyfound/black:latest_release
+  script:
+  # Dry-run black auto-formatter. If the code needs reformatting this test
+  # will fail.
+  - black --version
+  - black --check geokit
+  - black --check docs
+  - black --check Examples
+

@@ -28,6 +28,7 @@ Examples/*.shx
 Examples/*.prj
 Examples/*.cpg
 Examples/*.csv
+Examples/*.gpkg
 
 # Extras
 .vscode/settings.json

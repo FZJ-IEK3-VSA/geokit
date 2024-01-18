@@ -5,18 +5,22 @@ from geokit import srs, Extent, LocationSet, util, raster, vector, error, _test_
 def test_Extent___init__():
     # basic
     ex1 = Extent(3, -4, -5, 10, srs=EPSG4326)
-    assert (ex1.xyXY == (-5, -4, 3, 10))
+    assert ex1.xyXY == (-5, -4, 3, 10)
     ex1b = Extent((3, -4, -5, 10), srs=EPSG4326)
-    assert (ex1b.xyXY == (-5, -4, 3, 10))
+    assert ex1b.xyXY == (-5, -4, 3, 10)
 
     # from source
     ex2 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
-    assert (ex2.xyXY == (6.212409755390094, 48.864894076418935,
-                         7.782393932571588, 49.932593106005655))
+    assert ex2.xyXY == (
+        6.212409755390094,
+        48.864894076418935,
+        7.782393932571588,
+        49.932593106005655,
+    )
 
     # from source
     ex3 = Extent.fromRaster(source=AACHEN_ELIGIBILITY_RASTER)
-    assert (ex3.xyXY == (5.974, 50.494, 6.42, 50.951))
+    assert ex3.xyXY == (5.974, 50.494, 6.42, 50.951)
     assert ex3.srs.IsSame(EPSG4326)
 
 
@@ -55,16 +59,15 @@ def test_Extent_fromTileAt():
     assert np.isclose(tile.yMin, 6574807.424978)
     assert np.isclose(tile.yMax, 6731350.458906)
 
-    tile = Extent.fromTileAt(
-        x=4101103, y=2978620, zoom=8, srs=EPSG3035)
+    tile = Extent.fromTileAt(x=4101103, y=2978620, zoom=8, srs=EPSG3035)
 
     assert np.isclose(tile.xMin, 626172.135712164)
     assert np.isclose(tile.xMax, 782715.169640205)
     assert np.isclose(tile.yMin, 6418264.3910496775)
     assert np.isclose(tile.yMax, 6574807.4249777235)
 
-def test_Extent_fromVector():
 
+def test_Extent_fromVector():
     ex1 = Extent.fromVector(AACHEN_POINTS)
 
     assert np.isclose(ex1.xMin, 6.03745)
@@ -170,9 +173,9 @@ def test_Extent___eq__():
     ex3 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
 
     # Equality
-    assert (ex2 != ex1)
-    assert (ex2 == ex2)
-    assert (ex2 == ex3)
+    assert ex2 != ex1
+    assert ex2 == ex2
+    assert ex2 == ex3
 
 
 def test_Extent___add__():
@@ -189,9 +192,7 @@ def test_Extent___add__():
 
 
 def test_Extent_exportWKT():
-
-    if gdal.__version__ >= '3.0.0':
-
+    if gdal.__version__ >= "3.0.0":
         # setup
         ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG4326)
         s = ex1.exportWKT("|||")
@@ -203,8 +204,7 @@ def test_Extent_exportWKT():
         s2 = 'POLYGON ((1 2 0,3 2 0,3 4 0,1 4 0,1 2 0))|||PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]'
         assert s == s2
 
-    elif (gdal.__version__ > '2.2.0') and (gdal.__version__ < '3.0.0'): 
-
+    elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
         # setup
         ex1 = Extent(1, 2, 3, 4, srs=srs.EPSG4326)
         s = ex1.exportWKT("|||")
@@ -293,8 +293,7 @@ def test_Extent_castTo():
 
     # Projecting
     ex_cast = ex3.castTo(EPSG3035)
-    assert np.isclose(ex_cast.fit(1).xyXY,
-                      (4329833, 835682, 4770009, 1681039)).all()
+    assert np.isclose(ex_cast.fit(1).xyXY, (4329833, 835682, 4770009, 1681039)).all()
 
 
 def test_Extent_inSourceExtent():
@@ -302,15 +301,15 @@ def test_Extent_inSourceExtent():
     ex2 = Extent.fromVector(source=MULTI_FTR_SHAPE_PATH)
 
     # Test if in source
-    assert (ex2.inSourceExtent(LUX_SHAPE_PATH) == True)
-    assert (ex2.inSourceExtent(AACHEN_SHAPE_PATH) == False)
+    assert ex2.inSourceExtent(LUX_SHAPE_PATH) == True
+    assert ex2.inSourceExtent(AACHEN_SHAPE_PATH) == False
 
     # Overlapping, but not within eachother
     ext1 = Extent(0, 0, 3, 3, srs=4326)
     ext2 = Extent(-1, 1, 4, 2, srs=4326)
     vec = vector.createVector(ext2.box)
 
-    assert (ext1.inSourceExtent(vec) == True)
+    assert ext1.inSourceExtent(vec) == True
 
 
 def test_Extent_filterSources():
@@ -346,10 +345,10 @@ def test_Extent_contains():
     ex1 = Extent(3, -4, -5, 10, srs=EPSG4326)
 
     # Test for contains
-    assert (ex1.contains(Extent(-5, -4, 3, 12)) == False)
-    assert (ex1.contains(Extent(-5, -3.3333, 2.0002, 8)) == True)
-    assert (ex1.contains(Extent(-2.0, -3.5, 1.0, 8.5), 0.5) == True)
-    assert (ex1.contains(Extent(-2.0, -3.25, 1.0, 8.25), 0.5) == False)
+    assert ex1.contains(Extent(-5, -4, 3, 12)) == False
+    assert ex1.contains(Extent(-5, -3.3333, 2.0002, 8)) == True
+    assert ex1.contains(Extent(-2.0, -3.5, 1.0, 8.5), 0.5) == True
+    assert ex1.contains(Extent(-2.0, -3.25, 1.0, 8.25), 0.5) == False
 
 
 def test_Extent_findWithin():
@@ -402,7 +401,6 @@ def test_Extent_createRaster():
 
 
 def test_Extent_extractMatrix():
-
     # setup
     ex = Extent(6.022, 50.477, 6.189, 50.575).castTo(EPSG3035).fit(100)
 
@@ -431,8 +429,12 @@ def test_Extent_warp():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(3035).fit(200)
 
     # Change resolution to disk
-    d = ex.warp(CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200,
-                output=result("extent_warp1.tif"))
+    d = ex.warp(
+        CLC_RASTER_PATH,
+        pixelHeight=200,
+        pixelWidth=200,
+        output=result("extent_warp1.tif"),
+    )
     v1 = raster.extractMatrix(d)
     assert np.isclose(v1.mean(), 17.18144279)
 
@@ -442,31 +444,46 @@ def test_Extent_warp():
     assert np.isclose(v1, v2).all()
 
     # Do a cutline from disk
-    d = ex.warp(CLC_RASTER_PATH, pixelHeight=100, pixelWidth=100,
-                cutline=AACHEN_SHAPE_PATH, output=result("extent_warp3.tif"), noData=99)
+    d = ex.warp(
+        CLC_RASTER_PATH,
+        pixelHeight=100,
+        pixelWidth=100,
+        cutline=AACHEN_SHAPE_PATH,
+        output=result("extent_warp3.tif"),
+        noData=99,
+    )
     v3 = raster.extractMatrix(d)
     assert np.isclose(v3.mean(), 66.02815723)
     assert np.isclose(v3[0, 0], 99)
 
 
 def test_Extent_rasterize():
-
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(3035).fit(250)
 
     # Simple vectorization to file
-    r = ex.rasterize(source=AACHEN_ZONES, pixelWidth=250,
-                     pixelHeight=250, output=result("extent_rasterized1.tif"))
+    r = ex.rasterize(
+        source=AACHEN_ZONES,
+        pixelWidth=250,
+        pixelHeight=250,
+        output=result("extent_rasterized1.tif"),
+    )
     mat1 = raster.extractMatrix(r)
     assert np.isclose(mat1.mean(), 0.22881653)
 
     # Simple vectorization to mem
-    r = ex.rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250, )
+    r = ex.rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250,)
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2, mat1).all()
 
     # Write attribute values to disc
-    r = ex.rasterize(source=AACHEN_ZONES, value="YEAR", pixelWidth=250,
-                     pixelHeight=250, output=result("extent_rasterized3.tif"), noData=-1)
+    r = ex.rasterize(
+        source=AACHEN_ZONES,
+        value="YEAR",
+        pixelWidth=250,
+        pixelHeight=250,
+        output=result("extent_rasterized3.tif"),
+        noData=-1,
+    )
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 22025)
     assert np.isclose(np.nanmean(mat), 1996.36771232)
@@ -484,8 +501,9 @@ def test_Extent_mutateVector():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(4326)
 
     # Test simple clipping
-    vi = ex.mutateVector(AACHEN_ZONES, matchContext=False,
-                         output=result("extent_mutateVector1.shp"))
+    vi = ex.mutateVector(
+        AACHEN_ZONES, matchContext=False, output=result("extent_mutateVector1.shp")
+    )
     info = vector.vectorInfo(vi)
     assert np.isclose(info.count, 101)
     assert info.srs.IsSame(EPSG3035)
@@ -497,9 +515,16 @@ def test_Extent_mutateVector():
     assert info.srs.IsSame(EPSG4326)
 
     # Simple operation
-    def docenter(x): return {'geom': x.geom.Centroid()}
-    vi = ex.mutateVector(AACHEN_ZONES, matchContext=True, keepAttributes=False,
-                         processor=docenter, output=result("extent_mutateVector3.shp"))
+    def docenter(x):
+        return {"geom": x.geom.Centroid()}
+
+    vi = ex.mutateVector(
+        AACHEN_ZONES,
+        matchContext=True,
+        keepAttributes=False,
+        processor=docenter,
+        output=result("extent_mutateVector3.shp"),
+    )
     info = vector.vectorInfo(vi)
     assert np.isclose(len(info.attributes), 1)
     assert np.isclose(info.count, 101)
@@ -510,14 +535,19 @@ def test_Extent_mutateRaster():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(4326).fit(0.001)
 
     # test a simple clip
-    r = ex.mutateRaster(CLC_RASTER_PATH, output=result(
-        "extent_mutateRaster1.tif"))
+    r = ex.mutateRaster(CLC_RASTER_PATH, output=result("extent_mutateRaster1.tif"))
     mat = raster.extractMatrix(r)
     assert np.isclose(mat.mean(), 17.14654805)
 
     # test a clip and warp
-    r = ex.mutateRaster(CLC_RASTER_PATH, pixelHeight=0.001, pixelWidth=0.001,
-                        matchContext=True, output=result("extent_mutateRaster2.tif"), resampleAlg='near')
+    r = ex.mutateRaster(
+        CLC_RASTER_PATH,
+        pixelHeight=0.001,
+        pixelWidth=0.001,
+        matchContext=True,
+        output=result("extent_mutateRaster2.tif"),
+        resampleAlg="near",
+    )
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2.mean(), 17.14768769)
 
@@ -527,8 +557,9 @@ def test_Extent_mutateRaster():
         goodValues = mat[mat != -9999].flatten()
         return goodValues.max()
 
-    r = ex.mutateRaster(CLC_RASTER_PATH, processor=max_3x3,
-                        output=result("extent_mutateRaster3.tif"))
+    r = ex.mutateRaster(
+        CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif")
+    )
     mat3 = raster.extractMatrix(r)
     assert np.isclose(mat3.mean(), 19.27040301)
 
@@ -553,23 +584,24 @@ def test_Extent_clipRaster():
 
 
 def test_Extent_contoursFromRaster():
-
-    if gdal.__version__ >= '3.0.0':
-
+    if gdal.__version__ >= "3.0.0":
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
-                                       contourEdges=[1, 2, 3], transformGeoms=True)
+        geoms = ext.contoursFromRaster(
+            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
+        )
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
-        assert np.isclose(geoms.iloc[63].geom.Area(), 0.08834775465377398) # index of geom changed from 61 to 63 with GDAL >= 3.0.0
+        assert np.isclose(
+            geoms.iloc[63].geom.Area(), 0.08834775465377398
+        )  # index of geom changed from 61 to 63 with GDAL >= 3.0.0
         assert geoms.iloc[63].ID == 1
 
-    elif (gdal.__version__ > '2.2.0') and (gdal.__version__ < '3.0.0'):
-
+    elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC,
-                                       contourEdges=[1, 2, 3], transformGeoms=True)
+        geoms = ext.contoursFromRaster(
+            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
+        )
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
@@ -578,7 +610,7 @@ def test_Extent_contoursFromRaster():
 
 
 def test_Extent_subTiles():
-    ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
+    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
 
     tiles = [Extent.fromTile(t.xi, t.yi, t.zoom) for t in ext.subTiles(9)]
 
@@ -619,7 +651,7 @@ def test_Extent_subTiles():
 
 
 def test_Extent_tileBox():
-    ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
+    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
     ext_box = ext.tileBox(12)
 
     assert np.isclose(ext_box.xMin, 655523.954574)
@@ -630,9 +662,10 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-    ext = Extent.fromVector(_test_data_['aachenShapefile.shp'])
-    ras = ext.tileMosaic(join(_test_data_['prior_tiles'],
-                              "osm_roads_minor.{z}.{x}.{y}.tif"), 9,)
+    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
+    ras = ext.tileMosaic(
+        join(_test_data_["prior_tiles"], "osm_roads_minor.{z}.{x}.{y}.tif"), 9,
+    )
     rasmat = raster.extractMatrix(ras)
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
