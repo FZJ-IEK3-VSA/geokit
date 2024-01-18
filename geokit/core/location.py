@@ -286,7 +286,11 @@ class LocationSet(object):
         """
         if not _skip_check:
             if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
-                self._locations = np.array([Location.load(locations, srs=srs),])
+                self._locations = np.array(
+                    [
+                        Location.load(locations, srs=srs),
+                    ]
+                )
             elif isinstance(locations, LocationSet):
                 self._locations = locations[:]
             elif isinstance(locations, pd.DataFrame):
@@ -299,7 +303,11 @@ class LocationSet(object):
                 except GeoKitLocationError as err:
                     try:
                         # Try loading the input as as single Location
-                        self._locations = np.array([Location.load(locations, srs=srs),])
+                        self._locations = np.array(
+                            [
+                                Location.load(locations, srs=srs),
+                            ]
+                        )
                     except GeoKitLocationError:
                         raise err
         else:
