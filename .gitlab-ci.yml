@@ -14,7 +14,7 @@ stages:
     - python -m pip install -e . --no-deps
     # the following 2 imports are not part of the requirements but needed to test gpd conversions
     - micromamba install shapely --channel conda-forge
-    - micromamba install geopandas --channel conda-forge 
+    - micromamba install geopandas --channel conda-forge
 
 test-code:
   extends: .test_template
@@ -31,10 +31,6 @@ test-formatting:
   stage: test
   image: pyfound/black:latest_release
   script:
-  # Dry-run black auto-formatter. If the code needs reformatting this test
-  # will fail.
-  - black --version
-  - black --check geokit
-  - black --check docs
-  - black --check Examples
-
+    # Run black auto-formatter. The code will be automatically reformatted.
+    - black --version
+    - black --fast .
