@@ -1,0 +1,80 @@
+on:
+    push:
+      branches: master
+    pull_request:
+      branches: master
+    # Allows to trigger the workflow manually
+    workflow_dispatch:
+      branches: master
+    schedule:
+      # * is a special character in YAML so you have to quote this string
+      # Some Examples for cron syntax https://crontab.guru/examples.html
+      # Schedules job at any point after 12 pm
+      - cron:  '0 0 * * *'
+      # Weekly after sunday
+      # - cron: 0 0 * * 0
+  
+jobs:
+    TestGeokitCondaForge:
+      name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+      runs-on: ${{ matrix.os }}
+      strategy:
+        fail-fast: false
+        matrix:
+          os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            repository: FZJ-IEK3-VSA/geokit
+            path: './geokit'
+        - uses: conda-incubator/setup-miniconda@v3
+          with:
+            miniforge-version: latest
+            channels: conda-forge
+            activate-environment: test_env
+        - name: Run tests
+          shell: pwsh
+          run: |
+            ls
+            echo "LS Done"
+            mamba install -n test_env geokit pytest gdal=3.4.2
+            echo "Installation done"
+            conda list
+            echo "libaries printed"
+            echo "start pytest"
+            conda run -n test_env pytest
+            echo "Pytest done"
+        
+    TestGeokitDevLocal:
+      name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+      runs-on: ${{ matrix.os }}
+      strategy:
+        fail-fast: false
+        matrix:
+          os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            repository: FZJ-IEK3-VSA/geokit
+            path: './geokit'
+        - uses: conda-incubator/setup-miniconda@v3
+          with:
+            miniforge-version: latest
+            channels: conda-forge
+            activate-environment: test_env
+        - name: Run tests
+          shell: pwsh
+          run: |
+            ls
+            echo "LS Done"
+            cd geokit
+            mamba env create --name geokit_env --yes --file requirements-dev.yml
+            conda run --name geokit_env pip install . --no-deps
+            echo "Installation done"
+            conda list --name geokit_env
+            echo "libaries printed"
+            echo "start pytest"
+            conda run --name geokit_env pytest
+            echo "Pytest done"
