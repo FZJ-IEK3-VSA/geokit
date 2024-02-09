@@ -550,7 +550,11 @@ def sieve_ds():
     )
 
     data_raster = raster.createRaster(
-        bounds=(0, 0, 7, 5), pixelHeight=1, pixelWidth=1, srs=3035, data=data_arr,
+        bounds=(0, 0, 7, 5),
+        pixelHeight=1,
+        pixelWidth=1,
+        srs=3035,
+        data=data_arr,
     )
 
     return data_raster

@@ -158,7 +158,13 @@ def test_createVector(tmpdir):
     vector.createVector(
         GEOM_3035,
         out2,
-        fieldVals={"id": 1, "name": ["fred",], "value": 12.34,},
+        fieldVals={
+            "id": 1,
+            "name": [
+                "fred",
+            ],
+            "value": 12.34,
+        },
         fieldDef={"id": "int8", "name": str, "value": float},
         overwrite=True,
     )
@@ -406,7 +412,11 @@ def test_rasterize():
     assert np.isclose(mat1.mean(), 0.13910192)
 
     # Simple vectorization to mem
-    r = vector.rasterize(source=AACHEN_ZONES, pixelWidth=250, pixelHeight=250,)
+    r = vector.rasterize(
+        source=AACHEN_ZONES,
+        pixelWidth=250,
+        pixelHeight=250,
+    )
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2, mat1).all()
 

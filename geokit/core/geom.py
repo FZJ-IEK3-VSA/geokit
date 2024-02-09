@@ -253,15 +253,15 @@ def makeBox(*args, **kwargs):
     return box(*args, **kwargs)
 
 
-def polygon(outerRing, *args, srs=4326):
+def polygon(outerRing, *args, srs="default"):
     """Creates an OGR Polygon obect from a given set of points
 
     Parameters:
     -----------
-    outerRing : [(x,y), ] or Nx2 numpy.ndarray
+    outerRing : [(x,y), ] or [ogr.Geometry, ] or Nx2 numpy.ndarray
         The polygon's outer edge
 
-    *args : [(x,y), ] or Nx2 numpy.ndarray
+    *args : [(x,y), ] or [ogr.Geometry, ] or Nx2 numpy.ndarray
         The inner edges of the polygon
           * Each input forms a single edge
           * Inner rings cannot interset the outer ring or one another
@@ -270,8 +270,10 @@ def polygon(outerRing, *args, srs=4326):
             counterclockwise)
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
-        The srs of the polygon to create
-          * If not given, longitude/latitude is assumed
+        The srs of the polygon to create. By default "default", i.e. if
+        point geometries are passed, srs will be extracted from first point of outer ring,
+        if points are passed as (x, y) tuples, EPSG:4326 will be assigned
+        by default unless given otherwise. If given as None, no srs will be assigned
 
     Returns:
     --------
@@ -286,7 +288,16 @@ def polygon(outerRing, *args, srs=4326):
 
       geom = polygon( box, diamond )
     """
-    if not srs is None:
+    # check if we have all point geometries
+    pointGeometries = all([isinstance(_p, ogr.Geometry) for _p in outerRing])
+    if srs == "default":
+        if pointGeometries:
+            # we have geometries, set srs to the srs of the first outer ring point
+            srs = outerRing[0].GetSpatialReference()
+        else:
+            # set srs to EPSG:4326 as standard
+            srs = SRS.loadSRS(4326)
+    elif srs is not None:
         srs = SRS.loadSRS(srs)
 
     # Make the complete geometry
@@ -298,11 +309,17 @@ def polygon(outerRing, *args, srs=4326):
     otr = ogr.Geometry(ogr.wkbLinearRing)
     if not srs is None:
         otr.AssignSpatialReference(srs)
+    # convert to tuples if we have point geometries at hand
+    if pointGeometries:
+        outerRing = [(_p.GetX(), _p.GetY()) for _p in outerRing]
     [otr.AddPoint(float(x), float(y)) for x, y in outerRing]
     g.AddGeometry(otr)
 
     # Make the inner rings (maybe)
     for innerRing in args:
+        # extract (x, y) tuples first if needed
+        if all([isinstance(_p, ogr.Geometry) for _p in innerRing]):
+            innerRing = [(_p.GetX(), _p.GetY()) for _p in innerRing]
         tmp = ogr.Geometry(ogr.wkbLinearRing)
         if not srs is None:
             tmp.AssignSpatialReference(srs)

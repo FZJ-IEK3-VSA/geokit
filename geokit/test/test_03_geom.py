@@ -154,6 +154,34 @@ def test_line(points_input, srs, output_length, output_bounds):
     assert np.isclose(l.GetEnvelope(), output_bounds).all()
 
 
+def test_polygon():
+    # generate a list of point geoms from x/y
+    pointsInAachen4326_geoms = [geom.point(_p) for _p in pointsInAachen4326]
+
+    # create polygon from x/y coordinates with default setting
+    poly1 = geom.polygon(pointsInAachen4326, srs="default")
+    # test this against polygon created directly from points, as well default srs
+    poly2 = geom.polygon(pointsInAachen4326_geoms, srs="default")
+
+    assert poly1.GetSpatialReference().IsSame(EPSG4326)
+    assert poly1.Equals(poly2)
+    assert poly1.GetEnvelope() == (6.02141, 6.371634, 50.51939, 50.846025)
+
+    # now test with other srs options, e.g. EPSG:3035
+    poly3 = geom.polygon(pointsInAachen4326, srs=3035)
+    poly4 = geom.polygon(pointsInAachen4326, srs=3035)
+
+    assert poly3.GetSpatialReference().IsSame(EPSG3035)
+    assert poly3.Equals(poly4)
+    assert poly3.GetEnvelope() == (6.02141, 6.371634, 50.51939, 50.846025)
+
+    # test without SRS
+    poly5 = geom.polygon(pointsInAachen4326_geoms, srs=None)
+
+    assert poly5.GetSpatialReference() is None
+    assert poly5.GetEnvelope() == (6.02141, 6.371634, 50.51939, 50.846025)
+
+
 @pytest.mark.skip("No test implemented for: geom.empty")
 def test_empty():
     assert False
