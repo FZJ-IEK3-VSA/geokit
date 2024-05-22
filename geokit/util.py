@@ -11,4 +11,5 @@ from geokit.core.util import (
     KernelProcessor,
     drawImage,
     compare_geoms,
+    fitBoundsTo,
 )

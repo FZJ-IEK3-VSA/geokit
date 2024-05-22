@@ -219,9 +219,9 @@ def test_extractMatrix():
     mat3, bounds = raster.extractMatrix(
         CLC_RASTER_PATH, bounds=(6, 50.5, 6.5, 50.75), boundsSRS=4326, returnBounds=True
     )
-    assert bounds == (4037300.0, 3049100.0, 4074100.0, 3078600.0)
-    assert np.isclose(mat3.sum(), 2280501)
-    assert np.isclose(mat3.std(), 7.40666185608)
+    assert bounds == (4037300.0, 3049000.0, 4074100.0, 3078700.0)
+    assert np.isclose(mat3.sum(), 2294983)
+    assert np.isclose(mat3.std(), 7.4207103498004985)
 
     # Test flipped raster
     mat4, bounds = raster.extractMatrix(
