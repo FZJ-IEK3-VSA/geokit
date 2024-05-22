@@ -4,6 +4,8 @@ import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from collections import namedtuple
 from io import BytesIO
+from warnings import warn
+import multiprocessing
 
 from . import util as UTIL
 from . import srs as SRS
@@ -762,44 +764,6 @@ class RegionMask(object):
 
         return geoms
 
-    def indicateValuesMultiprocess(
-        self,
-        source,
-        value,
-        buffer=None,
-        resolutionDiv=1,
-        forceMaskShape=False,
-        applyMask=True,
-        noData=None,
-        resampleAlg="bilinear",
-        bufferMethod="area",
-        preBufferSimplification=None,
-        warpDType=None,
-        prunePatchSize=0,
-        sharedDict=None,
-        **kwargs,
-    ):
-        assert not sharedDict is None
-
-        indications = self.indicateValues(
-            source=source,
-            value=value,
-            buffer=buffer,
-            resolutionDiv=resolutionDiv,
-            forceMaskShape=forceMaskShape,
-            applyMask=applyMask,
-            noData=noData,
-            resampleAlg=resampleAlg,
-            bufferMethod=bufferMethod,
-            preBufferSimplification=preBufferSimplification,
-            warpDType=warpDType,
-            prunePatchSize=prunePatchSize,
-            **kwargs,
-        )
-
-        sharedDict["indications"] = indications
-        return
-
     def indicateValues(
         self,
         source,
@@ -815,6 +779,7 @@ class RegionMask(object):
         warpDType=None,
         prunePatchSize=0,
         threshold=0.5,
+        multiProcess=True,
         **kwargs,
     ):
         """
@@ -961,6 +926,10 @@ class RegionMask(object):
             The cell value ABOVE which cells count as positively indicated,
             relevant for partial overlaps with buffer method 'area'. Defaults to 0.5.
 
+        multiProcess: boolean, optional
+            If True, multiple parallel processes will be spawned within the function to
+            improve RAM efficiency, else it will fall back on linear execution. By default True.
+
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
 
@@ -969,243 +938,323 @@ class RegionMask(object):
         --------
         numpy.ndarray
         """
-        assert bufferMethod in ["area", "contour"]
-        assert isinstance(prunePatchSize, int)
 
-        # format value input
-        if isinstance(value, str):
-            pass
-        elif isinstance(value, tuple):  # Assume a range in implied
-            value = "[{}-{}]".format(
-                "" if value[0] is None else value[0],
-                "" if value[1] is None else value[1],
-            )
-        else:
-            try:  # Try treating value as an iterable
-                _value = ""
-                for v in value:
-                    _value += "{},".format(v)
-                value = _value[:-1]
-            except TypeError:  # Value should be just a number
-                value = str(value)
-
-        # make processor
-        def processor(data):
-            # Find nan values, maybe
-            if not noData is None:
-                nodat = np.isnan(data)
-
-            # Indicate value elements
-            output = np.zeros(data.shape, dtype="bool")
-            value_re = re.compile(
-                r"(?P<range>(?P<open>[\[\(])(?P<low>[-+]?(\d*\.\d+|\d+\.?))?-(?P<high>[-+]?(\d*\.\d+|\d+\.?))?(?P<close>[\]\)]))|(?P<value>[-+]?(\d*\.\d+|\d+\.?))"
-            )
-            for element in value.split(","):
-                element = element.replace(" ", "")
-                if element == "":
-                    continue
-
-                m = value_re.match(element)
-                if m is None or (m["value"] is None and m["range"] is None):
-                    raise RuntimeError(
-                        'The element "{}" does not match an expected format'.format(
-                            element
-                        )
-                    )
-
-                if m["value"] is not None:
-                    update_sel = data == float(m["value"])
-
-                else:  # We are dealing with a range
-                    update_sel = np.ones(data.shape, dtype="bool")
-
-                    if m["low"] is not None and m["open"] == "[":
-                        np.logical_and(data >= float(m["low"]), update_sel, update_sel)
-
-                    elif m["low"] is not None and m["open"] == "(":
-                        np.logical_and(data > float(m["low"]), update_sel, update_sel)
-
-                    if m["high"] is not None and m["close"] == "]":
-                        np.logical_and(data <= float(m["high"]), update_sel, update_sel)
-
-                    elif m["high"] is not None and m["close"] == ")":
-                        np.logical_and(data < float(m["high"]), update_sel, update_sel)
-
-                np.logical_or(update_sel, output, output)
-
-            # Fill nan values, maybe
-            if not noData is None:
-                output[nodat] = noData
-
-            # Done!
-            return output
-
-        # Do processing
-        newDS = self.extent.mutateRaster(
+        def _indicateValues(
             source,
-            processor=processor,
-            dtype="uint8",
-            noData=noData,
-            matchContext=False,
-        )
-        print(f"Memory useage during calc:", str(usage()), "MB")
-
-        # Warp onto region
-        if warpDType is None:
-            if resampleAlg in ["bilinear", "cubic", "average"]:
-                warpDType = "float32"
-            elif resampleAlg in ["near", "mode", "max", "min"]:
-                warpDType = "uint8"
-            else:
-                warpDType = "float32"
-
-        final = self.warp(
-            newDS,
-            dtype=warpDType,
-            resolutionDiv=resolutionDiv,
-            resampleAlg=resampleAlg,
-            applyMask=False,
-            noData=noData,
-            returnMatrix=True,
+            value,
+            buffer=None,
+            resolutionDiv=1,
+            forceMaskShape=False,
+            applyMask=True,
+            noData=None,
+            resampleAlg="bilinear",
+            bufferMethod="area",
+            preBufferSimplification=None,
+            warpDType=None,
+            prunePatchSize=0,
+            threshold=0.5,
+            resultsCollector=None,
             **kwargs,
-        )
+        ):
+            """The core method for _indicateValues, can be called either directly or via multiprocessing."""
+            assert bufferMethod in ["area", "contour"]
+            assert isinstance(prunePatchSize, int)
 
-        # Check for results
-        if not (final > 0).any():
-            # no results were found
-            return self._returnBlank(
-                resolutionDiv=resolutionDiv,
-                forceMaskShape=forceMaskShape,
-                applyMask=applyMask,
-                noData=noData,
-            )
-
-        # Apply a buffer if requested
-        if not buffer is None:
-            if bufferMethod == "contour":
-                geoms = self.contoursFromMask(final)
-            elif bufferMethod == "area":
-                # Check for results
-                if not (final > threshold).any():
-                    # no cells > threshold exist that would be buffered, so return empty
-                    return self._returnBlank(
-                        resolutionDiv=resolutionDiv,
-                        forceMaskShape=forceMaskShape,
-                        applyMask=applyMask,
-                        noData=noData,
-                    )
-                geoms = self.polygonizeMask(final > threshold, flat=False)
-
-            if preBufferSimplification is not None:
-                geoms = [g.Simplify(preBufferSimplification) for g in geoms]
-
-            if len(geoms) > 0:
-                geoms = [g.Buffer(float(buffer)) for g in geoms]
-                if not prunePatchSize == 0:
-                    # create Union of all geoms, this will merge overlapping
-                    # TODO speed up via cascaded union or better sieve raster or even inverted raster (approximate exclusions based on geoms directly)!
-                    union = geoms[0]
-                    if len(geoms) > 1:
-                        for g in geoms:
-                            union = union.Union(g)
-
-                    # create a new empty list of geoms that will be filled with manipulated shapes partly without holes
-                    geoms = []
-                    # if regionmask extent contains only a single polygon, make it a single-entry list to make it iterable
-                    if union.GetGeometryName() == "POLYGON":
-                        union = [union]
-                    # iterate over union first to separate independent polygons
-                    for polygon in union:
-                        # check if the independent iteration polygon has more than one geometry, if so has holes/inner rings
-                        NoIndivPol = polygon.GetGeometryCount()
-                        if NoIndivPol > 1:
-                            print("inner polygons found")
-                            # create a new base polygon containing the outer ring
-                            newpolygon = ogr.Geometry(ogr.wkbPolygon)
-                            newpolygon.AddGeometry(polygon.GetGeometryRef(0))
-                            # then iterate through the other geometries = inner rings
-                            for i in range(1, NoIndivPol):
-                                # only if the area of the inner ring exceeds the prunePatchSize criterion, add back as inner ring
-                                # else do nothing i.e. drop the inner ring
-                                if polygon.GetGeometryRef(i).Area() >= prunePatchSize:
-                                    # TODO this part might be faster with polygon.RemoveGeometry() without creating a 'newpolygon' above
-                                    newpolygon.AddGeometry(polygon.GetGeometryRef(i))
-                                else:
-                                    print("a innerring was dropped!")
-                            # add the new polygon with possibly less holes back to geoms
-                            geoms.append(newpolygon)
-
-                        # if the polygon has only one geometry, it has no inner ring and can be added to geom list as such
-                        else:
-                            geoms.append(polygon)
-
-                areaDS = VECTOR.createVector(geoms)
-                final = self.rasterize(
-                    areaDS,
-                    dtype="float32",
-                    bands=[1],
-                    burnValues=[1],
-                    resolutionDiv=resolutionDiv,
-                    applyMask=False,
-                    noData=noData,
+            # format value input
+            if isinstance(value, str):
+                pass
+            elif isinstance(value, tuple):  # Assume a range in implied
+                value = "[{}-{}]".format(
+                    "" if value[0] is None else value[0],
+                    "" if value[1] is None else value[1],
                 )
             else:
+                try:  # Try treating value as an iterable
+                    _value = ""
+                    for v in value:
+                        _value += "{},".format(v)
+                    value = _value[:-1]
+                except TypeError:  # Value should be just a number
+                    value = str(value)
+
+            # make processor
+            def processor(data):
+                # Find nan values, maybe
+                if not noData is None:
+                    nodat = np.isnan(data)
+
+                # Indicate value elements
+                output = np.zeros(data.shape, dtype="bool")
+                value_re = re.compile(
+                    r"(?P<range>(?P<open>[\[\(])(?P<low>[-+]?(\d*\.\d+|\d+\.?))?-(?P<high>[-+]?(\d*\.\d+|\d+\.?))?(?P<close>[\]\)]))|(?P<value>[-+]?(\d*\.\d+|\d+\.?))"
+                )
+                for element in value.split(","):
+                    element = element.replace(" ", "")
+                    if element == "":
+                        continue
+
+                    m = value_re.match(element)
+                    if m is None or (m["value"] is None and m["range"] is None):
+                        raise RuntimeError(
+                            'The element "{}" does not match an expected format'.format(
+                                element
+                            )
+                        )
+
+                    if m["value"] is not None:
+                        update_sel = data == float(m["value"])
+
+                    else:  # We are dealing with a range
+                        update_sel = np.ones(data.shape, dtype="bool")
+
+                        if m["low"] is not None and m["open"] == "[":
+                            np.logical_and(
+                                data >= float(m["low"]), update_sel, update_sel
+                            )
+
+                        elif m["low"] is not None and m["open"] == "(":
+                            np.logical_and(
+                                data > float(m["low"]), update_sel, update_sel
+                            )
+
+                        if m["high"] is not None and m["close"] == "]":
+                            np.logical_and(
+                                data <= float(m["high"]), update_sel, update_sel
+                            )
+
+                        elif m["high"] is not None and m["close"] == ")":
+                            np.logical_and(
+                                data < float(m["high"]), update_sel, update_sel
+                            )
+
+                    np.logical_or(update_sel, output, output)
+
+                # Fill nan values, maybe
+                if not noData is None:
+                    output[nodat] = noData
+
+                # Done!
+                return output
+
+            # Do processing
+            newDS = self.extent.mutateRaster(
+                source,
+                processor=processor,
+                dtype="uint8",
+                noData=noData,
+                matchContext=False,
+            )
+            print(f"Memory useage during calc:", str(usage()), "MB")
+
+            # Warp onto region
+            if warpDType is None:
+                if resampleAlg in ["bilinear", "cubic", "average"]:
+                    warpDType = "float32"
+                elif resampleAlg in ["near", "mode", "max", "min"]:
+                    warpDType = "uint8"
+                else:
+                    warpDType = "float32"
+
+            final = self.warp(
+                newDS,
+                dtype=warpDType,
+                resolutionDiv=resolutionDiv,
+                resampleAlg=resampleAlg,
+                applyMask=False,
+                noData=noData,
+                returnMatrix=True,
+                **kwargs,
+            )
+
+            # Check for results
+            if not (final > 0).any():
                 # no results were found
-                return self._returnBlank(
+                resultsCollector["indications"] = self._returnBlank(
                     resolutionDiv=resolutionDiv,
                     forceMaskShape=forceMaskShape,
                     applyMask=applyMask,
                     noData=noData,
                 )
+                return
 
-        # apply a threshold incase of funky warping issues
-        final[final > 1.0] = 1
-        final[final < 0.0] = 0
+            # Apply a buffer if requested
+            if not buffer is None:
+                if bufferMethod == "contour":
+                    geoms = self.contoursFromMask(final)
+                elif bufferMethod == "area":
+                    # Check for results
+                    if not (final > threshold).any():
+                        # no cells > threshold exist that would be buffered, so return empty
+                        resultsCollector["indications"] = self._returnBlank(
+                            resolutionDiv=resolutionDiv,
+                            forceMaskShape=forceMaskShape,
+                            applyMask=applyMask,
+                            noData=noData,
+                        )
+                        return
+                    geoms = self.polygonizeMask(final > threshold, flat=False)
 
-        # Make sure we have the mask's shape
+                if preBufferSimplification is not None:
+                    geoms = [g.Simplify(preBufferSimplification) for g in geoms]
 
-        if forceMaskShape:
-            if resolutionDiv > 1:
-                final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
+                if len(geoms) > 0:
+                    geoms = [g.Buffer(float(buffer)) for g in geoms]
+                    if not prunePatchSize == 0:
+                        # create Union of all geoms, this will merge overlapping
+                        # TODO speed up via cascaded union or better sieve raster or even inverted raster (approximate exclusions based on geoms directly)!
+                        union = geoms[0]
+                        if len(geoms) > 1:
+                            for g in geoms:
+                                union = union.Union(g)
 
-        # Apply mask?
-        if applyMask:
-            final = self.applyMask(final, noData)
+                        # create a new empty list of geoms that will be filled with manipulated shapes partly without holes
+                        geoms = []
+                        # if regionmask extent contains only a single polygon, make it a single-entry list to make it iterable
+                        if union.GetGeometryName() == "POLYGON":
+                            union = [union]
+                        # iterate over union first to separate independent polygons
+                        for polygon in union:
+                            # check if the independent iteration polygon has more than one geometry, if so has holes/inner rings
+                            NoIndivPol = polygon.GetGeometryCount()
+                            if NoIndivPol > 1:
+                                print("inner polygons found")
+                                # create a new base polygon containing the outer ring
+                                newpolygon = ogr.Geometry(ogr.wkbPolygon)
+                                newpolygon.AddGeometry(polygon.GetGeometryRef(0))
+                                # then iterate through the other geometries = inner rings
+                                for i in range(1, NoIndivPol):
+                                    # only if the area of the inner ring exceeds the prunePatchSize criterion, add back as inner ring
+                                    # else do nothing i.e. drop the inner ring
+                                    if (
+                                        polygon.GetGeometryRef(i).Area()
+                                        >= prunePatchSize
+                                    ):
+                                        # TODO this part might be faster with polygon.RemoveGeometry() without creating a 'newpolygon' above
+                                        newpolygon.AddGeometry(
+                                            polygon.GetGeometryRef(i)
+                                        )
+                                    else:
+                                        print("a innerring was dropped!")
+                                # add the new polygon with possibly less holes back to geoms
+                                geoms.append(newpolygon)
 
-        # Return result
-        return final
+                            # if the polygon has only one geometry, it has no inner ring and can be added to geom list as such
+                            else:
+                                geoms.append(polygon)
 
-    def indicateFeaturesMultiprocess(
-        self,
-        source,
-        where=None,
-        buffer=None,
-        bufferMethod="geom",
-        resolutionDiv=1,
-        forceMaskShape=False,
-        applyMask=True,
-        noData=0,
-        preBufferSimplification=None,
-        sharedDict=None,
-        **kwargs,
-    ):
-        assert not sharedDict is None
+                    areaDS = VECTOR.createVector(geoms)
+                    final = self.rasterize(
+                        areaDS,
+                        dtype="float32",
+                        bands=[1],
+                        burnValues=[1],
+                        resolutionDiv=resolutionDiv,
+                        applyMask=False,
+                        noData=noData,
+                    )
+                else:
+                    # no results were found
+                    resultsCollector["indications"] = self._returnBlank(
+                        resolutionDiv=resolutionDiv,
+                        forceMaskShape=forceMaskShape,
+                        applyMask=applyMask,
+                        noData=noData,
+                    )
+                    return
 
-        indicationMatrix = self.indicateFeatures(
-            source=source,
-            where=where,
-            buffer=buffer,
-            bufferMethod=bufferMethod,
-            resolutionDiv=resolutionDiv,
-            forceMaskShape=forceMaskShape,
-            applyMask=applyMask,
-            noData=noData,
-            preBufferSimplification=preBufferSimplification,
-            **kwargs,
-        )
+            # apply a threshold incase of funky warping issues
+            final[final > 1.0] = 1
+            final[final < 0.0] = 0
 
-        sharedDict["indications"] = indicationMatrix
-        return
+            # Make sure we have the mask's shape
+
+            if forceMaskShape:
+                if resolutionDiv > 1:
+                    final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
+
+            # Apply mask?
+            if applyMask:
+                final = self.applyMask(final, noData)
+
+            # Write results into the resultsCollector dict and exit
+            resultsCollector["indications"] = final
+            return
+
+        ####################
+        # EXECUTE FUNCTION #
+        ####################
+
+        manager = multiprocessing.Manager()
+
+        # initialize a dict to combine the results from possibly parallel processes
+        resultsCollector = manager.dict()
+
+        # try multiprocessing or fall back to linear processing
+        try:
+            if multiProcess:
+                # multiprocessing is requested, try to execute
+                manager = multiprocessing.Manager()
+
+                p = multiprocessing.Process(
+                    target=_indicateValues,
+                    args=(source,),
+                    kwargs={
+                        **{
+                            "value": value,
+                            "buffer": buffer,
+                            "resolutionDiv": resolutionDiv,
+                            "forceMaskShape": forceMaskShape,
+                            "applyMask": applyMask,
+                            "noData": noData,
+                            "resampleAlg": resampleAlg,
+                            "bufferMethod": bufferMethod,
+                            "preBufferSimplification": preBufferSimplification,
+                            "warpDType": warpDType,
+                            "prunePatchSize": prunePatchSize,
+                            "threshold": threshold,
+                            "resultsCollector": resultsCollector,
+                        },
+                        **kwargs,
+                    },
+                )
+                p.start()
+                p.join()
+
+                manager.shutdown()
+            else:
+                # if not multiprocessing, trigger an artificial error to fall back into except statement
+                raise ValueError(
+                    "NOTE: multiProcess is set to False, will fall back to linear processing."
+                )
+        # else fall back to linear processing if multiprocessing failed
+        except:
+            # warn and clean in case of a failed multiprocess
+            if multiProcess:
+                warn(
+                    "Memory efficient multiProcess failed, returning to safe linear processing."
+                )
+                # set up a clean resultsCollector in case of partial results from a multiprocessing failed half-way
+                resultsCollector = manager.dict()
+            # run _indicateValues in a single process
+            _indicateValues(
+                source=source,
+                value=value,
+                buffer=buffer,
+                resolutionDiv=resolutionDiv,
+                forceMaskShape=forceMaskShape,
+                applyMask=applyMask,
+                noData=noData,
+                resampleAlg=resampleAlg,
+                bufferMethod=bufferMethod,
+                preBufferSimplification=preBufferSimplification,
+                warpDType=warpDType,
+                prunePatchSize=prunePatchSize,
+                threshold=threshold,
+                resultsCollector=resultsCollector,
+                **kwargs,
+            )
+
+        return resultsCollector["indications"]
 
     #######################################################################################
     # Vector feature indicator
@@ -1220,6 +1269,7 @@ class RegionMask(object):
         applyMask=True,
         noData=0,
         preBufferSimplification=None,
+        multiProcess=True,
         **kwargs,
     ):
         """
@@ -1227,9 +1277,9 @@ class RegionMask(object):
         a subset of the features) contained in a given vector datasource
 
         * A Rasterization is performed from the input data set to the
-          RegionMask's mask.
-          -See geokit.vector.rasterize or, more specifically gdal.RasterizeOptions
-           kwargs for more info on how to control the rasterization step
+        RegionMask's mask.
+        -See geokit.vector.rasterize or, more specifically gdal.RasterizeOptions
+        kwargs for more info on how to control the rasterization step
 
         Parameters:
         -----------
@@ -1241,7 +1291,7 @@ class RegionMask(object):
             * Can be used to filter the input source according to their attributes
             * For tips, see "http://www.gdal.org/ogr_sql.html"
             Ex:
-              where="eye_color='Green' AND IQ>90"
+            where="eye_color='Green' AND IQ>90"
 
         buffer : float; optional
             A buffer region to add around the indicated pixels
@@ -1251,22 +1301,22 @@ class RegionMask(object):
             An indicator determining the method to use when buffereing
             * Options are: 'geom', 'area', and 'contour'
             * If 'geom', the function will attempt to grow each of the geometries
-              directly using the ogr library
-              - This can fail sometimes when the geometries are particularly
+            directly using the ogr library
+            - This can fail sometimes when the geometries are particularly
                 complex or if some of the geometries are not valid (as in, they
                 have self-intersections)
             * If 'area', the function will first rasterize the raw geometries and
-              will then apply the buffer to the indicated pixels
-              - This is the safer option although is not as accurate as the 'geom'
+            will then apply the buffer to the indicated pixels
+            - This is the safer option although is not as accurate as the 'geom'
                 option since it does not capture the exact edges of the geometries
-              - This method can be made more accurate by increasing the
+            - This method can be made more accurate by increasing the
                 'resolutionDiv' input
             * If 'contour', the function will still rasterize the raw geometries,
-              but will then create geometries via mask contours (not the explicit
-              pixel edges)
-              - This option will recreate geometries which are more similar to the
+            but will then create geometries via mask contours (not the explicit
+            pixel edges)
+            - This option will recreate geometries which are more similar to the
                 original geometries compared to the 'area' method
-              - This method can be made more accurate by increasing the
+            - This method can be made more accurate by increasing the
                 'resolutionDiv' input
 
         resolutionDiv : int; optional
@@ -1288,8 +1338,11 @@ class RegionMask(object):
             If given, then geometries will be simplified (using ogr.Geometry.Simplify)
             using the specified value before being buffered
             - Using this can drastically decrease the time it takes to perform the
-              bufferring procedure, but can decrease accuracy if it is too high
+            bufferring procedure, but can decrease accuracy if it is too high
 
+        multiProcess: boolean, optional
+            If True, multiple parallel processes will be spawned within the function to
+            improve RAM efficiency, else it will fall back on linear execution. By default True.
 
         kwargs -- Passed on to RegionMask.rasterize()
             * Most notably: 'allTouched'
@@ -1299,105 +1352,196 @@ class RegionMask(object):
         numpy.ndarray
 
         """
-        assert bufferMethod in ["geom", "area", "contour"]
-        # Ensure path to dataSet exists
-        source = VECTOR.loadVector(source)  # small ram increase
 
-        # Do we need to buffer?
-        if buffer == 0:
-            buffer = None
-        if not buffer is None and bufferMethod == "geom":
+        def _indicateFeatures(
+            source,
+            where=None,
+            buffer=None,
+            bufferMethod="geom",
+            resolutionDiv=1,
+            forceMaskShape=False,
+            applyMask=True,
+            noData=0,
+            preBufferSimplification=None,
+            resultsCollector=None,
+            **kwargs,
+        ):
+            """The core method for _indicateFeatures, can be called either directly or via multiprocessing."""
+            assert bufferMethod in ["geom", "area", "contour"]
+            # Ensure path to dataSet exists
+            source = VECTOR.loadVector(source)  # small ram increase
 
-            def doBuffer(ftr):
-                if preBufferSimplification is not None:
-                    geom = ftr.geom.Simplify(preBufferSimplification)
-                else:
-                    geom = ftr.geom
-                return {"geom": geom.Buffer(float(buffer))}
+            # Do we need to buffer?
+            if buffer == 0:
+                buffer = None
+            if not buffer is None and bufferMethod == "geom":
 
-            source = self.mutateVector(
+                def doBuffer(ftr):
+                    if preBufferSimplification is not None:
+                        geom = ftr.geom.Simplify(preBufferSimplification)
+                    else:
+                        geom = ftr.geom
+                    return {"geom": geom.Buffer(float(buffer))}
+
+                source = self.mutateVector(
+                    source,
+                    where=where,
+                    processor=doBuffer,
+                    matchContext=True,
+                    keepAttributes=False,
+                    _slim=True,
+                    **kwargs,
+                )  # big ram increase, much bigger than actual file size. wont bereleased either!!!
+                print(f"Memory useage during calc:", str(usage()), "MB")
+
+                where = (
+                    None  # Set where to None since the filtering has already been done
+                )
+
+                if source is None:  # this happens when the returned dataset is empty
+                    resultsCollector["indications"] = self._returnBlank(
+                        resolutionDiv=resolutionDiv,
+                        forceMaskShape=forceMaskShape,
+                        applyMask=applyMask,
+                        noData=noData,
+                    )
+                    return
+
+            # Do rasterize
+            final = self.rasterize(
                 source,
+                dtype="float32",
+                value=1,
                 where=where,
-                processor=doBuffer,
-                matchContext=True,
-                keepAttributes=False,
-                _slim=True,
-                **kwargs,
-            )  # big ram increase, much bigger than actual file size. wont bereleased either!!!
-            print(f"Memory useage during calc:", str(usage()), "MB")
-
-            where = None  # Set where to None since the filtering has already been done
-
-            if source is None:  # this happens when the returned dataset is empty
-                return self._returnBlank(
+                resolutionDiv=resolutionDiv,
+                applyMask=False,
+                noData=noData,
+            )  # no ram incrreas. final is a "small" np.array
+            # Check for results
+            if not (final > 0).any():
+                # no results were found
+                resultsCollector["indications"] = self._returnBlank(
                     resolutionDiv=resolutionDiv,
                     forceMaskShape=forceMaskShape,
                     applyMask=applyMask,
                     noData=noData,
-                    **kwargs,
                 )
+                return
 
-        # Do rasterize
-        final = self.rasterize(
-            source,
-            dtype="float32",
-            value=1,
-            where=where,
-            resolutionDiv=resolutionDiv,
-            applyMask=False,
-            noData=noData,
-        )  # no ram incrreas. final is a "small" np.array
-        # Check for results
-        if not (final > 0).any():
-            # no results were found
-            return self._returnBlank(
+            # maybe we want to do the other buffer method
+            if not buffer is None and (
+                bufferMethod == "area" or bufferMethod == "contour"
+            ):
+                if bufferMethod == "area":
+                    geoms = self.polygonizeMask(final > 0.5, flat=False)
+                elif bufferMethod == "contour":
+                    geoms = self.contoursFromMask(final)
+
+                if preBufferSimplification is not None:
+                    geoms = [g.Simplify(preBufferSimplification) for g in geoms]
+
+                if len(geoms) > 0:
+                    geoms = [g.Buffer(float(buffer)) for g in geoms]
+                    dataSet = VECTOR.createVector(geoms)
+                    final = self.rasterize(
+                        dataSet,
+                        dtype="float32",
+                        bands=[1],
+                        burnValues=[1],
+                        resolutionDiv=resolutionDiv,
+                        applyMask=False,
+                        noData=noData,
+                    )
+                else:
+                    # no results were found
+                    resultsCollector["indications"] = self._returnBlank(
+                        resolutionDiv=resolutionDiv,
+                        forceMaskShape=forceMaskShape,
+                        applyMask=applyMask,
+                        noData=noData,
+                    )
+                    return
+
+            # Make sure we have the mask's shape
+            if forceMaskShape:
+                if resolutionDiv > 1:
+                    final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
+
+            # Apply mask?
+            if applyMask:
+                final = self.applyMask(final, noData)
+
+            # Write results into the resultsCollector dict and exit
+            resultsCollector["indications"] = final
+            return
+
+        ####################
+        # EXECUTE FUNCTION #
+        ####################
+
+        manager = multiprocessing.Manager()
+
+        # initialize a dict to combine the results from possibly parallel processes
+        resultsCollector = manager.dict()
+
+        # try multiprocessing or fall back to linear processing
+        try:
+            if multiProcess:
+                # multiprocessing is requested, try to execute
+                manager = multiprocessing.Manager()
+
+                p = multiprocessing.Process(
+                    target=_indicateFeatures,
+                    args=(source,),
+                    kwargs={
+                        **{
+                            "where": where,
+                            "buffer": buffer,
+                            "bufferMethod": bufferMethod,
+                            "resolutionDiv": resolutionDiv,
+                            "forceMaskShape": forceMaskShape,
+                            "applyMask": applyMask,
+                            "noData": noData,
+                            "preBufferSimplification": preBufferSimplification,
+                            "resultsCollector": resultsCollector,
+                        },
+                        **kwargs,
+                    },
+                )
+                p.start()
+                p.join()
+
+                manager.shutdown()
+            else:
+                # if not multiprocessing, trigger an artificial error to fall back into except statement
+                raise ValueError(
+                    "NOTE: multiProcess is set to False, will fall back to linear processing."
+                )
+        # else fall back to linear processing if multiprocessing failed
+        except:
+            # warn and clean in case of a failed multiprocess
+            if multiProcess:
+                warn(
+                    "Memory efficient multiProcess failed, returning to safe linear processing."
+                )
+                # set up a clean resultsCollector in case of partial results from a multiprocessing failed half-way
+                resultsCollector = manager.dict()
+            # run _indicateFeatures in a single process
+            _indicateFeatures(
+                source=source,
+                where=where,
+                buffer=buffer,
+                bufferMethod=bufferMethod,
                 resolutionDiv=resolutionDiv,
                 forceMaskShape=forceMaskShape,
                 applyMask=applyMask,
                 noData=noData,
+                preBufferSimplification=preBufferSimplification,
+                resultsCollector=resultsCollector,
+                **kwargs,
             )
 
-        # maybe we want to do the other buffer method
-        if not buffer is None and (bufferMethod == "area" or bufferMethod == "contour"):
-            if bufferMethod == "area":
-                geoms = self.polygonizeMask(final > 0.5, flat=False)
-            elif bufferMethod == "contour":
-                geoms = self.contoursFromMask(final)
-
-            if preBufferSimplification is not None:
-                geoms = [g.Simplify(preBufferSimplification) for g in geoms]
-
-            if len(geoms) > 0:
-                geoms = [g.Buffer(float(buffer)) for g in geoms]
-                dataSet = VECTOR.createVector(geoms)
-                final = self.rasterize(
-                    dataSet,
-                    dtype="float32",
-                    bands=[1],
-                    burnValues=[1],
-                    resolutionDiv=resolutionDiv,
-                    applyMask=False,
-                    noData=noData,
-                )
-            else:
-                return self._returnBlank(
-                    resolutionDiv=resolutionDiv,
-                    forceMaskShape=forceMaskShape,
-                    applyMask=applyMask,
-                    noData=noData,
-                )
-
-        # Make sure we have the mask's shape
-        if forceMaskShape:
-            if resolutionDiv > 1:
-                final = UTIL.scaleMatrix(final, -1 * resolutionDiv)
-
-        # Apply mask?
-        if applyMask:
-            final = self.applyMask(final, noData)
-
-        # Return
-        return final
+        return resultsCollector["indications"]
 
     #######################################################################################
     # Vector feature indicator
