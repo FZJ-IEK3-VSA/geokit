@@ -499,7 +499,7 @@ def extractMatrix(
             boundsSRS = SRS.loadSRS(boundsSRS)
             if not dsInfo.srs.IsSame(boundsSRS):
                 bounds = GEOM.boundsToBounds(bounds, boundsSRS, dsInfo.srs)
-            bounds = UTIL.fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy)
+            bounds = UTIL.fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy, expand=True, startAtZero=True)
 
         # Find offsets
         xoff = int(np.round((bounds[0] - dsInfo.xMin) / dsInfo.dx))

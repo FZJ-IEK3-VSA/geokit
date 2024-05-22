@@ -385,18 +385,38 @@ def quickVector(geom, output=None):
         return dataSource
 
 
-def fitBoundsTo(bounds, dx, dy, enforce=False):
+def fitBoundsTo(bounds, dx, dy, expand=False, startAtZero=False, enforce=False):
     try:
         xMin, yMin, xMax, yMax = bounds
     except TypeError:
         xMin, yMin, xMax, yMax = bounds.xyXY
 
-    if enforce or not (bounds[2] - bounds[0]) % dx == 0:
-        xMin = np.round(bounds[0] / dx) * dx
-        xMax = np.round(bounds[2] / dx) * dx
-    if enforce or not (bounds[3] - bounds[1]) % dy == 0:
-        yMin = np.round(bounds[1] / dy) * dy
-        yMax = np.round(bounds[3] / dy) * dy
+    if (
+        enforce
+        or (bounds[2] - bounds[0]) % dx != 0
+        or (startAtZero and (bounds[2] % dx != 0 or bounds[0] % dx != 0))
+    ):
+        if expand:
+            # expand such that the original bounds are always fully contained
+            xMin = np.floor(bounds[0] / dx) * dx
+            xMax = np.ceil(bounds[2] / dx) * dx
+        else:
+            # round to the nearest cell resolution value
+            xMin = np.round(bounds[0] / dx) * dx
+            xMax = np.round(bounds[2] / dx) * dx
+    if (
+        enforce
+        or (bounds[3] - bounds[1]) % dy != 0
+        or (startAtZero and (bounds[3] % dy != 0 or bounds[1] % dy != 0))
+    ):
+        if expand:
+            # expand such that the original bounds are always fully contained
+            yMin = np.floor(bounds[1] / dy) * dy
+            yMax = np.ceil(bounds[3] / dy) * dy
+        else:
+            # round to the nearest cell resolution value
+            yMin = np.round(bounds[1] / dy) * dy
+            yMax = np.round(bounds[3] / dy) * dy
 
     return xMin, yMin, xMax, yMax
 
