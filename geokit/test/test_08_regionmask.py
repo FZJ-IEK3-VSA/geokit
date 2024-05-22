@@ -1,6 +1,7 @@
 from .helpers import *
 from geokit import RegionMask, Extent, geom, vector, raster, util, error
 import pytest
+import warnings
 
 
 def test_RegionMask___init__():
@@ -282,9 +283,15 @@ def test_RegionMask__returnBlank():
 def test_RegionMask_indicateValues():
     # Setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
-
-    # Testing valueMin (with srs change)
     res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None))
+    # Testing valueMin (with srs change), with multiProcess by default
+    with warnings.catch_warnings():
+        # make sure no failed multiprocessing warning was raised
+        warnings.filterwarnings(
+            action="error",
+            message="Memory efficient multiProcess failed, returning to safe linear processing.",
+        )
+        res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None))
 
     assert np.isclose(res1.sum(), 30969.6796875, 1e-6)
     assert np.isclose(res1.std(), 0.3489773, 1e-6)
@@ -308,9 +315,25 @@ def test_RegionMask_indicateValues():
 
     # Testing buffering
     res5 = rm.indicateValues(
-        CLC_RASTER_PATH, value=(1, 2), buffer=0.01, resolutionDiv=2, forceMaskShape=True
+        CLC_RASTER_PATH,
+        value=(1, 2),
+        buffer=0.01,
+        resolutionDiv=2,
+        forceMaskShape=True,
+        multiProcess=True,
     )
     assert np.isclose(res5.sum(), 65030.75000000, 1e-4)
+
+    # check if results stay the same with and without multiprocessing
+    res5b = rm.indicateValues(
+        CLC_RASTER_PATH,
+        value=(1, 2),
+        buffer=0.01,
+        resolutionDiv=2,
+        forceMaskShape=True,
+        multiProcess=False,
+    )
+    assert (res5 == res5b).all()
 
     # make sure we get an empty mask when nothing is indicated
     res6 = rm.indicateValues(
@@ -320,6 +343,7 @@ def test_RegionMask_indicateValues():
         resolutionDiv=2,
         forceMaskShape=True,
         noData=-1,
+        multiProcess=True,
     )
     assert np.isclose(res6.sum(), -113526.0, 1e-4)
 
@@ -330,31 +354,19 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
-def test_indicateValuesMultiprocess():
-    # Setup
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
-
-    # make sure that sharedDict is mandatory
-    with pytest.raises(AssertionError) as e:
-        rm.indicateValuesMultiprocess(source=CLC_RASTER_PATH, value=(20, None))
-
-    # Testing valueMin (with srs change)
-    testresults = dict()
-    rm.indicateValuesMultiprocess(
-        source=CLC_RASTER_PATH, value=(20, None), sharedDict=testresults
-    )
-
-    assert np.isclose(testresults["indications"].sum(), 30969.6796875, 1e-6)
-    assert np.isclose(testresults["indications"].std(), 0.3489773, 1e-6)
-
-
 def test_RegionMask_indicateFeatures():
     # setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
 
-    # Simple case
-    res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
-    # print("%.7f"%res.sum(), "%.7f"%res.std())
+    # Simple case (with multiProcess by default)
+    with warnings.catch_warnings():
+        # make sure no failed multiprocessing warning was raised
+        warnings.filterwarnings(
+            action="error",
+            message="Memory efficient multiProcess failed, returning to safe linear processing.",
+        )
+        res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
+
     assert np.isclose(res.sum(), 649, 1e-6)
     assert np.isclose(res.std(), 0.0646270, 1e-6)
 
@@ -394,25 +406,19 @@ def test_RegionMask_indicateFeatures():
 
     assert np.isclose(res4.sum(), -83792, 1e-6)
 
-
-def test_indicateFeaturesMultiprocess():
-    # Setup
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
-
-    # make sure that sharedDict is mandatory
-    with pytest.raises(AssertionError) as e:
-        rm.indicateFeaturesMultiprocess(
-            source=NATURA_PATH, where="SITECODE='DE5404303'"
-        )
-
-    # Testing valueMin (with srs change)
-    testresults = dict()
-    rm.indicateFeaturesMultiprocess(
-        NATURA_PATH, where="SITECODE='DE5404303'", sharedDict=testresults
+    # same case as No. 4 but without multiprocessing
+    res4b = rm.indicateFeatures(
+        NATURA_PATH,
+        where="SITETYPE='D'",
+        buffer=300,
+        bufferMethod="area",
+        resolutionDiv=2,
+        forceMaskShape=True,
+        noData=-1,
+        multiProcess=False,
     )
-
-    assert np.isclose(testresults["indications"].sum(), 649, 1e-6)
-    assert np.isclose(testresults["indications"].std(), 0.0646270, 1e-6)
+    # must remain the same
+    assert (res4 == res4b).all()
 
 
 @pytest.mark.skip("No test implemented")
