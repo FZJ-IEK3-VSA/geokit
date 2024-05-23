@@ -711,6 +711,7 @@ def extractAndClipFeatures(
     skipMissingGeoms=True,
     layerName=None,
     scaleAttrs=None,
+    minShare=0.001,
     **kwargs,
 ):
     """
@@ -758,10 +759,23 @@ def extractAndClipFeatures(
         attribute names of the source with numeric values. The values will be scaled linearly with the
         area share of the feature overlapping the geom.
 
+    minShare : float
+        The min. area share of a polygon that falls either inside or
+        outside the clipping geom. Allows to deal with imperfect boundary
+        alignments. 0 means that all clipped geoms, however small they
+        may be, are considered. Example: If minShare=0.001 (0.1%), a
+        polygon that overlaps with the clipping geom by 99.92% of its
+        area will NOT be clipped. If another polygon also at
+        minShare=0.001 overlaps by only 0.06% of its area, it will be
+        disregarded. By default 0.001.
+
     Returns:
     --------
     * pandas.DataFrame or pandas.Series
     """
+    assert (
+        0 <= minShare <= 1
+    ), f"minShare must be greater or equal to 0 and less or equal to 1.0"
     # assert and preprocess input source
     if isinstance(source, pd.DataFrame):
         # check validity of input dataframe
@@ -815,7 +829,7 @@ def extractAndClipFeatures(
         assert isinstance(
             scaleAttrs, list
         ), f"scaleAttrs must be a str or a list thereof if not None."
-    if len(df)>0:
+    if len(df) > 0:
         for _attr in scaleAttrs:
             if not _attr in list(df.columns):
                 raise AttributeError(
@@ -871,12 +885,12 @@ def extractAndClipFeatures(
     for i, feat in zip(outer_df.clippingID, outer_df.geom):
         _clipped = feat.Intersection(geom)
         _areaShare = _clipped.Area() / feat.Area()
-        if _areaShare == 1.0:
-            # the feature is only touched by the boundary but not reduced
+        if _areaShare >= 1.0 - minShare:
+            # the feature is only touched by the boundary (or protrudes minimally outside the geom edge) -> will not be reduced
             continue
-        elif _areaShare == 0.0:
-            # the feature is fully outside the geom and only touches the geom boundary
-            # set clipped feature geometry to np.nan to filter out later
+        elif _areaShare <= 0.0 + minShare:
+            # the feature is fully outside the geom and only touches the geom boundary (or overlaps only minimally with geom)
+            # -> set clipped feature geometry to np.nan to filter out later
             _clipped = np.nan
         _clippedGeoms.append(_clipped)
         _areaShares.append(_areaShare)
@@ -891,6 +905,9 @@ def extractAndClipFeatures(
     df.loc[df.clippingID.isin(_clippedIDs), "areaShare"] = _areaShares
     for _attr in scaleAttrs:
         df[_attr] = df.apply(lambda x: x[_attr] * x.areaShare, axis=1)
+
+    # drop nan geometries that do not (sufficiently) overlap filter geom
+    df = df[~df.geom.isna()].reset_index(drop=True)
 
     # return the adapted dataframe
     return df.drop(columns="clippingID")
