@@ -815,15 +815,16 @@ def extractAndClipFeatures(
         assert isinstance(
             scaleAttrs, list
         ), f"scaleAttrs must be a str or a list thereof if not None."
-    for _attr in scaleAttrs:
-        if not _attr in list(df.columns):
-            raise AttributeError(
-                f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe."
-            )
-        if not all([isinstance(_val, numbers.Number) for _val in df[_attr]]):
-            raise TypeError(
-                f"All values in column '{_attr}' in scaleAttrs must be numeric."
-            )
+    if len(df)>0:
+        for _attr in scaleAttrs:
+            if not _attr in list(df.columns):
+                raise AttributeError(
+                    f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe."
+                )
+            if not all([isinstance(_val, numbers.Number) for _val in df[_attr]]):
+                raise TypeError(
+                    f"All values in column '{_attr}' in scaleAttrs must be numeric."
+                )
 
     # check if we have any features to clip at all
     if len(df) == 0:
