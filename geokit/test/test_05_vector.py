@@ -90,6 +90,30 @@ def test_extractFeatures():
     assert vi.geom[2].Area() == 9.0  # geom mismatch
     assert vi["name"][2] == "hermoine"  # attribute mismatch
 
+    # Test spatialPredicate
+    # define a filter geom such that box "harry" is overlapping, box
+    # "ron" is included and box "hermoine" is touching only
+    _filtergeom = geom.box(0.5, 0.5, 5, 7)
+    vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="Overlaps")
+
+    # hermoine must now be gone, so make sure we have length 2
+    assert vi.shape == (2, 3)  # shape mismatch
+
+    assert vi.geom[0].Area() == 1.0  # geom mismatch
+    assert vi["name"][0] == "harry"  # attribute mismatch
+
+    assert vi.geom[1].Area() == 4.0  # geom mismatch
+    assert vi["name"][1] == "ron"  # attribute mismatch
+
+    # now extract only the geom whose centroid is within this same filter geom
+    vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin")
+
+    # hermoine AND harry must now be gone, so make sure we have length 1
+    assert vi.shape == (1, 3)  # shape mismatch
+
+    assert vi.geom[0].Area() == 4.0  # geom mismatch
+    assert vi["name"][0] == "ron"  # attribute mismatch
+
 
 def test_extractFeature():
     # test succeed
