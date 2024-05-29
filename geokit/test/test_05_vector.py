@@ -118,7 +118,9 @@ def test_extractFeatures():
     assert vi.geom[0].Area() == 64.0  # geom area mismatch
 
     # now extract only the geom whose centroid is within this same filter geom
-    vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin")
+    vi = vector.extractFeatures(
+        BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin"
+    )
 
     # hermoine AND harry must now be gone, so make sure we have length 1
     assert vi.shape == (1, 3)  # shape mismatch
