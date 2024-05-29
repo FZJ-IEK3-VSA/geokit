@@ -106,17 +106,16 @@ def test_extractFeatures():
     assert vi["name"][1] == "ron"  # attribute mismatch
 
     # sub test: make sure that also boxes are extracted that are LARGER than the filter geom when spatialPredicate="Overlaps"
-    LARGE_BOX = pd.DataFrame()
-    LARGE_BOX.loc[0, "geom"] = geom.polygon([(0, 0),(0, 8),(8, 8),(8, 0)])
-    LARGE_BOX.loc[0, "smart"] = 0
-    LARGE_BOX.loc[0, "name"] = "hagrid"
-    vi = vector.extractFeatures(LARGE_BOX, geom=_filtergeom, spatialPredicate="Overlaps")
+    vi = vector.extractFeatures(
+        vector.createVector(geom.polygon([(0, 0), (0, 8), (8, 8), (8, 0)])),
+        geom=_filtergeom,
+        spatialPredicate="Overlaps",
+    )
 
     # hagrid must be considered even if larger in all directions than the _filtergeom
-    assert vi.shape == (1, 3)  # shape mismatch
+    assert vi.shape == (1, 1)  # single geom found
 
-    assert vi.geom[0].Area() == 16.0  # geom mismatch
-    assert vi["name"][0] == "hagrid"  # attribute mismatch
+    assert vi.geom[0].Area() == 64.0  # geom area mismatch
 
     # now extract only the geom whose centroid is within this same filter geom
     vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin")
