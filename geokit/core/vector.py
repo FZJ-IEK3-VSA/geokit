@@ -356,7 +356,7 @@ def _extractFeatures(
             if spatialPredicate == "Overlaps":
                 if "POLYGON" in oGeom.GetGeometryName():
                     # this means extracted (multi)polygons must have an area overlap (partial or full)
-                    if not (_geom.Overlaps(oGeom) or oGeom.Within(_geom)):
+                    if not (_geom.Overlaps(oGeom) or oGeom.Within(_geom) or _geom.Within(oGeom)):
                         # skip those _geoms which do not overlap the filter geom (line touch only)
                         continue
                 elif "LINESTRING" in oGeom.GetGeometryName():
