@@ -109,8 +109,8 @@ def box(*args, srs=4326):
     yMin = float(yMin)
     yMax = float(yMax)
 
-    assert xMin<xMax, f"xMin must be less than xMax"
-    assert yMin<yMax, f"yMin must be less than yMax"
+    assert xMin < xMax, f"xMin must be less than xMax"
+    assert yMin < yMax, f"yMin must be less than yMax"
 
     # make box
     outBox = ogr.Geometry(ogr.wkbPolygon)

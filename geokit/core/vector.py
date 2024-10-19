@@ -298,11 +298,15 @@ def _extractFeatures(
     spatialPredicate="Touches",
 ):
     # Check spatialPredicate
-    avail_predicates=["Touches", "Overlaps", "CentroidWithin"]
-    assert spatialPredicate in avail_predicates, f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
-    if spatialPredicate!="Touches":
+    avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
+    assert (
+        spatialPredicate in avail_predicates
+    ), f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
+    if spatialPredicate != "Touches":
         # spatialPredicate is not default, will take effect only when filter geom is given
-        assert isinstance(geom, ogr.Geometry), f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
+        assert isinstance(
+            geom, ogr.Geometry
+        ), f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
 
     # Do filtering
     source = loadVector(source)
@@ -327,7 +331,9 @@ def _extractFeatures(
             _geom = GEOM.box(geom, srs=layer.GetSpatialRef())
         else:
             try:  # maybe geom is an extent object
-                _geom = GEOM.box(geom.castTo(layer.GetSpatialRef()).xyXY, srs=layer.GetSpatialRef())
+                _geom = GEOM.box(
+                    geom.castTo(layer.GetSpatialRef()).xyXY, srs=layer.GetSpatialRef()
+                )
             except:
                 raise GeoKitVectorError("Geom input not understood")
     elif isinstance(geom, ogr.Geometry):
@@ -335,39 +341,58 @@ def _extractFeatures(
     else:
         _geom = None
     # adapt srs of filter geom to extracted geometry if needed
-    if _geom is not None and layer.GetSpatialRef() is not None and not _geom.GetSpatialReference().IsSame(layer.GetSpatialRef()):
-        _geom = GEOM.transform(_geom, toSRS = layer.GetSpatialRef())
+    if (
+        _geom is not None
+        and layer.GetSpatialRef() is not None
+        and not _geom.GetSpatialReference().IsSame(layer.GetSpatialRef())
+    ):
+        _geom = GEOM.transform(_geom, toSRS=layer.GetSpatialRef())
 
     # Yield features and attributes
-    _warned=False # initialize flag
+    _warned = False  # initialize flag
     for ftr in loopFeatures(layer):
         oGeom = ftr.GetGeometryRef()
 
         if oGeom is None and skipMissingGeoms:
             continue
-        
+
         if layer.GetSpatialRef() is not None:
-            assert oGeom.GetSpatialReference().IsSame(layer.GetSpatialRef()), f"SRS of extracted geometry deviates from overall layer SRS!"
+            assert oGeom.GetSpatialReference().IsSame(
+                layer.GetSpatialRef()
+            ), f"SRS of extracted geometry deviates from overall layer SRS!"
 
         # base extraction is "Touches", now apply apply more sophisticated spatialPredicate if required
         if _geom is not None:
-            assert oGeom is not None # make sure
+            assert oGeom is not None  # make sure
             # apply different geometrical filter methods
             if spatialPredicate == "Overlaps":
                 if "POLYGON" in oGeom.GetGeometryName():
                     # this means extracted (multi)polygons must have an area overlap (partial or full)
-                    if not (_geom.Overlaps(oGeom) or oGeom.Within(_geom)):
+                    if not (
+                        _geom.Overlaps(oGeom)
+                        or oGeom.Within(_geom)
+                        or _geom.Within(oGeom)
+                    ):
                         # skip those _geoms which do not overlap the filter geom (line touch only)
                         continue
                 elif "LINESTRING" in oGeom.GetGeometryName():
                     # "overlap' for lines means that extracted lines actually intersect the filter geom beyond its boundary
-                    if oGeom.Intersects(_geom) and oGeom.Intersection(_geom).Equals(oGeom):
+                    if oGeom.Intersects(_geom) and oGeom.Intersection(_geom).Equals(
+                        oGeom
+                    ):
                         # the line touches the filter geom boundary along its whole length, no "true overlap"
                         # will also not be extracted by neighboring filter geoms
                         if not _warned:
-                            warnings.warn(f"At least one line geometry of the vector data to be extracted lies completely on (filter) geom boundary and will not be extracted.")
+                            warnings.warn(
+                                f"At least one line geometry of the vector data to be extracted lies completely on (filter) geom boundary and will not be extracted."
+                            )
                             _warned = True
-                    if not (oGeom.Intersects(_geom) and oGeom.Intersection(_geom).Equals(oGeom.Intersection(_geom.GetBoundary()))):
+                    if not (
+                        oGeom.Intersects(_geom)
+                        and oGeom.Intersection(_geom).Equals(
+                            oGeom.Intersection(_geom.GetBoundary())
+                        )
+                    ):
                         # the intersecting part of the filter geom and its boundary are alike, i.e. the line touches only, skip
                         continue
                 elif "POINT" in oGeom.GetGeometryName():
@@ -377,24 +402,32 @@ def _extractFeatures(
                     elif oGeom.GetGeometryName() == "MULTIPOINT":
                         _oGeomMulti = copy.copy(oGeom)
                     else:
-                        raise TypeError(f"Unknown extracted point geometry of type '{oGeom.GetGeometryName()}'.")
+                        raise TypeError(
+                            f"Unknown extracted point geometry of type '{oGeom.GetGeometryName()}'."
+                        )
                     if all([p.Intersects(_geom.GetBoundary()) for p in _oGeomMulti]):
                         # all points are on the filter geom boundary, these points will not be extracted here nor by neighboring filter geoms
                         if not _warned:
-                            warnings.warn(f"At least one (multi)point geometry of the vector data to be extracted lies completely on (filter) geom boundary and will not be extracted.")
+                            warnings.warn(
+                                f"At least one (multi)point geometry of the vector data to be extracted lies completely on (filter) geom boundary and will not be extracted."
+                            )
                             _warned = True
                     if not any([p.Within(_geom) for p in _oGeomMulti]):
                         # no point falls within the filter geom, skip
                         continue
                 else:
-                    raise TypeError(f"Unknown extracted geometry of type '{oGeom.GetGeometryName()}'.")
-            
+                    raise TypeError(
+                        f"Unknown extracted geometry of type '{oGeom.GetGeometryName()}'."
+                    )
+
             elif spatialPredicate == "CentroidWithin":
                 # applies to all extracted geom types alike: the centroid must fall "within" the filter _geom (works also for point and line filter geoms)
                 if oGeom.Centroid().Intersects(geom.GetBoundary()):
                     # the Centroid falls right on the filter geom boundary, will be extracted neither here nor by neighboring filter geoms
                     if not _warned:
-                        warnings.warn(f"Centroid of at least one geometry of the vector data to be extracted lies exactly on (filter) geom boundary and will not be extracted.")
+                        warnings.warn(
+                            f"Centroid of at least one geometry of the vector data to be extracted lies exactly on (filter) geom boundary and will not be extracted."
+                        )
                         _warned = True
                 if not oGeom.Centroid().Within(_geom):
                     # the extracted geom centroid lies outside filter geom (or on its boundary if filter geom is a polygon!), skip
@@ -494,14 +527,14 @@ def extractFeatures(
 
     spatialPredicate : str, optional
         Applies only in combination with given 'geom' filter. If "Touches",
-        all geometries will be extracted that simply touch the filter 
+        all geometries will be extracted that simply touch the filter
         geom. If "Overlaps", geometries to be extracted must overlap (for
-        lines, this represents an "Intersect") either partially or 
-        completely (i.e. it includes "Within"), and if "CentroidWithin" 
-        the centroid of the extracted geom must be within or on the 
+        lines, this represents an "Intersect") either partially or
+        completely (i.e. it includes "Within"), and if "CentroidWithin"
+        the centroid of the extracted geom must be within or on the
         filter geom. By default "Touches".
-        NOTE: When filter geom is a polygon, centroids exactly on the 
-        filter geom boundary will NOT be extracted. 
+        NOTE: When filter geom is a polygon, centroids exactly on the
+        filter geom boundary will NOT be extracted.
 
     Returns:
     --------

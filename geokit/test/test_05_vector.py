@@ -105,8 +105,22 @@ def test_extractFeatures():
     assert vi.geom[1].Area() == 4.0  # geom mismatch
     assert vi["name"][1] == "ron"  # attribute mismatch
 
+    # sub test: make sure that also boxes are extracted that are LARGER than the filter geom when spatialPredicate="Overlaps"
+    vi = vector.extractFeatures(
+        vector.createVector(geom.polygon([(0, 0), (0, 8), (8, 8), (8, 0)])),
+        geom=_filtergeom,
+        spatialPredicate="Overlaps",
+    )
+
+    # hagrid must be considered even if larger in all directions than the _filtergeom
+    assert vi.shape == (1, 1)  # single geom found
+
+    assert vi.geom[0].Area() == 64.0  # geom area mismatch
+
     # now extract only the geom whose centroid is within this same filter geom
-    vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin")
+    vi = vector.extractFeatures(
+        BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin"
+    )
 
     # hermoine AND harry must now be gone, so make sure we have length 1
     assert vi.shape == (1, 3)  # shape mismatch
