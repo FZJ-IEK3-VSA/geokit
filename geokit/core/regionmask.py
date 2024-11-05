@@ -1512,6 +1512,11 @@ class RegionMask(object):
                 p.join()
 
                 manager.shutdown()
+                if not "indications" in resultsCollector.keys():
+                    error_msg = f"'indications' key not in resultsCollector dict after feature indication."
+                    # print error statement before raising Error to show it even in try/except loop
+                    print(error_msg, flush=True)
+                    raise KeyError(error_msg)
             else:
                 # if not multiprocessing, trigger an artificial error to fall back into except statement
                 raise ValueError(
