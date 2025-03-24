@@ -513,7 +513,7 @@ class RegionMask(object):
 
         self._mask = None
         self._mask = self.rasterize(self.vectorPath, applyMask=False, **kwargs).astype(
-            np.bool_
+            bool
         )
         self.height, self.width = self._mask.shape
 
