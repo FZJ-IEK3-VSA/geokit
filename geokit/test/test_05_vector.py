@@ -512,3 +512,48 @@ def test_createGeoDataFrame():
         == dfOut["geometry"]
     ).all()
     assert dfOut["geometry"].crs.to_epsg() == 3857
+
+
+def test_createDataFrameFromGeoDataFrame():
+    import geopandas as gpd
+
+    # load input df geopandas style
+    gdf = gpd.read_file(AACHEN_ZONES)
+    # convert to gk style df
+    df = vector.createDataFrameFromGeoDataFrame(gdf)
+
+    # make sure it fits so compare against df directly extracted via gk
+    dfComp = vector.extractFeatures(AACHEN_ZONES)
+    assert sorted(df.columns) == sorted(dfComp.columns)
+    assert len(df) == len(dfComp)
+    assert (
+        df["geom"]
+        .iloc[0]
+        .GetSpatialReference()
+        .IsSame(dfComp["geom"].iloc[0].GetSpatialReference())
+    )
+    assert all([df.geom[i].Equals(dfComp.geom[i]) for i in range(len(df))])
+
+
+def test_applyGeopandasMethod():
+    # load a simple vector dataset
+    boxes1 = vector.extractFeatures(BOXES)
+    # create a copy with new data
+    boxes2 = pd.DataFrame(columns=["female"], data=[False, False, True])
+    # and add identical polgons but the first
+    boxes2["geom"] = [
+        geom.polygon([(-3, -3), (-2, -2), (-3, -2), (-3, -3)]),
+        boxes1.geom[1],
+        boxes1.geom[2],
+    ]
+    # apply geopandas.sjoin() method
+    joint = vector.applyGeopandasMethod("sjoin", boxes1, boxes2, predicate="intersects")
+    # make sure the data matches
+    # length should be 2 - harry's polygon was changes and is not a spatial match anymore
+    assert len(joint) == 2
+    # check old and new data - hermoine is female and smart
+    assert joint.set_index("name").loc["hermoine", "smart"] == 1
+    assert joint.set_index("name").loc["hermoine", "female"] == True
+    # ron is neither one
+    assert joint.set_index("name").loc["ron", "female"] == False
+    assert joint.set_index("name").loc["ron", "smart"] == 0

@@ -12,5 +12,7 @@ from geokit.core.vector import (
     mutateVector,
     rasterize,
     createGeoDataFrame,
+    createDataFrameFromGeoDataFrame,
+    applyGeopandasMethod,
     listLayers,
 )
