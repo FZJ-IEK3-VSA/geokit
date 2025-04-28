@@ -396,7 +396,8 @@ def fitBoundsTo(bounds, dx, dy, expand=False, startAtZero=False, enforce=False):
         or (bounds[2] - bounds[0]) % dx != 0
         or (startAtZero and (bounds[2] % dx != 0 or bounds[0] % dx != 0))
     ):
-        if expand:
+        # if expand is demanded or necessary because width would be 0
+        if expand or np.round(bounds[0] / dx) * dx == np.round(bounds[2] / dx) * dx:
             # expand such that the original bounds are always fully contained
             xMin = np.floor(bounds[0] / dx) * dx
             xMax = np.ceil(bounds[2] / dx) * dx
@@ -409,7 +410,8 @@ def fitBoundsTo(bounds, dx, dy, expand=False, startAtZero=False, enforce=False):
         or (bounds[3] - bounds[1]) % dy != 0
         or (startAtZero and (bounds[3] % dy != 0 or bounds[1] % dy != 0))
     ):
-        if expand:
+        # if expand is demanded or necessary because height would be 0
+        if expand or np.round(bounds[1] / dy) * dy == np.round(bounds[3] / dy) * dy:
             # expand such that the original bounds are always fully contained
             yMin = np.floor(bounds[1] / dy) * dy
             yMax = np.ceil(bounds[3] / dy) * dy

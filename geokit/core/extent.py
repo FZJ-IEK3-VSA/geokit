@@ -724,8 +724,28 @@ class Extent(object):
             The sources to test
 
         """
-        sourceExtent = Extent.load(source)
-        return self.overlaps(sourceExtent)
+        try:
+            # cover the case that the source file is an empty or single-point vector = no extent possible
+            _tmp = VECTOR.extractFeatures(source)
+            if len(_tmp) == 1 and _tmp.geom.iloc[0].GetGeometryName() == "POINT":
+                # we have a single point, add minimal tolerance in each direction to enable an extent
+                tol = 0.00001
+                sourceExtent = Extent(
+                    _tmp.geom.iloc[0].GetX() * (1 - tol),
+                    _tmp.geom.iloc[0].GetY() * (1 - tol),
+                    _tmp.geom.iloc[0].GetX() * (1 + tol),
+                    _tmp.geom.iloc[0].GetY() * (1 + tol),
+                )
+                return self.overlaps(sourceExtent)
+            elif len(_tmp) == 0:
+                # source is an empty vector file, overlap is not possible
+                return False
+            else:
+                # fall back to normal path below in except
+                raise Exception()
+        except:
+            sourceExtent = Extent.load(source)
+            return self.overlaps(sourceExtent)
 
     def filterSources(self, sources, error_on_missing=True):
         """Filter a list of sources by those whose's envelope overlaps the Extent.
