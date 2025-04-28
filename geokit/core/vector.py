@@ -1441,6 +1441,42 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
     return gdf
 
 
+def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
+    """Creates a geokit-style dataframe from a geopandas geodataframe
+
+    Parameters
+    ----------
+    gdf : pd.DataFrame
+        geopandas-style pd.DataFrame, need a 'geometry' column.
+
+    Returns
+    -------
+    pd.DataFrame
+        Same as the previos, just as an geokit-style dataframe with 'geom'
+        column with osgeo.ogr.Geometry objects.
+    """
+    assert isinstance(gdf, pd.DataFrame)
+    assert "geometry" in gdf.columns
+
+    # import the required external packages - these are not part of the requirements.yml and are possibly not installed
+    try:
+        import geopandas as gpd
+    except:
+        raise ImportError(
+            "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+        )
+
+    # get the CRS/SRS of the gdf
+    crs_wkt = gdf.crs.to_wkt()
+    srs = SRS.loadSRS(crs_wkt)
+    # create WKT geometry and then convert to osgeo.ogr.Geometry
+    gdf["geom"] = gdf["geometry"].apply(lambda x: GEOM.convertWKT(x.wkt, srs=srs))
+
+    # remove geometry column and return geokit df
+    df = gdf.drop(columns="geometry")
+    return df
+
+
 def mutateVector(
     source,
     processor=None,
@@ -1808,3 +1844,56 @@ def rasterize(
             raise RASTER.GeoKitRasterError("Rasterization failed!")
 
         return output
+
+
+def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
+    """
+    Convenience function to apply geopandas methods to a geokit-style
+    dataframe with 'geom' column with osgeo.ogr.Geometry objects.
+    NOTE: All arguments besides **kwargs must be passed as positional
+    arguments.
+
+    geopandasMethod : str, executable
+        Geopandas method to apply to the dataframe, either str-formatted
+        method name or method as a callable function.
+    *dfs : pd.DataFrames
+        One or multiple comma-separated pd.DataFrames with 'geom' column
+        with osgeo.ogr.Geometry objects. Will be passed to the geopandas
+        method as positional arguments, starting from the first position.
+    **kwargs
+        Will be passed on to the geopandas function.
+    """
+    # load geopandas
+    try:
+        import geopandas as gpd
+    except:
+        raise ImportError(
+            "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+        )
+    # get the method as callable
+    if callable(geopandasMethod):
+        # we have a callable function already, just make sure its gpd
+        if not geopandasMethod.__module__.split(".")[0] == "geopandas":
+            raise AttributeError(
+                f"'{geopandasMethod}' is not a callable method from geopandas!"
+            )
+    else:
+        # not an executable yet, get the executable function via its name
+        if not isinstance(geopandasMethod, str):
+            # must be a str formatted name
+            raise TypeError(
+                f"'geopandasMethod' must be str-formatted geopandas method name if not callable."
+            )
+        geopandasMethod = getattr(gpd, geopandasMethod, None)
+
+    # create geodataframes from input geokit dfs
+    assert all(
+        [isinstance(_df, pd.DataFrame) and "geom" in _df.columns for _df in dfs]
+    ), f"positional *dfs arguments must be geokit-style pd.DataFrames with 'geom' column."
+    gdfs = [createGeoDataFrame(dfGeokit=_df) for _df in dfs]
+
+    # now apply geopandas method onto gdfs
+    gdf = geopandasMethod(*gdfs, **kwargs)
+    # now convert the result back to geokit style and return
+    df = createDataFrameFromGeoDataFrame(gdf)
+    return df

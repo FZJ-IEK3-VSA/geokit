@@ -315,6 +315,10 @@ def polygon(outerRing, *args, srs="default"):
     # convert to tuples if we have point geometries at hand
     if pointGeometries:
         outerRing = [(_p.GetX(), _p.GetY()) for _p in outerRing]
+    else:
+        assert all(
+            [isinstance(x, tuple) for x in outerRing]
+        ), f"All outerRing entries must be (x,y) tuples in given (or default) srs."
     [otr.AddPoint(float(x), float(y)) for x, y in outerRing]
     g.AddGeometry(otr)
 
