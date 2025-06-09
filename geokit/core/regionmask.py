@@ -1221,7 +1221,7 @@ class RegionMask(object):
                         # print error statement before raising Error to show it even in try/except loop
                         print(error_msg, flush=True)
                         raise KeyError(error_msg)
-                    
+
                     # extract results from multiprocessing manager
                     result = resultsCollector["indications"]
 
@@ -1238,7 +1238,7 @@ class RegionMask(object):
                     "Memory efficient multiProcess failed, returning to safe linear processing."
                 )
             # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
-            resultsCollector = dict() #manager.dict()
+            resultsCollector = dict()  # manager.dict()
             # run _indicateValues in a single process
             _indicateValues(
                 source=source,
@@ -1519,10 +1519,10 @@ class RegionMask(object):
                         # print error statement before raising Error to show it even in try/except loop
                         print(error_msg, flush=True)
                         raise KeyError(error_msg)
-                    
+
                     # extract results from multiprocessing manager
                     result = resultsCollector["indications"]
-                    
+
             else:
                 # if not multiprocessing, trigger an artificial error to fall back into except statement
                 raise ValueError(
@@ -1536,7 +1536,7 @@ class RegionMask(object):
                     "Memory efficient multiProcess failed, returning to safe linear processing."
                 )
             # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
-            resultsCollector = dict() #manager.dict()
+            resultsCollector = dict()  # manager.dict()
             # run _indicateFeatures in a single process
             _indicateFeatures(
                 source=source,
