@@ -1184,43 +1184,47 @@ class RegionMask(object):
         # EXECUTE FUNCTION #
         ####################
 
-        manager = multiprocessing.Manager()
-
-        # initialize a dict to combine the results from possibly parallel processes
-        resultsCollector = manager.dict()
-
         # try multiprocessing or fall back to linear processing
         try:
             if multiProcess:
                 # multiprocessing is requested, try to execute
-                manager = multiprocessing.Manager()
-
-                p = multiprocessing.Process(
-                    target=_indicateValues,
-                    args=(source,),
-                    kwargs={
-                        **{
-                            "value": value,
-                            "buffer": buffer,
-                            "resolutionDiv": resolutionDiv,
-                            "forceMaskShape": forceMaskShape,
-                            "applyMask": applyMask,
-                            "noData": noData,
-                            "resampleAlg": resampleAlg,
-                            "bufferMethod": bufferMethod,
-                            "preBufferSimplification": preBufferSimplification,
-                            "warpDType": warpDType,
-                            "prunePatchSize": prunePatchSize,
-                            "threshold": threshold,
-                            "resultsCollector": resultsCollector,
+                with multiprocessing.Manager() as manager:
+                    # initialize a dict to combine the results from parallel processes
+                    resultsCollector = manager.dict()
+                    p = multiprocessing.Process(
+                        target=_indicateValues,
+                        args=(source,),
+                        kwargs={
+                            **{
+                                "value": value,
+                                "buffer": buffer,
+                                "resolutionDiv": resolutionDiv,
+                                "forceMaskShape": forceMaskShape,
+                                "applyMask": applyMask,
+                                "noData": noData,
+                                "resampleAlg": resampleAlg,
+                                "bufferMethod": bufferMethod,
+                                "preBufferSimplification": preBufferSimplification,
+                                "warpDType": warpDType,
+                                "prunePatchSize": prunePatchSize,
+                                "threshold": threshold,
+                                "resultsCollector": resultsCollector,
+                            },
+                            **kwargs,
                         },
-                        **kwargs,
-                    },
-                )
-                p.start()
-                p.join()
+                    )
+                    p.start()
+                    p.join()
 
-                manager.shutdown()
+                    if not "indications" in resultsCollector.keys():
+                        error_msg = f"'indications' key not in resultsCollector dict after value indication."
+                        # print error statement before raising Error to show it even in try/except loop
+                        print(error_msg, flush=True)
+                        raise KeyError(error_msg)
+                    
+                    # extract results from multiprocessing manager
+                    result = resultsCollector["indications"]
+
             else:
                 # if not multiprocessing, trigger an artificial error to fall back into except statement
                 raise ValueError(
@@ -1233,8 +1237,8 @@ class RegionMask(object):
                 warn(
                     "Memory efficient multiProcess failed, returning to safe linear processing."
                 )
-                # set up a clean resultsCollector in case of partial results from a multiprocessing failed half-way
-                resultsCollector = manager.dict()
+            # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
+            resultsCollector = dict() #manager.dict()
             # run _indicateValues in a single process
             _indicateValues(
                 source=source,
@@ -1254,7 +1258,10 @@ class RegionMask(object):
                 **kwargs,
             )
 
-        return resultsCollector["indications"]
+            # write into return variable
+            result = resultsCollector["indications"]
+
+        return result
 
     #######################################################################################
     # Vector feature indicator
@@ -1479,44 +1486,43 @@ class RegionMask(object):
         # EXECUTE FUNCTION #
         ####################
 
-        manager = multiprocessing.Manager()
-
-        # initialize a dict to combine the results from possibly parallel processes
-        resultsCollector = manager.dict()
-
         # try multiprocessing or fall back to linear processing
         try:
             if multiProcess:
                 # multiprocessing is requested, try to execute
-                manager = multiprocessing.Manager()
-
-                p = multiprocessing.Process(
-                    target=_indicateFeatures,
-                    args=(source,),
-                    kwargs={
-                        **{
-                            "where": where,
-                            "buffer": buffer,
-                            "bufferMethod": bufferMethod,
-                            "resolutionDiv": resolutionDiv,
-                            "forceMaskShape": forceMaskShape,
-                            "applyMask": applyMask,
-                            "noData": noData,
-                            "preBufferSimplification": preBufferSimplification,
-                            "resultsCollector": resultsCollector,
+                with multiprocessing.Manager() as manager:
+                    # initialize a dict to combine the results from parallel processes
+                    resultsCollector = manager.dict()
+                    p = multiprocessing.Process(
+                        target=_indicateFeatures,
+                        args=(source,),
+                        kwargs={
+                            **{
+                                "where": where,
+                                "buffer": buffer,
+                                "bufferMethod": bufferMethod,
+                                "resolutionDiv": resolutionDiv,
+                                "forceMaskShape": forceMaskShape,
+                                "applyMask": applyMask,
+                                "noData": noData,
+                                "preBufferSimplification": preBufferSimplification,
+                                "resultsCollector": resultsCollector,
+                            },
+                            **kwargs,
                         },
-                        **kwargs,
-                    },
-                )
-                p.start()
-                p.join()
+                    )
+                    p.start()
+                    p.join()
 
-                manager.shutdown()
-                if not "indications" in resultsCollector.keys():
-                    error_msg = f"'indications' key not in resultsCollector dict after feature indication."
-                    # print error statement before raising Error to show it even in try/except loop
-                    print(error_msg, flush=True)
-                    raise KeyError(error_msg)
+                    if not "indications" in resultsCollector.keys():
+                        error_msg = f"'indications' key not in resultsCollector dict after feature indication."
+                        # print error statement before raising Error to show it even in try/except loop
+                        print(error_msg, flush=True)
+                        raise KeyError(error_msg)
+                    
+                    # extract results from multiprocessing manager
+                    result = resultsCollector["indications"]
+                    
             else:
                 # if not multiprocessing, trigger an artificial error to fall back into except statement
                 raise ValueError(
@@ -1529,8 +1535,8 @@ class RegionMask(object):
                 warn(
                     "Memory efficient multiProcess failed, returning to safe linear processing."
                 )
-                # set up a clean resultsCollector in case of partial results from a multiprocessing failed half-way
-                resultsCollector = manager.dict()
+            # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
+            resultsCollector = dict() #manager.dict()
             # run _indicateFeatures in a single process
             _indicateFeatures(
                 source=source,
@@ -1546,7 +1552,10 @@ class RegionMask(object):
                 **kwargs,
             )
 
-        return resultsCollector["indications"]
+            # write into return variable
+            result = resultsCollector["indications"]
+
+        return result
 
     #######################################################################################
     # Vector feature indicator
