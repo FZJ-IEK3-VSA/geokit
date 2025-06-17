@@ -48,12 +48,13 @@ jobs:
         - name: Run Examples
           shell: pwsh
           run: |
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_01_srs.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_02_geometry.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_03_vector.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_04_raster.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_05_Extent.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_06_RegionMask.ipynb
+            ls
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_01_srs.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_02_geometry.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_03_vector.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_04_raster.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_05_Extent.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_06_RegionMask.ipynb
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
         
     TestGeokitDevLocal:
@@ -91,11 +92,12 @@ jobs:
         - name: Run Examples
           shell: pwsh
           run: |
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_01_srs.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_02_geometry.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_03_vector.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_04_raster.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_05_Extent.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_06_RegionMask.ipynb
+            ls
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_01_srs.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_02_geometry.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_03_vector.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_04_raster.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_05_Extent.ipynb
+            mamba run -n geokit_env jupyter nbconvert --execute --to=python ./Examples/example_06_RegionMask.ipynb
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
           
