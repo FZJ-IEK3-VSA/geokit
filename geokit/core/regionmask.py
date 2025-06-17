@@ -1,23 +1,23 @@
-import numpy as np
-from osgeo import ogr
+import multiprocessing
+import os
 import re
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 from collections import namedtuple
 from io import BytesIO
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from warnings import warn
-import multiprocessing
 
-from . import util as UTIL
-from . import srs as SRS
+import numpy as np
+import psutil
+from osgeo import ogr
+
 from . import geom as GEOM
 from . import raster as RASTER
+from . import srs as SRS
+from . import util as UTIL
 from . import vector as VECTOR
 
 # from .location import Location, LocationSet
 from .extent import Extent
-
-import psutil
-import os
 
 
 def usage():
@@ -1381,7 +1381,7 @@ class RegionMask(object):
             # Do we need to buffer?
             if buffer == 0:
                 buffer = None
-            if not buffer is None and bufferMethod == "geom":
+            if buffer is not None and bufferMethod == "geom":
 
                 def doBuffer(ftr):
                     if preBufferSimplification is not None:
@@ -1436,7 +1436,7 @@ class RegionMask(object):
                 return
 
             # maybe we want to do the other buffer method
-            if not buffer is None and (
+            if buffer is not None and (
                 bufferMethod == "area" or bufferMethod == "contour"
             ):
                 if bufferMethod == "area":
@@ -1514,7 +1514,7 @@ class RegionMask(object):
                     p.start()
                     p.join()
 
-                    if not "indications" in resultsCollector.keys():
+                    if "indications" not in resultsCollector.keys():
                         error_msg = f"'indications' key not in resultsCollector dict after feature indication."
                         # print error statement before raising Error to show it even in try/except loop
                         print(error_msg, flush=True)

@@ -1,7 +1,9 @@
-from .helpers import *
-from geokit import RegionMask, Extent, geom, vector, raster, util, error
-import pytest
 import warnings
+
+import pytest
+
+from geokit import Extent, RegionMask, error, geom, raster, util, vector
+from geokit.test.helpers import *
 
 
 def test_RegionMask___init__():
@@ -615,3 +617,12 @@ def test_contoursFromMatrix():
 @pytest.mark.skip("No test implemented")
 def test_contoursFromMask():
     print("Nothing to do :(")
+
+
+@pytest.mark.skip("No test implemented")
+def test_contoursFromMask():
+    print("Nothing to do :(")
+
+
+if __name__ == "__main__":
+    test_RegionMask_indicateFeatures()
