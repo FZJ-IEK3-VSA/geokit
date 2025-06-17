@@ -1,6 +1,4 @@
 on:
-    push:
-      branches: '**'
     pull_request:
       branches: [master,dev]
     # Allows to trigger the workflow manually
