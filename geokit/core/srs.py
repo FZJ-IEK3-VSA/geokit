@@ -1,14 +1,15 @@
+import numbers
 import os
-import numpy as np
-from osgeo import osr, gdal, ogr
 import warnings
 from collections import namedtuple
-import smopy
 from typing import Iterable
-import numbers
 
-from . import util as UTIL
-from . import geom as GEOM
+import numpy as np
+import smopy
+from osgeo import gdal, ogr, osr
+
+from geokit.core import geom as GEOM
+from geokit.core import util as UTIL
 
 
 class GeoKitSRSError(UTIL.GeoKitError):

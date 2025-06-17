@@ -11,10 +11,10 @@ import pandas as pd
 from osgeo import gdal, ogr
 from scipy.interpolate import RectBivariateSpline
 
-from . import geom as GEOM
-from . import srs as SRS
-from . import util as UTIL
-from .location import Location, LocationSet
+from geokit.core import geom as GEOM
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
+from geokit.core.location import Location, LocationSet
 
 
 class GeoKitRasterError(UTIL.GeoKitError):

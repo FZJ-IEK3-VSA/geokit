@@ -1,9 +1,11 @@
-from .helpers import *
-from geokit import vector, raster, geom, util
-from os.path import join, dirname
+from functools import reduce
+from os.path import dirname, join
+
 import pandas as pd
 import pytest
-from functools import reduce
+
+from geokit import geom, raster, util, vector
+from geokit.test.helpers import *
 
 # ogrType
 

@@ -1,10 +1,10 @@
-import numpy as np
-from os.path import join, dirname, isfile, isdir
-from osgeo import ogr, gdal, osr
-import matplotlib.pyplot as plt
 import os
-import pandas as pd
+from os.path import dirname, isdir, isfile, join
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from osgeo import gdal, ogr, osr
 
 # Runtime vars
 RESULT = "results"

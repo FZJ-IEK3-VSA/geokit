@@ -1,3 +1,3 @@
-from .helpers import *
+from geokit.test.helpers import *
 
 # Put tests here

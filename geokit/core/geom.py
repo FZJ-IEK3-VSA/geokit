@@ -1,13 +1,14 @@
-from copy import copy
-import numpy as np
-from osgeo import ogr, osr, gdal
 import warnings
+from collections import namedtuple
+from copy import copy
+
+import numpy as np
 import pandas as pd
 import smopy
-from collections import namedtuple
+from osgeo import gdal, ogr, osr
 
-from . import util as UTIL
-from . import srs as SRS
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
 
 
 class GeoKitGeomError(UTIL.GeoKitError):
@@ -964,8 +965,9 @@ def drawLinearRing(g, plotargs, ax, colorVal=None):
 
 
 def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
-    from descartes import PolygonPatch
     from json import loads
+
+    from descartes import PolygonPatch
 
     if g.GetGeometryCount() == 0:  # Geometry doesn't actually exist. skip it
         return None

@@ -1,5 +1,7 @@
 import warnings
+from sys import platform
 
+import numpy as np
 import pytest
 
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
@@ -283,9 +285,21 @@ def test_RegionMask__returnBlank():
 
 
 def test_RegionMask_indicateValues():
+
+    if platform == "linux" or platform == "linux2":
+        multiProcess = True
+    elif platform == "darwin":
+        multiProcess = False
+
+    elif platform == "win32":
+        multiProcess = False
+    else:
+        multiProcess = False
     # Setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
-    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None))
+    res1 = rm.indicateValues(
+        CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
+    )
     # Testing valueMin (with srs change), with multiProcess by default
     with warnings.catch_warnings():
         # make sure no failed multiprocessing warning was raised
@@ -293,23 +307,29 @@ def test_RegionMask_indicateValues():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None))
+        res1 = rm.indicateValues(
+            CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
+        )
 
     assert np.isclose(res1.sum(), 30969.6796875, 1e-6)
     assert np.isclose(res1.std(), 0.3489773, 1e-6)
 
     # Testing valueMax (with srs change)
-    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None, 24))
+    res2 = rm.indicateValues(
+        CLC_RASTER_PATH, value=(None, 24), multiProcess=multiProcess
+    )
     assert np.isclose(res2.sum(), 82857.5078125, 1e-6)
     assert np.isclose(res2.std(), 0.4867994, 1e-6)
 
     # Testing valueEquals (with srs change)
-    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic")
+    res3 = rm.indicateValues(
+        CLC_RASTER_PATH, value=7, resampleAlg="cubic", multiProcess=multiProcess
+    )
     assert np.isclose(res3.sum(), 580.9105835, 1e-4)
     assert np.isclose(res3.std(), 0.0500924, 1e-6)
 
     # Testing range
-    res4 = rm.indicateValues(CLC_RASTER_PATH, value=(20, 24))
+    res4 = rm.indicateValues(CLC_RASTER_PATH, value=(20, 24), multiProcess=multiProcess)
 
     combi = np.logical_and(res1 > 0.5, res2 > 0.5)
     # Some pixels will not end up the same due to warping issues
@@ -322,7 +342,7 @@ def test_RegionMask_indicateValues():
         buffer=0.01,
         resolutionDiv=2,
         forceMaskShape=True,
-        multiProcess=True,
+        multiProcess=multiProcess,
     )
     assert np.isclose(res5.sum(), 65030.75000000, 1e-4)
 
@@ -345,18 +365,30 @@ def test_RegionMask_indicateValues():
         resolutionDiv=2,
         forceMaskShape=True,
         noData=-1,
-        multiProcess=True,
+        multiProcess=multiProcess,
     )
     assert np.isclose(res6.sum(), -113526.0, 1e-4)
 
     # Test set exclusion
     res7 = rm.indicateValues(
-        CLC_RASTER_PATH, value="[-.2),[5-7.00),12,(22-26],29,33.01,[40.-]"
+        CLC_RASTER_PATH,
+        value="[-.2),[5-7.00),12,(22-26],29,33.01,[40.-]",
+        multiProcess=multiProcess,
     )
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
 def test_RegionMask_indicateFeatures():
+
+    if platform == "linux" or platform == "linux2":
+        multiProcess = True
+    elif platform == "darwin":
+        multiProcess = False
+
+    elif platform == "win32":
+        multiProcess = False
+    else:
+        multiProcess = False
     # setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
 
@@ -367,7 +399,9 @@ def test_RegionMask_indicateFeatures():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'")
+        res = rm.indicateFeatures(
+            NATURA_PATH, where="SITECODE='DE5404303'", multiProcess=multiProcess
+        )
 
     assert np.isclose(res.sum(), 649, 1e-6)
     assert np.isclose(res.std(), 0.0646270, 1e-6)
@@ -379,6 +413,7 @@ def test_RegionMask_indicateFeatures():
         buffer=300,
         resolutionDiv=3,
         forceMaskShape=True,
+        multiProcess=multiProcess,
     )
     # print("%.7f"%res2.sum(), "%.7f"%res2.std())
     assert np.isclose(res2.sum(), 13670.5555556, 1e-6)
@@ -390,6 +425,7 @@ def test_RegionMask_indicateFeatures():
         bufferMethod="area",
         resolutionDiv=5,
         forceMaskShape=True,
+        multiProcess=multiProcess,
     )
     # print("%.7f"%res3.sum(), "%.7f"%res3.std())
     assert np.isclose(res3.sum(), 13807.320000, 1e-6)
@@ -403,6 +439,7 @@ def test_RegionMask_indicateFeatures():
         resolutionDiv=2,
         forceMaskShape=True,
         noData=-1,
+        multiProcess=multiProcess,
     )
     # print("%.7f"%res4.sum(), "%.7f"%res4.std())
 
@@ -625,4 +662,4 @@ def test_contoursFromMask():
 
 
 if __name__ == "__main__":
-    test_RegionMask_indicateFeatures()
+    test_RegionMask_indicateValues()

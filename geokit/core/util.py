@@ -1,19 +1,20 @@
 """The Util sub-module contains a number of generally helpful utility functions, classes, and constants"""
 
 import os
-import sys
 import re
-import numpy as np
-from osgeo import gdal, ogr, osr
-from tempfile import TemporaryDirectory, NamedTemporaryFile
-from glob import glob
+import sys
 import warnings
-from collections import namedtuple, defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
-import pandas as pd
-from scipy.stats import describe
-from scipy.interpolate import RectBivariateSpline
+from glob import glob
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from types import GeneratorType
+
+import numpy as np
+import pandas as pd
+from osgeo import gdal, ogr, osr
+from scipy.interpolate import RectBivariateSpline
+from scipy.stats import describe
 
 ######################################################################################
 # test modules

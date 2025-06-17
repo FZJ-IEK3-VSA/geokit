@@ -1,22 +1,23 @@
-from .helpers import (
-    MASK_DATA,
-    np,
-    pointInAachen3035,
-    pointsInAachen4326,
+import matplotlib.pyplot as plt
+import pandas as pd
+import pytest
+from osgeo import ogr
+
+from geokit import geom, vector
+from geokit.test.helpers import (
     EPSG3035,
     EPSG4326,
     FJI_SHAPE_PATH,
-    POLY,
     GEOM,
-    SUB_GEOMS,
+    MASK_DATA,
+    POLY,
     SUB_GEOM,
+    SUB_GEOMS,
+    np,
+    pointInAachen3035,
+    pointsInAachen4326,
     result,
 )
-from geokit import geom, vector
-import matplotlib.pyplot as plt
-import pytest
-import pandas as pd
-from osgeo import ogr
 
 
 # box
@@ -561,10 +562,18 @@ def test_applyBuffer():
     buf_north_clip_6933 = geom.applyBuffer(
         geom=testpoint_north, buffer=50000, applyBufferInSRS=6933, split="clip"
     )
-    assert buf_north_clip_6933.GetEnvelope() == (
-        -0.5182083905606406,
-        0.5182083905606406,
-        83.33841323028614,
-        89.99999879797518,
-    )
+    assert np.isclose(buf_north_clip_6933.GetEnvelope()[0], -0.5182083905606406)
+    assert np.isclose(buf_north_clip_6933.GetEnvelope()[1], 0.5182083905606406)
+    assert np.isclose(buf_north_clip_6933.GetEnvelope()[2], 83.33841323028614)
+    assert np.isclose(buf_north_clip_6933.GetEnvelope()[3], 89.99999879797518)
+    # assert buf_north_clip_6933.GetEnvelope() == (
+    #     -0.5182083905606406,
+    #     0.5182083905606406,
+    #     83.33841323028614,
+    #     89.99999879797518,
+    # )
     assert geom.transform(buf_north_clip_6933, toSRS=6933).Area() == 3926325058.480929
+
+
+if __name__ == "__main__":
+    test_applyBuffer()

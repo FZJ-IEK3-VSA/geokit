@@ -1,5 +1,7 @@
-from .helpers import *
+import os
+
 from geokit import Location, LocationSet, geom
+from geokit.test.helpers import *
 
 xy = (9, 5)
 
@@ -269,6 +271,7 @@ def test_LocationSet_asHash():
 
 
 def test_LocationSet_splitKMeans():
+    os.environ["OMP_NUM_THREADS"] = "1"
     pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5), (2, -1), (2, -1.5), (2, -1.25)]
     locs = LocationSet(pts)
 
