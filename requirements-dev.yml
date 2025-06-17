@@ -1,9 +1,11 @@
 name: geokit
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python
   - pytest
+  - pytest-xdist 
   - pytest-cov
   - pylint
   - autopep8
@@ -20,4 +22,5 @@ dependencies:
   - gdal>=3.4.2,<=3.4.3
   - smopy
   - geopandas
+  - nbconvert
 

@@ -8,12 +8,14 @@ name = "geokit"
 version = "1.4.2"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
-    { name = "Severin Ryberg" },
+    { name = "David Severin Ryberg" },
+    { name = "Zena Tulemat"},
     { name = "Christoph Winkler", email = "c.winkler@fz-juelich.de" },
     { name = "Ishmam Shitab", email = "s.ishmam@fz-juelich.de" },
+    { name = "Julian Belina", email = "j.belina@fz-juelich.de"}
 ]
 maintainers = [
-  {name = "Julian Belina", email = "j.belina@fz-juelich.de"}
+  { name = "Julian Belina", email = "j.belina@fz-juelich.de"}
 ]
 license = { file = "LICENSE.txt" }
 readme = "README.md"
