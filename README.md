@@ -1,4 +1,8 @@
-﻿<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
+﻿| Name |  Version  | Test on pull request | Daily test of conda-forge package|
+| --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_conda_forge_version.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_development_version.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_development_version.yml) | [![.github/workflows/test_conda_forge_version.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_conda_forge_version.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_conda_forge_version.yml) |
+
+<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
 
 # GeoKit - **Geo**spatial tool**kit** for Python
 
