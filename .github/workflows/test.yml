@@ -38,7 +38,7 @@ jobs:
           run: |
             ls
             echo "LS Done"
-            mamba install -c nodefaults -n geokit_env geokit pytest
+            mamba install -c nodefaults -c conda-forge -n geokit_env geokit pytest
             echo "Installation done"
             conda list
             echo "libaries printed"
