@@ -1,8 +1,7 @@
 on:
     push:
-      branches: master
-    pull_request:
-      branches: master
+      pull_request:
+      branches: [master,dex]
     # Allows to trigger the workflow manually
     workflow_dispatch:
       branches: master
@@ -16,7 +15,7 @@ on:
   
 jobs:
     TestGeokitCondaForge:
-      name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+      name: Test conda-forge package for ${{ matrix.os }})
       runs-on: ${{ matrix.os }}
       strategy:
         fail-fast: false
@@ -38,7 +37,7 @@ jobs:
           run: |
             ls
             echo "LS Done"
-            mamba install -n test_env geokit pytest gdal=3.4.2
+            mamba install -n test_env geokit pytest
             echo "Installation done"
             conda list
             echo "libaries printed"
@@ -47,7 +46,7 @@ jobs:
             echo "Pytest done"
         
     TestGeokitDevLocal:
-      name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+      name: Test local development Version on ${{ matrix.os }}
       runs-on: ${{ matrix.os }}
       strategy:
         fail-fast: false
