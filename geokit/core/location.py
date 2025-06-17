@@ -1,11 +1,12 @@
 import re
-import numpy as np
-from osgeo import ogr
-import pandas as pd
 
-from . import util as UTIL
-from . import srs as SRS
-from . import geom as GEOM
+import numpy as np
+import pandas as pd
+from osgeo import ogr
+
+from geokit.core import geom as GEOM
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
 
 
 class GeoKitLocationError(UTIL.GeoKitError):

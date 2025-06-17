@@ -1,10 +1,8 @@
-﻿|                                                          master                                                           |                                                          dev                                                           |
-| :-----------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------: |
-| [![Build Status](https://travis-ci.com/FZJ-IEK3-VSA/geokit.svg?branch=master)](https://travis-ci.com/FZJ-IEK3-VSA/geokit) | [![Build Status](https://travis-ci.com/FZJ-IEK3-VSA/geokit.svg?branch=dev)](https://travis-ci.com/FZJ-IEK3-VSA/geokit) |
+﻿<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
 
----
-
-<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
+| Name |  Version  | Test on pull request | Daily test of conda-forge package|
+| --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_development_version.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_development_version.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_development_version.yml) | [![.github/workflows/test_conda_forge_version.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_conda_forge_version.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_conda_forge_version.yml) |
 
 # GeoKit - **Geo**spatial tool**kit** for Python
 
@@ -83,51 +81,14 @@ pip install . --no-deps -e
 
 See the [Examples page](Examples/)
 
-## Docker
-
-We are trying to get GeoKit to work within a Docker container. Try it out!
-
-- First pull the image with:
-
-```bash
-docker pull sevberg/geokit:latest
-```
-
-- You can then start a basic python interpreter with:
-
-```bash
-docker run -it sevberg/geokit:latest -c "python"
-```
-
-- Or you can start a jupyter notebook using:
-
-```bash
-docker run -it \
-    -p 8888:8888 \
-    sevberg/geokit:latest \
-    -c "jupyter notebook --ip='*' --port=8888 --no-browser --allow-root"
-```
-
-- Which can then be connected to at the address "localhost:8888:<API-KEY>"
-- The API Key can be found from the output of the earlier command
-
-* Finally, you might want to mount a volume to access geospatial data. For this you can use:
-
-```bash
-docker run -it \
-    --mount target=/notebooks,type=bind,src=<PATH-TO-DIRECTORY> \
-    -p 8888:8888 \
-    sevberg/geokit:latest  \
-    -c "jupyter notebook --notebook-dir=/notebooks --ip='*' --port=8888 --no-browser --allow-root"
-```
 
 ## License
 
 MIT License
 
-Active Developers: Julian Schönau, Rachel Maier, Christoph Winkler, Shitab Ishmam, David Franzmann, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
+Active Developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
 
-Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch
+Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann,
 
 You should have received a copy of the MIT License along with this program.  
 If not, see <https://opensource.org/licenses/MIT>

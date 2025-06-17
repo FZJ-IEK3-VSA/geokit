@@ -4,11 +4,11 @@
 
 from geokit.core.util import (
     GeoKitError,
-    isVector,
-    isRaster,
-    scaleMatrix,
     KernelProcessor,
-    drawImage,
     compare_geoms,
+    drawImage,
     fitBoundsTo,
+    isRaster,
+    isVector,
+    scaleMatrix,
 )

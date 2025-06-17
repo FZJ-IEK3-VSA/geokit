@@ -1,18 +1,20 @@
 import os
+import pathlib
 import sys
-import numpy as np
-from osgeo import gdal, ogr
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+
+import numpy as np
 import pandas as pd
+from osgeo import gdal, ogr
 from scipy.interpolate import RectBivariateSpline
 
-from . import util as UTIL
-from . import srs as SRS
-from . import geom as GEOM
-from .location import Location, LocationSet
+from geokit.core import geom as GEOM
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
+from geokit.core.location import Location, LocationSet
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -116,14 +118,14 @@ def gdalType(s):
 
 def createRaster(
     bounds,
-    output=None,
+    output: None | str | pathlib.Path = None,
     pixelWidth=100,
     pixelHeight=100,
     dtype=None,
     srs="europe_m",
     compress=True,
     noData=None,
-    overwrite=True,
+    overwrite: bool = True,
     fill=None,
     data=None,
     meta=None,
@@ -222,9 +224,9 @@ def createRaster(
 
     """
     # Check for existing file
-    if not output is None:
+    if output is not None:
         if os.path.isfile(output):
-            if overwrite == True:
+            if overwrite is True:
                 os.remove(output)
                 if os.path.isfile(output + ".aux.xml"):
                     os.remove(output + ".aux.xml")
@@ -233,6 +235,7 @@ def createRaster(
 
         # check if writeable:
         if not os.access(os.path.dirname(output), os.W_OK):
+            print(os.path.dirname(output))
             raise PermissionError(
                 f"Writing permission error for path: {os.path.dirname(output)}"
             )

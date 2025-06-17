@@ -1,23 +1,24 @@
-import numpy as np
-from osgeo import ogr
+import multiprocessing
+import os
 import re
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 from collections import namedtuple
 from io import BytesIO
+from sys import platform
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from warnings import warn
-import multiprocessing
 
-from . import util as UTIL
-from . import srs as SRS
-from . import geom as GEOM
-from . import raster as RASTER
-from . import vector as VECTOR
+import numpy as np
+import psutil
+from osgeo import ogr
+
+from geokit.core import geom as GEOM
+from geokit.core import raster as RASTER
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
+from geokit.core import vector as VECTOR
 
 # from .location import Location, LocationSet
-from .extent import Extent
-
-import psutil
-import os
+from geokit.core.extent import Extent
 
 
 def usage():
@@ -929,6 +930,7 @@ class RegionMask(object):
         multiProcess: boolean, optional
             If True, multiple parallel processes will be spawned within the function to
             improve RAM efficiency, else it will fall back on linear execution. By default True.
+            Only works on Linux and will be deactivated on Windows and Mac.
 
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
@@ -938,6 +940,29 @@ class RegionMask(object):
         --------
         numpy.ndarray
         """
+
+        multi_processing_warning_message = (
+            "Multiprocessing has been set to 'False' because it is not available for Windows or Mac."
+            " To deactivate this warning, please set the multiProcess variable to False. On Windows and "
+            "Mac, new processes must be spawned, which requires the serialisation of the method to be "
+            "executed via multiprocessing. However, Geokit contains objects that cannot be serialised by Pickle. "
+            "On Linux, however, new processes are inherited and no serialisation is required."
+        )
+        if platform == "linux" or platform == "linux2":
+            pass
+        elif platform == "darwin" and multiProcess is True:
+            multiProcess = False
+            warn(multi_processing_warning_message)
+        elif platform == "win32" and multiProcess is True:
+            multiProcess = False
+            warn(multi_processing_warning_message)
+        elif platform == "darwin" and multiProcess is False:
+            pass
+        elif platform == "win32" and multiProcess is False:
+            pass
+        else:
+            multiProcess = False
+            warn(multi_processing_warning_message)
 
         def _indicateValues(
             source,
@@ -1381,7 +1406,7 @@ class RegionMask(object):
             # Do we need to buffer?
             if buffer == 0:
                 buffer = None
-            if not buffer is None and bufferMethod == "geom":
+            if buffer is not None and bufferMethod == "geom":
 
                 def doBuffer(ftr):
                     if preBufferSimplification is not None:
@@ -1436,7 +1461,7 @@ class RegionMask(object):
                 return
 
             # maybe we want to do the other buffer method
-            if not buffer is None and (
+            if buffer is not None and (
                 bufferMethod == "area" or bufferMethod == "contour"
             ):
                 if bufferMethod == "area":
@@ -1514,7 +1539,7 @@ class RegionMask(object):
                     p.start()
                     p.join()
 
-                    if not "indications" in resultsCollector.keys():
+                    if "indications" not in resultsCollector.keys():
                         error_msg = f"'indications' key not in resultsCollector dict after feature indication."
                         # print error statement before raising Error to show it even in try/except loop
                         print(error_msg, flush=True)
