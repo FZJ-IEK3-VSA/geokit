@@ -1,5 +1,5 @@
 on:
-  push:
+    push:
       branches: '**'
     # Allows to trigger the workflow manually
     workflow_dispatch:
