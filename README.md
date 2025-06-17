@@ -1,10 +1,4 @@
-﻿|                                                          master                                                           |                                                          dev                                                           |
-| :-----------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------: |
-| [![Build Status](https://travis-ci.com/FZJ-IEK3-VSA/geokit.svg?branch=master)](https://travis-ci.com/FZJ-IEK3-VSA/geokit) | [![Build Status](https://travis-ci.com/FZJ-IEK3-VSA/geokit.svg?branch=dev)](https://travis-ci.com/FZJ-IEK3-VSA/geokit) |
-
----
-
-<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
+﻿<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/FJZ_IEK-3_logo.svg?raw=True" alt="Forschungszentrum Juelich Logo" width="300px"></a> 
 
 # GeoKit - **Geo**spatial tool**kit** for Python
 

@@ -1,7 +1,8 @@
 on:
     push:
-      pull_request:
-      branches: [master,dex]
+      branches: '**'
+    pull_request:
+      branches: [master,dev]
     # Allows to trigger the workflow manually
     workflow_dispatch:
       branches: master
