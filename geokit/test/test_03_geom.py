@@ -5,16 +5,18 @@ from .helpers import (
     pointsInAachen4326,
     EPSG3035,
     EPSG4326,
+    FJI_SHAPE_PATH,
     POLY,
     GEOM,
     SUB_GEOMS,
     SUB_GEOM,
     result,
 )
-from geokit import geom
+from geokit import geom, vector
 import matplotlib.pyplot as plt
 import pytest
 import pandas as pd
+from osgeo import ogr
 
 
 # box
@@ -439,3 +441,130 @@ def test_shift():
     b_multi = b1.Union(b2)
     b_multi_check = b1_check.Union(b2_check)
     assert geom.shift(geom=b_multi, lonShift=180, latShift=-90).Equals(b_multi_check)
+
+
+def test_divideMultipolygonIntoEasternAndWesternPart():
+    # load FJI.shp from test data
+    FJI_geom = vector.extractFeatures(FJI_SHAPE_PATH).geom.iloc[0]
+    # divide the geometry at the antimeridian, keep main
+    main_geom = geom.divideMultipolygonIntoEasternAndWesternPart(FJI_geom, side="main")
+
+    assert main_geom.GetGeometryName() == "MULTIPOLYGON"
+    assert main_geom.GetGeometryCount() == 274
+    assert main_geom.GetEnvelope() == (
+        176.89971924,
+        180.0,
+        -19.19361115,
+        -12.46172428,
+    )
+    assert main_geom.Area() == 1.5381107036696313
+
+    # make sure extraction of both geoms works, too
+    both_geoms = geom.divideMultipolygonIntoEasternAndWesternPart(FJI_geom, side="both")
+
+    assert len(both_geoms) == 2
+    assert [g.Area() for g in both_geoms] == [1.5381107036696313, 0.07496812355738873]
+
+    # make sure extraction of right geom is always the same
+    right_geom = geom.divideMultipolygonIntoEasternAndWesternPart(
+        FJI_geom, side="right"
+    )
+
+    assert right_geom.GetEnvelope() == (
+        -180.0,
+        -178.22860718,
+        -21.04249954,
+        -15.70972347,
+    )
+    assert right_geom.Area() == 0.07496812355738873
+
+
+def test_fixOutOfBoundsGeoms():
+    # generate circles near and crossing the antimeridian, merge to multipolygon
+    testcircle = geom.point(0, 0).Buffer(1)
+    testcircleeast = geom.shift(
+        testcircle, lonShift=-179.5
+    )  # extends over entimeridian in the East
+    testcirclewest = geom.shift(
+        testcircle, lonShift=+180.8
+    )  # extends over entimeridian in the West
+    multi = testcirclewest.Union(testcircleeast)
+
+    # clip off the parts extending over antimeridian
+    multi_clipped = geom.fixOutOfBoundsGeoms(multi, how="clip")
+    assert isinstance(multi_clipped, ogr.Geometry)
+    assert multi_clipped.GetEnvelope() == (
+        -180.0,
+        180.0,
+        -1.0,
+        +1.0,
+    )
+    # do again just for the western testcircle
+    testcirclewest_clipped = geom.fixOutOfBoundsGeoms(testcirclewest, how="clip")
+    assert isinstance(testcirclewest_clipped, ogr.Geometry)
+    assert testcirclewest_clipped.GetEnvelope() == (
+        179.8,
+        180.0,
+        -0.5995364281486639,
+        +0.5995364281486636,
+    )
+
+    # split multi along the antimeridian
+    testcirclewest_shifted = geom.fixOutOfBoundsGeoms(testcirclewest, how="shift")
+
+    assert isinstance(testcirclewest_shifted, ogr.Geometry)
+    assert testcirclewest_shifted.GetEnvelope() == (
+        -180.0,
+        +180.0,
+        -1.0,
+        +1.0,
+    )
+
+
+def test_applyBuffer():
+    # generate point at lat = 0 to apply a test buffer
+    testpoint_equator = geom.point(-179.9, 0, srs=4326)
+    # first test latlon buffer
+    buf_none = geom.applyBuffer(
+        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="none"
+    )
+    assert buf_none.GetEnvelope() == (-180.9, -178.9, -1.0, 1.0)
+    assert np.isclose(buf_none.Area(), np.pi, rtol=0.001)
+    buf_shift = geom.applyBuffer(
+        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="shift"
+    )
+    assert buf_shift.GetEnvelope() == (-180.0, +180.0, -1.0, 1.0)
+    assert np.isclose(buf_shift.Area(), buf_none.Area(), rtol=0.001)
+    buf_clip = geom.applyBuffer(
+        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="clip"
+    )
+    assert buf_clip.GetEnvelope() == (-180.0, -178.9, -1.0, 1.0)
+    # then do metric buffer with 50 kms
+    buf_clip_6933 = geom.applyBuffer(
+        geom=testpoint_equator, buffer=50000, applyBufferInSRS=6933, split="clip"
+    )
+    assert buf_clip_6933.GetEnvelope() == (
+        -180.0,
+        -179.38179160943938,
+        -0.391934549810819,
+        0.391934549810819,
+    )
+
+    # now try again near 90° lat
+    testpoint_north = geom.point(0, 89.9, srs=4326)
+    # first latlon buffer
+    buf_north_clip = geom.applyBuffer(
+        geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
+    )
+    assert buf_north_clip.GetEnvelope() == (-1, +1, 88.9, 90)
+    # try again with metric system and 50kms buffer
+    buf_north_clip_6933 = geom.applyBuffer(
+        geom=testpoint_north, buffer=50000, applyBufferInSRS=6933, split="clip"
+    )
+    assert buf_north_clip_6933.GetEnvelope() == (
+        -0.5182083905606406,
+        0.5182083905606406,
+        83.33841323028614,
+        89.99999879797518,
+    )
+    assert geom.transform(buf_north_clip_6933, toSRS=6933).Area() == 3926325058.480929

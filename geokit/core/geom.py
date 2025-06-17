@@ -1,3 +1,4 @@
+from copy import copy
 import numpy as np
 from osgeo import ogr, osr, gdal
 import warnings
@@ -1574,6 +1575,9 @@ def shift(geom, lonShift=0, latShift=0):
         raise TypeError(f"geom must be of type osgeo.ogr.Geometry")
     # first get srs of input geom
     _srs = geom.GetSpatialReference()
+    # get the dimension of the geometry
+    dims = geom.GetCoordinateDimension()
+    assert dims in [2, 3], f"Only 2D and 3D points are supported, but got {dims}D"
 
     # define sub method to shift collection of single points
     def _movePoints(pointCollection, lonShift, latShift):
@@ -1591,18 +1595,26 @@ def shift(geom, lonShift=0, latShift=0):
     # first check if geom is a point and shift
     if "POINT" in geom.GetGeometryName():
         p = geom.GetPoint()
-        return point((p[0] + lonShift, p[1] + latShift), srs=_srs)
+        point_shifted = point((p[0] + lonShift, p[1] + latShift), srs=_srs)
+        if dims == 2:
+            point_shifted.FlattenTo2D()
+        return point_shifted
     # else check if line and adapt
     elif (
         "LINESTRING" in geom.GetGeometryName()
         and not "MULTILINE" in geom.GetGeometryName()
     ):
-        return line(
+        assert not geom.IsEmpty(), f"Line is empty"
+        line_shifted = line(
             _movePoints(pointCollection=geom, lonShift=lonShift, latShift=latShift),
             srs=_srs,
         )
+        if dims == 2:
+            line_shifted.FlattenTo2D()
+        return line_shifted
     # else check if we have a (multi)polygon
     elif "POLYGON" in geom.GetGeometryName():
+        assert not geom.IsEmpty(), f"Polygon is empty"
         if not "MULTIPOLYGON" in geom.GetGeometryName():
             # only a simple polygon, generate single entry list to allow iteration
             geom = [geom]
@@ -1626,8 +1638,381 @@ def shift(geom, lonShift=0, latShift=0):
                     multi_shifted = poly_shifted
                 else:
                     multi_shifted = multi_shifted.Union(poly_shifted)
+        # the shifted polygon should have the same dimensions as the input
+        if dims == 2:
+            multi_shifted.FlattenTo2D()
         return multi_shifted
     else:
         raise TypeError(
             f"geom must be a 'POINT', 'LINESTRING', 'POLYGON' or 'MULTIPOLYGON' osgeo.ogr.Geometry"
         )
+
+
+def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
+    """
+    Multipolygons spanning the antimeridian (this includes polygons that are
+    split at the antimeridian, with the Western half shifted Eastwards by 360°
+    longitude) are separated into a part East and West of the antimeridian by
+    identifying the largest longitudinal gap between any of the sub polygons and
+    dividing the sub polys into one Eastern and one Western polygon list which
+    is returned as multipolygons.
+    NOTE: This function only works for already shifted subpolygons with an
+    overall envelope betweeen -180° and +180° longitude.
+
+    Parameters
+    ----------
+    geom: ogr.Geometry
+        The geometry to split. Must be a MultiPolygon.
+    side: str, optional
+        'left' or 'right' to return the left or right side of the antimeridian
+        'main' to return the side with the largest area
+        'both' to return both sides as a tuple (left, right)
+    """
+    # check inputs
+    assert side in (
+        "both",
+        "left",
+        "right",
+        "main",
+    ), "side must be 'left', 'right', 'main' or 'both'"
+    assert isinstance(geom, ogr.Geometry), "geom must be of type osgeo.ogr.Geometry"
+    assert geom.GetGeometryName() == "MULTIPOLYGON", "Only MultiPolygon supported"
+    assert geom.GetSpatialReference().IsSame(
+        SRS.loadSRS(4326)
+    ), "geometry must be in EPSG:4326"
+    assert (
+        geom.GetEnvelope()[0] >= -180 and geom.GetEnvelope()[1] <= 180
+    ), "Envelope must be between -180° and +180° longitude"
+    assert geom.GetSpatialReference().IsSame(
+        SRS.loadSRS(4326)
+    ), "Only EPSG:4326 lat/lon supported"
+
+    # first extract sub polygons
+    sub_polys = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
+
+    # get all the bounding boxes
+    bounds = []
+    for poly in sub_polys:
+        env = poly.GetEnvelope()  # (minX, maxX, minY, maxY)
+        bounds.append((env[0], env[1], poly))  # store (minX, maxX, polygon)
+
+    # sort them from left to right based on minX
+    bounds.sort(key=lambda x: x[0])
+
+    # find the largest gap iteratively
+    max_gap = 0
+    split_index = 0
+    curr_maxs = list()
+    for i in range(len(bounds) - 1):
+        curr_maxs.append(bounds[i][1])
+        curr_max = max(curr_maxs)
+        next_min = bounds[i + 1][0]
+        gap = next_min - curr_max
+        if gap > max_gap:
+            # overwrite the max gap so far and save the index when it occurs
+            max_gap = gap
+            split_index = i
+
+    # split into two sets of geoms - left and right of the gap (do only if necessary for time)
+    if side in ["both", "main", "right"]:
+        # filter only sub polys below (or equal) split index
+        right_polys = [b[2] for i, b in enumerate(bounds) if i <= split_index]
+        # merge all right polygons into a single multipolygon and assign the same spatial reference
+        right_multi = ogr.Geometry(ogr.wkbMultiPolygon)
+        for poly in right_polys:
+            right_multi.AddGeometry(poly.Clone())
+        right_multi.AssignSpatialReference(geom.GetSpatialReference())
+    # same for the left side
+    if side in ["both", "main", "left"]:
+        # only polys above split index
+        left_polys = [b[2] for i, b in enumerate(bounds) if i > split_index]
+        left_multi = ogr.Geometry(ogr.wkbMultiPolygon)
+        for poly in left_polys:
+            left_multi.AddGeometry(poly.Clone())
+        left_multi.AssignSpatialReference(geom.GetSpatialReference())
+
+    if side == "left":
+        return left_multi
+    elif side == "right":
+        return right_multi
+    elif side == "both":
+        # return both left and right
+        return left_multi, right_multi
+    elif side == "main":
+        # return the side with the largest area
+        left_area = left_multi.GetArea()
+        right_area = right_multi.GetArea()
+        if left_area > right_area:
+            return left_multi
+        else:
+            return right_multi
+    else:
+        raise ValueError("side must be 'left', 'right', 'main' or None")
+
+
+def applyBuffer(
+    geom, buffer, applyBufferInSRS=False, split="shift", tol=1e-6, verbose=False
+):
+    """
+    This function applies a buffer to any geom, avoiding edge issues with geoms
+    near the SRS bounds. By shifting the geom to a zero longitude, geometry
+    distortions are avoided when the buffered geom exceeds the bounds (i.e.
+    antimeridian or latitudes of +/-90° e.g. in the case of EPSG:4326). Buffered
+    geom areas extending over the bounds can either be clipped off or shifted to
+    the respective "other end of the map". If the buffer is applied in a
+    different (e.g. metric) EPSG, latitudinal overlaps will always be clipped.
+
+    geom : osgeo.ogr.Geometry
+        Geometry to be buffered.
+    buffer : int, float
+        The buffer value to be applied to the geom, in unit of the SRS unless
+        'bufferInEPSG6933' is True, then always in meters.
+    applyBufferInSRS : int, osgeo.osr.SpatialReference, optional
+        Allows to specify an EPSG integer code or an osgeo.osr.SpatialReference
+        instance to define the SRS in which the buffer will be applied, then in
+        the unit of the specified EPSG. If e.g. 6933 is given, the buffer will
+        be applied in meters in a metric system. By default False, i.e. the
+        original SRS of the geom will be used.
+        NOTE: 'Lambert_Azimuthal_Equal_Area' or 'Lambert_Conformal_Conic_2SP'
+        projections are not allowed here, use e.g. EPSG:6933 as global metric SRS.
+    split : str, optional
+        'shift' : shift areas that exceed the antimeridian line to the other end (default)
+        'clip' : remove/clip polygon parts that exceed the antimeridian
+        'none' : do not split geoms at all that cross the antimeridian
+    tol : int, float, optional
+        Geoms protruding over the +/-90° latitude line will be clipped to 90°
+        plus/minus this tolerance in degrees to avoid geometry issues due to
+        distortions during SRS transformation. By default 1E-6.
+    verbose : boolean, optional
+        If True, additional notifications will be printed when geometry has to
+        be clipped to enable retransformation to initial SRS. By default False.
+    """
+    if not applyBufferInSRS is False:
+        try:
+            applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
+        except:
+            raise ValueError(
+                f"applyBufferInSRS {applyBufferInSRS} is not a known SRS to geokit.srs.loadSRS()"
+            )
+        assert not applyBufferInSRS.GetAttrValue("PROJECTION") in [
+            "Lambert_Azimuthal_Equal_Area",
+            "Lambert_Conformal_Conic_2SP",
+        ], f"SRS projection must not be in: 'Lambert_Azimuthal_Equal_Area', 'Lambert_Conformal_Conic_2SP'"
+
+    # first shift the geom to the "center of the world"
+    geom_shftd = shift(
+        geom,
+        lonShift=-geom.Centroid().GetX(),
+        latShift=(
+            -geom.Centroid().GetY() if applyBufferInSRS is False else 0
+        ),  # latitudinal shift would distort latlon-to-metric conversion
+    )
+    if applyBufferInSRS:
+        # transform to applyBufferInSRS srs
+        geom_shftd_epsg = transform(geom_shftd, toSRS=applyBufferInSRS)
+        # apply buffer
+        geom_shftd_buf_epsg = geom_shftd_epsg.Buffer(buffer)
+        assert (
+            geom_shftd_buf_epsg.IsValid()
+        ), f"geom in EPSG:{applyBufferInSRS} invalid after buffering."
+        # clip to +/-90° lat "world window" (shrink window by tolerance and transform to EPSG)
+        _worldbox_epsg = transform(
+            polygon(
+                [
+                    (-180 + tol, -90 + tol),
+                    (-180 + tol, 90 - tol),
+                    (180 - tol, 90 - tol),
+                    (180 - tol, -90 + tol),
+                ],
+                srs=4326,
+            ),
+            toSRS=applyBufferInSRS,
+        )
+        _env = geom_shftd_buf_epsg.GetEnvelope()
+        if (
+            _worldbox_epsg.GetEnvelope()[2] < _env[2]
+            or _worldbox_epsg.GetEnvelope()[3] > _env[3]
+        ):
+            # the vertical dimension exceeds the "world window", clip to worldbox to avoid geoms extending over +/-90° lat
+            geom_shftd_buf_epsg = geom_shftd_buf_epsg.Intersection(_worldbox_epsg)
+            _env_new = geom_shftd_buf_epsg.GetEnvelope()
+            if verbose:
+                print(f"NOTE: geometry was clipped vertically.", flush=True)
+            if _env_new[0] < _env[0] or _env_new[1] < _env[1] and not split == "clip":
+                # longitudinal clip, this is not supposed to happen since the geom has been shifted longitudinally!
+                warnings.warn("geometry was clipped horizontally!", Warning)
+        # reconvert to original SRS, still centered on (0,0)
+        geom_shftd_buf = transform(
+            geom_shftd_buf_epsg, toSRS=geom.GetSpatialReference()
+        )
+        # geom is sometimes invalid after transformation, if so try to fix with zero-buffer trick
+        if not geom_shftd_buf.IsValid():
+            geom_shftd_buf = geom_shftd_buf.Buffer(0)
+        assert (
+            geom_shftd_buf.IsValid()
+        ), f"buffered geom invalid after re-transformation to initial SRS."
+    else:
+        # apply buffer in unit of geom SRS
+        geom_shftd_buf = geom_shftd.Buffer(buffer)
+    # shift back to the original centroid location
+    geom_buf = shift(
+        geom_shftd_buf,
+        lonShift=geom.Centroid().GetX(),
+        latShift=(
+            geom.Centroid().GetY() if applyBufferInSRS is False else 0
+        ),  # same as above
+    )
+    assert (
+        geom_buf.IsValid()
+    ), f"buffered geom in initial SRS invalid after shifting it back to initial longitude."
+    if split in ["none", None]:
+        # no splitting of protruding geoms required, return as is
+        return geom_buf
+    elif split == "clip":
+        # clip protruding elements
+        return fixOutOfBoundsGeoms(geom=geom_buf, how="clip")
+    elif split == "shift":
+        # split and shift and re-merge protruding polygon parts
+        return fixOutOfBoundsGeoms(geom=geom_buf, how="shift")
+    else:
+        raise ValueError(f"split argument must be either 'none', 'clip' or 'shift'.")
+
+
+def fixOutOfBoundsGeoms(geom, how="shift"):
+    """
+    This function allows to deal with polygons that protrude over the SRS bounds
+    at +/-180° longitude respectively +/-90° latitude. Polygon areas that exceed
+    those bounds are either clipped or shifted to the "opposite end of the map"
+    with shapes at the poles being inverted and shifted by 180° to create a
+    "fold-over" effect.
+
+    geom : osgeo-ogr.Geometry
+        Geometry to fix.
+    how : str, optional
+        The way how to deal with sub shapes extending over the bounds:
+        'shift' :   split off and shift to the "opposite end of the map"
+        'clip' :    clip and remove extending shapes completely
+    """
+    assert isinstance(geom, ogr.Geometry), f"geom must be an osgeo.ogr.Geometry"
+    assert how in ["clip", "shift"], f"how must be in 'clip', 'shift'"
+    # get the envelope and srs of original geom
+    env = geom.GetEnvelope()
+    _srs = geom.GetSpatialReference()
+    assert _srs.IsSame(SRS.loadSRS(4326)), f"SRS must be EPSG:4326"
+
+    if env[0] >= -180 and env[1] <= 180 and env[2] >= -90 and env[3] <= 90:
+        # the polygon is completely within bounds already, return as is
+        return geom
+
+    # else we need to clip and shift/rotate
+    geom_fixed = copy(geom)
+    # HORIZONTZAL BOUNDS
+    if env[0] < -180 or env[1] > 180:
+        # we need to clip & shift in HORIZONTAL direction
+        basebox_tripleheight = polygon(
+            [(-180, -90 * 3), (-180, 90 * 3), (180, 90 * 3), (180, -90 * 3)], srs=4326
+        )
+        geom_fixed = geom_fixed.Intersection(
+            basebox_tripleheight
+        )  # clip off outer parts
+        if env[0] < -180 and how == "shift":
+            # extends over left edge, get the left part, shift and merge
+            left_part = shift(basebox_tripleheight, lonShift=-360).Intersection(geom)
+            if geom_fixed.IsEmpty():
+                geom_fixed = shift(
+                    left_part, lonShift=360
+                )  # overwrite when no center part
+            else:
+                geom_fixed = geom_fixed.Union(shift(left_part, lonShift=360))
+        if env[1] > 180 and how == "shift":
+            # extends over right edge, get the right part, shift and merge
+            right_part = shift(basebox_tripleheight, lonShift=+360).Intersection(geom)
+            if geom_fixed.IsEmpty():
+                geom_fixed = shift(
+                    right_part, lonShift=-360
+                )  # overwrite when no center part
+            else:
+                geom_fixed = geom_fixed.Union(shift(right_part, lonShift=-360))
+    # VERTICAL BOUNDS
+    if env[2] < -90 or env[3] > 90:
+        # we need to clip in VERTICAL direction and rotate (horizontal issue are fixed already)
+        def fold_over_pole(geom):
+            """Aux function to fold a geometry over the +/-90° latitude line and rotate it."""
+            env = geom.GetEnvelope()
+            center_lon = (env[0] + env[1]) / 2  # x value of center axis of whole geom
+
+            def fold_polygon(polygon):
+                """Function that folds a polygon geometrie ofer 90° lat line"""
+
+                def _fold_ring(ring):
+                    """core function for every linear ring"""
+                    new_ring = ogr.Geometry(ogr.wkbLinearRing)
+                    for i in range(ring.GetPointCount()):
+                        x, y, *z = ring.GetPoint(i)
+                        # if needed, mirror y at +/-90° line and flip x value around center axis + shift by 180° (fold over)
+                        if -90 <= y <= 90:  # all good
+                            y_new = y
+                            x_new = x
+                        else:  # rotate and flip x values, fold y values
+                            _x_new = x + 2 * (center_lon - x)
+                            x_new = (_x_new + 180) % 360
+                            if y > 90:
+                                y_new = 180 - y
+                                y_new = min(
+                                    y_new, 90.0 - 1e-6
+                                )  # avoid that geoms touch eachother at the pole
+                            elif y < -90:
+                                y_new = -180 - y
+                                y_new = max(
+                                    y_new, -90.0 + 1e-6
+                                )  # avoid that geoms touch eachother at the pole
+                        new_ring.AddPoint(x_new, y_new)  # create new ring point
+                    return new_ring
+
+                new_geom = ogr.Geometry(ogr.wkbPolygon)
+                outer_ring = _fold_ring(polygon.GetGeometryRef(0))
+                new_geom.AddGeometry(outer_ring)
+                # now do this for every potential other (inner) ring
+                for i in range(1, polygon.GetGeometryCount()):
+                    inner_ring = _fold_ring(polygon.GetGeometryRef(i))
+                    new_geom.AddGeometry(inner_ring)
+                return new_geom
+
+            if geom.GetGeometryName() == "POLYGON":
+                # apply function directly
+                new_geom = fold_polygon(geom)
+            elif geom.GetGeometryName() == "MULTIPOLYGON":
+                new_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+                # fold iteratively every single sub poly
+                for i in range(geom.GetGeometryCount()):
+                    sub_geom = geom.GetGeometryRef(i)
+                    rotated = fold_polygon(sub_geom)
+                    new_geom.AddGeometry(rotated)
+            else:
+                raise NotImplementedError(
+                    f"Geometry type '{geom.GetGeometryName()}' not supported"
+                )
+            # assign SRS and return
+            new_geom.AssignSpatialReference(geom.GetSpatialReference())
+            return new_geom
+
+        basebox = polygon([(-180, -90), (-180, 90), (180, 90), (180, -90)], srs=4326)
+        geom_fixed_horizontally = copy(geom_fixed)
+        geom_fixed = geom_fixed.Intersection(basebox)
+        if env[2] < -90 and how == "shift":
+            # clip off the bottom part and rotate to the other side (by 180°)
+            bottom_part = shift(basebox, latShift=-180).Intersection(
+                geom_fixed_horizontally
+            )
+            bottom_part_shifted = fold_over_pole(bottom_part)
+            geom_fixed = geom_fixed.Union(bottom_part_shifted)
+        if env[3] > 90 and how == "shift":
+            # clip off the top part and rotate to the other side (by 180°)
+            top_part = shift(basebox, latShift=+180).Intersection(
+                geom_fixed_horizontally
+            )
+            top_part_shifted = fold_over_pole(top_part)
+            geom_fixed = geom_fixed.Union(top_part_shifted)
+    # assign srs and return
+    geom_fixed.AssignSpatialReference(_srs)
+    return geom_fixed
