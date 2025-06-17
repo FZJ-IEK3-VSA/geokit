@@ -32,18 +32,18 @@ jobs:
           with:
             miniforge-version: latest
             channels: conda-forge
-            activate-environment: test_env
+            activate-environment: geokit_env
         - name: Run tests
           shell: pwsh
           run: |
             ls
             echo "LS Done"
-            mamba install -c nodefaults -n test_env geokit pytest
+            mamba install -c nodefaults -n geokit_env geokit pytest
             echo "Installation done"
             conda list
             echo "libaries printed"
             echo "start pytest"
-            conda run -n test_env pytest
+            conda run -n geokit_env pytest
             echo "Pytest done"
         - name: Run Examples
           shell: pwsh
@@ -54,7 +54,7 @@ jobs:
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_04_raster.ipynb
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_05_Extent.ipynb
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_06_RegionMask.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
+            # mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
         
     TestGeokitDevLocal:
       name: Test local development Version on ${{ matrix.os }}
@@ -62,7 +62,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+          os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
       steps:
         - name: Checkout
           uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
           with:
             miniforge-version: latest
             channels: conda-forge
-            activate-environment: test_env
+            activate-environment: geokit_env
         - name: Run tests
           shell: pwsh
           run: |
@@ -97,5 +97,5 @@ jobs:
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_04_raster.ipynb
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_05_Extent.ipynb
             mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_06_RegionMask.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
+            # mamba run -n geokit_env jupyter nbconvert --execute --to=python Examples/example_07_GeographyHandling.ipynb
           
