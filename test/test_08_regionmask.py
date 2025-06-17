@@ -1,11 +1,11 @@
 import warnings
 from sys import platform
+from test.helpers import *
 
 import numpy as np
 import pytest
 
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
-from geokit.test.helpers import *
 
 
 def test_RegionMask___init__():

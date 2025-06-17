@@ -1,6 +1,7 @@
 """The GeoKit library is a collection of general geospatial operations"""
 
 # maybe set GDAL_DATA variable
+import pathlib
 from os import environ as _environ
 from os.path import basename as _basename
 from os.path import dirname as _dirname
@@ -55,5 +56,5 @@ from geokit.core.util import drawImage
 
 _test_data_ = _OrderedDict()
 
-for f in _glob(_join(_dirname(__file__), "test", "data", "*")):
+for f in _glob(_join(pathlib.Path(__file__).parents[1], "test", "data", "*")):
     _test_data_[_basename(f)] = f

@@ -1,7 +1,7 @@
 import os
+from test.helpers import *
 
 from geokit import Location, LocationSet, geom
-from geokit.test.helpers import *
 
 xy = (9, 5)
 

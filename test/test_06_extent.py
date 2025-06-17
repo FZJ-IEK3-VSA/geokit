@@ -1,5 +1,6 @@
+from test.helpers import *
+
 from geokit import Extent, LocationSet, _test_data_, error, raster, srs, util, vector
-from geokit.test.helpers import *
 
 
 def test_Extent___init__():

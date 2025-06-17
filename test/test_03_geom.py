@@ -1,10 +1,4 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import pytest
-from osgeo import ogr
-
-from geokit import geom, vector
-from geokit.test.helpers import (
+from test.helpers import (
     EPSG3035,
     EPSG4326,
     FJI_SHAPE_PATH,
@@ -18,6 +12,13 @@ from geokit.test.helpers import (
     pointsInAachen4326,
     result,
 )
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import pytest
+from osgeo import ogr
+
+from geokit import geom, vector
 
 
 # box

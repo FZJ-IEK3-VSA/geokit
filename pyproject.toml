@@ -28,6 +28,6 @@ where = ["."]
 # https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options
 
 [tool.pytest.ini_options]
-testpaths = ["geokit/test"] # Sets the path where to look for tests
+testpaths = ["test"] # Sets the path where to look for tests
 pythonpath =["test"] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"

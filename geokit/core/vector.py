@@ -1149,7 +1149,7 @@ def createVector(
         driver = ogr.GetDriverByName(driverName)
         dataSource = driver.CreateDataSource(output)
 
-    elif output is not None and overwrite == False:
+    elif output is not None and overwrite is False:
         warnings.warn("Overwriting existing file")
         dataSource = ogr.Open(output, 1)
         assert dataSource is not None, f"Could not open {output}"
