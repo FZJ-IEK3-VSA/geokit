@@ -81,51 +81,14 @@ pip install . --no-deps -e
 
 See the [Examples page](Examples/)
 
-## Docker
-
-We are trying to get GeoKit to work within a Docker container. Try it out!
-
-- First pull the image with:
-
-```bash
-docker pull sevberg/geokit:latest
-```
-
-- You can then start a basic python interpreter with:
-
-```bash
-docker run -it sevberg/geokit:latest -c "python"
-```
-
-- Or you can start a jupyter notebook using:
-
-```bash
-docker run -it \
-    -p 8888:8888 \
-    sevberg/geokit:latest \
-    -c "jupyter notebook --ip='*' --port=8888 --no-browser --allow-root"
-```
-
-- Which can then be connected to at the address "localhost:8888:<API-KEY>"
-- The API Key can be found from the output of the earlier command
-
-* Finally, you might want to mount a volume to access geospatial data. For this you can use:
-
-```bash
-docker run -it \
-    --mount target=/notebooks,type=bind,src=<PATH-TO-DIRECTORY> \
-    -p 8888:8888 \
-    sevberg/geokit:latest  \
-    -c "jupyter notebook --notebook-dir=/notebooks --ip='*' --port=8888 --no-browser --allow-root"
-```
 
 ## License
 
 MIT License
 
-Active Developers: Julian Schönau, Rachel Maier, Christoph Winkler, Shitab Ishmam, David Franzmann, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
+Active Developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
 
-Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch
+Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann,
 
 You should have received a copy of the MIT License along with this program.  
 If not, see <https://opensource.org/licenses/MIT>
