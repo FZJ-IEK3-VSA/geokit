@@ -95,6 +95,8 @@ AACHEN_ZONES = source("aachen_zones.shp")
 AACHEN_POINTS = source("aachen_points.shp")
 AACHEN_URBAN_LC = source("urban_land_cover_aachenClipped.tif")
 
+FJI_SHAPE_PATH = source("FJI.shp")
+
 NUMPY_FLOAT_ARRAY = np.arange(10, dtype="float")
 
 ELIGIBILITY_DATA = np.zeros((100, 100))

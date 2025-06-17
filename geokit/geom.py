@@ -24,4 +24,7 @@ from geokit.core.geom import (
     partition,
     extractVerticies,
     shift,
+    divideMultipolygonIntoEasternAndWesternPart,
+    applyBuffer,
+    fixOutOfBoundsGeoms,
 )
