@@ -5,16 +5,20 @@ import warnings
 from collections import namedtuple
 import smopy
 from typing import Iterable
+import numbers
 
 from . import util as UTIL
 from . import geom as GEOM
 
+
 class GeoKitSRSError(UTIL.GeoKitError):
     pass
+
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 # Basic loader
+
 
 def loadSRS(source):
     """
@@ -38,7 +42,7 @@ def loadSRS(source):
 
     """
     # Do initial check of source
-    if(isinstance(source, osr.SpatialReference)):
+    if isinstance(source, osr.SpatialReference):
         return source
     elif source is None:
         return None
@@ -47,7 +51,7 @@ def loadSRS(source):
     srs = osr.SpatialReference()
 
     # Check if source is a string
-    if(isinstance(source, str)):
+    if isinstance(source, str):
         if hasattr(SRSCOMMON, source):
             # assume a name for one of the common SRS's was given
             srs = SRSCOMMON[source]
@@ -56,19 +60,19 @@ def loadSRS(source):
                 # try handling as a standardized epsg or esri etc. code
                 srs = osr.SpatialReference()
                 _val = srs.SetFromUserInput(source)
-                assert _val==0
+                assert _val == 0
             except:
                 srs.ImportFromWkt(source)  # assume a Wkt string was input
-    elif(isinstance(source, int)):
+    elif isinstance(source, int):
         srs.ImportFromEPSG(source)
     else:
         raise GeoKitSRSError("Unknown srs source type: ", type(source))
 
-    if gdal.__version__ >= '3.0.0':
+    if gdal.__version__ >= "3.0.0":
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
-    assert srs.Validate()==0, f"Created srs is invalid."
+    assert srs.Validate() == 0, f"Created srs is invalid."
 
     return srs
 
@@ -94,7 +98,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
         The latitude of the projection's center. Required if no geom is given.
 
     geom: osgeo.ogr.Geometry
-        The region shape to center the LAEA in. If given, lat and lon must not 
+        The region shape to center the LAEA in. If given, lat and lon must not
         be given, instead they will be defined automatically as the coordinates
         of the region centroid.
 
@@ -104,11 +108,17 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 
     """
     if geom is None:
-        assert isinstance(lat, float) and isinstance(lon, float), "If geom is not passed, lat and lon must be given as float values."
+        assert isinstance(lat, numbers.Number) and isinstance(
+            lon, numbers.Number
+        ), "If geom is not passed, lat and lon must be given as float values."
     else:
-        assert isinstance(geom, ogr.Geometry), "geom must be given as osgeo.ogr.Geometry class object if not None."
-        assert lat is None and lon is None, "If geom is given, lat and lon must not be given."
-    
+        assert isinstance(
+            geom, ogr.Geometry
+        ), "geom must be given as osgeo.ogr.Geometry class object if not None."
+        assert (
+            lat is None and lon is None
+        ), "If geom is given, lat and lon must not be given."
+
     # check if lat/lon can be used or if it must be extracted from geom first
     if not geom is None:
         # transform to EPSG:4326 in case it not already is lat/lon projection
@@ -118,21 +128,26 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
         lat = geom.Centroid().GetY()
 
     srs = osr.SpatialReference()
-    srs.ImportFromWkt('PROJCS["{}",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(name, lat, lon))
-    
-    if gdal.__version__ >= '3.0.0':
+    srs.ImportFromWkt(
+        'PROJCS["{}",GEOGCS["GRS 1980(IUGG, 1980)",DATUM["unknown",SPHEROID["GRS80",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_center",{}],PARAMETER["longitude_of_center",{}],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'.format(
+            name, float(lat), float(lon)
+        )
+    )
+
+    if gdal.__version__ >= "3.0.0":
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
-    assert srs.Validate()==0, f"Created srs is invalid."
-        
+    assert srs.Validate() == 0, f"Created srs is invalid."
+
     return srs
+
 
 ####################################################################
 # point transformer
 
 
-def xyTransform(*args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
+def xyTransform(*args, fromSRS="latlon", toSRS="europe_m", outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Parameters:
@@ -172,7 +187,9 @@ def xyTransform(*args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
         xy = args[0]
         if isinstance(xy, tuple):
             x, y = xy
-            out = [trx.TransformPoint(x, y), ]
+            out = [
+                trx.TransformPoint(x, y),
+            ]
         else:
             out = trx.TransformPoints(xy)
     elif len(args) == 2:
@@ -204,20 +221,19 @@ def xyTransform(*args, fromSRS='latlon', toSRS='europe_m', outputFormat="raw"):
 
 
 Tile = namedtuple("Tile", "xi yi zoom")
+
+
 def tileIndexAt(x, y, zoom, srs):
-    """Get the "slippy tile" index at the given zoom, around the 
+    """Get the "slippy tile" index at the given zoom, around the
     coordinates ('x', 'y') within the specified 'srs'
     """
     srs = loadSRS(srs)
 
-    iterable_input = isinstance(x,Iterable) or isinstance(y,Iterable)
+    iterable_input = isinstance(x, Iterable) or isinstance(y, Iterable)
 
     if not srs.IsSame(EPSG4326):
-        pt = xyTransform(x,y, 
-                fromSRS=srs,
-                toSRS=EPSG4326, 
-                outputFormat="xy")
-        
+        pt = xyTransform(x, y, fromSRS=srs, toSRS=EPSG4326, outputFormat="xy")
+
         if iterable_input:
             x, y = pt.x, pt.y
         else:
@@ -230,6 +246,7 @@ def tileIndexAt(x, y, zoom, srs):
     xi, yi = smopy.deg2num(y, x, zoom)
 
     return Tile(xi, yi, zoom)
+
 
 ######################################################################################
 # Common SRS library
@@ -244,6 +261,7 @@ class _SRSCOMMON:
         1: SRSCOMMON.<srs>
         2: SRSCOMMON["<srs>"]
     """
+
     # basic latitude and longitude
     _latlon = osr.SpatialReference()
     _latlon.ImportFromEPSG(4326)
@@ -254,6 +272,7 @@ class _SRSCOMMON:
 
         Units: Degrees"""
         return self._latlon
+
     # basic latitude and longitude
     _europe_laea = osr.SpatialReference()
     _europe_laea.ImportFromEPSG(3035)
@@ -261,13 +280,12 @@ class _SRSCOMMON:
 
     @property
     def europe_m(self):
-        
         warnings.warn(
             "SRSCOMMON.europe_m is deprecated and will be removed in a future release. \
             use SRSCOMMON.europe_laea instead.",
             DeprecationWarning,
         )
-         
+
         return self._europe_m
 
     @property
@@ -278,10 +296,12 @@ class _SRSCOMMON:
 
         Units: Meters"""
         return self._europe_laea
-    
+
     # define a centered LAEA on the centroid lat/lon of ECOWAS region
-    _ecowas_laea = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS")
-    
+    _ecowas_laea = centeredLAEA(
+        lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS"
+    )
+
     @property
     def ecowas_laea(self):
         """Equal-Area projection centered around ECOWAS (Western Africa).
@@ -290,10 +310,12 @@ class _SRSCOMMON:
 
         Units: Meters"""
         return self._ecowas_laea
-    
+
     # define a centered LAEA on the centroid lat/lon of SADC region
-    _sadc_laea = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC")
-    
+    _sadc_laea = centeredLAEA(
+        lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC"
+    )
+
     @property
     def sadc_laea(self):
         """Equal-Area projection centered around ECOWAS (Western Africa).
@@ -305,12 +327,11 @@ class _SRSCOMMON:
 
     # basic getter
     def __getitem__(self, name):
-        
         if not hasattr(self, name):
-            
-            raise ValueError("SRS \"%s\" not found" % name)
-        
+            raise ValueError('SRS "%s" not found' % name)
+
         return getattr(self, f"_{name}")
+
 
 # Initialize
 SRSCOMMON = _SRSCOMMON()

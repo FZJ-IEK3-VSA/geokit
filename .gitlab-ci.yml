@@ -12,6 +12,9 @@ stages:
     - micromamba activate geokit
     # Install geokit with no --no-deps flag to create a reproducible environment
     - python -m pip install -e . --no-deps
+    # the following 2 imports are not part of the requirements but needed to test gpd conversions
+    - micromamba install shapely --channel conda-forge
+    - micromamba install geopandas --channel conda-forge
 
 test-code:
   extends: .test_template
@@ -23,3 +26,11 @@ test-code:
     - if: $CI_COMMIT_TAG
       when: never
     - when: always
+
+test-formatting:
+  stage: test
+  image: pyfound/black:latest_release
+  script:
+    # Run black auto-formatter. The code will be automatically reformatted.
+    - black --version
+    - black --fast .
