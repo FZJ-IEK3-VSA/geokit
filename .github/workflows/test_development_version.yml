@@ -49,9 +49,7 @@ jobs:
           shell: pwsh
           run: |
             ls
-            python 
-            import geokit
-            exit()
+            mamba run -n geokit_env python -c "import geokit" 
             mamba run -n geokit_env C:\Programming\geokit\Examples\execute_all_notebooks.py
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python ./geokit/Examples/example_01_srs.ipynb
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python ./geokit/Examples/example_02_geometry.ipynb
