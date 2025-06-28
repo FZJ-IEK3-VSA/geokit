@@ -64,6 +64,6 @@ _test_data_ = _OrderedDict()
 # p = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data").glob("**/*")
 # files = [x for x in p if x.is_file()]
 path = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data")
-print("PATH: ", path)
+
 for current_path in path.iterdir():
     _test_data_[current_path.name] = str(current_path)
