@@ -54,7 +54,7 @@ from geokit.core.regionmask import RegionMask
 # import vidualizing functions to top level since they are
 from geokit.core.util import drawImage
 
-_test_data_ = _OrderedDict()
+# _test_data_ = _OrderedDict()
 
 # for f in _glob(_join(pathlib.Path(__file__).parents[1], "test", "data", "*")):
 #     _test_data_[_basename(f)] = f
@@ -63,7 +63,9 @@ _test_data_ = _OrderedDict()
 #     _test_data_[_basename(f)] = f
 # p = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data").glob("**/*")
 # files = [x for x in p if x.is_file()]
-path = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data")
-print("PATH: ", path)
-for current_path in path.iterdir():
-    _test_data_[current_path.name] = str(current_path)
+
+
+# path = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data")
+# print("PATH: ", path)
+# for current_path in path.iterdir():
+#     _test_data_[current_path.name] = str(current_path)
