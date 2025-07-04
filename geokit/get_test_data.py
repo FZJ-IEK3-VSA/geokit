@@ -125,7 +125,8 @@ def get_test_data(
         return_path = odie.fetch(fname=file_name)
     else:
         return_path = data_cache_folder.joinpath(file_name)
-
+        if not return_path.is_file():
+            raise Exception("There is no file at: " + str(return_path))
         file_hash = pooch.file_hash(return_path, alg="sha256")
         file_hash_with_algorithm_prefix = "sha256:" + file_hash
         file_hash_stored = all_file_name_dict[file_name]
