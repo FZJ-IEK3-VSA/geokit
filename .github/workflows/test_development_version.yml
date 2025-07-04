@@ -49,8 +49,11 @@ jobs:
         - name: Run Examples
           shell: pwsh
           run: |
-            ls
-            mamba run -n geokit_env python -c "import geokit" 
+            yourfilenames=`ls ./*.txt`
+            for eachfile in $yourfilenames
+            do
+              echo $eachfile
+            done
             mamba run -n geokit_env ./Examples/execute_all_notebooks.py
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python ./geokit/Examples/example_01_srs.ipynb
             # mamba run -n geokit_env jupyter nbconvert --execute --to=python ./geokit/Examples/example_02_geometry.ipynb
