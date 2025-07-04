@@ -36,7 +36,6 @@ jobs:
           run: |
             ls
             echo "LS Done"
-            cd geokit
             mamba env create --name geokit_env --yes --file requirements-dev.yml
             conda run --name geokit_env pip install . --no-deps
             echo "Installation done"
