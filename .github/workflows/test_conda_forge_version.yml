@@ -25,7 +25,6 @@ jobs:
           uses: actions/checkout@v4
           with:
             repository: FZJ-IEK3-VSA/geokit
-            path: './geokit'
         - uses: conda-incubator/setup-miniconda@v3
           with:
             miniforge-version: latest
