@@ -110,7 +110,7 @@ def get_test_data(
         raise Exception(
             "The requested file,"
             + str(file_name)
-            + " , is not included in the test and example data dictionary. Perhaps it's a typo? The following files can be retrieved from the test and example data dictionary: "
+            + " , is not included in the test and example data dictionary. Perhaps it's a typo? The following files can be retrieved from the test and example data dictionary: \n\n"
             + str(list(all_file_name_dict.keys()))
         )
 
@@ -199,3 +199,19 @@ def get_test_shape_file(
                 no_download=no_download,
             )
     return return_path
+
+
+def get_all_shape_files(
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
+        "data"
+    ),
+    no_download: bool = True,
+):
+    for current_file in all_file_name_dict.keys():
+        get_test_data(
+            file_name=current_file,
+            data_cache_folder=data_cache_folder,
+            no_download=no_download,
+        )
+    path_to_all_shape_files = data_cache_folder.joinpath("*.shp")
+    return path_to_all_shape_files

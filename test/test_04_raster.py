@@ -1,10 +1,10 @@
 import os
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 import pytest
 from osgeo import gdal
 
 from geokit import geom, raster, util
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 

@@ -1,8 +1,7 @@
-from test.helpers import AACHEN_SHAPE_PATH, CLC_RASTER_PATH, MASK_DATA, np
-
 import pytest
 
 from geokit import util
+from test.helpers import AACHEN_SHAPE_PATH, CLC_RASTER_PATH, MASK_DATA, np
 
 # Scale Matrix
 

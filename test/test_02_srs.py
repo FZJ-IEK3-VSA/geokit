@@ -1,3 +1,6 @@
+import pytest
+
+from geokit import srs, vector
 from test.helpers import (
     AACHEN_SHAPE_PATH,
     MASK_DATA,
@@ -8,10 +11,6 @@ from test.helpers import (
     pointInWindhoekSadcM,
     pointsInAachen4326,
 )
-
-import pytest
-
-from geokit import srs, vector
 
 
 @pytest.mark.parametrize(

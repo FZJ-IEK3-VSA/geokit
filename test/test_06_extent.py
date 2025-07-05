@@ -1,9 +1,6 @@
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
-
-# from geokit import Extent, LocationSet, _test_data_, error, raster, srs, util, vector
-from geokit.get_test_data import get_test_data, get_test_shape_file
-
-from .helpers import *
+from geokit.get_test_data import get_all_shape_files, get_test_data, get_test_shape_file
+from test.helpers import *
 
 
 def test_Extent___init__():
@@ -313,22 +310,22 @@ def test_Extent_inSourceExtent():
     ext2 = Extent(-1, 1, 4, 2, srs=4326)
     vec = vector.createVector(ext2.box)
 
-    assert ext1.inSourceExtent(vec) == True
+    assert ext1.inSourceExtent(vec) is True
 
 
-# def test_Extent_filterSources():
-#     sources = source("*.shp")
-#     ex = Extent.fromVector(source=AACHEN_SHAPE_PATH)
+def test_Extent_filterSources():
+    sources = str(get_all_shape_files())
+    ex = Extent.fromVector(source=AACHEN_SHAPE_PATH)
 
-#     goodSources = list(ex.filterSources(sources))
-#     # Inclusion
-#     assert AACHEN_ZONES in goodSources
-#     assert AACHEN_POINTS in goodSources
+    goodSources = list(ex.filterSources(sources))
+    # Inclusion
+    assert AACHEN_ZONES in goodSources
+    assert AACHEN_POINTS in goodSources
 
-#     # Exclusion
-#     assert not BOXES in goodSources
-#     assert not LUX_SHAPE_PATH in goodSources
-#     assert not LUX_LINES_PATH in goodSources
+    # Exclusion
+    assert BOXES not in goodSources
+    assert LUX_SHAPE_PATH not in goodSources
+    assert LUX_LINES_PATH not in goodSources
 
 
 def test_Extent_containsLoc():
@@ -680,18 +677,35 @@ def test_Extent_tileBox():
     assert ext_box.srs.IsSame(srs.EPSG3857)
 
 
-# def test_Extent_mosiacTiles():
-#     ext = Extent.fromVector(
-#         get_test_shape_file(
-#             file_name_without_extension="aachenShapefile", extension=".shp"
-#         )
-#     )
+def test_Extent_mosiacTiles():
 
-#     ras = ext.tileMosaic(
-#         get_test_data(file_name="osm_roads_minor.{z}.{x}.{y}.tif"),
-#         9,
-#     )
-#     rasmat = raster.extractMatrix(ras)
-#     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
-#     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
-#     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+    ext = Extent.fromVector(
+        get_test_shape_file(
+            file_name_without_extension="aachenShapefile", extension=".shp"
+        )
+    )
+
+    # Get all required raster files
+    get_test_data(file_name="osm_roads_minor.9.264.171.tif")
+    get_test_data(file_name="osm_roads_minor.9.264.172.tif")
+    get_test_data(file_name="osm_roads_minor.9.265.171.tif")
+    path_to_last_data = get_test_data(file_name="osm_roads_minor.9.265.172.tif")
+
+    # Get generic raster file with variables
+    data_folder_path = pathlib.Path(path_to_last_data).parent
+    string_path_with_variables = str(
+        data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif")
+    )
+    ras = ext.tileMosaic(
+        string_path_with_variables,
+        9,
+    )
+
+    rasmat = raster.extractMatrix(ras)
+    assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
+    assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+    assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+
+
+if __name__ == "__main__":
+    test_Extent_mosiacTiles()
