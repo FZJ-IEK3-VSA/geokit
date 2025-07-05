@@ -215,3 +215,26 @@ def get_all_shape_files(
         )
     path_to_all_shape_files = data_cache_folder.joinpath("*.shp")
     return path_to_all_shape_files
+
+
+def create_hash_dict(
+    list_of_file_paths: list[pathlib.Path], alg: str = "sha256"
+) -> dict[str, str]:
+    output_dict = {}
+    for current_file_path in list_of_file_paths:
+        hash = pooch.file_hash(fname=current_file_path, alg=alg)
+        output_dict[current_file_path.name] = alg + ":" + hash
+    return output_dict
+
+
+if __name__ == "__main__":
+    root_dir = pathlib.Path(__file__).parent.parent
+    hash_dict = create_hash_dict(
+        list_of_file_paths=[
+            root_dir.joinpath("data/osm_roads_minor.9.264.171.tif"),
+            root_dir.joinpath("data/osm_roads_minor.9.264.172.tif"),
+            root_dir.joinpath("data/osm_roads_minor.9.265.171.tif"),
+            root_dir.joinpath("data/osm_roads_minor.9.265.172.tif"),
+        ]
+    )
+    print(hash_dict)
