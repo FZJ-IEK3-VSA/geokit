@@ -231,10 +231,11 @@ if __name__ == "__main__":
     root_dir = pathlib.Path(__file__).parent.parent
     hash_dict = create_hash_dict(
         list_of_file_paths=[
-            root_dir.joinpath("data/osm_roads_minor.9.264.171.tif"),
-            root_dir.joinpath("data/osm_roads_minor.9.264.172.tif"),
-            root_dir.joinpath("data/osm_roads_minor.9.265.171.tif"),
-            root_dir.joinpath("data/osm_roads_minor.9.265.172.tif"),
+            root_dir.joinpath("data/aachenShapefile.dbf"),
+            root_dir.joinpath("data/aachenShapefile.prj"),
+            root_dir.joinpath("data/aachenShapefile.qpj"),
+            root_dir.joinpath("data/aachenShapefile.shp"),
+            root_dir.joinpath("data/aachenShapefile.shx"),
         ]
     )
     print(hash_dict)
