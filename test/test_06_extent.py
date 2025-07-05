@@ -679,11 +679,11 @@ def test_Extent_tileBox():
 
 def test_Extent_mosiacTiles():
 
-    ext = Extent.fromVector(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
+    path_aachen_shape_file = get_test_shape_file(
+        file_name_without_extension="aachenShapefile", extension=".shp"
     )
+
+    ext = Extent.fromVector(path_aachen_shape_file)
 
     # Get all required raster files
     get_test_data(file_name="osm_roads_minor.9.264.171.tif")
@@ -691,13 +691,9 @@ def test_Extent_mosiacTiles():
     get_test_data(file_name="osm_roads_minor.9.265.171.tif")
     path_to_last_data = get_test_data(file_name="osm_roads_minor.9.265.172.tif")
 
-    Get generic raster file with variables
+    # Get generic raster file with variables
     # data_folder_path = pathlib.Path(path_to_last_data).parent
-    data_folder_path = pathlib.Path(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
-    ).parent
+    data_folder_path = pathlib.Path(path_aachen_shape_file).parent
 
     string_path_with_variables = str(
         data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif")
