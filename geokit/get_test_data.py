@@ -238,10 +238,10 @@ if __name__ == "__main__":
     #         root_dir.joinpath("data/aachenShapefile.shx"),
     #     ]
     # )
-    hash_dict = create_hash_dict(
-        list_of_file_paths=[
-            root_dir.joinpath(r"C:\Programming\geokit\data\aachenShapefile.qpj"),
-        ]
-    )
+    # hash_dict = create_hash_dict(
+    #     list_of_file_paths=[
+    #         root_dir.joinpath(r"C:\Programming\geokit\data\aachenShapefile.qpj"),
+    #     ]
+    # )
 
-    print(hash_dict)
+    # print(hash_dict)

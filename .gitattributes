@@ -1,5 +1,6 @@
 # All files are checked into the repo with LF
 * text=auto eol=lf
+*.qpj text
 
 # These files are checked out using CRLF locally
 *.bat eol=crlf
