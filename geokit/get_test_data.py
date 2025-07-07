@@ -17,7 +17,7 @@ all_file_name_dict = {
     "aachen_eligibility.tif": "sha256:2cdddce2a97c8b314d74c3e060fef07a15e1cfe995804bc4202aad77bc268748",
     "aachen_points.dbf": "sha256:85cf4e0c26e043342aee9cd5ddc0d11c1355d0a8e0cb3dafd6274e62bfca59c0",
     "aachen_points.prj": "sha256:98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
-    "aachen_points.qpj": "sha256:6eb7e7bea6a396821b1c484f05584d4afa8aff85898e79faefc63029fa9f2962",
+    "aachen_points.qpj": "sha256:1de411dcdeedce3219242306fc29bfa1d7fa08883e4ff6779baf798ec50d1657",
     "aachen_points.shp": "sha256:3e07f2a1664b88482e576dad04a94ec25c1e16985f86a27b526970159aef0663",
     "aachen_points.shx": "sha256:7057b4c38e18afe60a0d1a4b06f715af7611a908ba6d89d9a9adf5a0371a5a22",
     "aachen_rails.dbf": "sha256:f8ea646fa52d507d218d3659265b35bac3a86154c0f53ba89ee1f37a011302d8",
