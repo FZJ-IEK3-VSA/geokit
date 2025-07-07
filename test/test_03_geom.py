@@ -554,27 +554,33 @@ def test_applyBuffer():
     buf_none = geom.applyBuffer(
         geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="none"
     )
-    assert buf_none.GetEnvelope() == (-180.9, -178.9, -1.0, 1.0)
+    assert np.isclose(buf_none.GetEnvelope(), (-180.9, -178.9, -1.0, 1.0), atol=0).all()
     assert np.isclose(buf_none.Area(), np.pi, rtol=0.001)
     buf_shift = geom.applyBuffer(
         geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="shift"
     )
-    assert buf_shift.GetEnvelope() == (-180.0, +180.0, -1.0, 1.0)
+    assert np.isclose(
+        buf_shift.GetEnvelope(), (-180.0, +180.0, -1.0, 1.0), atol=0
+    ).all()
     assert np.isclose(buf_shift.Area(), buf_none.Area(), rtol=0.001)
     buf_clip = geom.applyBuffer(
         geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="clip"
     )
-    assert buf_clip.GetEnvelope() == (-180.0, -178.9, -1.0, 1.0)
+    assert np.isclose(buf_clip.GetEnvelope(), (-180.0, -178.9, -1.0, 1.0), atol=0).all()
     # then do metric buffer with 50 kms
     buf_clip_6933 = geom.applyBuffer(
         geom=testpoint_equator, buffer=50000, applyBufferInSRS=6933, split="clip"
     )
-    assert buf_clip_6933.GetEnvelope() == (
-        -180.0,
-        -179.38179160943938,
-        -0.391934549810819,
-        0.391934549810819,
-    )
+    assert np.isclose(
+        buf_clip_6933.GetEnvelope(),
+        (
+            -180.0,
+            -179.38179160943938,
+            -0.391934549810819,
+            0.391934549810819,
+        ),
+        atol=0,
+    ).all()
 
     # now try again near 90° lat
     testpoint_north = geom.point(0, 89.9, srs=4326)
@@ -582,7 +588,7 @@ def test_applyBuffer():
     buf_north_clip = geom.applyBuffer(
         geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
     )
-    assert buf_north_clip.GetEnvelope() == (-1, +1, 88.9, 90)
+    assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
     # try again with metric system and 50kms buffer
     buf_north_clip_6933 = geom.applyBuffer(
         geom=testpoint_north, buffer=50000, applyBufferInSRS=6933, split="clip"
@@ -597,7 +603,11 @@ def test_applyBuffer():
     #     83.33841323028614,
     #     89.99999879797518,
     # )
-    assert geom.transform(buf_north_clip_6933, toSRS=6933).Area() == 3926325058.480929
+    assert np.isclose(
+        geom.transform(buf_north_clip_6933, toSRS=6933).Area(),
+        3926325058.480929,
+        atol=0,
+    )
 
 
 if __name__ == "__main__":
