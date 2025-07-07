@@ -1,10 +1,10 @@
 import os
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 import pytest
 from osgeo import gdal
 
 from geokit import geom, raster, util
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 
@@ -500,7 +500,7 @@ def test_warp():
     # change resolution to memory
     d = raster.warp(CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200)
     v2 = raster.extractMatrix(d)
-    assert np.isclose(v1, v2).all()
+    assert np.isclose(v1, v2, atol=0).all()
 
     # Do a cutline from disk
     d = raster.warp(
@@ -520,8 +520,8 @@ def test_warp():
         noData=99,
     )
     v4 = raster.extractMatrix(d)
-    assert np.isclose(v4[0, 0], 99)
-    assert np.isclose(v4.mean(), 76.72702479)
+    assert np.isclose(v4[0, 0], 99, atol=0)
+    assert np.isclose(v4.mean(), 76.72702479, atol=0)
 
     # Do a flipped-source check
     d = raster.warp(
@@ -530,13 +530,13 @@ def test_warp():
         noData=99,
     )
     v5 = raster.extractMatrix(d)
-    assert np.isclose(v4, v5).all()
+    assert np.isclose(v4, v5, atol=0).all()
 
     d = raster.warp(
         CLC_FLIPCHECK_PATH, pixelHeight=200, pixelWidth=200, output=result("warp6.tif")
     )
     v6 = raster.extractMatrix(d)
-    assert np.isclose(v1, v6).all()
+    assert np.isclose(v1, v6, atol=0).all()
 
 
 @pytest.fixture()

@@ -1,9 +1,3 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import pytest
-from osgeo import ogr
-
-from geokit import geom, vector
 from test.helpers import (
     EPSG3035,
     EPSG4326,
@@ -18,6 +12,13 @@ from test.helpers import (
     pointsInAachen4326,
     result,
 )
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import pytest
+from osgeo import ogr
+
+from geokit import geom, vector
 
 
 # box
@@ -451,33 +452,45 @@ def test_divideMultipolygonIntoEasternAndWesternPart():
     main_geom = geom.divideMultipolygonIntoEasternAndWesternPart(FJI_geom, side="main")
 
     assert main_geom.GetGeometryName() == "MULTIPOLYGON"
-    assert main_geom.GetGeometryCount() == 274
-    assert main_geom.GetEnvelope() == (
-        176.89971924,
-        180.0,
-        -19.19361115,
-        -12.46172428,
-    )
-    assert main_geom.Area() == 1.5381107036696313
+    assert np.isclose(main_geom.GetGeometryCount(), 274)
+    assert np.isclose(
+        main_geom.GetEnvelope(),
+        (
+            176.89971924,
+            180.0,
+            -19.19361115,
+            -12.46172428,
+        ),
+        atol=0,
+    ).all()
+    assert np.isclose(main_geom.Area(), 1.5381107036696313, atol=0)
 
     # make sure extraction of both geoms works, too
     both_geoms = geom.divideMultipolygonIntoEasternAndWesternPart(FJI_geom, side="both")
 
     assert len(both_geoms) == 2
-    assert [g.Area() for g in both_geoms] == [1.5381107036696313, 0.07496812355738873]
+    assert np.isclose(
+        [g.Area() for g in both_geoms],
+        [1.5381107036696313, 0.07496812355738873],
+        atol=0,
+    ).all()
 
     # make sure extraction of right geom is always the same
     right_geom = geom.divideMultipolygonIntoEasternAndWesternPart(
         FJI_geom, side="right"
     )
 
-    assert right_geom.GetEnvelope() == (
-        -180.0,
-        -178.22860718,
-        -21.04249954,
-        -15.70972347,
-    )
-    assert right_geom.Area() == 0.07496812355738873
+    assert np.isclose(
+        right_geom.GetEnvelope(),
+        (
+            -180.0,
+            -178.22860718,
+            -21.04249954,
+            -15.70972347,
+        ),
+        atol=0,
+    ).all()
+    assert np.isclose(right_geom.Area(), 0.07496812355738873, atol=0)
 
 
 def test_fixOutOfBoundsGeoms():
@@ -494,32 +507,44 @@ def test_fixOutOfBoundsGeoms():
     # clip off the parts extending over antimeridian
     multi_clipped = geom.fixOutOfBoundsGeoms(multi, how="clip")
     assert isinstance(multi_clipped, ogr.Geometry)
-    assert multi_clipped.GetEnvelope() == (
-        -180.0,
-        180.0,
-        -1.0,
-        +1.0,
-    )
+    assert np.isclose(
+        multi_clipped.GetEnvelope(),
+        (
+            -180.0,
+            180.0,
+            -1.0,
+            +1.0,
+        ),
+        atol=0,
+    ).all()
     # do again just for the western testcircle
     testcirclewest_clipped = geom.fixOutOfBoundsGeoms(testcirclewest, how="clip")
     assert isinstance(testcirclewest_clipped, ogr.Geometry)
-    assert testcirclewest_clipped.GetEnvelope() == (
-        179.8,
-        180.0,
-        -0.5995364281486639,
-        +0.5995364281486636,
-    )
+    assert np.isclose(
+        testcirclewest_clipped.GetEnvelope(),
+        (
+            179.8,
+            180.0,
+            -0.5995364281486639,
+            +0.5995364281486636,
+        ),
+        atol=0,
+    ).all()
 
     # split multi along the antimeridian
     testcirclewest_shifted = geom.fixOutOfBoundsGeoms(testcirclewest, how="shift")
 
     assert isinstance(testcirclewest_shifted, ogr.Geometry)
-    assert testcirclewest_shifted.GetEnvelope() == (
-        -180.0,
-        +180.0,
-        -1.0,
-        +1.0,
-    )
+    assert np.isclose(
+        testcirclewest_shifted.GetEnvelope(),
+        (
+            -180.0,
+            +180.0,
+            -1.0,
+            +1.0,
+        ),
+        atol=0,
+    ).all()
 
 
 def test_applyBuffer():
