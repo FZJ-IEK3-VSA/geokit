@@ -6,7 +6,7 @@ import pooch
 all_file_name_dict = {
     "aachenShapefile.dbf": "sha256:0f1262b987e88fe3eef267b828d4b6712a7ba71fe22a995c2a67d4a8a3200292",
     "aachenShapefile.prj": "sha256:98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
-    "aachenShapefile.qpj": "sha256:6eb7e7bea6a396821b1c484f05584d4afa8aff85898e79faefc63029fa9f2962",
+    "aachenShapefile.qpj": "sha256:1de411dcdeedce3219242306fc29bfa1d7fa08883e4ff6779baf798ec50d1657",
     "aachenShapefile.shp": "sha256:fdf082c0c6adb0c00332259c43455598562c1a534feb105e53ee69b8646984de",
     "aachenShapefile.shx": "sha256:5de9710f210b104fc3573a04e480d8b1c49784370c117d32f4a89a88c8a6f0c6",
     "aachen_buildings.dbf": "sha256:9ab2584c73c9497ca93bf9a8d64355f3fcb7e8afaf3653561a302ad69243e53b",
@@ -229,13 +229,19 @@ def create_hash_dict(
 
 if __name__ == "__main__":
     root_dir = pathlib.Path(__file__).parent.parent
+    # hash_dict = create_hash_dict(
+    #     list_of_file_paths=[
+    #         root_dir.joinpath("data/aachenShapefile.dbf"),
+    #         root_dir.joinpath("data/aachenShapefile.prj"),
+    #         root_dir.joinpath("data/aachenShapefile.qpj"),
+    #         root_dir.joinpath("data/aachenShapefile.shp"),
+    #         root_dir.joinpath("data/aachenShapefile.shx"),
+    #     ]
+    # )
     hash_dict = create_hash_dict(
         list_of_file_paths=[
-            root_dir.joinpath("data/aachenShapefile.dbf"),
-            root_dir.joinpath("data/aachenShapefile.prj"),
-            root_dir.joinpath("data/aachenShapefile.qpj"),
-            root_dir.joinpath("data/aachenShapefile.shp"),
-            root_dir.joinpath("data/aachenShapefile.shx"),
+            root_dir.joinpath(r"C:\Programming\geokit\data\aachenShapefile.qpj"),
         ]
     )
+
     print(hash_dict)

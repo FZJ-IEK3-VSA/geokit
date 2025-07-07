@@ -1,4 +1,6 @@
 root = true
 
+# Is used to set lf Linbreaks as project standard to improve compatability between linux and Windows
+# # https://www.aleksandrhovhannisyan.com/blog/crlf-vs-lf-normalizing-line-endings-in-git/
 [*]
 end_of_line = lf
