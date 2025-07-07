@@ -1,6 +1,11 @@
 # All files are checked into the repo with LF
 * text=auto eol=lf
-*.qpj text
+*.shx binary
+*.dbf binary
+*.prj binary
+*.qpj binary
+*.shp binary
+*.tif binary
 
 # These files are checked out using CRLF locally
 *.bat eol=crlf

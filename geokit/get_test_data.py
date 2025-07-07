@@ -28,7 +28,7 @@ all_file_name_dict = {
     "aachen_zones.cpg": "sha256:3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
     "aachen_zones.dbf": "sha256:bf99f3e355b064ba1515ce28168631467d60e1994fbb0a1c94f818662a255efc",
     "aachen_zones.prj": "sha256:1fb8a9c4eb5c8c90031c66d4192f0f67bb09b47d29a9e055df3f0be188864db8",
-    "aachen_zones.qpj": "sha256:ade308b71f1982004ec42becd8be9c2c634965a4a0e99a980a4ab707d0919649",
+    "aachen_zones.qpj": "sha256:ac0f80bae3da64638fa7c3567f219f166d22171efe582d7dbe16814e795b6c32",
     "aachen_zones.shp": "sha256:beb492bcc7e113abf00ca6d3c92c639e76c79346d9161e84251d6c4b794318fa",
     "aachen_zones.shx": "sha256:97aa30327616e7d7d89c2a88b4ac2665da4a734906fe72e27ad08531f337e30e",
     "boxes.dbf": "sha256:594bb714232471af4d4ead34b0887a86f713478d3468572a2bae9a4fa3a51bae",
