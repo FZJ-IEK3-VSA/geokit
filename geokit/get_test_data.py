@@ -11,7 +11,7 @@ all_file_name_dict = {
     "aachenShapefile.shx": "sha256:5de9710f210b104fc3573a04e480d8b1c49784370c117d32f4a89a88c8a6f0c6",
     "aachen_buildings.dbf": "sha256:9ab2584c73c9497ca93bf9a8d64355f3fcb7e8afaf3653561a302ad69243e53b",
     "aachen_buildings.prj": "sha256:98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
-    "aachen_buildings.qpj": "sha256:6eb7e7bea6a396821b1c484f05584d4afa8aff85898e79faefc63029fa9f2962",
+    "aachen_buildings.qpj": "sha256:1de411dcdeedce3219242306fc29bfa1d7fa08883e4ff6779baf798ec50d1657",
     "aachen_buildings.shp": "sha256:e60940a1f91e916b7b9ab0b789be4e771d7c2d3063f19b4b17c2d14a72682dcf",
     "aachen_buildings.shx": "sha256:e335225ae6a2c65c823b0d97cbec1eb97065a5b49b7456c176f8c910c5cadee8",
     "aachen_eligibility.tif": "sha256:2cdddce2a97c8b314d74c3e060fef07a15e1cfe995804bc4202aad77bc268748",
