@@ -37,7 +37,7 @@ all_file_name_dict = {
     "boxes.shx": "sha256:5bdd1a01fe9eb5876ab6a9db32c9dbba18611b909bfbcd48a5397983350430cf",
     "CDDA_aachenClipped.dbf": "sha256:aaef0d03954f2fdc1b1f0570b6ba9e7fb1929624c5200b7d5db5ef40f5562e84",
     "CDDA_aachenClipped.prj": "sha256:1fb8a9c4eb5c8c90031c66d4192f0f67bb09b47d29a9e055df3f0be188864db8",
-    "CDDA_aachenClipped.qpj": "sha256:ade308b71f1982004ec42becd8be9c2c634965a4a0e99a980a4ab707d0919649",
+    "CDDA_aachenClipped.qpj": "sha256:ac0f80bae3da64638fa7c3567f219f166d22171efe582d7dbe16814e795b6c32",
     "CDDA_aachenClipped.shp": "sha256:0448409e07c8cecd0874d48ae5b6dfcdc63638fb0ad82db53a83690b3ecaec9f",
     "CDDA_aachenClipped.shx": "sha256:5cf6749ee0e4647b7b543cd6b60be8e5bc1edf90be3247d6b2c189e3cc88d1f4",
     "clc-aachen_clipped-unflipped.tif": "sha256:a0a69c37c4bc09af44f701aead44e8468b9f1c6e7a0bc4874b071ffdfb691473",
