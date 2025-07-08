@@ -772,7 +772,7 @@ RasterInfo = namedtuple(
 )
 
 
-def rasterInfo(sourceDS):
+def rasterInfo(sourceDS) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster
 
     Returns:
@@ -2188,6 +2188,7 @@ def warp(
     * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
+    pass
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(source)

@@ -21,7 +21,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 # Basic loader
 
 
-def loadSRS(source):
+def loadSRS(source) -> osr.SpatialReference:
     """
     Load a spatial reference system (SRS) from various sources.
 

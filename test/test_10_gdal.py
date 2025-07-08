@@ -2,7 +2,7 @@ import os
 import pathlib
 
 import numpy as np
-from osgeo import gdal
+from osgeo import gdal, osr
 
 from test.helpers import CLC_RASTER_PATH, result
 
@@ -11,19 +11,13 @@ def test_warp_bare_bones():
     current_dir = pathlib.Path(__file__).parent
     root_dir = current_dir.parent
     path_to_input_file = CLC_RASTER_PATH
-    pixelHeight = 200
-    pixelWidth = 200
+    ds = gdal.Open(path_to_input_file, 0)
+
+    assert isinstance(ds, gdal.Dataset)
+    projection_string = ds.GetProjectionRef()
+    srs = osr.SpatialReference()
+    _val = srs.SetFromUserInput(projection_string)
     output = str(current_dir.joinpath("results", "warp1.tif"))
-
-    # # Check some for bad input configurations
-    # if not srs is None:
-    #     if (pixelHeight is None or pixelWidth is None):
-    #         raise GeoKitRasterError("When warping between srs's and writing to a file, pixelWidth and pixelHeight must be given")
-
-    # Arange inputs
-    co = ["COMPRESS=LZW"]
-    copyMeta = True
-    aligned = True
 
     # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
 
@@ -32,25 +26,26 @@ def test_warp_bare_bones():
     # Let gdalwarp do everything...
     opts = gdal.WarpOptions(
         outputType=getattr(gdal, "GDT_Byte"),
-        xRes=pixelWidth,
-        yRes=pixelHeight,
-        creationOptions=co,
+        xRes=200,
+        yRes=200,
+        creationOptions=["COMPRESS=LZW"],
         outputBounds=bounds,
-        dstSRS=None,
-        dstNodata=None,
+        dstSRS=srs,
+        dstNodata=0,
         resampleAlg="bilinear",
-        copyMetadata=copyMeta,
-        targetAlignedPixels=aligned,
+        copyMetadata=True,
+        targetAlignedPixels=True,
         cutlineDSName=None,
     )
     result = gdal.Warp(output, path_to_input_file, options=opts)
-
     new_raster = gdal.Open(output)
+
+    new_array = np.array(new_raster.ReadAsArray())
+
     path_to_comparison_file = root_dir.joinpath(
         "data", "results_for_comparison", "warp1.tif"
     )
     comparison_raster = gdal.Open(str(path_to_comparison_file))
-    new_array = np.array(new_raster.ReadAsArray())
     array_for_comparison = np.array(comparison_raster.ReadAsArray())
     assert new_array.shape == (396, 413)
     assert array_for_comparison.shape == (396, 413)
