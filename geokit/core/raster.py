@@ -807,6 +807,7 @@ def rasterInfo(sourceDS) -> RasterInfo:
     else:
         # generate an srs object if we have srs information
         srs = SRS.loadSRS(sourceDS.GetProjectionRef())
+        asd = srs.ExportToWkt()
     output["srs"] = srs
 
     # get extent and resolution

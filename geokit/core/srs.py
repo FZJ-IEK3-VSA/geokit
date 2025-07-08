@@ -61,6 +61,7 @@ def loadSRS(source) -> osr.SpatialReference:
                 # try handling as a standardized epsg or esri etc. code
                 srs = osr.SpatialReference()
                 _val = srs.SetFromUserInput(source)
+
                 assert _val == 0
             except:
                 srs.ImportFromWkt(source)  # assume a Wkt string was input
