@@ -5,9 +5,11 @@ import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Literal
 
 import numpy as np
 import pandas as pd
+import structlog
 from osgeo import gdal, ogr
 from scipy.interpolate import RectBivariateSpline
 
@@ -31,7 +33,7 @@ else:
 # Basic Loader
 
 
-def loadRaster(source, mode=0):
+def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
     """
     Load a raster dataset from a path to a file on disc
 
@@ -431,10 +433,10 @@ def extractMatrix(
     source,
     bounds=None,
     boundsSRS="latlon",
-    maskBand=False,
-    autocorrect=False,
-    returnBounds=False,
-):
+    maskBand: bool = False,
+    autocorrect: bool = False,
+    returnBounds: bool = False,
+) -> np.ndarray | tuple[np.ndarray, tuple[float, float, float, float] | None]:
     """extract all or part of a raster's band as a numpy matrix
 
     Note:
@@ -488,7 +490,7 @@ def extractMatrix(
         sourceBand = sourceDS.GetRasterBand(1)  # get band
 
     # Handle the boundaries
-    if not bounds is None:
+    if bounds is not None:
         # check for extent
         try:
             isExtent = bounds._whatami == "Extent"
@@ -1974,7 +1976,9 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     return pd.DataFrame(dict(geom=finalGeoms, value=finalRID))
 
 
-def contours(source, contourEdges, polygonize=True, unpack=True, **kwargs):
+def contours(
+    source, contourEdges, polygonize=True, unpack=True, **kwargs
+) -> pd.DataFrame:
     """Create contour geometries at specified edges for the given raster data
 
     Notes:
@@ -2070,20 +2074,35 @@ def contours(source, contourEdges, polygonize=True, unpack=True, **kwargs):
 
 def warp(
     source,
-    resampleAlg="bilinear",
+    resampleAlg: Literal[
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "Q1",
+        "Q3",
+        "sum",
+    ] = "bilinear",
     cutline=None,
-    output=None,
+    output: str | None = None,
     pixelHeight=None,
     pixelWidth=None,
     srs=None,
-    bounds=None,
+    bounds: tuple | None = None,
     dtype=None,
     noData=None,
     fill=None,
     overwrite=True,
     meta=None,
     **kwargs,
-):
+) -> gdal.Dataset | str:
     """Warps a given raster source to another context
 
     * Can be used to 'warp' a raster in memory to a raster on disk
@@ -2105,7 +2124,9 @@ def warp(
     resampleAlg : str; optional
         The resampling algorithm to use when translating pixel values
         * Knowing which option to use can have significant impacts!
-        * Options are: 'near', 'bilinear', 'cubic', 'average'
+        * Options are: near , bilinear, cubic,
+        cubicspline, lanczos, average, rms, mode,
+        max, min, med, Q1, Q3, sum
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
@@ -2176,7 +2197,7 @@ def warp(
         isAdjusted = False
 
     # Handle potentially missing arguments
-    if not srs is None:
+    if srs is not None:
         srs = SRS.loadSRS(srs)
     if srs is None:
         srs = dsInfo.srs
@@ -2214,7 +2235,7 @@ def warp(
         noData = dsInfo.noData
 
     # If a cutline is given, create the output
-    if not cutline is None:
+    if cutline is not None:
         if isinstance(cutline, ogr.Geometry):
             tempdir = TemporaryDirectory()
             cutline = UTIL.quickVector(
@@ -2229,9 +2250,9 @@ def warp(
             )
 
     # Workflow depends on whether or not we have an output
-    if not output is None:  # Simply do a translate
+    if output is not None:  # Simply do a translate
         if os.path.isfile(output):
-            if overwrite == True:
+            if overwrite is True:
                 os.remove(output)
                 if os.path.isfile(output + ".aux.xml"):  # Because QGIS....
                     os.remove(output + ".aux.xml")
@@ -2300,7 +2321,7 @@ def warp(
         destRas.FlushCache()
 
     # Do we have meta data?
-    if not meta is None:
+    if meta is not None:
         if isinstance(result, str):
             ds = loadRaster(result, 1)
         else:
@@ -2327,7 +2348,7 @@ def warp(
     # TODO: Should 'result' be deleted at this point?
 
     # Done!
-    if not cutline is None:
+    if cutline is not None:
         del tempdir
     return destRas
 

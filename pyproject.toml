@@ -34,3 +34,8 @@ where = ["."]
 testpaths = ["test"] # Sets the path where to look for tests
 pythonpath =["test"] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+typeguard-packages = """
+geokit"""
+typeguard-debug-instrumentation = true
+typeguard-forward-ref-policy = "ERROR"
+typeguard-collection-check-strategy = "ALL_ITEMS"

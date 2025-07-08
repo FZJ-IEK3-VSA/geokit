@@ -1,12 +1,16 @@
 import os
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
+import numpy as np
 import pytest
+import structlog
 from osgeo import gdal
 
 from geokit import geom, raster, util
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
+
+log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
 def test_gdalType():
@@ -489,12 +493,33 @@ def test_contours():
     assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
 
 
+def test_warp_minimum():
+    current_dir = pathlib.Path(__file__).parent
+    root_dir = current_dir.parent
+    path_to_comparison_file = root_dir.joinpath(
+        "data", "results_for_comparison", "warp1.tif"
+    )
+    d = raster.warp(
+        CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif")
+    )
+    new_raster = gdal.Open(d)
+    comparison_raster = gdal.Open(str(path_to_comparison_file))
+    new_array = np.array(new_raster.ReadAsArray())
+    array_for_comparison = np.array(comparison_raster.ReadAsArray())
+    assert np.array_equal(new_array, array_for_comparison)
+    pass
+
+
 def test_warp():
     # Change resolution to disk
     d = raster.warp(
         CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif")
     )
+
+    assert isinstance(d, str)
     v1 = raster.extractMatrix(d)
+
+    log.debug("Warped Matrix %s", v1)
     assert np.isclose(v1.mean(), 16.3141463057)
 
     # change resolution to memory
@@ -717,3 +742,8 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+if __name__ == "__main__":
+    # test_warp()
+    test_warp_minimum()

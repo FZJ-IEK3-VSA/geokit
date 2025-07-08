@@ -21,4 +21,7 @@ dependencies:
   - gdal>=3.4.2,<=3.4.3
   - smopy
   - geopandas
+  - pooch
+  - structlog
+  - rich
 

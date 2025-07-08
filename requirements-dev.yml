@@ -24,4 +24,7 @@ dependencies:
   - geopandas<=0.14.4 
   - nbconvert
   - pooch
+  - typeguard
+  - structlog
+  - rich
 
