@@ -42,7 +42,7 @@ jobs:
             conda list --name geokit_env
             echo "libaries printed"
             echo "start pytest"
-            conda run --name geokit_env pytest
+            conda run --name geokit_env pytest -vv
             echo "Pytest done"
         - name: Run Examples
           shell: pwsh
