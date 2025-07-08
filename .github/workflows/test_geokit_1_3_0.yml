@@ -46,7 +46,7 @@ jobs:
                 method: CreateOrUpdate
                 changes: |
                   {
-                  "dependencies[16]": "gdal=${{ matrix.gdal_version }}"
+                  "dependencies[15]": "gdal=${{ matrix.gdal_version }}"
                   }
             - name: Install libraries
               shell: pwsh
@@ -59,8 +59,6 @@ jobs:
                     echo "Installation done"
                     conda list -n test_env
                     echo "libraries printed" 
-            
-  
             - name: Run pytest for geokit
               shell: pwsh
               run: |
