@@ -1,6 +1,7 @@
 name: geokit
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python
   - pytest

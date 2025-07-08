@@ -1,4 +1,4 @@
-name: Test Geokit 1.3.0 conda forge package
+name: Test Geokit 1.3.0
 on: 
   workflow_dispatch:
     inputs:
@@ -6,10 +6,8 @@ on:
         description: 'Manual run' 
   push:
     branches: 
-      - main
-  pull_request:
-    branches: 
-      - main
+      - version/1.3.0
+
   # Allows to trigger the workflow manually
     
 jobs:
@@ -28,38 +26,39 @@ jobs:
                 # gdal_version: ["2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","3.0.0","3.0.1","3.0.2","3.0.3","3.0.4","3.1.0","3.1.1","3.1.2","3.1.3","3.1.4","3.2.0","3.2.1"]
                 gdal_version: ["2.4.0","3.2.0","3.2.1"]
         steps:
-            - uses: conda-incubator/setup-miniconda@v3
+            - name: Setup Conda
+              uses: conda-incubator/setup-miniconda@v3
               with:
                 miniforge-version: latest
                 channels: conda-forge
                 activate-environment: test_env
+            - name: Checkout geokit
+              uses: actions/checkout@v4
+              with:
+                repository: FZJ-IEK3-VSA/geokit
+                fetch-depth: 0             
+            - name: Update values.yaml
+              uses: fjogeleit/yaml-update-action@main
+              with:
+                valueFile: 'requirements-dev.yml'
+                commitChange: false
+                method: CreateOrUpdate
+                changes: |
+                  {
+                  "dependencies.gdal":=${{ matrix.gdal_version }}
+                  }
             - name: Install libraries
               shell: pwsh
               id: install-step
               run: |
                     ls
                     echo "LS Done"
-                    mamba install -c conda-forge -c nodefaults -n test_env python pytest jupyter matplotlib descartes pandas numpy scipy scikit-learn=${{ matrix.scikit_version }} gdal=${{ matrix.gdal_version }} smopy
+                    mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
                     conda run -n test_env python pip install -e . --no-deps
                     echo "Installation done"
                     conda list -n test_env
-                    echo "libraries printed"                          
-            # - name: Define geokit version string
-            #   shell: pwsh
-            #   id: other-version
-            #   run: |
-            #       $GEOKIT_STRING = conda list -e -n test_env geokit | Out-String
-            #       echo The geokit string is $GEOKIT_STRING
-            #       $GEOKIT_VERSION = [regex]::Match($GEOKIT_STRING, 'geokit=(\d+\.\d+\.\d+)=').Groups[1].Value 
-            #       echo "GEOKIT_VERSION=$GEOKIT_VERSION" >> $GITHUB_OUTPUT
-            # https://stackoverflow.com/questions/74117204/how-to-generate-a-new-string-by-combine-github-action-workflow-variables
-
-            - name: Checkout geokit
-              uses: actions/checkout@v4
-              with:
-                repository: FZJ-IEK3-VSA/geokit
-                ref: v${{ matrix.geokit_version }}
-                fetch-depth: 0 
+                    echo "libraries printed" 
+            
   
             - name: Run pytest for geokit
               shell: pwsh
