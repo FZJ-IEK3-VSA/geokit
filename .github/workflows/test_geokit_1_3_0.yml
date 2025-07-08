@@ -46,7 +46,7 @@ jobs:
                 method: CreateOrUpdate
                 changes: |
                   {
-                  "dependencies.gdal":=${{ matrix.gdal_version }}
+                  "dependencies[16]": "gdal=${{ matrix.gdal_version }}"
                   }
             - name: Install libraries
               shell: pwsh
