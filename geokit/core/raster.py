@@ -806,8 +806,8 @@ def rasterInfo(sourceDS) -> RasterInfo:
         srs = None
     else:
         # generate an srs object if we have srs information
+        pass
         srs = SRS.loadSRS(sourceDS.GetProjectionRef())
-        asd = srs.ExportToWkt()
     output["srs"] = srs
 
     # get extent and resolution
@@ -2189,7 +2189,6 @@ def warp(
     * If 'output' is a string: The path to the output is returned (for easy opening)
 
     """
-    pass
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(source)

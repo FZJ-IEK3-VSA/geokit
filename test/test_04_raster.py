@@ -502,9 +502,11 @@ def test_warp_minimum():
         CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif")
     )
 
-    new_raster = gdal.Open(d)
+    new_raster = gdal.Open(d, 0)
 
     new_array = np.array(new_raster.ReadAsArray())
+
+    assert new_array.shape == (396, 413)
 
     path_to_comparison_file = root_dir.joinpath(
         "data", "results_for_comparison", "warp1.tif"
@@ -512,7 +514,6 @@ def test_warp_minimum():
     comparison_raster = gdal.Open(str(path_to_comparison_file))
     array_for_comparison = np.array(comparison_raster.ReadAsArray())
 
-    assert new_array.shape == (396, 413)
     assert array_for_comparison.shape == (396, 413)
     assert np.array_equal(new_array, array_for_comparison)
 
