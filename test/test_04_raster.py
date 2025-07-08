@@ -38,7 +38,7 @@ def test_rasterInfo():
     assert info.dtype == gdal.GDT_Byte  # datatype
     assert info.srs.IsSame(EPSG3035)  # srs
     assert info.noData == 0  # noData
-    assert info.flipY == True  # flipY
+    assert info.flipY is True  # flipY
 
 
 # createRaster
@@ -67,7 +67,7 @@ def test_createRaster():
         fillValue=inputFillValue,
     )
 
-    assert not memRas is None  # creating raster in memory
+    assert memRas is not None  # creating raster in memory
 
     mri = raster.rasterInfo(memRas)  # memory raster info
     assert mri.bounds == inputBounds  # bounds
@@ -506,8 +506,9 @@ def test_warp_minimum():
     comparison_raster = gdal.Open(str(path_to_comparison_file))
     new_array = np.array(new_raster.ReadAsArray())
     array_for_comparison = np.array(comparison_raster.ReadAsArray())
+    assert new_array.shape == (396, 413)
+    assert array_for_comparison.shape == (396, 413)
     assert np.array_equal(new_array, array_for_comparison)
-    pass
 
 
 def test_warp():
