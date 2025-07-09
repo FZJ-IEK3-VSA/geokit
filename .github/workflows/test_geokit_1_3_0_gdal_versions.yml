@@ -18,7 +18,7 @@ jobs:
             fail-fast: false
             matrix:
                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
-                os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "macos-11","windows-latest","windows-2019"]
+                os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13","windows-latest","windows-2022"]
                 # os: ["ubuntu-latest","windows-latest"]
                 geokit_version: ["1.3.0"]
                 
@@ -49,7 +49,7 @@ jobs:
                 method: CreateOrUpdate
                 changes: |
                   {
-                  "dependencies[12]": "gdal=${{ matrix.gdal_version }}"
+                  "dependencies[15]": "gdal=${{ matrix.gdal_version }}"
                   }
             - name: Install libraries
               shell: pwsh
