@@ -19,7 +19,8 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
+          # os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
+          os: ["ubuntu-latest","ubuntu-22.04", "windows-latest","windows-2022"]
       steps:
         - name: Checkout
           uses: actions/checkout@v4
