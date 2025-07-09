@@ -1,10 +1,13 @@
 import os
+import pathlib
 from os.path import dirname, isdir, isfile, join
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
+
+from geokit.get_test_data import get_test_data, get_test_shape_file
 
 # Runtime vars
 RESULT = "results"
@@ -77,12 +80,21 @@ SUB_GEOMS = [SUB_GEOM, SUB_GEOM2, SUB_GEOM3]
 GEOM_3035 = SUB_GEOM.Clone()
 GEOM_3035.TransformTo(EPSG3035)
 
-MULTI_FTR_SHAPE_PATH = source("multiFeature.shp")
-BOXES = source("boxes.shp")
-LUX_SHAPE_PATH = source("LuxShape.shp")
-LUX_LINES_PATH = source("LuxLines.shp")
+MULTI_FTR_SHAPE_PATH = get_test_shape_file(
+    file_name_without_extension="multiFeature", extension=".shp"
+)
+BOXES = get_test_shape_file(file_name_without_extension="boxes", extension=".shp")
+LUX_SHAPE_PATH = get_test_shape_file(
+    file_name_without_extension="LuxShape", extension=".shp"
+)
+LUX_LINES_PATH = get_test_shape_file(
+    file_name_without_extension="LuxLines", extension=".shp"
+)
 
-AACHEN_SHAPE_PATH = source("aachenShapefile.shp")
+AACHEN_SHAPE_PATH = get_test_shape_file(
+    file_name_without_extension="aachenShapefile", extension=".shp"
+)
+
 AACHEN_SHAPE_EXTENT = (
     5.974861621856746,
     50.494369506836165,
@@ -90,12 +102,21 @@ AACHEN_SHAPE_EXTENT = (
     50.95013427734369,
 )
 AACHEN_SHAPE_EXTENT_3035 = (4035500.0, 3048700.0, 4069500.0, 3101000.0)
-AACHEN_ELIGIBILITY_RASTER = source("aachen_eligibility.tif")
-AACHEN_ZONES = source("aachen_zones.shp")
-AACHEN_POINTS = source("aachen_points.shp")
-AACHEN_URBAN_LC = source("urban_land_cover_aachenClipped.tif")
+AACHEN_ELIGIBILITY_RASTER = get_test_data(file_name="aachen_eligibility.tif")
 
-FJI_SHAPE_PATH = source("FJI.shp")
+AACHEN_ZONES = get_test_shape_file(
+    file_name_without_extension="aachen_zones", extension=".shp"
+)
+AACHEN_POINTS = get_test_shape_file(
+    file_name_without_extension="aachen_points", extension=".shp"
+)
+
+AACHEN_URBAN_LC = get_test_data(file_name="urban_land_cover_aachenClipped.tif")
+
+FJI_SHAPE_PATH = get_test_shape_file(
+    file_name_without_extension="FJI", extension=".shp"
+)
+
 
 NUMPY_FLOAT_ARRAY = np.arange(10, dtype="float")
 
@@ -114,16 +135,30 @@ for x, y in zip(np.arange(100), 10 * np.sin(np.pi * np.arange(100) / 20)):
     _y = np.round(y).astype("int")
     MASK_DATA[_y + 75 : _y + 77, _x] = True
 
-EUR_STATS_FILE = source("Europe_with_H2MobilityData_GermanyClip.shp")
+EUR_STATS_FILE = get_test_shape_file(
+    file_name_without_extension="Europe_with_H2MobilityData_GermanyClip",
+    extension=".shp",
+)
 
-CLC_RASTER_PATH = source("clc-aachen_clipped.tif")
-CLC_FLIPCHECK_PATH = source("clc-aachen_clipped-unflipped.tif")
-RASTER_GDAL_244 = source("raster_gdal_244.tif")
 
-SINGLE_HILL_PATH = source("elevation_singleHill.tif")
-ELEVATION_PATH = source("elevation.tif")
-CDDA_PATH = source("CDDA_aachenClipped.shp")
-NATURA_PATH = source("Natura2000_aachenClipped.shp")
+CLC_RASTER_PATH = get_test_data(file_name="clc-aachen_clipped.tif")
+CLC_FLIPCHECK_PATH = get_test_data(file_name="clc-aachen_clipped-unflipped.tif")
+
+RASTER_GDAL_244 = get_test_data(file_name="raster_gdal_244.tif")
+
+
+SINGLE_HILL_PATH = get_test_data(file_name="elevation_singleHill.tif")
+
+ELEVATION_PATH = get_test_data(file_name="elevation.tif")
+CDDA_PATH = get_test_shape_file(
+    file_name_without_extension="CDDA_aachenClipped",
+    extension=".shp",
+)
+
+NATURA_PATH = get_test_shape_file(
+    file_name_without_extension="Natura2000_aachenClipped",
+    extension=".shp",
+)
 
 
 ## Def a visualizer func
@@ -134,5 +169,15 @@ def vis(mat, points=None):
 
     if points:
         plt.plot(points[1], points[0], "o")
+
+    plt.show()
+
+    plt.show()
+
+    plt.show()
+
+    plt.show()
+
+    plt.show()
 
     plt.show()

@@ -386,7 +386,14 @@ def quickVector(geom, output=None):
         return dataSource
 
 
-def fitBoundsTo(bounds, dx, dy, expand=False, startAtZero=False, enforce=False):
+def fitBoundsTo(
+    bounds,
+    dx,
+    dy,
+    expand: bool = False,
+    startAtZero: bool = False,
+    enforce: bool = False,
+) -> tuple:
     try:
         xMin, yMin, xMax, yMax = bounds
     except TypeError:

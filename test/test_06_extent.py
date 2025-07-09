@@ -1,6 +1,6 @@
+from geokit import Extent, LocationSet, error, raster, srs, util, vector
+from geokit.get_test_data import get_all_shape_files, get_test_data, get_test_shape_file
 from test.helpers import *
-
-from geokit import Extent, LocationSet, _test_data_, error, raster, srs, util, vector
 
 
 def test_Extent___init__():
@@ -310,11 +310,11 @@ def test_Extent_inSourceExtent():
     ext2 = Extent(-1, 1, 4, 2, srs=4326)
     vec = vector.createVector(ext2.box)
 
-    assert ext1.inSourceExtent(vec) == True
+    assert ext1.inSourceExtent(vec) is True
 
 
 def test_Extent_filterSources():
-    sources = source("*.shp")
+    sources = str(get_all_shape_files())
     ex = Extent.fromVector(source=AACHEN_SHAPE_PATH)
 
     goodSources = list(ex.filterSources(sources))
@@ -323,9 +323,9 @@ def test_Extent_filterSources():
     assert AACHEN_POINTS in goodSources
 
     # Exclusion
-    assert not BOXES in goodSources
-    assert not LUX_SHAPE_PATH in goodSources
-    assert not LUX_LINES_PATH in goodSources
+    assert BOXES not in goodSources
+    assert LUX_SHAPE_PATH not in goodSources
+    assert LUX_LINES_PATH not in goodSources
 
 
 def test_Extent_containsLoc():
@@ -618,7 +618,11 @@ def test_Extent_contoursFromRaster():
 
 
 def test_Extent_subTiles():
-    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
+    ext = Extent.fromVector(
+        get_test_shape_file(
+            file_name_without_extension="aachenShapefile", extension=".shp"
+        )
+    )
 
     tiles = [Extent.fromTile(t.xi, t.yi, t.zoom) for t in ext.subTiles(9)]
 
@@ -659,7 +663,11 @@ def test_Extent_subTiles():
 
 
 def test_Extent_tileBox():
-    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
+    ext = Extent.fromVector(
+        get_test_shape_file(
+            file_name_without_extension="aachenShapefile", extension=".shp"
+        )
+    )
     ext_box = ext.tileBox(12)
 
     assert np.isclose(ext_box.xMin, 655523.954574)
@@ -670,11 +678,36 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-    ext = Extent.fromVector(_test_data_["aachenShapefile.shp"])
+
+    path_aachen_shape_file = get_test_shape_file(
+        file_name_without_extension="aachenShapefile", extension=".shp"
+    )
+
+    ext = Extent.fromVector(path_aachen_shape_file)
+
+    # Get all required raster files
+    get_test_data(file_name="osm_roads_minor.9.264.171.tif")
+    get_test_data(file_name="osm_roads_minor.9.264.172.tif")
+    get_test_data(file_name="osm_roads_minor.9.265.171.tif")
+    path_to_last_data = get_test_data(file_name="osm_roads_minor.9.265.172.tif")
+
+    # Get generic raster file with variables
+    # data_folder_path = pathlib.Path(path_to_last_data).parent
+    data_folder_path = pathlib.Path(path_aachen_shape_file).parent
+
+    string_path_with_variables = str(
+        data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif")
+    )
     ras = ext.tileMosaic(
-        join(_test_data_["prior_tiles"], "osm_roads_minor.{z}.{x}.{y}.tif"),
+        string_path_with_variables,
         9,
     )
+
     rasmat = raster.extractMatrix(ras)
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+    assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+
+
+if __name__ == "__main__":
+    test_Extent_mosiacTiles()

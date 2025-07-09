@@ -1,12 +1,17 @@
 import os
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
+import pathlib
 
+import numpy as np
 import pytest
+import structlog
 from osgeo import gdal
 
 from geokit import geom, raster, util
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
+
+log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
 def test_gdalType():
@@ -34,7 +39,7 @@ def test_rasterInfo():
     assert info.dtype == gdal.GDT_Byte  # datatype
     assert info.srs.IsSame(EPSG3035)  # srs
     assert info.noData == 0  # noData
-    assert info.flipY == True  # flipY
+    assert info.flipY is True  # flipY
 
 
 # createRaster
@@ -63,7 +68,7 @@ def test_createRaster():
         fillValue=inputFillValue,
     )
 
-    assert not memRas is None  # creating raster in memory
+    assert memRas is not None  # creating raster in memory
 
     mri = raster.rasterInfo(memRas)  # memory raster info
     assert mri.bounds == inputBounds  # bounds
@@ -489,18 +494,46 @@ def test_contours():
     assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
 
 
+def test_warp_minimum():
+    current_dir = pathlib.Path(__file__).parent
+    root_dir = current_dir.parent
+
+    d = raster.warp(
+        CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif")
+    )
+
+    new_raster = gdal.Open(d, 0)
+
+    new_array = np.array(new_raster.ReadAsArray())
+
+    assert new_array.shape == (396, 413)
+
+    path_to_comparison_file = root_dir.joinpath(
+        "data", "results_for_comparison", "warp1.tif"
+    )
+    comparison_raster = gdal.Open(str(path_to_comparison_file))
+    array_for_comparison = np.array(comparison_raster.ReadAsArray())
+
+    assert array_for_comparison.shape == (396, 413)
+    assert np.array_equal(new_array, array_for_comparison)
+
+
 def test_warp():
     # Change resolution to disk
     d = raster.warp(
         CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200, output=result("warp1.tif")
     )
+
+    assert isinstance(d, str)
     v1 = raster.extractMatrix(d)
+
+    log.debug("Warped Matrix %s", v1)
     assert np.isclose(v1.mean(), 16.3141463057)
 
     # change resolution to memory
     d = raster.warp(CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200)
     v2 = raster.extractMatrix(d)
-    assert np.isclose(v1, v2).all()
+    assert np.isclose(v1, v2, atol=0).all()
 
     # Do a cutline from disk
     d = raster.warp(
@@ -520,8 +553,8 @@ def test_warp():
         noData=99,
     )
     v4 = raster.extractMatrix(d)
-    assert np.isclose(v4[0, 0], 99)
-    assert np.isclose(v4.mean(), 76.72702479)
+    assert np.isclose(v4[0, 0], 99, atol=0)
+    assert np.isclose(v4.mean(), 76.72702479, atol=0)
 
     # Do a flipped-source check
     d = raster.warp(
@@ -530,13 +563,13 @@ def test_warp():
         noData=99,
     )
     v5 = raster.extractMatrix(d)
-    assert np.isclose(v4, v5).all()
+    assert np.isclose(v4, v5, atol=0).all()
 
     d = raster.warp(
         CLC_FLIPCHECK_PATH, pixelHeight=200, pixelWidth=200, output=result("warp6.tif")
     )
     v6 = raster.extractMatrix(d)
-    assert np.isclose(v1, v6).all()
+    assert np.isclose(v1, v6, atol=0).all()
 
 
 @pytest.fixture()
@@ -717,3 +750,8 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+if __name__ == "__main__":
+    # test_warp()
+    test_warp_minimum()

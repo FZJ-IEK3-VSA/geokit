@@ -1055,7 +1055,7 @@ class RegionMask(object):
                     np.logical_or(update_sel, output, output)
 
                 # Fill nan values, maybe
-                if not noData is None:
+                if noData is not None:
                     output[nodat] = noData
 
                 # Done!

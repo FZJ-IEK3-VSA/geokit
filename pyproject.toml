@@ -2,7 +2,6 @@
 requires = ["setuptools>=64.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
 name = "geokit"
 version = "1.4.2"
@@ -24,6 +23,10 @@ readme = "README.md"
 [tool.setuptools.packages.find]
 where = ["."]
 
+# [tool.setuptools.package-data]
+# "resources.artifacts" = ["*"]
+# recipe = ["*.yaml"]
+
 #Configureation options
 # https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options
 
@@ -31,3 +34,8 @@ where = ["."]
 testpaths = ["test"] # Sets the path where to look for tests
 pythonpath =["test"] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+typeguard-packages = """
+geokit"""
+typeguard-debug-instrumentation = true
+typeguard-forward-ref-policy = "ERROR"
+typeguard-collection-check-strategy = "ALL_ITEMS"
