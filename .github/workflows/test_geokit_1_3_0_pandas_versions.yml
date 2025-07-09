@@ -1,4 +1,4 @@
-name: Test Geokit 1.3.0 for Numpy Versions
+name: Test Geokit 1.3.0 for Pandas Versions
 on: 
   workflow_dispatch:
     inputs:
