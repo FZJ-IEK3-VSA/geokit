@@ -1,0 +1,26 @@
+name: PushGitlab
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+      branches: [master,dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        fetch-depth: 0      
+
+    - name: Push To Gitlab
+      env: 
+        token: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+      run: |
+        echo Starting to push repo to gitlab
+        git config user.name "julian-belina"
+        git config user.email "j.belina@fz-juelich.de"
+        git remote set-url origin "git clone "https://geokit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de:iek-3/shared-code/geokit.git"
+        git push origin dev
