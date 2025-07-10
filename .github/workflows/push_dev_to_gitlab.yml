@@ -23,6 +23,6 @@ jobs:
         git config user.name "julian-belina"
         git config user.email "j.belina@fz-juelich.de"
         echo user name and email set
-        git remote set-url origin "https://geokit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de:iek-3/shared-code/geokit.git"
+        git remote set-url origin "https://geokit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git"
         echo set remote url
         git push origin dev
