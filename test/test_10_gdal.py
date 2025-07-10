@@ -9,31 +9,41 @@ from test.helpers import CLC_RASTER_PATH, result
 
 def test_gdal_warp_basic():
 
-    # Perform warp using gdal.Warp
-    ds = gdal.Warp(
-        result("warp_basic.tif"), CLC_RASTER_PATH, xRes=200, yRes=200, format="GTiff"
+    output_path = result("warp_basic.tif")
+
+    # Perform warp using gdal.Warp (write to disk)
+    warped_ds = gdal.Warp(
+        output_path, CLC_RASTER_PATH, xRes=200, yRes=200, format="GTiff"
     )
 
-    assert ds is not None, "Warping failed"
-    ds = None  # Close dataset
+    assert warped_ds is not None, "Warping failed"
 
-    # Read the warped file
-    ds = gdal.Open(result("warp_basic.tif"))
-    assert ds is not None, "Failed to open output raster"
+    # Read array directly from the warped dataset (in-memory reference)
+    warped_band = warped_ds.GetRasterBand(1)
+    arr_inmem = warped_band.ReadAsArray()
+    warped_ds = None  # Close dataset
 
-    band = ds.GetRasterBand(1)
-    arr = band.ReadAsArray()
-    assert isinstance(arr, np.ndarray), "Output is not a NumPy array"
+    assert isinstance(arr_inmem, np.ndarray), "Warped output is not a NumPy array"
+
+    # Open the same file and read again (reload from disk)
+    ds_reload = gdal.Open(output_path)
+    assert ds_reload is not None, "Failed to reopen output raster"
+
+    band_reload = ds_reload.GetRasterBand(1)
+    arr_reload = band_reload.ReadAsArray()
+    ds_reload = None  # Close dataset after reading
+
+    # Assert shape equality
+    assert (
+        arr_inmem.shape == arr_reload.shape
+    ), f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
 
     expected_mean = 16.26
     assert np.isclose(
-        arr.mean(), expected_mean, rtol=1e-3
-    ), f"Mean mismatch: got {arr.mean()}"
+        arr_inmem.mean(), expected_mean, rtol=1e-3
+    ), f"Mean mismatch: got {arr_inmem.mean()}"
 
-    expected_shape = (int(ds.RasterYSize), int(ds.RasterXSize))
-    assert (
-        arr.shape == expected_shape
-    ), f"Shape mismatch: got {arr.shape}, expected {expected_shape}"
+    # Assert arrays match exactly (bitwise)
+    assert np.array_equal(arr_inmem, arr_reload), "Warped array differs after reload"
 
-    ds = None
-    os.remove(result("warp_basic.tif"))
+    os.remove(output_path)
