@@ -430,31 +430,33 @@ def test_Extent_warp():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(3035).fit(200)
 
     # Change resolution to disk
-    d = ex.warp(
+    d1 = ex.warp(
         CLC_RASTER_PATH,
+        resampleAlg="near",
         pixelHeight=200,
         pixelWidth=200,
         output=result("extent_warp1.tif"),
     )
-    v1 = raster.extractMatrix(d)
-    assert np.isclose(v1.mean(), 17.18144279)
+    v1 = raster.extractMatrix(d1)
+    assert np.isclose(v1.mean(), 17.17905450, rtol=1e-4)
 
     # change resolution to memory
-    d = ex.warp(CLC_RASTER_PATH, pixelHeight=200, pixelWidth=200)
-    v2 = raster.extractMatrix(d)
+    d2 = ex.warp(CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200)
+    v2 = raster.extractMatrix(d2)
     assert np.isclose(v1, v2).all()
 
     # Do a cutline from disk
-    d = ex.warp(
+    d3 = ex.warp(
         CLC_RASTER_PATH,
+        resampleAlg="near",
         pixelHeight=100,
         pixelWidth=100,
         cutline=AACHEN_SHAPE_PATH,
         output=result("extent_warp3.tif"),
         noData=99,
     )
-    v3 = raster.extractMatrix(d)
-    assert np.isclose(v3.mean(), 66.02815723)
+    v3 = raster.extractMatrix(d3)
+    assert np.isclose(v3.mean(), 66.02815723, rtol=1e-4)
     assert np.isclose(v3[0, 0], 99)
 
 

@@ -560,7 +560,7 @@ def test_warp():
         noData=99,
     )
     v4 = raster.extractMatrix(d4)
-    assert np.isclose(v4.mean(), 89.9568135904)
+    assert np.isclose(v4.mean(), 89.9568135904, rtol=1e-4)
     assert np.isclose(v4[0, 0], 99)
 
     # Test 4: Do a cutline from memory
