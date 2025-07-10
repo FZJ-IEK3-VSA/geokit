@@ -51,7 +51,7 @@
 #               run: |
 #                     ls
 #                     echo "LS Done"
-#                     conda config --add channels nodefaults -conda-forge
+#                     conda config --add channels nodefaults conda-forge
 #                     mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
 #                     conda run -n test_env python pip install -e . --no-deps
 #                     echo "Installation done"

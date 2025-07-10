@@ -1,4 +1,4 @@
-name: Test Geokit 1.3.0 for scikit-learn Versions
+name: Test Geokit 1.3.0 for Smopy Versions
 on: 
   workflow_dispatch:
     inputs:
@@ -11,7 +11,7 @@ on:
     
 jobs:
     TestGeokitForNumpyVersions:
-        name: scikit-learn=${{ matrix.scikit_learn_version }},${{ matrix.os }}
+        name: smopy_version=${{ matrix.smopy_version }},${{ matrix.os }}
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
@@ -20,9 +20,7 @@ jobs:
                 # os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "macos-11","windows-latest","windows-2019"]
                 os: ["ubuntu-latest"]
                 geokit_version: ["1.3.0"]               
-                # scikit_learn_version: ["1.4.2","1.4.1","1.4.1","1.4.0","1.3.2","1.3.1","1.3.0",
-                # scikit_learn_version: ["1.2.2","1.2.1","1.2.0","1.1.3","1.1.2","1.1.1","1.1.0","0.24.2","0.24.1","0.24.0","0.23.2","0.23.1","0.23.0","0.22.1","0.22","0.21.3","0.21.2","0.21.1","0.21.0","0.20.4","0.20.3","0.20.2","0.20.1","0.20.0","0.19.2","0.19.1","0.19.0","0.18.2","0.18.1","0.18.0","0.18","0.17"]
-                scikit_learn_version: ["0.23.2","0.23.1","0.23.0","0.22.1","0.22","0.21.3","0.21.2","0.21.1","0.21.0","0.20.4","0.20.3","0.20.2","0.20.1","0.20.0","0.19.2","0.19.1","0.19.0","0.18.2","0.18.1","0.18.0","0.18","0.17"] 
+                smopy_version: ["0.0.7","0.0.8"] 
         steps:
             - name: Setup Conda
               uses: conda-incubator/setup-miniconda@v3
@@ -45,7 +43,7 @@ jobs:
                 method: CreateOrUpdate
                 changes: |
                   {
-                  "dependencies[14]": "scikit-learn=${{ matrix.scikit_learn_version }}"
+                  "dependencies[16]": "smopy_version=${{ matrix.smopy_version }}"
                   }
             - name: Install libraries
               shell: pwsh
