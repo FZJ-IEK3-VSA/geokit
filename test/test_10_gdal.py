@@ -13,7 +13,12 @@ def test_gdal_warp_basic():
 
     # Perform warp using gdal.Warp (write to disk)
     warped_ds = gdal.Warp(
-        output_path, CLC_RASTER_PATH, xRes=200, yRes=200, format="GTiff"
+        output_path,
+        CLC_RASTER_PATH,
+        xRes=200,
+        yRes=200,
+        resampleAlg="nearest",
+        format="GTiff",
     )
 
     assert warped_ds is not None, "Warping failed"
@@ -38,7 +43,7 @@ def test_gdal_warp_basic():
         arr_inmem.shape == arr_reload.shape
     ), f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
 
-    expected_mean = 16.26
+    expected_mean = 16.264478  # Expected mean value based on the warped raster
     assert np.isclose(
         arr_inmem.mean(), expected_mean, rtol=1e-3
     ), f"Mean mismatch: got {arr_inmem.mean()}"
