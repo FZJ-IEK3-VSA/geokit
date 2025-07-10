@@ -1,60 +1,67 @@
 on:
-    push:
-      branches: '**'
-    # Allows to trigger the workflow manually
-    workflow_dispatch:
-      branches: master
-    schedule:
-      # * is a special character in YAML so you have to quote this string
-      # Some Examples for cron syntax https://crontab.guru/Examples.html
-      # Schedules job at any point after 12 pm
-      - cron:  '0 0 * * *'
-      # Weekly after sunday
-      # - cron: 0 0 * * 0
-  
-jobs:       
-    TestGeokitDevLocal:
-      name: Test local development Version on ${{ matrix.os }}
-      runs-on: ${{ matrix.os }}
-      strategy:
-        fail-fast: false
-        matrix:
-          # os: ["ubuntu-latest","ubuntu-22.04", "macos-latest","macos-13", "windows-latest","windows-2022"]
-          os: ["ubuntu-latest","ubuntu-22.04", "windows-latest","windows-2022"]
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
-          with:
-            repository: FZJ-IEK3-VSA/geokit
-        - uses: conda-incubator/setup-miniconda@v3
-          with:
-            miniforge-version: latest
-            channels: conda-forge
-            activate-environment: geokit_env
-            conda-remove-defaults: true
-        - name: Run tests
-          shell: pwsh
-          run: |
-            ls
-            echo "LS Done"
-            mamba env create --name geokit_env --yes --file requirements-dev.yml
-            conda run --name geokit_env pip install . --no-deps
-            echo "Installation done"
-            conda list --name geokit_env
-            echo "libaries printed"
-            echo "start pytest"
-            conda run --name geokit_env pytest -vv
-            echo "Pytest done"
-        - name: Run Examples
-          shell: pwsh
-          run: |
-            ls
-            # mamba run -n geokit_env ./Examples/execute_all_notebooks.py
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_01_srs.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_02_geometry.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_03_vector.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_04_raster.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_05_Extent.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_06_RegionMask.ipynb
-            mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_07_GeographyHandling.ipynb
-          
+  push:
+    branches: "**"
+  # Allows to trigger the workflow manually
+  workflow_dispatch:
+    branches: master
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Some Examples for cron syntax https://crontab.guru/Examples.html
+    # Schedules job at any point after 12 pm
+    - cron: "0 0 * * *"
+    # Weekly after sunday
+    # - cron: 0 0 * * 0
+
+jobs:
+  TestGeokitDevLocal:
+    name: Test local development Version on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [
+            "ubuntu-latest",
+            "ubuntu-22.04",
+            "macos-latest",
+            "macos-13",
+            "windows-latest",
+            "windows-2022",
+          ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: FZJ-IEK3-VSA/geokit
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          activate-environment: geokit_env
+          conda-remove-defaults: true
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ls
+          echo "LS Done"
+          mamba env create --name geokit_env --yes --file requirements-dev.yml
+          conda run --name geokit_env pip install . --no-deps
+          echo "Installation done"
+          conda list --name geokit_env
+          echo "libaries printed"
+          echo "start pytest"
+          conda run --name geokit_env pytest -vv
+          echo "Pytest done"
+      - name: Run Examples
+        shell: pwsh
+        run: |
+          ls
+          # mamba run -n geokit_env ./Examples/execute_all_notebooks.py
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_01_srs.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_02_geometry.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_03_vector.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_04_raster.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_05_Extent.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_06_RegionMask.ipynb
+          mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_07_GeographyHandling.ipynb
