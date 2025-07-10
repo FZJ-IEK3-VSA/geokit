@@ -1,4 +1,4 @@
-name: PushGitlab
+name: Push to Jugit
 
 on:
   push:
@@ -12,9 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with: 
-        fetch-depth: 0 
-        repository: FZJ-IEK3-VSA/geokit     
-
+        repository: FZJ-IEK3-VSA/geokit
     - name: Push To Gitlab
       env: 
         token: ${{ secrets.GITLAB_ACCESS_TOKEN }}
