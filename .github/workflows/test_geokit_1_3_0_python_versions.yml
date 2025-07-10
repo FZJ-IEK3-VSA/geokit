@@ -1,0 +1,71 @@
+# name: Test Geokit 1.3.0 for Python Versions
+# on: 
+#   workflow_dispatch:
+#     inputs:
+#       tags:
+#         description: 'Manual run' 
+#   push:
+#     branches: 
+#       - version/1.3.0
+#   # Allows to trigger the workflow manually
+    
+# jobs:
+#     TestGeokitForNumpyVersions:
+#         name: pandas=${{ matrix.pandas_version }},${{ matrix.os }}
+#         runs-on: ${{ matrix.os }}
+#         strategy:
+#             fail-fast: false
+#             matrix:
+#                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
+#                 # os: ["ubuntu-latest","ubuntu-20.04", "macos-latest","macos-13","macos-12", "macos-11","windows-latest","windows-2019"]
+#                 os: ["ubuntu-latest"]
+#                 geokit_version: ["1.3.0"]               
+#                 python_version: ["3.0","3.1","3.2","3.3","3.4","3.5","3.6","3.7","3.8","3.9","3.10","3.11","3.12","3.13"] 
+#         steps:
+#             - name: Setup Conda
+#               uses: conda-incubator/setup-miniconda@v3
+#               with:
+#                 miniforge-version: latest
+#                 channels: conda-forge,nodefaults
+#                 activate-environment: test_env
+#                 conda-remove-defaults: "true"
+#             - name: Checkout geokit
+#               uses: actions/checkout@v4
+#               with:
+#                 repository: FZJ-IEK3-VSA/geokit
+#                 fetch-depth: 0   
+#                 ref: version/1.3.0        
+#             - name: Update values.yaml
+#               uses: fjogeleit/yaml-update-action@main
+#               with:
+#                 valueFile: 'requirements-dev.yml'
+#                 commitChange: false
+#                 method: CreateOrUpdate
+#                 changes: |
+#                   {
+#                   "dependencies[0]": "python=${{ matrix.python_version }}"
+#                   }
+#             - name: Install libraries
+#               shell: pwsh
+#               id: install-step
+#               run: |
+#                     ls
+#                     echo "LS Done"
+#                     conda config --add channels nodefaults -conda-forge
+#                     mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
+#                     conda run -n test_env python pip install -e . --no-deps
+#                     echo "Installation done"
+#                     conda list -n test_env
+#                     echo "libraries printed" 
+#             - name: Run pytest for geokit
+#               shell: pwsh
+#               run: |
+#                     echo "Start ls"
+#                     ls
+#                     echo "ls terminated"
+#                     cd geokit
+#                     ls
+#                     echo "Second ls terminated"
+#                     echo "start pytest"
+#                     conda run -n test_env python -m pytest
+#                     echo "Pytest done"
