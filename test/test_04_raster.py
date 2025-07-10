@@ -494,34 +494,6 @@ def test_contours():
     assert geoms.geom[59].GetSpatialReference().IsSame(ri.srs)
 
 
-# def test_warp_minimum():
-#     current_dir = pathlib.Path(__file__).parent
-#     root_dir = current_dir.parent
-
-#     d = raster.warp(
-#         CLC_RASTER_PATH,
-#         resampleAlg="near",
-#         pixelHeight=200,
-#         pixelWidth=200,
-#         output=result("warp1.tif"),
-#     )
-
-#     new_raster = gdal.Open(d, 0)
-
-#     new_array = np.array(new_raster.ReadAsArray())
-
-#     assert new_array.shape == (396, 413)
-
-#     path_to_comparison_file = root_dir.joinpath(
-#         "data", "results_for_comparison", "warp1.tif"
-#     )
-#     comparison_raster = gdal.Open(str(path_to_comparison_file))
-#     array_for_comparison = np.array(comparison_raster.ReadAsArray())
-
-#     assert array_for_comparison.shape == (396, 413)
-#     assert np.array_equal(new_array, array_for_comparison)
-
-
 def test_warp():
 
     # Test 1a: Change resolution and save to disk
