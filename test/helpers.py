@@ -125,6 +125,10 @@ ELEVATION_PATH = source("elevation.tif")
 CDDA_PATH = source("CDDA_aachenClipped.shp")
 NATURA_PATH = source("Natura2000_aachenClipped.shp")
 
+DIVIDED_RASTER_1_PATH = source("divided_raster_1.tif")
+DIVIDED_RASTER_2_PATH = source("divided_raster_2.tif")
+DIVIDED_RASTER_3_PATH = source("divided_raster_3.tif")
+
 
 ## Def a visualizer func
 def vis(mat, points=None):

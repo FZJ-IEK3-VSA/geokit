@@ -163,6 +163,26 @@ def test_extractValues():
     v4 = raster.extractValues(CLC_RASTER_PATH, pt, winRange=2)
     assert np.isclose(np.abs(v4.data - real).sum(), 0.0)
 
+    # now test multiple sources
+    sources = [
+        DIVIDED_RASTER_1_PATH, 
+        DIVIDED_RASTER_2_PATH, 
+        DIVIDED_RASTER_3_PATH
+        ]
+    pts=[
+        geom.point(4040000, 2900000, srs=3035), # tile 1
+        geom.point(4060000, 2980000, srs=3035), # tile 1
+        geom.point(4140000, 2930000, srs=3035), # tile 2+3
+        geom.point(4140000, 2980000, srs=3035), # tile 2
+        geom.point(4040000, 2980000, srs=3035), # tile 3
+        geom.point(4200000, 2980000, srs=3035), # out of bounds for all tiles
+    ]
+    
+    v4 = raster.extractValues(sources, pts)
+
+    assert np.allclose(v4.data.array, np.array([2.0,24.0,12.0,12.0,23,np.nan]), equal_nan=True)
+    
+
 
 # A nicer way to get a single value
 
