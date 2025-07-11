@@ -1,9 +1,9 @@
 on:
   push:
-    branches: "**"
+    branches: ["**"]
   # Allows to trigger the workflow manually
   workflow_dispatch:
-    branches: master
+    branches: [ master ]
   schedule:
     # * is a special character in YAML so you have to quote this string
     # Some Examples for cron syntax https://crontab.guru/Examples.html
@@ -57,7 +57,6 @@ jobs:
         shell: pwsh
         run: |
           ls
-          # mamba run -n geokit_env ./Examples/execute_all_notebooks.py
           mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_01_srs.ipynb
           mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_02_geometry.ipynb
           mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_03_vector.ipynb

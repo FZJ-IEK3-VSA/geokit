@@ -54,14 +54,16 @@ body:
       Please describe or show a code example of the expected behavior.
 
 - type: textarea
-  id: version
+  id: EnvironmentConda
   attributes:
-    label: Installed Versions
+    label: conda list
     description: >
-      Please share information on your environment. Paste the output below.  For conda ``conda env export`` and for pip ``pip freeze``.
-    value: >
-      <details>
+      Please share information on your environment. Paste the output of the command ``conda list`` below.
+    
 
-      Replace this line.
-
-      </details>
+- type: textarea
+  id: EnvironmentPip
+  attributes:
+    label: pip list -v
+    description: >
+      Please share information on your environment. Paste the output of the command "pip list -v" below. 

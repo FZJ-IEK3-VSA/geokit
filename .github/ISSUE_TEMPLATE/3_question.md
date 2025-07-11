@@ -9,7 +9,6 @@ assignees: ''
 ---
 
 
-## Describe the feature you'd like to see
+## General
 
-*Please give a clear and concise description and provide context why the feature would be useful.*
-*Also, we'd appreciate any implementation ideas and references you already have.*
+Do you have a general question that does not fit any of the other categories? Feel free to contact us.
