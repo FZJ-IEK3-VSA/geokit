@@ -160,6 +160,10 @@ NATURA_PATH = get_test_shape_file(
     extension=".shp",
 )
 
+DIVIDED_RASTER_1_PATH = source("divided_raster_1.tif")
+DIVIDED_RASTER_2_PATH = source("divided_raster_2.tif")
+DIVIDED_RASTER_3_PATH = source("divided_raster_3.tif")
+
 
 ## Def a visualizer func
 def vis(mat, points=None):
@@ -169,15 +173,5 @@ def vis(mat, points=None):
 
     if points:
         plt.plot(points[1], points[0], "o")
-
-    plt.show()
-
-    plt.show()
-
-    plt.show()
-
-    plt.show()
-
-    plt.show()
 
     plt.show()
