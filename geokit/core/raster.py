@@ -15,6 +15,7 @@ from scipy.interpolate import RectBivariateSpline
 
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
+from geokit.core import extent as EXTENT
 from geokit.core import util as UTIL
 from geokit.core.location import Location, LocationSet
 
@@ -806,7 +807,6 @@ def rasterInfo(sourceDS) -> RasterInfo:
         srs = None
     else:
         # generate an srs object if we have srs information
-        pass
         srs = SRS.loadSRS(sourceDS.GetProjectionRef())
     output["srs"] = srs
 
@@ -878,8 +878,10 @@ def extractValues(
 
     Parameters:
     -----------
-    source : Anything acceptable by loadRaster()
-        The raster datasource
+    source : Anything acceptable by loadRaster() or list
+        The raster datasource, can be a filepath, a raster dataset etc., see 
+        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
@@ -923,8 +925,23 @@ def extractValues(
 
     """
     # Be sure we have a raster and srs
-    source = loadRaster(source)
-    info = rasterInfo(source)
+    if not isinstance(source, list):
+        source = [source]
+    # make sure all source entries can be interpreted by loadRaster
+    try:
+        source = [loadRaster(s) for s in source]
+    except:
+        raise TypeError(f"At least one source cannot be loaded by geokit.raster.loadRaster().")
+    srs = None
+    for s in source:
+        # load file to make sure it can be interpreted by loadRaster
+        if srs is None:
+            srs = rasterInfo(s).srs
+        else:
+            assert srs.IsSame(rasterInfo(s).srs), \
+                f"All source entries must have the same SRS."
+
+    # generate srs for points
     pointSRS = SRS.loadSRS(pointSRS)
 
     # Ensure we have a list of point geometries
@@ -933,12 +950,12 @@ def extractValues(
             asSingle = True
             pointsKey = None
             points = [
-                points.asGeom(info.srs),
+                points.asGeom(srs),
             ]
         elif points._TYPE_KEY_ == "LocationSet":
             asSingle = False
             pointsKey = points
-            points = points.asGeom(info.srs)
+            points = points.asGeom(srs)
     except AttributeError:
         pointsKey = None
 
@@ -974,86 +991,131 @@ def extractValues(
         # Cast to source srs
         # make sure we're using the pointSRS for the points in the list
         pointSRS = points[0].GetSpatialReference()
-        if not pointSRS.IsSame(info.srs):
-            points = GEOM.transform(points, fromSRS=pointSRS, toSRS=info.srs)
+        if not pointSRS.IsSame(srs):
+            points = GEOM.transform(points, fromSRS=pointSRS, toSRS=srs)
 
-    # Get x/y values as numpy arrays
-    x = np.array([pt.GetX() for pt in points])
-    y = np.array([pt.GetY() for pt in points])
-
-    # Calculate x/y indexes
-    xValues = (x - (info.xMin + 0.5 * info.pixelWidth)) / info.pixelWidth
-    xIndexes = np.round(xValues)
-    xOffset = xValues - xIndexes
-
-    if info.yAtTop:
-        yValues = ((info.yMax - 0.5 * info.pixelWidth) - y) / abs(info.pixelHeight)
-        yIndexes = np.round(yValues)
-        yOffset = yValues - yIndexes
+    # get the srcs that are actually overlapping with our points
+    src_mapper = {}
+    if len(source) > 1:
+        for s in source:
+            # get bounds and filter indices of points that fall into bounds
+            _bounds = rasterInfo(s).bounds
+            _indices = [i for i,p in enumerate(points) if (_bounds[0]<=p.GetX()<=_bounds[2]) and (_bounds[1]<=p.GetY()<=_bounds[3])]
+            # add source as key plus list of overlapped point indices
+            src_mapper[s] = _indices
     else:
-        yValues = (y - (info.yMin + 0.5 * info.pixelWidth)) / info.pixelHeight
-        yIndexes = np.round(yValues)
-        yOffset = -1 * (yValues - yIndexes)
+        # we have only one source which must be applied to all points
+        src_mapper[source[0]] = list(range(len(points)))
+        # srcs = source * len(points)
+    
+    # iterate over all unique srcs and extract the raster values for the affected points _src by _src
 
-    # Calculate the starts and window size
-    xStarts = xIndexes - winRange
-    yStarts = yIndexes - winRange
-    window = 2 * winRange + 1
+    values = [np.nan] * len(points) # initialize values with nan for every point
+    inBounds = [False] * len(points) # initialize inbounds with False for every point
+    xOffset = [np.nan] * len(points) # initialize offsets with nan for every point
+    yOffset = [np.nan] * len(points) # initialize offsets with nan for every point
 
-    inBounds = xStarts >= 0
-    inBounds = inBounds & (yStarts >= 0)
-    inBounds = inBounds & (xStarts + window <= info.xWinSize)
-    inBounds = inBounds & (yStarts + window <= info.yWinSize)
+    for _src, _inds in src_mapper.items():
+        # get the indices of the points for which data has been extracted already
+        _xtrct = [i for i, v in enumerate(values) if pd.notnull(v)]
+        # deduct them from the inds here (they may have been extracted already from an overlapping _src tile)
+        _inds = list(set(_inds)-set(_xtrct))
+        
+        if len(_inds) == 0:
+            # no indices left to extract from this _src
+            continue
 
-    if (~inBounds).any():
-        msg = "WARNING: One of the given points (or extraction windows) exceeds the source's limits. Valies are replaced with nan."
-        warnings.warn(msg, UserWarning)
+        # get the points with this _src via list indices
+        _points = [points[i] for i in _inds]
+        
+        # get the raster info for this _src
+        _info = rasterInfo(_src)
+        
+        # Get x/y values as numpy arrays
+        x = np.array([pt.GetX() for pt in _points])
+        y = np.array([pt.GetY() for pt in _points])
 
-    # Read values
-    values = []
-    band = source.GetRasterBand(1)
+        # Calculate x/y indexes
+        xValues = (x - (_info.xMin + 0.5 * _info.pixelWidth)) / _info.pixelWidth
+        xIndexes = np.round(xValues)
+        _xOffset = xValues - xIndexes
 
-    for xi, yi, ib in zip(xStarts, yStarts, inBounds):
-        if not ib:
-            data = np.ones((window, window)) * np.nan
+        if _info.yAtTop:
+            yValues = ((_info.yMax - 0.5 * _info.pixelWidth) - y) / abs(_info.pixelHeight)
+            yIndexes = np.round(yValues)
+            _yOffset = yValues - yIndexes
         else:
-            # Open and read from raster
-            data = band.ReadAsArray(
-                xoff=xi, yoff=yi, win_xsize=window, win_ysize=window
-            )
-            if (info.scale != None) and (info.scale != 1.0):
-                data = data * info.scale
-            if (info.offset != None) and (info.offset != 0.0):
-                data = data + info.offset
+            yValues = (y - (_info.yMin + 0.5 * _info.pixelWidth)) / _info.pixelHeight
+            yIndexes = np.round(yValues)
+            _yOffset = -1 * (yValues - yIndexes)
 
-            # Look for nodata
-            if not info.noData is None:
-                nodata = data == info.noData
-                if nodata.any():
-                    if noDataOkay:
-                        # data will neaed to be a float type to represent a nodata value
-                        data = data.astype(np.float64)
-                        data[nodata] = np.nan
-                    else:
-                        raise GeoKitRasterError(
-                            "No data values found in extractValues with 'noDataOkay' set to False"
-                        )
+        # Calculate the starts and window size
+        xStarts = xIndexes - winRange
+        yStarts = yIndexes - winRange
+        window = 2 * winRange + 1
 
-            # flip if not in the 'flipped-y' orientation
-            if not info.yAtTop:
-                data = data[::-1, :]
+        _inBounds = xStarts >= 0
+        _inBounds = _inBounds & (yStarts >= 0)
+        _inBounds = _inBounds & (xStarts + window <= _info.xWinSize)
+        _inBounds = _inBounds & (yStarts + window <= _info.yWinSize)
 
-        if winRange == 0:
-            # If winRange is 0, theres no need to return a 2D matrix
-            data = data[0][0]
+        # Read values
+        _values = []
+        band = _src.GetRasterBand(1)
 
-        # Append to values
-        values.append(data)
+        for xi, yi, ib in zip(xStarts, yStarts, _inBounds):
+            if not ib:
+                data = np.ones((window, window)) * np.nan
+            else:
+                # Open and read from raster
+                data = band.ReadAsArray(
+                    xoff=xi, yoff=yi, win_xsize=window, win_ysize=window
+                )
+                if (_info.scale != None) and (_info.scale != 1.0):
+                    data = data * _info.scale
+                if (_info.offset != None) and (_info.offset != 0.0):
+                    data = data + _info.offset
 
-        # check if not inbounds, then replace values with nan
-        for i in range(len(values)):
-            if not inBounds[i]:
-                values[i] = np.nan * np.ones_like(values[i])
+                # Look for nodata
+                if not _info.noData is None:
+                    nodata = data == _info.noData
+                    if nodata.any():
+                        if noDataOkay:
+                            # data will neaed to be a float type to represent a nodata value
+                            data = data.astype(np.float64)
+                            data[nodata] = np.nan
+                        else:
+                            raise GeoKitRasterError(
+                                "No data values found in extractValues with 'noDataOkay' set to False"
+                            )
+
+                # flip if not in the 'flipped-y' orientation
+                if not _info.yAtTop:
+                    data = data[::-1, :]
+
+            if winRange == 0:
+                # If winRange is 0, theres no need to return a 2D matrix
+                data = data[0][0]
+
+            # Append to values
+            _values.append(data)
+
+            # check if not _inbounds, then replace values with nan
+            for i in range(len(_values)):
+                if not _inBounds[i]:
+                    _values[i] = np.nan * np.ones_like(_values[i])
+
+        # write _values, _inbounds and offsets into the overall container at the respective indices
+        for i, v, ib, x, y in zip(_inds, _values, _inBounds, _xOffset, _yOffset):
+            values[i] = v
+            inBounds[i] = ib
+            xOffset[i] = x
+            yOffset[i] = y
+    
+    if np.isnan(values).any():
+        # we still have NaN values left
+        msg = f"WARNING: {np.isnan(values).sum()} of the given points (or extraction windows) exceed/s the source's limits. Values were replaced with nan."
+        warnings.warn(msg, UserWarning)
 
     # Done!
     if asSingle:  # A single point was given, so return a single result
@@ -1086,8 +1148,10 @@ def interpolateValues(
 
     Parameters:
     -----------
-    source : Anything acceptable by loadRaster()
-        The raster datasource
+    source : Anything acceptable by loadRaster() or list
+        The raster datasource, can be a filepath, a raster dataset etc., see 
+        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
