@@ -20,7 +20,7 @@ jobs:
         echo Starting to push repo to gitlab
         git config user.name "julian-belina"
         git config user.email "j.belina@fz-juelich.de"
-        echo user name and email set
+        echo user name and email are set
         git fetch
         git checkout dev
         echo "Checkout complete"
