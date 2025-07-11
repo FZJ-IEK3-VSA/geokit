@@ -18,10 +18,9 @@ dependencies:
   - numpy<1.24
   - scipy
   - scikit-learn
-  - gdal>=3.4.2,<=3.4.3
+  - gdal>=3.4
   - smopy
   - geopandas
   - pooch
   - structlog
   - rich
-
