@@ -18,12 +18,14 @@ jobs:
         token: ${{ secrets.GITLAB_ACCESS_TOKEN }}
       run: |
         echo Starting to push repo to gitlab
-        git config user.name "julian-belina"
+        git config user.name "julian-belina-auto-commit"
         git config user.email "j.belina@fz-juelich.de"
         echo user name and email are set
         git fetch
         git checkout dev
         echo "Checkout complete"
-        git remote set-url origin "https://j.belina:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git"
-        echo set remote url
-        git push origin dev
+        # git remote set-url origin "https://j.belina:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git"
+        # git push https://gitlab-ci-token:<access_token>@gitlab.com/myuser/myrepo.git
+        echo start to push
+        git remote set-url origin https://push_to_jugit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git dev
+        echo push done
