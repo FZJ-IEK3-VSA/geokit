@@ -1,5 +1,6 @@
 import os
 import pathlib
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 import numpy as np
 import pytest
@@ -7,7 +8,6 @@ import structlog
 from osgeo import gdal
 
 from geokit import geom, raster, util
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 
@@ -133,6 +133,7 @@ def test_extractValues():
         assert np.isclose(v.xOffset, real[0], rtol=1e-4)
         assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
+    pass
     # test flipped
     v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
 
@@ -148,6 +149,7 @@ def test_extractValues():
     pt.AddPoint(4061794.7, 3094718.4)
     pt.AssignSpatialReference(EPSG3035)
 
+    pass
     v3 = raster.extractValues(CLC_RASTER_PATH, pt)
 
     assert v3.data == 3
@@ -169,24 +171,21 @@ def test_extractValues():
     assert np.isclose(np.abs(v4.data - real).sum(), 0.0)
 
     # now test multiple sources
-    sources = [
-        DIVIDED_RASTER_1_PATH, 
-        DIVIDED_RASTER_2_PATH, 
-        DIVIDED_RASTER_3_PATH
-        ]
-    pts=[
-        geom.point(4040000, 2900000, srs=3035), # tile 1
-        geom.point(4060000, 2980000, srs=3035), # tile 1
-        geom.point(4140000, 2930000, srs=3035), # tile 2+3
-        geom.point(4140000, 2980000, srs=3035), # tile 2
-        geom.point(4040000, 2980000, srs=3035), # tile 3
-        geom.point(4200000, 2980000, srs=3035), # out of bounds for all tiles
+    sources = [DIVIDED_RASTER_1_PATH, DIVIDED_RASTER_2_PATH, DIVIDED_RASTER_3_PATH]
+    pts = [
+        geom.point(4040000, 2900000, srs=3035),  # tile 1
+        geom.point(4060000, 2980000, srs=3035),  # tile 1
+        geom.point(4140000, 2930000, srs=3035),  # tile 2+3
+        geom.point(4140000, 2980000, srs=3035),  # tile 2
+        geom.point(4040000, 2980000, srs=3035),  # tile 3
+        geom.point(4200000, 2980000, srs=3035),  # out of bounds for all tiles
     ]
-    
+
     v4 = raster.extractValues(sources, pts)
 
-    assert np.allclose(v4.data.array, np.array([2.0,24.0,12.0,12.0,23,np.nan]), equal_nan=True)
-    
+    assert np.allclose(
+        v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True
+    )
 
 
 # A nicer way to get a single value
@@ -755,3 +754,4 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
