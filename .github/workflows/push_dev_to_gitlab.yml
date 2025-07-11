@@ -25,5 +25,5 @@ jobs:
         git switch dev
         echo "Checkout complete"
         echo start to push
-        git push --force https://push_to_jugit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git dev
+        git push --force https://push_to_jugit:${{ secrets.GITLAB_ACCESS_TOKEN }}@jugit.fz-juelich.de/iek-3/shared-code/geokit.git dev
         echo push done
