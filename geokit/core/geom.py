@@ -1789,6 +1789,8 @@ def applyBuffer(
         If True, additional notifications will be printed when geometry has to
         be clipped to enable retransformation to initial SRS. By default False.
     """
+    if buffer < 0:
+        raise ValueError(f"buffer must be a positive value: {buffer}")
     if not applyBufferInSRS is False:
         try:
             applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
@@ -1812,6 +1814,9 @@ def applyBuffer(
     if applyBufferInSRS:
         # transform to applyBufferInSRS srs
         geom_shftd_epsg = transform(geom_shftd, toSRS=applyBufferInSRS)
+        assert (
+            geom_shftd_epsg.IsValid()
+        ), f"geom invalid after transformation to required SRS: {applyBufferInSRS}."
         # apply buffer
         geom_shftd_buf_epsg = geom_shftd_epsg.Buffer(buffer)
         assert (
@@ -1853,9 +1858,13 @@ def applyBuffer(
         assert (
             geom_shftd_buf.IsValid()
         ), f"buffered geom invalid after re-transformation to initial SRS."
+        assert not geom_shftd_buf.IsEmpty(), \
+            f"polygon is empty after re-transformation to initial SRS."
     else:
         # apply buffer in unit of geom SRS
         geom_shftd_buf = geom_shftd.Buffer(buffer)
+        assert not geom_shftd_buf.IsEmpty(), \
+            f"polygon in original SRS is empty after buffering."
     # shift back to the original centroid location
     geom_buf = shift(
         geom_shftd_buf,
@@ -1867,6 +1876,9 @@ def applyBuffer(
     assert (
         geom_buf.IsValid()
     ), f"buffered geom in initial SRS invalid after shifting it back to initial longitude."
+    assert not geom_buf.IsEmpty(), \
+        f"buffered polygon in initial SRS is empty."
+
     if split in ["none", None]:
         # no splitting of protruding geoms required, return as is
         return geom_buf
@@ -1896,6 +1908,10 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
         'clip' :    clip and remove extending shapes completely
     """
     assert isinstance(geom, ogr.Geometry), f"geom must be an osgeo.ogr.Geometry"
+    assert geom.IsValid(), \
+        f"input geom is invalid."
+    assert not geom.IsEmpty(), \
+        f"input geom is empty."
     assert how in ["clip", "shift"], f"how must be in 'clip', 'shift'"
     # get the envelope and srs of original geom
     env = geom.GetEnvelope()
@@ -2017,4 +2033,8 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
             geom_fixed = geom_fixed.Union(top_part_shifted)
     # assign srs and return
     geom_fixed.AssignSpatialReference(_srs)
+    assert geom_fixed.IsValid(), \
+        f"geom is invalid after fixing out-of-bound errors."
+    assert not geom_fixed.IsEmpty(), \
+        f"geom is empty after fixing out-of-bound errors."
     return geom_fixed
