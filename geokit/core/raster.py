@@ -878,8 +878,10 @@ def extractValues(
 
     Parameters:
     -----------
-    source : Anything acceptable by loadRaster()
-        The raster datasource
+    source : Anything acceptable by loadRaster() or list
+        The raster datasource, can be a filepath, a raster dataset etc., see 
+        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
@@ -1146,8 +1148,10 @@ def interpolateValues(
 
     Parameters:
     -----------
-    source : Anything acceptable by loadRaster()
-        The raster datasource
+    source : Anything acceptable by loadRaster() or list
+        The raster datasource, can be a filepath, a raster dataset etc., see 
+        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
         Coordinates for the points to extract
