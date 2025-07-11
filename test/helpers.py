@@ -14,10 +14,6 @@ RESULT = "results"
 DATA = "data"
 
 
-def source(s):
-    return join(dirname(__file__), DATA, s)
-
-
 def result(s):
     return join(dirname(__file__), RESULT, s)
 
@@ -160,9 +156,9 @@ NATURA_PATH = get_test_shape_file(
     extension=".shp",
 )
 
-DIVIDED_RASTER_1_PATH = source("divided_raster_1.tif")
-DIVIDED_RASTER_2_PATH = source("divided_raster_2.tif")
-DIVIDED_RASTER_3_PATH = source("divided_raster_3.tif")
+DIVIDED_RASTER_1_PATH = get_test_data(file_name="divided_raster_1.tif")
+DIVIDED_RASTER_2_PATH = get_test_data(file_name="divided_raster_2.tif")
+DIVIDED_RASTER_3_PATH = get_test_data(file_name="divided_raster_3.tif")
 
 
 ## Def a visualizer func
