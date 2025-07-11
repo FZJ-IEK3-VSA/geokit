@@ -24,6 +24,6 @@ jobs:
         git fetch
         git checkout dev
         echo "Checkout complete"
-        git remote set-url origin "https://push_to_jugit:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git"
+        git remote set-url origin "https://j.belina:$GITLAB_ACCESS_TOKEN@jugit.fz-juelich.de/iek-3/shared-code/geokit.git"
         echo set remote url
         git push origin dev
