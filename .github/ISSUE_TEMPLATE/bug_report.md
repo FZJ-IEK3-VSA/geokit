@@ -18,14 +18,15 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-
-
 **Additional context**
-1. Which Version of geokit did you use?
-2. Which operating system did you use?
-3. Please provide information about the environment that you used to execute geokit. Paste the output of the command "conda list" and "pip list -v"
+1. Which cersion of geokit did you use?
+2. What operating system did you use (Windows, Linux, MacOs)?
+3. Please provide information about the environment in which you executed Geokit. Paste the output of the "conda list" and "pip list -v" commands.
 
 **conda list** 
+
 ...
+
 **pip list -v**
+
 ...
