@@ -53,3 +53,12 @@ from geokit.core.regionmask import RegionMask
 
 # import vidualizing functions to top level since they are
 from geokit.core.util import drawImage
+from geokit.get_test_data import get_test_data
+
+_test_data_ = _OrderedDict()
+
+path = pathlib.Path(pathlib.Path(__file__).parents[1], "test", "data")
+print("PATH: ", path)
+for current_path in path.iterdir():
+    get_test_data()
+    _test_data_[current_path.name] = str(current_path)

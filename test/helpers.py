@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
 
-from geokit.get_test_data import get_test_data, get_test_shape_file
+from geokit.get_test_data import get_test_data
 
 # Runtime vars
 RESULT = "results"
@@ -76,20 +76,14 @@ SUB_GEOMS = [SUB_GEOM, SUB_GEOM2, SUB_GEOM3]
 GEOM_3035 = SUB_GEOM.Clone()
 GEOM_3035.TransformTo(EPSG3035)
 
-MULTI_FTR_SHAPE_PATH = get_test_shape_file(
-    file_name_without_extension="multiFeature", extension=".shp"
+MULTI_FTR_SHAPE_PATH = get_test_data(file_name="multiFeature.shp")
+BOXES = get_test_data(
+    file_name="boxes.shp",
 )
-BOXES = get_test_shape_file(file_name_without_extension="boxes", extension=".shp")
-LUX_SHAPE_PATH = get_test_shape_file(
-    file_name_without_extension="LuxShape", extension=".shp"
-)
-LUX_LINES_PATH = get_test_shape_file(
-    file_name_without_extension="LuxLines", extension=".shp"
-)
+LUX_SHAPE_PATH = get_test_data(file_name="LuxShape.shp")
+LUX_LINES_PATH = get_test_data(file_name="LuxLines.shp")
 
-AACHEN_SHAPE_PATH = get_test_shape_file(
-    file_name_without_extension="aachenShapefile", extension=".shp"
-)
+AACHEN_SHAPE_PATH = get_test_data(file_name_without_extension="aachenShapefile.shp")
 
 AACHEN_SHAPE_EXTENT = (
     5.974861621856746,
@@ -100,18 +94,14 @@ AACHEN_SHAPE_EXTENT = (
 AACHEN_SHAPE_EXTENT_3035 = (4035500.0, 3048700.0, 4069500.0, 3101000.0)
 AACHEN_ELIGIBILITY_RASTER = get_test_data(file_name="aachen_eligibility.tif")
 
-AACHEN_ZONES = get_test_shape_file(
-    file_name_without_extension="aachen_zones", extension=".shp"
+AACHEN_ZONES = get_test_data(
+    file_name="aachen_zones.shp",
 )
-AACHEN_POINTS = get_test_shape_file(
-    file_name_without_extension="aachen_points", extension=".shp"
-)
+AACHEN_POINTS = get_test_data(file_name="aachen_points.shp")
 
 AACHEN_URBAN_LC = get_test_data(file_name="urban_land_cover_aachenClipped.tif")
 
-FJI_SHAPE_PATH = get_test_shape_file(
-    file_name_without_extension="FJI", extension=".shp"
-)
+FJI_SHAPE_PATH = get_test_data(file_name_without_extension="FJI.shp")
 
 
 NUMPY_FLOAT_ARRAY = np.arange(10, dtype="float")
@@ -131,9 +121,8 @@ for x, y in zip(np.arange(100), 10 * np.sin(np.pi * np.arange(100) / 20)):
     _y = np.round(y).astype("int")
     MASK_DATA[_y + 75 : _y + 77, _x] = True
 
-EUR_STATS_FILE = get_test_shape_file(
-    file_name_without_extension="Europe_with_H2MobilityData_GermanyClip",
-    extension=".shp",
+EUR_STATS_FILE = get_test_data(
+    file_name="Europe_with_H2MobilityData_GermanyClip.shp",
 )
 
 
@@ -146,14 +135,12 @@ RASTER_GDAL_244 = get_test_data(file_name="raster_gdal_244.tif")
 SINGLE_HILL_PATH = get_test_data(file_name="elevation_singleHill.tif")
 
 ELEVATION_PATH = get_test_data(file_name="elevation.tif")
-CDDA_PATH = get_test_shape_file(
-    file_name_without_extension="CDDA_aachenClipped",
-    extension=".shp",
+CDDA_PATH = get_test_data(
+    file_name="CDDA_aachenClipped.shp",
 )
 
-NATURA_PATH = get_test_shape_file(
-    file_name_without_extension="Natura2000_aachenClipped",
-    extension=".shp",
+NATURA_PATH = get_test_data(
+    file_name="Natura2000_aachenClipped.shp",
 )
 
 DIVIDED_RASTER_1_PATH = get_test_data(file_name="divided_raster_1.tif")

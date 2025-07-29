@@ -754,4 +754,3 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
-
