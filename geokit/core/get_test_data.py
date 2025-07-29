@@ -152,9 +152,9 @@ list_of_all_shape_file_extensions = [
 
 def get_test_data(
     file_name: str,
-    data_cache_folder: pathlib.Path = pathlib.Path(
-        __file__
-    ).parent.parent.parent.joinpath("data"),
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
+        "data"
+    ),
     no_download: bool = True,
 ) -> str:
 
@@ -188,9 +188,9 @@ def get_test_data(
 
 
 def get_all_shape_files(
-    data_cache_folder: pathlib.Path = pathlib.Path(
-        __file__
-    ).parent.parent.parent.joinpath("data"),
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
+        "data"
+    ),
     no_download: bool = True,
 ):
     for current_file in all_file_name_dict.keys():
