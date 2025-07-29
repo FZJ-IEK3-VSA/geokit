@@ -1,4 +1,5 @@
 import pathlib
+from collections import OrderedDict as _OrderedDict
 from typing import Literal
 
 import pooch
@@ -100,9 +101,7 @@ all_file_name_dict = {
 
 def _get_test_data(
     file_name: str,
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path,
     no_download: bool = True,
 ) -> str:
     if no_download is False:
@@ -153,9 +152,9 @@ list_of_all_shape_file_extensions = [
 
 def get_test_data(
     file_name: str,
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path = pathlib.Path(
+        __file__
+    ).parent.parent.parent.joinpath("data"),
     no_download: bool = True,
 ) -> str:
 
@@ -188,51 +187,10 @@ def get_test_data(
     return return_path_str
 
 
-# def get_test_shape_file(
-#     file_name_without_extension: str,
-#     extension: Literal[
-#         ".shp",
-#         ".dbf",
-#         ".shx",
-#         ".prj",
-#         ".sbn",
-#         ".sbx",
-#         ".ain",
-#         ".aih",
-#         ".ixs",
-#         ".mxs",
-#         ".atx",
-#         ".shp.xml",
-#         ".cpg",
-#         ".qix",
-#     ],
-#     data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-#         "data"
-#     ),
-#     no_download: bool = True,
-# ) -> str:
-#     file_name = file_name_without_extension + extension
-#     return_path = get_test_data(
-#         file_name=file_name,
-#         data_cache_folder=data_cache_folder,
-#         no_download=no_download,
-#     )
-
-#     for additional_file_type in list_of_all_shape_file_extensions:
-#         additional_file_name = file_name_without_extension + additional_file_type
-#         if additional_file_name in all_file_name_dict:
-#             get_test_data(
-#                 file_name=additional_file_name,
-#                 data_cache_folder=data_cache_folder,
-#                 no_download=no_download,
-#             )
-#     return return_path
-
-
 def get_all_shape_files(
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path = pathlib.Path(
+        __file__
+    ).parent.parent.parent.joinpath("data"),
     no_download: bool = True,
 ):
     for current_file in all_file_name_dict.keys():
@@ -255,8 +213,11 @@ def create_hash_dict(
     return output_dict
 
 
-def get_all_test_data(self):
-    pass
+def get_all_test_data_dict() -> _OrderedDict[str, str]:
+    _test_data_ = _OrderedDict()
+    for current_file_name in all_file_name_dict.keys():
+        _test_data_[current_file_name] = get_test_data(file_name=current_file_name)
+    return _test_data_
 
 
 if __name__ == "__main__":

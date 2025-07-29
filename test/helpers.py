@@ -1,5 +1,6 @@
 import os
 import pathlib
+from collections import OrderedDict as _OrderedDict
 from os.path import dirname, isdir, isfile, join
 
 import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
 
-from geokit.get_test_data import get_test_data
+from geokit.core.get_test_data import get_test_data
 
 # Runtime vars
 RESULT = "results"
@@ -83,7 +84,7 @@ BOXES = get_test_data(
 LUX_SHAPE_PATH = get_test_data(file_name="LuxShape.shp")
 LUX_LINES_PATH = get_test_data(file_name="LuxLines.shp")
 
-AACHEN_SHAPE_PATH = get_test_data(file_name_without_extension="aachenShapefile.shp")
+AACHEN_SHAPE_PATH = get_test_data(file_name="aachenShapefile.shp")
 
 AACHEN_SHAPE_EXTENT = (
     5.974861621856746,
@@ -101,7 +102,7 @@ AACHEN_POINTS = get_test_data(file_name="aachen_points.shp")
 
 AACHEN_URBAN_LC = get_test_data(file_name="urban_land_cover_aachenClipped.tif")
 
-FJI_SHAPE_PATH = get_test_data(file_name_without_extension="FJI.shp")
+FJI_SHAPE_PATH = get_test_data(file_name="FJI.shp")
 
 
 NUMPY_FLOAT_ARRAY = np.arange(10, dtype="float")
@@ -158,3 +159,6 @@ def vis(mat, points=None):
         plt.plot(points[1], points[0], "o")
 
     plt.show()
+
+
+pass

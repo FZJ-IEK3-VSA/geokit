@@ -1,5 +1,5 @@
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
-from geokit.get_test_data import get_all_shape_files, get_test_data
+from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
 
 
