@@ -1,6 +1,6 @@
 name: Documentation Improvement
 description: Report wrong or missing documentation
-type: 'Docs'
+type: 'Documentation improvement'
 
 body:
 - type: textarea

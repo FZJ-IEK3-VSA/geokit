@@ -1,14 +1,13 @@
 ---
 name: Feature Request
 about: Suggest an idea for this project
-title: ''
-type: 'Feature'
-assignees: ''
+type: 'Feature request'
 
 ---
 
 
 ## Describe the feature you'd like to see
 
-*Please give a clear and concise description and provide context why the feature would be useful.*
-*Also, we'd appreciate any implementation ideas and references you already have.*
+*Please provide a clear and concise description of the feature, explaining why it would be useful.*
+*For example, provide an example command that shows how to use the feature and the expected output.*
+*Also, please provide any implementation ideas and references you already have. *

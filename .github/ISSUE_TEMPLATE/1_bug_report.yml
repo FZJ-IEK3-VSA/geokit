@@ -14,18 +14,18 @@ body:
     label: Version Checks (indicate both or one)
     options:
     - label: >
-        I have confirmed this bug exists on the lastest
-        [release](https://github.com/FZJ-IEK3-VSA/geokit/releases) of geokit.
+        I have confirmed this bug exists on the lastest commit on the master branch of geokit.
     - label: >
-        I have confirmed this bug exists on the current
-        [`master`](https://github.com/FZJ-IEK3-VSA/geokit/tree/master) branch of geokit.
+        I have confirmed this bug exists on the lastest commit on the dev branch of geokit.
+    - label: >
+        I have confirmed this bug exists for a specific version of geokit.
 
 - type: textarea
   id: problem
   attributes:
     label: Issue Description
     description: >
-      Please provide a description of the issue.
+      Please provide a description of the issue. Also, please provide the error output as text or as a screenshot.
   validations:
     required: true
 
@@ -66,4 +66,4 @@ body:
   attributes:
     label: pip list -v
     description: >
-      Please share information on your environment. Paste the output of the command "pip list -v" below. 
+      Please share information on your environment. Paste the output of the command ''pip list -v'' below. 

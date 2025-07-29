@@ -1,6 +1,6 @@
 name: Code Improvement
 description: Propose improvement to the code
-type: 'Docs'
+type: 'Code improvement'
 
 body:
 - type: textarea
@@ -19,6 +19,9 @@ body:
   attributes:
     label: Proposal
     description: >
-      Please provide a description of what should be improved.
+      Please provide a description of what should be improved. For example:
+        - For which function should the efficiency be improved, and how can this be achieved?
+        - Which part of the code needs refactoring?
+        - Which warnings should be removed or implemented?
   validations:
     required: true
