@@ -27,4 +27,5 @@ dependencies:
   - typeguard
   - structlog
   - rich
+  - black-jupyter
 

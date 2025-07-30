@@ -879,8 +879,8 @@ def extractValues(
     Parameters:
     -----------
     source : Anything acceptable by loadRaster() or list
-        The raster datasource, can be a filepath, a raster dataset etc., see 
-        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        The raster datasource, can be a filepath, a raster dataset etc., see
+        RASTER.loadRaster() for details. Alternatively, a list of multiple
         such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
@@ -931,15 +931,18 @@ def extractValues(
     try:
         source = [loadRaster(s) for s in source]
     except:
-        raise TypeError(f"At least one source cannot be loaded by geokit.raster.loadRaster().")
+        raise TypeError(
+            f"At least one source cannot be loaded by geokit.raster.loadRaster()."
+        )
     srs = None
     for s in source:
         # load file to make sure it can be interpreted by loadRaster
         if srs is None:
             srs = rasterInfo(s).srs
         else:
-            assert srs.IsSame(rasterInfo(s).srs), \
-                f"All source entries must have the same SRS."
+            assert srs.IsSame(
+                rasterInfo(s).srs
+            ), f"All source entries must have the same SRS."
 
     # generate srs for points
     pointSRS = SRS.loadSRS(pointSRS)
@@ -1000,37 +1003,42 @@ def extractValues(
         for s in source:
             # get bounds and filter indices of points that fall into bounds
             _bounds = rasterInfo(s).bounds
-            _indices = [i for i,p in enumerate(points) if (_bounds[0]<=p.GetX()<=_bounds[2]) and (_bounds[1]<=p.GetY()<=_bounds[3])]
+            _indices = [
+                i
+                for i, p in enumerate(points)
+                if (_bounds[0] <= p.GetX() <= _bounds[2])
+                and (_bounds[1] <= p.GetY() <= _bounds[3])
+            ]
             # add source as key plus list of overlapped point indices
             src_mapper[s] = _indices
     else:
         # we have only one source which must be applied to all points
         src_mapper[source[0]] = list(range(len(points)))
         # srcs = source * len(points)
-    
+
     # iterate over all unique srcs and extract the raster values for the affected points _src by _src
 
-    values = [np.nan] * len(points) # initialize values with nan for every point
-    inBounds = [False] * len(points) # initialize inbounds with False for every point
-    xOffset = [np.nan] * len(points) # initialize offsets with nan for every point
-    yOffset = [np.nan] * len(points) # initialize offsets with nan for every point
+    values = [np.nan] * len(points)  # initialize values with nan for every point
+    inBounds = [False] * len(points)  # initialize inbounds with False for every point
+    xOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
+    yOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
 
     for _src, _inds in src_mapper.items():
         # get the indices of the points for which data has been extracted already
         _xtrct = [i for i, v in enumerate(values) if pd.notnull(v)]
         # deduct them from the inds here (they may have been extracted already from an overlapping _src tile)
-        _inds = list(set(_inds)-set(_xtrct))
-        
+        _inds = list(set(_inds) - set(_xtrct))
+
         if len(_inds) == 0:
             # no indices left to extract from this _src
             continue
 
         # get the points with this _src via list indices
         _points = [points[i] for i in _inds]
-        
+
         # get the raster info for this _src
         _info = rasterInfo(_src)
-        
+
         # Get x/y values as numpy arrays
         x = np.array([pt.GetX() for pt in _points])
         y = np.array([pt.GetY() for pt in _points])
@@ -1041,7 +1049,9 @@ def extractValues(
         _xOffset = xValues - xIndexes
 
         if _info.yAtTop:
-            yValues = ((_info.yMax - 0.5 * _info.pixelWidth) - y) / abs(_info.pixelHeight)
+            yValues = ((_info.yMax - 0.5 * _info.pixelWidth) - y) / abs(
+                _info.pixelHeight
+            )
             yIndexes = np.round(yValues)
             _yOffset = yValues - yIndexes
         else:
@@ -1111,7 +1121,7 @@ def extractValues(
             inBounds[i] = ib
             xOffset[i] = x
             yOffset[i] = y
-    
+
     if np.isnan(values).any():
         # we still have NaN values left
         msg = f"WARNING: {np.isnan(values).sum()} of the given points (or extraction windows) exceed/s the source's limits. Values were replaced with nan."
@@ -1149,8 +1159,8 @@ def interpolateValues(
     Parameters:
     -----------
     source : Anything acceptable by loadRaster() or list
-        The raster datasource, can be a filepath, a raster dataset etc., see 
-        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        The raster datasource, can be a filepath, a raster dataset etc., see
+        RASTER.loadRaster() for details. Alternatively, a list of multiple
         such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
