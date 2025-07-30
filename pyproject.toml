@@ -23,9 +23,8 @@ readme = "README.md"
 [tool.setuptools.packages.find]
 where = ["."]
 
-# [tool.setuptools.package-data]
-# "resources.artifacts" = ["*"]
-# recipe = ["*.yaml"]
+[tool.setuptools.package-data]
+"*" = ["*.*"]
 
 #Configureation options
 # https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options

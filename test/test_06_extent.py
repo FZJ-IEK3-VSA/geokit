@@ -1,5 +1,5 @@
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
-from geokit.get_test_data import get_all_shape_files, get_test_data, get_test_shape_file
+from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
 
 
@@ -620,11 +620,7 @@ def test_Extent_contoursFromRaster():
 
 
 def test_Extent_subTiles():
-    ext = Extent.fromVector(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
-    )
+    ext = Extent.fromVector(get_test_data(file_name="aachenShapefile.shp"))
 
     tiles = [Extent.fromTile(t.xi, t.yi, t.zoom) for t in ext.subTiles(9)]
 
@@ -665,11 +661,7 @@ def test_Extent_subTiles():
 
 
 def test_Extent_tileBox():
-    ext = Extent.fromVector(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
-    )
+    ext = Extent.fromVector(get_test_data(file_name="aachenShapefile.shp"))
     ext_box = ext.tileBox(12)
 
     assert np.isclose(ext_box.xMin, 655523.954574)
@@ -681,9 +673,7 @@ def test_Extent_tileBox():
 
 def test_Extent_mosiacTiles():
 
-    path_aachen_shape_file = get_test_shape_file(
-        file_name_without_extension="aachenShapefile", extension=".shp"
-    )
+    path_aachen_shape_file = get_test_data(file_name="aachenShapefile.shp")
 
     ext = Extent.fromVector(path_aachen_shape_file)
 

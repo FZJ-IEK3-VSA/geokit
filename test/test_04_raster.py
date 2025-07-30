@@ -1,6 +1,5 @@
 import os
 import pathlib
-from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 import numpy as np
 import pytest
@@ -8,6 +7,7 @@ import structlog
 from osgeo import gdal
 
 from geokit import geom, raster, util
+from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 
@@ -754,4 +754,3 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
-
