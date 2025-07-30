@@ -159,6 +159,3 @@ def vis(mat, points=None):
         plt.plot(points[1], points[0], "o")
 
     plt.show()
-
-
-pass
