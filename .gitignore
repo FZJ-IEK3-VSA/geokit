@@ -12,6 +12,8 @@ analysis/regions/*
 .ruff_cache
 docs/_build
 docs/autoapi
+docs/geokit
+docs/combineSimilarRasters
 
 # Remove things in testing results dir
 testing/results/*.tif
