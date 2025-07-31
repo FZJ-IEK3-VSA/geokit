@@ -47,8 +47,8 @@ sphinx:
     autoapi_generate_api_docs: true
     suppress_warnings: ["etoc.toctree"]
     autoapi_python_class_content: "both"
-    napoleon_google_docstring: True
-    napoleon_include_init_with_doc: True
+    # napoleon_google_docstring: True
+    # napoleon_include_init_with_doc: True
 
     # exclude_patterns : ['_build', '_templates','autoapi','visualizations','knowledge_articles','documentation']
 

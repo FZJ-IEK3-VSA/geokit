@@ -11,7 +11,7 @@ parts:
   - caption: Tutorial
     maxdepth: 3
     chapters:
-      - file: contents.md
+      - file: first_article.md
 
   - caption: API
     chapters:
