@@ -2,17 +2,27 @@
 # Learn more at https://jupyterbook.org/customize/toc.html
 
 format: jb-book
-root: contents
+root: docs/contents.md
 
 options: # The options key will be applied to all chapters, but not sub-sections
   numbered: True
 
 parts:
-  - caption: Tutorial
+  - caption: Examples
     maxdepth: 3
     chapters:
-      - file: first_article.md
+      - file: docs/Introduction.md
+      - file: Examples/example_01_srs.ipynb
+      - file: Examples/example_02_geometry.ipynb
+      - file: Examples/example_03_vector.ipynb
+      - file: Examples/example_04_raster.ipynb
+      - file: Examples/example_05_Extent.ipynb
+      - file: Examples/example_06_RegionMask.ipynb
+      - file: Examples/example_07_GeographyHandling.ipynb
 
   - caption: API
     chapters:
-      - file: autoapi/geokit/index.rst
+      - file: docs/autoapi/geokit/index.rst
+  - caption: FAQ
+    chapters:
+      - file: docs/FAQ.md

@@ -1,14 +1,17 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 
-title: ETHOS.PeNALPS
+title: GeoKit
 author: Julian Belina
-logo: ./visualizations/logos/fzj_logo.svg
+logo: docs/visualizations/logos/fzj_logo.svg
 
 # Force re-execution of notebooks on each build.
 # See https://jupyterbook.org/content/execute.html
+# execute:
+#   execute_notebooks: cache
+
 execute:
-  execute_notebooks: force
+  execute_notebooks: "force"
 
 # Define the name of the latex output file for PDF builds
 latex:
@@ -30,6 +33,7 @@ html:
   use_issues_button: true
   use_repository_button: true
 
+only_build_toc_files: true
 sphinx:
   extra_extensions:
     - autoapi.extension
@@ -39,7 +43,8 @@ sphinx:
     - sphinx.ext.napoleon
 
   config:
-    autoapi_dirs: ["../geokit"]
+    autoapi_dirs: ["./geokit"]
+    autoapi_root: "./docs"
     autoapi_add_toctree_entry: false
     autoapi_file_patterns: ["*.py"]
     autosummary_generate: false
@@ -47,9 +52,8 @@ sphinx:
     autoapi_generate_api_docs: true
     suppress_warnings: ["etoc.toctree"]
     autoapi_python_class_content: "both"
-    # napoleon_google_docstring: True
-    # napoleon_include_init_with_doc: True
-
+    napoleon_google_docstring: True
+    napoleon_include_init_with_doc: True
     # exclude_patterns : ['_build', '_templates','autoapi','visualizations','knowledge_articles','documentation']
 
   autoapi_options:
