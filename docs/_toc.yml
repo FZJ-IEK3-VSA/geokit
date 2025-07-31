@@ -1,0 +1,18 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: contents
+
+options: # The options key will be applied to all chapters, but not sub-sections
+  numbered: True
+
+parts:
+  - caption: Tutorial
+    maxdepth: 3
+    chapters:
+      - file: contents.md
+
+  - caption: API
+    chapters:
+      - file: autoapi/geokit/index.rst

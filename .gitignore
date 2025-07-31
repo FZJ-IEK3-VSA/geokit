@@ -10,6 +10,8 @@ analysis/regions/*
 #*.ipynb
 *.aux.xml
 .ruff_cache
+docs/_build
+docs/autoapi
 
 # Remove things in testing results dir
 testing/results/*.tif

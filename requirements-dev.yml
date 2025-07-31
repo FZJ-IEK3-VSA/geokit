@@ -30,3 +30,5 @@ dependencies:
   - black-jupyter
   - ruff=0.12.7
   - nbqa=1.9.0
+  - jupyter-book
+  - sphinx-autoapi
