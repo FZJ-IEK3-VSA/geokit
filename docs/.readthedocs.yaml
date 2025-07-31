@@ -18,7 +18,7 @@ build:
     pre_build:
       # Generate the Sphinx configuration for this Jupyter Book so it builds.
       # - "jupyter-book config sphinx . --toc docs/_toc.yml --config docs/_config.yml"
-      - "jupyter-book config sphinx ."
+      - "jupyter-book config sphinx docs/"
 
 conda:
   environment: requirements-dev.yml
