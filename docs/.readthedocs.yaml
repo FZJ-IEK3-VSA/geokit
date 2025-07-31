@@ -20,7 +20,7 @@ build:
       - "jupyter-book config sphinx docs/"
 
 conda:
-  environment: environment.yml
+  environment: requirements-dev.yml
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
