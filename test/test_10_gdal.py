@@ -8,7 +8,6 @@ from test.helpers import CLC_RASTER_PATH, result
 
 
 def test_gdal_warp_basic():
-
     output_path = result("warp_basic.tif")
 
     # Perform warp using gdal.Warp (write to disk)
@@ -39,14 +38,14 @@ def test_gdal_warp_basic():
     ds_reload = None  # Close dataset after reading
 
     # Assert shape equality
-    assert (
-        arr_inmem.shape == arr_reload.shape
-    ), f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
+    assert arr_inmem.shape == arr_reload.shape, (
+        f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
+    )
 
     expected_mean = 16.264478  # Expected mean value based on the warped raster
-    assert np.isclose(
-        arr_inmem.mean(), expected_mean, rtol=1e-3
-    ), f"Mean mismatch: got {arr_inmem.mean()}"
+    assert np.isclose(arr_inmem.mean(), expected_mean, rtol=1e-3), (
+        f"Mean mismatch: got {arr_inmem.mean()}"
+    )
 
     # Assert arrays match exactly (bitwise)
     assert np.array_equal(arr_inmem, arr_reload), "Warped array differs after reload"

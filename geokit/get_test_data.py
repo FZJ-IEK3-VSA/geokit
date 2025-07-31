@@ -105,7 +105,6 @@ def get_test_data(
     ),
     no_download: bool = True,
 ) -> str:
-
     if file_name not in all_file_name_dict:
         raise Exception(
             "The requested file,"

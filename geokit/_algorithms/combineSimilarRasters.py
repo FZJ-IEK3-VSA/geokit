@@ -154,9 +154,9 @@ def combineSimilarRasters(
     for i in range(len(datasets)):
         if verbose:
             if isinstance(datasets[i], str):
-                print(f"{i+1}/{len(datasets)} ({basename(datasets[i])})")
+                print(f"{i + 1}/{len(datasets)} ({basename(datasets[i])})")
             else:
-                print(f"{i+1}/{len(datasets)}")
+                print(f"{i + 1}/{len(datasets)}")
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 

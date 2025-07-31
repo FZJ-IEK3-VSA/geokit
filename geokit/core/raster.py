@@ -940,9 +940,9 @@ def extractValues(
         if srs is None:
             srs = rasterInfo(s).srs
         else:
-            assert srs.IsSame(
-                rasterInfo(s).srs
-            ), f"All source entries must have the same SRS."
+            assert srs.IsSame(rasterInfo(s).srs), (
+                f"All source entries must have the same SRS."
+            )
 
     # generate srs for points
     pointSRS = SRS.loadSRS(pointSRS)
@@ -2588,9 +2588,9 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         points = [points]
     elif isinstance(points, tuple) and len(points) == 2:
         points = [points]
-    assert hasattr(
-        points, "__iter__"
-    ), f"points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
+    assert hasattr(points, "__iter__"), (
+        f"points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
+    )
     if isinstance(points[0], ogr.Geometry):
         if not all([p.GetGeometryName() == "POINT" for p in points]):
             raise TypeError(f"Only POINT geometries allowed")
@@ -2606,7 +2606,9 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
                 and all([isinstance(_x, (int, float)) for _x in x])
                 for x in points
             ]
-        ), f"All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
+        ), (
+            f"All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
+        )
 
     # get bounds, cellWidth and cellHeight from the inputs
     if source is not None:
@@ -2642,13 +2644,15 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
             and all([isinstance(x, (int, float)) for x in bounds])
             and bounds[0] < bounds[2]
             and bounds[1] < bounds[3]
-        ), f"bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
-        assert isinstance(
-            cellHeight, (int, float)
-        ), f"cellHeight must be an int or float."
-        assert isinstance(
-            cellWidth, (int, float)
-        ), f"cellWidth must be an int or float."
+        ), (
+            f"bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
+        )
+        assert isinstance(cellHeight, (int, float)), (
+            f"cellHeight must be an int or float."
+        )
+        assert isinstance(cellWidth, (int, float)), (
+            f"cellWidth must be an int or float."
+        )
         # calculate the raster width and height in Nos of cells
         rasterWidth = (bounds[2] - bounds[0]) / cellWidth
         rasterHeight = (bounds[3] - bounds[1]) / cellHeight

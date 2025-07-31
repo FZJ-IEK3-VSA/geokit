@@ -285,7 +285,6 @@ def test_RegionMask__returnBlank():
 
 
 def test_RegionMask_indicateValues():
-
     if platform == "linux" or platform == "linux2":
         multiProcess = True
     elif platform == "darwin":
@@ -379,7 +378,6 @@ def test_RegionMask_indicateValues():
 
 
 def test_RegionMask_indicateFeatures():
-
     if platform == "linux" or platform == "linux2":
         multiProcess = True
     elif platform == "darwin":

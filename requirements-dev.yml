@@ -3,9 +3,9 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python<=3.10.13 
+  - python<=3.10.13
   - pytest
-  - pytest-xdist 
+  - pytest-xdist
   - pytest-cov
   - pylint
   - autopep8
@@ -17,15 +17,16 @@ dependencies:
   - descartes
   - pandas<=2.3
   - numpy<1.24
-  - scipy<=1.15.2 
+  - scipy<=1.15.2
   - scikit-learn
   - gdal>=3.4.2,<=3.4.3
-  - smopy<=0.0.8 
-  - geopandas<=0.14.4 
+  - smopy<=0.0.8
+  - geopandas<=0.14.4
   - nbconvert
   - pooch
   - typeguard
   - structlog
   - rich
   - black-jupyter
-
+  - ruff=0.12.7
+  - nbqa=1.9.0

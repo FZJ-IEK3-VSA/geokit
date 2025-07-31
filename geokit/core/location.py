@@ -237,11 +237,9 @@ class Location(object):
             output = Location.fromPointGeom(loc.geom)
 
         elif (
-            (
-                isinstance(loc, tuple)
-                or isinstance(loc, list)
-                or isinstance(loc, np.ndarray)
-            )
+            isinstance(loc, tuple)
+            or isinstance(loc, list)
+            or isinstance(loc, np.ndarray)
         ) and len(loc) == 2:
             if srs is None or srs == 4326 or srs == "latlon":
                 output = Location(lon=loc[0], lat=loc[1])

@@ -107,16 +107,16 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 
     """
     if geom is None:
-        assert isinstance(lat, numbers.Number) and isinstance(
-            lon, numbers.Number
-        ), "If geom is not passed, lat and lon must be given as float values."
+        assert isinstance(lat, numbers.Number) and isinstance(lon, numbers.Number), (
+            "If geom is not passed, lat and lon must be given as float values."
+        )
     else:
-        assert isinstance(
-            geom, ogr.Geometry
-        ), "geom must be given as osgeo.ogr.Geometry class object if not None."
-        assert (
-            lat is None and lon is None
-        ), "If geom is given, lat and lon must not be given."
+        assert isinstance(geom, ogr.Geometry), (
+            "geom must be given as osgeo.ogr.Geometry class object if not None."
+        )
+        assert lat is None and lon is None, (
+            "If geom is given, lat and lon must not be given."
+        )
 
     # check if lat/lon can be used or if it must be extracted from geom first
     if not geom is None:

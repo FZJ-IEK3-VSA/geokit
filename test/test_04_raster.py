@@ -514,7 +514,6 @@ def test_contours():
 
 
 def test_warp():
-
     # Test 1a: Change resolution and save to disk
     d1 = raster.warp(
         CLC_RASTER_PATH,

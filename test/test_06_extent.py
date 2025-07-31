@@ -680,7 +680,6 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-
     path_aachen_shape_file = get_test_shape_file(
         file_name_without_extension="aachenShapefile", extension=".shp"
     )

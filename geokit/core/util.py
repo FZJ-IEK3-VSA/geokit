@@ -526,7 +526,7 @@ def drawImage(
     rightMargin=0,
     topMargin=0,
     bottomMargin=0,
-    **kwargs
+    **kwargs,
 ):
     """Draw a matrix as an image on a matplotlib canvas
 
