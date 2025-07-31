@@ -10,7 +10,5 @@ jobs:
       - uses: astral-sh/ruff-action@v3
       - name: Check Linter
         run: ruff check --output-format=github . --config ruff.toml
-      - name: Check Linter for .ipynb files
-        run: nbqa ruff Examples --config ruff.toml
       - name: Check Format
         run: ruff format --check --config ruff.toml
