@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python<=3.10.13
+  - python
   - pytest
   - pytest-xdist
   - pytest-cov
@@ -13,15 +13,15 @@ dependencies:
   - notebook
   - jupyterlab
   - pip
-  - matplotlib<=3.9.1
+  - matplotlib
   - descartes
-  - pandas<=2.3
-  - numpy<1.24
-  - scipy<=1.15.2
+  - pandas
+  - numpy
+  - scipy
   - scikit-learn
   - gdal>=3.4.2,<=3.4.3
-  - smopy<=0.0.8
-  - geopandas<=0.14.4
+  - smopy
+  - geopandas
   - nbconvert
   - pooch
   - typeguard
