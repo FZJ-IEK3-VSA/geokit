@@ -20,7 +20,7 @@ build:
       - echo "Creation of config.py is terminated"
     build:
       html:
-        - sphinx-build . ./$READTHEDOCS_OUTPUT/html/docs -b html
+        - sphinx-build -T -b html -d _build/doctrees -D language=en. $READTHEDOCS_OUTPUT/html -b html
 conda:
   environment: requirements-dev.yml
 
