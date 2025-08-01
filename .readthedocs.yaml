@@ -15,8 +15,12 @@ build:
       # Generate the Sphinx configuration for this Jupyter Book so it builds.
       # - "jupyter-book config sphinx . --toc docs/_toc.yml --config docs/_config.yml"
       - echo "Start creation of config.py"
-      - jupyter-book config sphinx --toc docs/_toc.yaml --config docs/_config.yaml .readthedocs.yaml
+      # - jupyter-book config sphinx --toc docs/_toc.yaml --config docs/_config.yaml .readthedocs.yaml
+      - jupyter-book config sphinx .
       - echo "Creation of config.py is terminated"
+    build:
+      html:
+        - sphinx-build . ./$READTHEDOCS_OUTPUT/html/docs -b html
 conda:
   environment: requirements-dev.yml
 
