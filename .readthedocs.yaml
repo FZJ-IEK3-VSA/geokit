@@ -16,7 +16,7 @@ build:
       # - "jupyter-book config sphinx . --toc docs/_toc.yml --config docs/_config.yml"
       - echo "Start creation of config.py"
       # - jupyter-book config sphinx --toc docs/_toc.yaml --config docs/_config.yaml .readthedocs.yaml
-      - conda run --name latest pip install . --no-deps
+      - conda run --name latest pip install -e . --no-deps
       - conda run --name latest jupyter-book config sphinx .
       - echo "Creation of config.py is terminated"
     build:
