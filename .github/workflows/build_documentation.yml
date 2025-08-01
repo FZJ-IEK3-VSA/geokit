@@ -50,7 +50,7 @@ jobs:
 
     # Build the book
     - name: Build the book
-      run:  jupyter-book build . --toc docs/_toc.yml --config docs/_config.yml
+      run:  conda run --name geokit_env jupyter-book build . --toc docs/_toc.yml --config docs/_config.yml
 
     # Upload the book's HTML as an artifact
     - name: Upload artifact
