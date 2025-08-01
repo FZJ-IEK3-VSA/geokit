@@ -23,3 +23,4 @@ dependencies:
   - pooch <=1.8.2
   - structlog <=25.4.0
   - rich <=14.1.0
+  - psutil <=7.0.0
