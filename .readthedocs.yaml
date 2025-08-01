@@ -20,7 +20,7 @@ build:
       - echo "Creation of config.py is terminated"
     build:
       html:
-        - sphinx-build -T -b html -d _build/doctrees -D language=en. $READTHEDOCS_OUTPUT/html -b html
+        - sphinx-build -T -b html -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/html -b html
 conda:
   environment: requirements-dev.yml
 
@@ -28,6 +28,7 @@ conda:
 sphinx:
   configuration: docs/conf.py
   builder: html
+  fail_on_warning: false
 # Optionally build your docs in additional formats such as PDF and ePub
 # formats:
 #    - pdf
