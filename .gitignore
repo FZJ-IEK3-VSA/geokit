@@ -14,6 +14,7 @@ docs/_build
 docs/autoapi
 docs/geokit
 docs/combineSimilarRasters
+_build
 
 # Remove things in testing results dir
 testing/results/*.tif
