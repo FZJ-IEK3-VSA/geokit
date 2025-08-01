@@ -16,7 +16,8 @@ build:
       # - "jupyter-book config sphinx . --toc docs/_toc.yml --config docs/_config.yml"
       - echo "Start creation of config.py"
       # - jupyter-book config sphinx --toc docs/_toc.yaml --config docs/_config.yaml .readthedocs.yaml
-      - jupyter-book config sphinx .
+      - conda run --name geokit_env pip install . --no-deps
+      - conda run --name geokit_env jupyter-book config sphinx .
       - echo "Creation of config.py is terminated"
     build:
       html:

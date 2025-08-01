@@ -15,6 +15,7 @@ docs/autoapi
 docs/geokit
 docs/combineSimilarRasters
 _build
+conf.py
 
 # Remove things in testing results dir
 testing/results/*.tif
