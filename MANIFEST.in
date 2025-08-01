@@ -1,2 +1,0 @@
-recursive-include geokit *.py
-recursive-include geokit/test *

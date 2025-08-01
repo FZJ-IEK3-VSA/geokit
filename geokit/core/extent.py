@@ -1,17 +1,18 @@
-import numpy as np
-from osgeo import gdal, ogr, osr
-from glob import glob
 import warnings
 from collections import namedtuple
-import smopy
+from glob import glob
 from os.path import isfile
 
-from . import util as UTIL
-from . import srs as SRS
-from . import geom as GEOM
-from . import raster as RASTER
-from . import vector as VECTOR
-from .location import Location, LocationSet
+import numpy as np
+import smopy
+from osgeo import gdal, ogr, osr
+
+from geokit.core import geom as GEOM
+from geokit.core import raster as RASTER
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
+from geokit.core import vector as VECTOR
+from geokit.core.location import Location, LocationSet
 
 
 class GeoKitExtentError(UTIL.GeoKitError):

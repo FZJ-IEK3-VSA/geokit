@@ -1,6 +1,7 @@
-name: geokit
+name: geokit_env
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # - python
   # - pytest
@@ -19,4 +20,8 @@ dependencies:
   - scikit-learn
   - gdal>=3.4.2,<=3.4.3
   - smopy
+  - geopandas
+  - pooch
+  - structlog
+  - rich
 

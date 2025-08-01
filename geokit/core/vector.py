@@ -1,19 +1,20 @@
-import os
 import copy
-import numpy as np
-from osgeo import gdal, ogr, osr
-from tempfile import TemporaryDirectory
-import warnings
-from collections import namedtuple, defaultdict, OrderedDict
-from collections.abc import Iterable
-import pandas as pd
-from binascii import hexlify
 import numbers
+import os
+import warnings
+from binascii import hexlify
+from collections import OrderedDict, defaultdict, namedtuple
+from collections.abc import Iterable
+from tempfile import TemporaryDirectory
 
-from . import util as UTIL
-from . import srs as SRS
-from . import geom as GEOM
-from . import raster as RASTER
+import numpy as np
+import pandas as pd
+from osgeo import gdal, ogr, osr
+
+from geokit.core import geom as GEOM
+from geokit.core import raster as RASTER
+from geokit.core import srs as SRS
+from geokit.core import util as UTIL
 
 
 class GeoKitVectorError(UTIL.GeoKitError):
@@ -1148,7 +1149,7 @@ def createVector(
         driver = ogr.GetDriverByName(driverName)
         dataSource = driver.CreateDataSource(output)
 
-    elif output is not None and overwrite == False:
+    elif output is not None and overwrite is False:
         warnings.warn("Overwriting existing file")
         dataSource = ogr.Open(output, 1)
         assert dataSource is not None, f"Could not open {output}"
@@ -1348,8 +1349,9 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
 
     # Put in the right format
     if topo:
-        from topojson import conversion
         from io import TextIOWrapper
+
+        from topojson import conversion
 
         fo.seek(0)
         topo = conversion.convert(

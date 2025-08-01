@@ -1,13 +1,15 @@
-from geokit.core.regionmask import *
-from geokit.core.util import GeoKitError
-from geokit.raster import rasterInfo, createRaster, extractMatrix
-from os.path import basename
 import os
 import sys
-from json import dumps
 from glob import glob
-from osgeo import gdal
+from json import dumps
+from os.path import basename
 from warnings import warn
+
+from osgeo import gdal
+
+from geokit.core.regionmask import *
+from geokit.core.util import GeoKitError
+from geokit.raster import createRaster, extractMatrix, rasterInfo
 
 
 def combineSimilarRasters(
