@@ -10,10 +10,6 @@ build:
   os: ubuntu-22.04
   tools:
     python: mambaforge-latest
-    # You can also specify other tool versions:
-    # nodejs: "19"
-    # rust: "1.64"
-    # golang: "1.19"
   jobs:
     pre_build:
       # Generate the Sphinx configuration for this Jupyter Book so it builds.
