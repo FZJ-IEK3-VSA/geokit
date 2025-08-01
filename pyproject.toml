@@ -4,18 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geokit"
-version = "1.4.2"
+version = "1.5.0"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
-    { name = "David Severin Ryberg" },
-    { name = "Zena Tulemat"},
-    { name = "Christoph Winkler", email = "c.winkler@fz-juelich.de" },
-    { name = "Ishmam Shitab", email = "s.ishmam@fz-juelich.de" },
-    { name = "Julian Belina", email = "j.belina@fz-juelich.de"}
+  { name = "David Severin Ryberg" },
+  { name = "Christoph Winkler", email = "c.winkler@fz-juelich.de" },
+  { name = "Ishmam Shitab", email = "s.ishmam@fz-juelich.de" },
+  { name = "Julian Belina", email = "j.belina@fz-juelich.de" },
 ]
-maintainers = [
-  { name = "Julian Belina", email = "j.belina@fz-juelich.de"}
-]
+maintainers = [{ name = "Julian Belina", email = "j.belina@fz-juelich.de" }]
 license = { file = "LICENSE.txt" }
 readme = "README.md"
 
@@ -32,7 +29,9 @@ where = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["test"] # Sets the path where to look for tests
-pythonpath =["test"] # Sets the path which should be prepended to pythonpath relative to the root folder
+pythonpath = [
+  "test",
+] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
 typeguard-packages = """
 geokit"""

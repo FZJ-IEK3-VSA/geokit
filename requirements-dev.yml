@@ -3,28 +3,25 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python<=3.10.13 
-  - pytest
-  - pytest-xdist 
-  - pytest-cov
-  - pylint
-  - autopep8
-  - jupyter
-  - notebook
-  - jupyterlab
-  - pip
-  - matplotlib<=3.9.1
-  - descartes
-  - pandas<=2.3
-  - numpy<1.24
-  - scipy<=1.15.2 
-  - scikit-learn
-  - gdal>=3.4.2,<=3.4.3
-  - smopy<=0.0.8 
-  - geopandas<=0.14.4 
-  - nbconvert
-  - pooch
-  - typeguard
-  - structlog
-  - rich
-
+  - python <=3.10.13
+  - pytest <=8.4.1
+  - pytest-xdist <=3.8.0
+  - pytest-cov <=6.2.1
+  - jupyter <=1.1.1
+  - notebook <=7.4.4
+  - jupyterlab <=4.4.5
+  - descartes <=1.1.0
+  - pip <=25.2
+  - matplotlib <=3.9.1
+  - pandas <=2.3.1
+  - numpy <=1.26.4
+  - scipy <=1.15.2
+  - scikit-learn <=1.7.1
+  - gdal >=3.4.2,<=3.4.3
+  - smopy <=0.0.8
+  - geopandas <=0.14.4
+  - nbconvert <=7.16.6
+  - pooch <=1.8.2
+  - typeguard <=4.4.4
+  - structlog <=25.4.0
+  - rich <=14.1.0
