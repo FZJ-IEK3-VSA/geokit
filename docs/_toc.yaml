@@ -2,7 +2,7 @@
 # Learn more at https://jupyterbook.org/customize/toc.html
 
 format: jb-book
-root: docs/contents.md
+root: contents.md
 
 options: # The options key will be applied to all chapters, but not sub-sections
   numbered: True

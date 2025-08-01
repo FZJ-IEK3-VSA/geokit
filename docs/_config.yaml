@@ -25,7 +25,7 @@ latex:
 # Information about where the book exists on the web
 repository:
   url: https://github.com/FZJ-IEK3-VSA/geokit # Online location of your book
-  path_to_book: docs # Optional path to your book, relative to the repository root
+  # path_to_book: . # Optional path to your book, relative to the repository root
 
 # Add GitHub buttons to your book
 # See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
