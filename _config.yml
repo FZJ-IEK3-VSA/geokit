@@ -32,6 +32,7 @@ repository:
 html:
   use_issues_button: true
   use_repository_button: true
+  use_edit_page_button: true
 
 only_build_toc_files: true
 sphinx:
