@@ -55,11 +55,13 @@ def combineSimilarRasters(
     infoSet = [rasterInfo(d) for d in datasets]
 
     # Ensure all input rasters share resolution, srs, datatype, and noData
+    if not all([info.srs.IsSame(infoSet[0].srs) for info in infoSet]):
+        # all srs must always be the same irrespective of warping or not
+        raise GeoKitError(f"SRS does not match in all datasets.")
+    
     try:
         # first try if the ds are in the same context already
         for info in infoSet[1:]:
-            if not info.srs.IsSame(infoSet[0].srs):
-                raise GeoKitError(f"SRS does not match in datasets: {info.srs} vs. {infoSet[0].srs}")
             if not (info.dx == infoSet[0].dx and info.dy == infoSet[0].dy):
                 raise GeoKitError(f"Resolution does not match in datasets. x/y: {info.dx} vs. {infoSet[0].dx} / {info.dy} vs. {infoSet[0].dy}")
             if not (info.dtype == infoSet[0].dtype):
@@ -83,11 +85,9 @@ def combineSimilarRasters(
                 # define the first resolution and srs as reference
                 x_ref = _x
                 y_ref = _y
-                srs_ref = _info.srs
             else:
                 # make sure all other res are at least similar, even if maybe not the same
                 assert np.isclose([_x, _y], [x_ref, y_ref]).all()
-                assert _info.srs.IsSame(srs_ref) # srs must match
             # calculate the new bounds, the rule - maintain bottom left bounds
             _bounds = ( 
                 _info.bounds[0], 
@@ -100,7 +100,7 @@ def combineSimilarRasters(
                 resampleAlg = 'near',
                 pixelHeight = y_ref,
                 pixelWidth = x_ref,
-                srs = srs_ref,
+                srs = _info.srs,
                 bounds = _bounds,
                 dtype = dtype_ref,
                 noData = _info.noData,
