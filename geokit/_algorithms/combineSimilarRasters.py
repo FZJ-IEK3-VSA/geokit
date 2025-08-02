@@ -8,7 +8,7 @@ from warnings import warn
 from osgeo import gdal
 
 from geokit.core.regionmask import *
-from geokit.core.util import GeoKitError
+from geokit.core.util import GeoKitError, get_common_dtype
 from geokit.raster import createRaster, extractMatrix, rasterInfo, warp
 
 
@@ -68,29 +68,11 @@ def combineSimilarRasters(
     except Exception as e:
         if verbose:
             print(f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
-        # first find the dtype that covers all our rasters, starting with the most versatile GDAL integer dtype code to the most lightweight
-        dtype_codes_preferences = [
-            11,  # GDT_CFloat64
-            10,  # GDT_CFloat32
-            # 9,   # GDT_CInt32 # deprecated from general use, not in rasters, should not be used
-            # 8,   # GDT_CInt16 # deprecated from general use, not in rasters, should not be used
-            7,   # GDT_Float64
-            6,   # GDT_Float32
-            14,  # GDT_Int64
-            13,  # GDT_UInt64
-            5,   # GDT_Int32
-            4,   # GDT_UInt32
-            3,   # GDT_Int16
-            2,   # GDT_UInt16
-            12,  # GDT_Int8
-            1    # GDT_Byte
-        ]
-        for dtype_ref in dtype_codes_preferences+[None]:
-            if dtype_ref in [_i.dtype for _i in infoSet]:
-                # as soon as the least versatile dtype is matched, we must use it for all dsets
-                break
-        if dtype_ref is None:
-            raise GeoKitError(f"None of the GDAL internal dtype codes matched the following unique dataset info.dtypes: {sorted(set([_i.dtype for _i in infoSet]))}")
+        # get the unique actual dtypes in input rasters
+        dtypes = sorted(set([_i.dtype for _i in infoSet]))
+        # now get the most lightweight commonly useable dtype
+        # set automated fallback to None - user shall preprocess in such cases
+        dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
         # else (marginally) warp them to the same context first
         _datasets = []
         for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
@@ -125,7 +107,7 @@ def combineSimilarRasters(
                 fill = _info.noData,
             )
             _datasets.append(_dswarped)
-        # overwrite datasets and calculate a new infoset with updated rasterInfo#
+        # overwrite datasets and calculate a new infoset with updated rasterInfo
         datasets = _datasets
         infoSet = [rasterInfo(d) for d in datasets]
 
