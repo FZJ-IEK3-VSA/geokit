@@ -9,7 +9,7 @@ from osgeo import gdal
 
 from geokit.core.regionmask import *
 from geokit.core.util import GeoKitError
-from geokit.raster import createRaster, extractMatrix, rasterInfo
+from geokit.raster import createRaster, extractMatrix, rasterInfo, warp
 
 
 def combineSimilarRasters(
@@ -55,13 +55,79 @@ def combineSimilarRasters(
     infoSet = [rasterInfo(d) for d in datasets]
 
     # Ensure all input rasters share resolution, srs, datatype, and noData
-    for info in infoSet[1:]:
-        if not info.srs.IsSame(infoSet[0].srs):
-            raise GeoKitError("SRS does not match in datasets")
-        if not (info.dx == infoSet[0].dx and info.dy == infoSet[0].dy):
-            raise GeoKitError("Resolution does not match in datasets")
-        if not (info.dtype == infoSet[0].dtype):
-            raise GeoKitError("Datatype does not match in datasets")
+    try:
+        # first try if the ds are in the same context already
+        for info in infoSet[1:]:
+            if not info.srs.IsSame(infoSet[0].srs):
+                raise GeoKitError(f"SRS does not match in datasets: {info.srs} vs. {infoSet[0].srs}")
+            if not (info.dx == infoSet[0].dx and info.dy == infoSet[0].dy):
+                raise GeoKitError(f"Resolution does not match in datasets. x/y: {info.dx} vs. {infoSet[0].dx} / {info.dy} vs. {infoSet[0].dy}")
+            if not (info.dtype == infoSet[0].dtype):
+                raise GeoKitError(f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}")
+            
+    except Exception as e:
+        if verbose:
+            print(f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
+        # first find the dtype that covers all our rasters, starting with the most versatile GDAL integer dtype code to the most lightweight
+        dtype_codes_preferences = [
+            11,  # GDT_CFloat64
+            10,  # GDT_CFloat32
+            # 9,   # GDT_CInt32 # deprecated from general use, not in rasters, should not be used
+            # 8,   # GDT_CInt16 # deprecated from general use, not in rasters, should not be used
+            7,   # GDT_Float64
+            6,   # GDT_Float32
+            14,  # GDT_Int64
+            13,  # GDT_UInt64
+            5,   # GDT_Int32
+            4,   # GDT_UInt32
+            3,   # GDT_Int16
+            2,   # GDT_UInt16
+            12,  # GDT_Int8
+            1    # GDT_Byte
+        ]
+        for dtype_ref in dtype_codes_preferences+[None]:
+            if dtype_ref in [_i.dtype for _i in infoSet]:
+                # as soon as the least versatile dtype is matched, we must use it for all dsets
+                break
+        if dtype_ref is None:
+            raise GeoKitError(f"None of the GDAL internal dtype codes matched the following unique dataset info.dtypes: {sorted(set([_i.dtype for _i in infoSet]))}")
+        # else (marginally) warp them to the same context first
+        _datasets = []
+        for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
+            # get the res/srs and make sure it is close enough for all rasters
+            _x = _info.pixelWidth
+            _y = _info.pixelHeight
+            if i==0:
+                # define the first resolution and srs as reference
+                x_ref = _x
+                y_ref = _y
+                srs_ref = _info.srs
+            else:
+                # make sure all other res are at least similar, even if maybe not the same
+                assert np.isclose([_x, _y], [x_ref, y_ref]).all()
+                assert _info.srs.IsSame(srs_ref) # srs must match
+            # calculate the new bounds, the rule - maintain bottom left bounds
+            _bounds = ( 
+                _info.bounds[0], 
+                _info.bounds[0]+_info.xWinSize*x_ref, 
+                _info.bounds[2],
+                _info.bounds[2]+_info.yWinSize*y_ref,
+                )
+            _dswarped = warp(
+                source = _ds,
+                resampleAlg = 'near',
+                pixelHeight = y_ref,
+                pixelWidth = x_ref,
+                srs = srs_ref,
+                bounds = _bounds,
+                dtype = dtype_ref,
+                noData = _info.noData,
+                fill = _info.noData,
+            )
+            _datasets.append(_dswarped)
+        # overwrite datasets and calculate a new infoset with updated rasterInfo#
+        datasets = _datasets
+        infoSet = [rasterInfo(d) for d in datasets]
 
     # Get summary info about the whole dataset group
     dataXMin = min([i.xMin for i in infoSet])
