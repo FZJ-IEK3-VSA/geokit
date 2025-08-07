@@ -1,0 +1,69 @@
+name: Bug Report
+description: Create a report if something doesn't work quite right.
+type: "Bug"
+
+body:
+- type: markdown
+  attributes:
+    value: |
+      Thanks for taking the time to fill out this bug report!
+
+- type: checkboxes
+  id: checks
+  attributes:
+    label: Version Checks (indicate both or one)
+    options:
+    - label: >
+        I have confirmed this bug exists on the lastest commit on the master branch of geokit.
+    - label: >
+        I have confirmed this bug exists on the lastest commit on the dev branch of geokit.
+    - label: >
+        I have confirmed this bug exists for a specific version of geokit.
+
+- type: textarea
+  id: problem
+  attributes:
+    label: Issue Description
+    description: >
+      Please provide a description of the issue. Also, please provide the error output as text or as a screenshot.
+  validations:
+    required: true
+
+- type: textarea
+  id: example
+  validations:
+    required: true
+  attributes:
+    label: Reproducible Example
+    description: >
+      Please provide a minimal reproduciable example. See how to [craft minimal bug reports](https://matthewrocklin.com/minimal-bug-reports).
+    placeholder: >
+      import geokit as gk
+
+      ...
+
+    render: python
+
+- type: textarea
+  id: expected-behavior
+  validations:
+    required: true
+  attributes:
+    label: Expected Behavior
+    description: >
+      Please describe or show a code example of the expected behavior.
+
+- type: textarea
+  id: EnvironmentConda
+  attributes:
+    label: conda list
+    description: >
+      Please share information on your environment. Paste the output of the command ``conda list`` below.
+    
+
+- type: textarea
+  id: EnvironmentPip
+  attributes:
+    label: pip list -v
+    description: >
+      Please share information on your environment. Paste the output of the command ''pip list -v'' below. 

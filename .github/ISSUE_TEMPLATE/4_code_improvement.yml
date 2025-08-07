@@ -1,0 +1,27 @@
+name: Code Improvement
+description: Propose improvement to the code
+type: 'Code improvement'
+
+body:
+- type: textarea
+  id: Purpose
+  attributes:
+    label: Purpose of the improvement
+    description: >
+      How should your proposal improve the code?
+      - Increase efficiency
+      - Improve maintainability
+      - Improve the user interaction e.g. remove warnings
+  validations:
+    required: true
+- type: textarea
+  id: Proposal
+  attributes:
+    label: Proposal
+    description: >
+      Please provide a description of what should be improved. For example:
+        - For which function should the efficiency be improved, and how can this be achieved?
+        - Which part of the code needs refactoring?
+        - Which warnings should be removed or implemented?
+  validations:
+    required: true
