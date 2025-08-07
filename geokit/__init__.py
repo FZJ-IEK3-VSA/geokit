@@ -45,6 +45,7 @@ import geokit.util
 import geokit.vector
 from geokit.core.extent import Extent
 from geokit.core.geom import drawGeoms
+from geokit.core.get_test_data import get_all_test_data_dict
 
 # import the main objects
 from geokit.core.location import Location, LocationSet
@@ -53,3 +54,5 @@ from geokit.core.regionmask import RegionMask
 
 # import vidualizing functions to top level since they are
 from geokit.core.util import drawImage
+
+_test_data_ = get_all_test_data_dict()
