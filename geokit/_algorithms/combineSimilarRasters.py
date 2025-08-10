@@ -14,7 +14,13 @@ from geokit.raster import createRaster, extractMatrix, rasterInfo, warp
 
 
 def combineSimilarRasters(
-    datasets, output=None, combiningFunc=None, verbose=True, updateMeta=False, allowPreWarp=True, **kwargs
+    datasets,
+    output=None,
+    combiningFunc=None,
+    verbose=True,
+    updateMeta=False,
+    allowPreWarp=True,
+    **kwargs,
 ):
     """
     Combines several similar raster files into one single raster file.
@@ -22,25 +28,25 @@ def combineSimilarRasters(
     Parameters
     ----------
     datasets : string or list
-        glob string path describing datasets to combine, alternatively list of 
+        glob string path describing datasets to combine, alternatively list of
         gdal.Datasets or iterable object with paths.
     output : string, optional
-        Filepath to output raster file. If it is an existing file, datasets will 
-        be added to output. Recommended to create a new file everytime though. 
-        If None, no output dataset will be loaded or created on disk and output 
+        Filepath to output raster file. If it is an existing file, datasets will
+        be added to output. Recommended to create a new file everytime though.
+        If None, no output dataset will be loaded or created on disk and output
         dataset kept in memory only, by default None
     combiningFunc : [type], optional
         Allows customized functions to combine matrices, by default None
     verbose : bool, optional
-        If True, additional status print stamenets will be issued, by default 
+        If True, additional status print stamenets will be issued, by default
         True
     updateMeta : bool, optional
-        If True, metadata of output dataset will be a combination of all input 
+        If True, metadata of output dataset will be a combination of all input
         rasters, by default False.
-        NOTE: In the case of multiple values for the metadata keys, the last 
+        NOTE: In the case of multiple values for the metadata keys, the last
         dataset metadata will take precedence.
     allowPreWarp : bool, optional
-        If True, minor deviations in raster context will be aligned by a 
+        If True, minor deviations in raster context will be aligned by a
         preprocessing warping step.
     Returns:
     ----------
@@ -74,29 +80,39 @@ def combineSimilarRasters(
     else:
         # define the reference srs
         srs_ref = infoSet[0].srs
-    
+
     try:
         # first try if the ds are in the same context already
         for info in infoSet[1:]:
             if not (info.dx == infoSet[0].dx and info.dy == infoSet[0].dy):
-                raise GeoKitError(f"Resolution does not match in datasets. x/y: {info.dx} vs. {infoSet[0].dx} / {info.dy} vs. {infoSet[0].dy}")
+                raise GeoKitError(
+                    f"Resolution does not match in datasets. x/y: {info.dx} vs. {infoSet[0].dx} / {info.dy} vs. {infoSet[0].dy}"
+                )
             if not (info.dtype == infoSet[0].dtype):
+                raise GeoKitError(
+                    f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}"
+                )
                 raise GeoKitError(f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}")
             
+
     except Exception as e:
         # we have a mismatch of at least one relevant context parameter between the rasters in the list
         if not allowPreWarp:
             # pre-warp is not allowed, must fail
             raise e
         if verbose:
-            print(datetime.datetime.now(), f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
-        
+            print(
+                datetime.datetime.now(),
+                f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}",
+                flush=True,
+            )
+
         # get the unique actual dtypes in input rasters
         dtypes = sorted(set([_i.dtype for _i in infoSet]))
         # now get the most lightweight commonly useable dtype
         # set automated fallback to None - user shall preprocess in such cases
         dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
-        
+
         # get the reference resolution in x and y dir as the most commonly used value
         x_ress = [_i.pixelWidth for _i in infoSet]
         x_ref = max(set(x_ress), key=x_ress.count)
@@ -112,50 +128,79 @@ def combineSimilarRasters(
         else:
             # bounds of SRS unknown, so align all bounds to the first matching raster which has correct x_ref and y_ref resolution
             i_match = next(
-                (i for i, (x, y) in enumerate(zip(x_ress, y_ress)) if x == x_ref and y == y_ref),
-                None
+                (
+                    i
+                    for i, (x, y) in enumerate(zip(x_ress, y_ress))
+                    if x == x_ref and y == y_ref
+                ),
+                None,
             )
             if i_match is not None:
                 # we have a "perfect" raster, use the min. bounds of that one as reference for all other rasters
                 bounds_refXmin = infoSet[i_match].bounds[0]
                 bounds_refYmin = infoSet[i_match].bounds[2]
-                print(datetime.datetime.now(), f"NOTE: SRS validity bounds could not be extracted from SRS, so the bounds of the first raster which matches both reference resolutions in x and y direction are used as reference (raster #{i_match}).", flush=True)
+                print(
+                    datetime.datetime.now(),
+                    f"NOTE: SRS validity bounds could not be extracted from SRS, so the bounds of the first raster which matches both reference resolutions in x and y direction are used as reference (raster #{i_match}).",
+                    flush=True,
+                )
             else:
                 # we do not have any raster which matches both r_ref any y_ref in its resolution. Simply use the first raster.
                 bounds_refXmin = infoSet[0].bounds[0]
                 bounds_refYmin = infoSet[0].bounds[2]
-                print(datetime.datetime.now(), f"NOTE: SRS validity bounds could not be extracted from SRS nor does one raster match both reference resolutions in x and y direction. Use first raster bounds as reference.", flush=True)
-
+                print(
+                    datetime.datetime.now(),
+                    f"NOTE: SRS validity bounds could not be extracted from SRS nor does one raster match both reference resolutions in x and y direction. Use first raster bounds as reference.",
+                    flush=True,
+                )
 
         # now (marginally) warp all rasters to the same context first
         _datasets = []
         for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
             if verbose:
                 if isinstance(datasets[i], str):
-                    print(datetime.datetime.now(), f"Now pre-warping raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})")
+                    print(
+                        datetime.datetime.now(),
+                        f"Now pre-warping raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})",
+                    )
                 else:
-                    print(datetime.datetime.now(), f"Now pre-warping raster No. {i+1}/{len(datasets)}")
+                    print(
+                        datetime.datetime.now(),
+                        f"Now pre-warping raster No. {i+1}/{len(datasets)}",
+                    )
             # get the res and make sure it is close enough to the reference for all rasters
-            assert np.isclose([_info.pixelWidth, _info.pixelHeight], [x_ref, y_ref]).all()
+            assert np.isclose(
+                [_info.pixelWidth, _info.pixelHeight], [x_ref, y_ref]
+            ).all()
             # calculate the new bounds, the rule - maintain bottom left bounds and align with bounds_ref
-            _bounds_Xmin = bounds_refXmin + round((_info.bounds[0] - bounds_refXmin) / x_ref) * x_ref
-            _bounds_Ymin = bounds_refYmin + round((_info.bounds[1] - bounds_refYmin) / y_ref) * y_ref
-            _bounds = ( 
-                _bounds_Xmin, 
+            _bounds_Xmin = (
+                bounds_refXmin
+                + round((_info.bounds[0] - bounds_refXmin) / x_ref) * x_ref
+            )
+            _bounds_Ymin = (
+                bounds_refYmin
+                + round((_info.bounds[1] - bounds_refYmin) / y_ref) * y_ref
+            )
+            _bounds = (
+                _bounds_Xmin,
                 _bounds_Ymin,
+                _bounds_Xmin + _info.xWinSize * x_ref,
+                _bounds_Ymin + _info.yWinSize * y_ref,
+            )
+            # warp the data to the new context
                 _bounds_Xmin+_info.xWinSize*x_ref, 
                 _bounds_Ymin+_info.yWinSize*y_ref,
                 )
             _dswarped = warp(
-                source = _ds,
-                resampleAlg = 'near',
-                pixelHeight = y_ref,
-                pixelWidth = x_ref,
-                srs = srs_ref,
-                bounds = _bounds,
-                dtype = dtype_ref,
-                noData = _info.noData,
-                fill = _info.noData,
+                source=_ds,
+                resampleAlg="near",
+                pixelHeight=y_ref,
+                pixelWidth=x_ref,
+                srs=srs_ref,
+                bounds=_bounds,
+                dtype=dtype_ref,
+                noData=_info.noData,
+                fill=_info.noData,
             )
             _datasets.append(_dswarped)
         # overwrite datasets and calculate a new infoset with updated rasterInfo
@@ -251,9 +296,15 @@ def combineSimilarRasters(
     for i in range(len(datasets)):
         if verbose:
             if isinstance(datasets[i], str):
-                print(datetime.datetime.now(), f"Now adding raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})")
+                print(
+                    datetime.datetime.now(),
+                    f"Now adding raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})",
+                )
             else:
-                print(datetime.datetime.now(), f"Now adding raster No. {i+1}/{len(datasets)}")
+                print(
+                    datetime.datetime.now(),
+                    f"Now adding raster No. {i+1}/{len(datasets)}",
+                )
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 
