@@ -13,7 +13,7 @@ from geokit.raster import createRaster, extractMatrix, rasterInfo, warp
 
 
 def combineSimilarRasters(
-    datasets, output=None, combiningFunc=None, verbose=True, updateMeta=False, **kwargs
+    datasets, output=None, combiningFunc=None, verbose=True, updateMeta=False, allowPreWarp=True, **kwargs
 ):
     """
     Combines several similar raster files into one single raster file.
@@ -38,11 +38,16 @@ def combineSimilarRasters(
         rasters, by default False.
         NOTE: In the case of multiple values for the metadata keys, the last 
         dataset metadata will take precedence.
+    allowPreWarp : bool, optional
+        If True, minor deviations in raster context will be aligned by a 
+        preprocessing warping step.
     Returns:
     ----------
     output dataset: osgeo.gdal.Dataset
         Raster file containing the combined matrices of all input datasets.
     """
+    if not isinstance(allowPreWarp, bool):
+        raise TypeError(f"allowPreWarp must be boolean.")
 
     # Ensure we have a list of raster datasets
     if isinstance(datasets, str):
@@ -75,7 +80,11 @@ def combineSimilarRasters(
                 raise GeoKitError(f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}")
             
     except Exception as e:
-        if verbose:
+        # we have a mismatch of at least one relevant context parameter between the rasters in the list
+        if not allowPreWarp:
+            # pre-warp is not allowed, must fail
+            raise e
+        elif verbose:
             print(f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
         # get the unique actual dtypes in input rasters
         dtypes = sorted(set([_i.dtype for _i in infoSet]))
