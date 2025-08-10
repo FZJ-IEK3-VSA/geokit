@@ -103,7 +103,31 @@ def combineSimilarRasters(
         y_ress = [_i.pixelHeight for _i in infoSet]
         y_ref = max(set(y_ress), key=y_ress.count)
 
-        # else (marginally) warp them to the same context first
+        # get the relative boundaries to align all raster bounds with, so that cells do not partially overlap
+        areaOfUse = srs_ref.GetAreaOfUse()
+        if areaOfUse is not None:
+            # align the rasters to the minimum boundaries of the SRS
+            bounds_refXmin = areaOfUse.west_lon_degree
+            bounds_refYmin = areaOfUse.south_lon_degree
+        else:
+            # bounds of SRS unknown, so align all bounds to the first matching raster which has correct x_ref and y_ref resolution
+            i_match = next(
+                (i for i, (x, y) in enumerate(zip(x_ress, y_ress)) if x == x_ref and y == y_ref),
+                None
+            )
+            if i_match is not None:
+                # we have a "perfect" raster, use the min. bounds of that one as reference for all other rasters
+                bounds_refXmin = infoSet[i_match].bounds[0]
+                bounds_refYmin = infoSet[i_match].bounds[2]
+                print(datetime.datetime.now(), f"NOTE: SRS validity bounds could not be extracted from SRS, so the bounds of the first raster which matches both reference resolutions in x and y direction are used as reference (raster #{i_match}).", flush=True)
+            else:
+                # we do not have any raster which matches both r_ref any y_ref in its resolution. Simply use the first raster.
+                bounds_refXmin = infoSet[0].bounds[0]
+                bounds_refYmin = infoSet[0].bounds[2]
+                print(datetime.datetime.now(), f"NOTE: SRS validity bounds could not be extracted from SRS nor does one raster match both reference resolutions in x and y direction. Use first raster bounds as reference.", flush=True)
+
+
+        # now (marginally) warp all rasters to the same context first
         _datasets = []
         for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
             if verbose:
@@ -113,12 +137,14 @@ def combineSimilarRasters(
                     print(datetime.datetime.now(), f"Now pre-warping raster No. {i+1}/{len(datasets)}")
             # get the res and make sure it is close enough to the reference for all rasters
             assert np.isclose([_info.pixelWidth, _info.pixelHeight], [x_ref, y_ref]).all()
-            # calculate the new bounds, the rule - maintain bottom left bounds
+            # calculate the new bounds, the rule - maintain bottom left bounds and align with bounds_ref
+            _bounds_Xmin = bounds_refXmin + round((_info.bounds[0] - bounds_refXmin) / x_ref) * x_ref
+            _bounds_Ymin = bounds_refYmin + round((_info.bounds[1] - bounds_refYmin) / y_ref) * y_ref
             _bounds = ( 
-                _info.bounds[0], 
-                _info.bounds[0]+_info.xWinSize*x_ref, 
-                _info.bounds[2],
-                _info.bounds[2]+_info.yWinSize*y_ref,
+                _bounds_Xmin, 
+                _bounds_Ymin,
+                _bounds_Xmin+_info.xWinSize*x_ref, 
+                _bounds_Ymin+_info.yWinSize*y_ref,
                 )
             _dswarped = warp(
                 source = _ds,
