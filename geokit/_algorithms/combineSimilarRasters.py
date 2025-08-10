@@ -92,8 +92,13 @@ def combineSimilarRasters(
                 raise GeoKitError(
                     f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}"
                 )
-                raise GeoKitError(f"Datatype does not match in datasets: {info.dtype} vs. {infoSet[0].dtype}")
-            
+            if not (
+                abs((infoSet[0].bounds[0] - info.bounds[0]) % infoSet[0].dx) == 0
+                and abs((infoSet[0].bounds[1] - info.bounds[1]) % infoSet[0].dy) == 0
+            ):
+                raise GeoKitError(
+                    f"Boundaries of the different rasters are not aligned with cell resolution."
+                )
 
     except Exception as e:
         # we have a mismatch of at least one relevant context parameter between the rasters in the list
