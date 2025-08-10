@@ -89,24 +89,24 @@ def combineSimilarRasters(
             raise e
         elif verbose:
             print(f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
+        
         # get the unique actual dtypes in input rasters
         dtypes = sorted(set([_i.dtype for _i in infoSet]))
         # now get the most lightweight commonly useable dtype
         # set automated fallback to None - user shall preprocess in such cases
         dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
+        
+        # get the reference resolution in x and y dir as the most commonly used value
+        x_ress = [_i.pixelWidth for _i in infoSet]
+        x_ref = max(set(x_ress), key=x_ress.count)
+        y_ress = [_i.pixelHeight for _i in infoSet]
+        y_ref = max(set(y_ress), key=y_ress.count)
+
         # else (marginally) warp them to the same context first
         _datasets = []
         for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
-            # get the res/srs and make sure it is close enough for all rasters
-            _x = _info.pixelWidth
-            _y = _info.pixelHeight
-            if i==0:
-                # define the first resolution and srs as reference
-                x_ref = _x
-                y_ref = _y
-            else:
-                # make sure all other res are at least similar, even if maybe not the same
-                assert np.isclose([_x, _y], [x_ref, y_ref]).all()
+            # get the res and make sure it is close enough to the reference for all rasters
+            assert np.isclose([_info.pixelWidth, _info.pixelHeight], [x_ref, y_ref]).all()
             # calculate the new bounds, the rule - maintain bottom left bounds
             _bounds = ( 
                 _info.bounds[0], 
