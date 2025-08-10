@@ -63,13 +63,16 @@ def combineSimilarRasters(
     if len(datasets) == 0:
         raise GeoKitError("No datasets given")
 
-    # Determine info for all datasets
+    # determine info for all datasets
     infoSet = [rasterInfo(d) for d in datasets]
 
     # Ensure all input rasters share resolution, srs, datatype, and noData
     if not all([info.srs.IsSame(infoSet[0].srs) for info in infoSet]):
         # all srs must always be the same irrespective of warping or not
         raise GeoKitError(f"SRS does not match in all datasets.")
+    else:
+        # define the reference srs
+        srs_ref = infoSet[0].srs
     
     try:
         # first try if the ds are in the same context already
@@ -116,7 +119,7 @@ def combineSimilarRasters(
                 resampleAlg = 'near',
                 pixelHeight = y_ref,
                 pixelWidth = x_ref,
-                srs = _info.srs,
+                srs = srs_ref,
                 bounds = _bounds,
                 dtype = dtype_ref,
                 noData = _info.noData,
@@ -148,7 +151,6 @@ def combineSimilarRasters(
             dx = infoSet[0].dx
             dy = infoSet[0].dy
             dtype = infoSet[0].dtype
-            srs = infoSet[0].srs
 
             createRaster(
                 bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
@@ -157,7 +159,7 @@ def combineSimilarRasters(
                 pixelWidth=dx,
                 pixelHeight=dy,
                 noData=noDataValue,
-                srs=srs,
+                srs=srs_ref,
                 fill=noDataValue,
                 **kwargs,
             )
@@ -178,7 +180,6 @@ def combineSimilarRasters(
         dx = infoSet[0].dx
         dy = infoSet[0].dy
         dtype = infoSet[0].dtype
-        srs = infoSet[0].srs
 
         outputDS = createRaster(
             bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
@@ -186,7 +187,7 @@ def combineSimilarRasters(
             pixelWidth=dx,
             pixelHeight=dy,
             noData=noDataValue,
-            srs=srs,
+            srs=srs_ref,
             fill=noDataValue,
             **kwargs,
         )
@@ -201,7 +202,7 @@ def combineSimilarRasters(
     mInfo = rasterInfo(outputDS)
     mExtent = Extent(mInfo.bounds, srs=mInfo.srs)
 
-    if not mInfo.srs.IsSame(infoSet[0].srs):
+    if not mInfo.srs.IsSame(srs_ref):
         raise GeoKitError("SRS's do not match output dataset")
     if not (mInfo.dx == infoSet[0].dx and mInfo.dy == infoSet[0].dy):
         raise GeoKitError("Resolution's do not match output dataset")
