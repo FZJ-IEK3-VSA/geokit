@@ -4,6 +4,7 @@ from glob import glob
 from json import dumps
 from os.path import basename
 from warnings import warn
+import datetime
 
 from osgeo import gdal
 
@@ -87,8 +88,8 @@ def combineSimilarRasters(
         if not allowPreWarp:
             # pre-warp is not allowed, must fail
             raise e
-        elif verbose:
-            print(f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
+        if verbose:
+            print(datetime.datetime.now(), f"Resolution, SRS or datatype are not unique in datasets. First warping all datasets to identical context: {e}", flush=True)
         
         # get the unique actual dtypes in input rasters
         dtypes = sorted(set([_i.dtype for _i in infoSet]))
@@ -105,6 +106,11 @@ def combineSimilarRasters(
         # else (marginally) warp them to the same context first
         _datasets = []
         for i, (_ds, _info) in enumerate(zip(datasets, infoSet)):
+            if verbose:
+                if isinstance(datasets[i], str):
+                    print(datetime.datetime.now(), f"Now pre-warping raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})")
+                else:
+                    print(datetime.datetime.now(), f"Now pre-warping raster No. {i+1}/{len(datasets)}")
             # get the res and make sure it is close enough to the reference for all rasters
             assert np.isclose([_info.pixelWidth, _info.pixelHeight], [x_ref, y_ref]).all()
             # calculate the new bounds, the rule - maintain bottom left bounds
@@ -219,9 +225,9 @@ def combineSimilarRasters(
     for i in range(len(datasets)):
         if verbose:
             if isinstance(datasets[i], str):
-                print(f"{i+1}/{len(datasets)} ({basename(datasets[i])})")
+                print(datetime.datetime.now(), f"Now adding raster No. {i+1}/{len(datasets)} ({basename(datasets[i])})")
             else:
-                print(f"{i+1}/{len(datasets)}")
+                print(datetime.datetime.now(), f"Now adding raster No. {i+1}/{len(datasets)}")
         # create dataset extent
         dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
 
