@@ -21,16 +21,23 @@ def combineSimilarRasters(
     Parameters
     ----------
     datasets : string or list
-        glob string path describing datasets to combine, alternatively list of gdal.Datasets or iterable object with paths.
+        glob string path describing datasets to combine, alternatively list of 
+        gdal.Datasets or iterable object with paths.
     output : string, optional
-        Filepath to output raster file. If it is an existing file, datasets will be added to output. Recommended to create a new file everytime though. If None, no output dataset will be loaded or created on disk and output dataset kept in memory only, by default None
+        Filepath to output raster file. If it is an existing file, datasets will 
+        be added to output. Recommended to create a new file everytime though. 
+        If None, no output dataset will be loaded or created on disk and output 
+        dataset kept in memory only, by default None
     combiningFunc : [type], optional
         Allows customized functions to combine matrices, by default None
     verbose : bool, optional
-        If True, additional status print stamenets will be issued, by default True
+        If True, additional status print stamenets will be issued, by default 
+        True
     updateMeta : bool, optional
-        If True, metadata of output dataset will be a combination of all input rasters, by default False
-
+        If True, metadata of output dataset will be a combination of all input 
+        rasters, by default False.
+        NOTE: In the case of multiple values for the metadata keys, the last 
+        dataset metadata will take precedence.
     Returns:
     ----------
     output dataset: osgeo.gdal.Dataset
