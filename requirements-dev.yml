@@ -3,9 +3,9 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python
-  - pytest
-  - pytest-cov
+  - python >=3.7,<=3.9
+  - pytest <=8.4.1
+  - pytest-cov <=6.2.1
   - pylint
   - autopep8
   - jupyter
