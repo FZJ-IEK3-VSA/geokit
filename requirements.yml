@@ -11,16 +11,16 @@ dependencies:
   # - jupyter
   # - notebook
   # - jupyterlab
-  - matplotlib <=3.9.1
-  - pandas <=2.3.1
-  - numpy <=1.26.4
-  - descartes <=1.1.0
-  - scipy <=1.15.2
-  - scikit-learn <=1.7.1
+  - matplotlib 
+  - pandas 
+  - numpy 
+  - descartes 
+  - scipy 
+  - scikit-learn 
   - gdal
-  - smopy <=0.0.8
-  - geopandas <=0.14.4
-  - pooch <=1.8.2
-  - structlog <=25.4.0
-  - rich <=14.1.0
-  - psutil <=7.0.0
+  - smopy 
+  - geopandas 
+  - pooch 
+  - structlog 
+  - rich 
+  - psutil 
