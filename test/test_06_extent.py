@@ -672,7 +672,6 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-
     path_aachen_shape_file = get_test_data(file_name="aachenShapefile.shp")
 
     ext = Extent.fromVector(path_aachen_shape_file)
