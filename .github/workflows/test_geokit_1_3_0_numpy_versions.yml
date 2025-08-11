@@ -17,7 +17,7 @@
 #             matrix:
 #                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
 #                 os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","windows-2025","windows-2022"]
-#                 # Failing
+#                 # Not tested because it fails on gdal
 #                 # os: ["macos-14","macos-15"]
 #                 geokit_version: ["1.3.0"]
 #                 # Proper versions
