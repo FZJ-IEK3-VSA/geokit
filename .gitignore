@@ -9,6 +9,7 @@ analysis/regions/*
 # file types to ignore
 #*.ipynb
 *.aux.xml
+.ruff_cache
 
 # Remove things in testing results dir
 testing/results/*.tif

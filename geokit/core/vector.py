@@ -300,14 +300,14 @@ def _extractFeatures(
 ):
     # Check spatialPredicate
     avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
-    assert (
-        spatialPredicate in avail_predicates
-    ), f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
+    assert spatialPredicate in avail_predicates, (
+        f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
+    )
     if spatialPredicate != "Touches":
         # spatialPredicate is not default, will take effect only when filter geom is given
-        assert isinstance(
-            geom, ogr.Geometry
-        ), f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
+        assert isinstance(geom, ogr.Geometry), (
+            f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
+        )
 
     # Do filtering
     source = loadVector(source)
@@ -358,9 +358,9 @@ def _extractFeatures(
             continue
 
         if layer.GetSpatialRef() is not None:
-            assert oGeom.GetSpatialReference().IsSame(
-                layer.GetSpatialRef()
-            ), f"SRS of extracted geometry deviates from overall layer SRS!"
+            assert oGeom.GetSpatialReference().IsSame(layer.GetSpatialRef()), (
+                f"SRS of extracted geometry deviates from overall layer SRS!"
+            )
 
         # base extraction is "Touches", now apply apply more sophisticated spatialPredicate if required
         if _geom is not None:
@@ -807,9 +807,9 @@ def extractAndClipFeatures(
     --------
     * pandas.DataFrame or pandas.Series
     """
-    assert (
-        0 <= minShare <= 1
-    ), f"minShare must be greater or equal to 0 and less or equal to 1.0"
+    assert 0 <= minShare <= 1, (
+        f"minShare must be greater or equal to 0 and less or equal to 1.0"
+    )
     # assert and preprocess input source
     if isinstance(source, pd.DataFrame):
         # check validity of input dataframe
@@ -860,9 +860,9 @@ def extractAndClipFeatures(
     elif isinstance(scaleAttrs, str):
         scaleAttrs = [scaleAttrs]
     else:
-        assert isinstance(
-            scaleAttrs, list
-        ), f"scaleAttrs must be a str or a list thereof if not None."
+        assert isinstance(scaleAttrs, list), (
+            f"scaleAttrs must be a str or a list thereof if not None."
+        )
     if len(df) > 0:
         for _attr in scaleAttrs:
             if not _attr in list(df.columns):
@@ -880,9 +880,9 @@ def extractAndClipFeatures(
         df["areaShare"] = None
         return df
     # else add the expected areaShare column
-    assert not "areaShare" in list(
-        df.columns
-    ), f"source data must not contain a 'areaShare' attribute."
+    assert not "areaShare" in list(df.columns), (
+        f"source data must not contain a 'areaShare' attribute."
+    )
     df["areaShare"] = 1.0
     # check if we need to clip the geometries at all
     if df.geom.iloc[0].GetGeometryName()[:5] == "POINT":
@@ -890,9 +890,9 @@ def extractAndClipFeatures(
         return df
 
     # else we need to add an ID column and generate a new vector
-    assert not "clippingID" in list(
-        df.columns
-    ), f"source data must not contain a 'clippingID' attribute."
+    assert not "clippingID" in list(df.columns), (
+        f"source data must not contain a 'clippingID' attribute."
+    )
     df["clippingID"] = range(len(df))
     _vec = createVector(df)
     # extract only these features intersected by the outer geom boundary
@@ -1066,9 +1066,9 @@ def createVector(
         geomSRS = geoms[0].GetSpatialReference()
         if checkAllGeoms:
             # check if all other geoms have the same SRS
-            assert all(
-                [geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]
-            ), f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
+            assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), (
+                f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
+            )
         # Set up some variables for the upcoming loop
         doTransform = False
         setSRS = False
@@ -1176,9 +1176,9 @@ def createVector(
         # Create the layer
         if output is not None and overwrite == False:
             layerName = layerName
-            assert layerName not in listLayers(
-                output
-            ), f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."
+            assert layerName not in listLayers(output), (
+                f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."
+            )
 
         else:
             layerName = layerName
@@ -1891,7 +1891,9 @@ def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
     # create geodataframes from input geokit dfs
     assert all(
         [isinstance(_df, pd.DataFrame) and "geom" in _df.columns for _df in dfs]
-    ), f"positional *dfs arguments must be geokit-style pd.DataFrames with 'geom' column."
+    ), (
+        f"positional *dfs arguments must be geokit-style pd.DataFrames with 'geom' column."
+    )
     gdfs = [createGeoDataFrame(dfGeokit=_df) for _df in dfs]
 
     # now apply geopandas method onto gdfs

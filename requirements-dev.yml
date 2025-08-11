@@ -26,3 +26,6 @@ dependencies:
   - structlog <=25.4.0
   - rich <=14.1.0
   - psutil <=7.0.0
+  - black-jupyter
+  - ruff=0.12.7
+  - nbqa=1.9.0

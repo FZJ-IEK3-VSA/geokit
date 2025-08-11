@@ -318,9 +318,9 @@ def polygon(outerRing, *args, srs="default"):
     if pointGeometries:
         outerRing = [(_p.GetX(), _p.GetY()) for _p in outerRing]
     else:
-        assert all(
-            [isinstance(x, tuple) for x in outerRing]
-        ), f"All outerRing entries must be (x,y) tuples in given (or default) srs."
+        assert all([isinstance(x, tuple) for x in outerRing]), (
+            f"All outerRing entries must be (x,y) tuples in given (or default) srs."
+        )
     [otr.AddPoint(float(x), float(y)) for x, y in outerRing]
     g.AddGeometry(otr)
 
@@ -1622,14 +1622,14 @@ def shift(geom, lonShift=0, latShift=0):
             geom = [geom]
         # iterate over individual polygons
         for ip, poly in enumerate(geom):
-            assert (
-                "POLYGON" in poly.GetGeometryName()
-            ), f"MULTIPOLYGON is not composed of only POLYGONS"
+            assert "POLYGON" in poly.GetGeometryName(), (
+                f"MULTIPOLYGON is not composed of only POLYGONS"
+            )
             # iterate over sub linear rings
             for ir, ring in enumerate(poly):
-                assert (
-                    "LINEARRING" in ring.GetGeometryName()
-                ), f"POLYGON (or sub polygon of MULTIPOLYGON) is not composed of only LINEARRINGS"
+                assert "LINEARRING" in ring.GetGeometryName(), (
+                    f"POLYGON (or sub polygon of MULTIPOLYGON) is not composed of only LINEARRINGS"
+                )
                 poly_shifted = polygon(
                     _movePoints(
                         pointCollection=ring, lonShift=lonShift, latShift=latShift
@@ -1679,15 +1679,15 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
     ), "side must be 'left', 'right', 'main' or 'both'"
     assert isinstance(geom, ogr.Geometry), "geom must be of type osgeo.ogr.Geometry"
     assert geom.GetGeometryName() == "MULTIPOLYGON", "Only MultiPolygon supported"
-    assert geom.GetSpatialReference().IsSame(
-        SRS.loadSRS(4326)
-    ), "geometry must be in EPSG:4326"
-    assert (
-        geom.GetEnvelope()[0] >= -180 and geom.GetEnvelope()[1] <= 180
-    ), "Envelope must be between -180° and +180° longitude"
-    assert geom.GetSpatialReference().IsSame(
-        SRS.loadSRS(4326)
-    ), "Only EPSG:4326 lat/lon supported"
+    assert geom.GetSpatialReference().IsSame(SRS.loadSRS(4326)), (
+        "geometry must be in EPSG:4326"
+    )
+    assert geom.GetEnvelope()[0] >= -180 and geom.GetEnvelope()[1] <= 180, (
+        "Envelope must be between -180° and +180° longitude"
+    )
+    assert geom.GetSpatialReference().IsSame(SRS.loadSRS(4326)), (
+        "Only EPSG:4326 lat/lon supported"
+    )
 
     # first extract sub polygons
     sub_polys = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
@@ -1799,7 +1799,9 @@ def applyBuffer(
         assert not applyBufferInSRS.GetAttrValue("PROJECTION") in [
             "Lambert_Azimuthal_Equal_Area",
             "Lambert_Conformal_Conic_2SP",
-        ], f"SRS projection must not be in: 'Lambert_Azimuthal_Equal_Area', 'Lambert_Conformal_Conic_2SP'"
+        ], (
+            f"SRS projection must not be in: 'Lambert_Azimuthal_Equal_Area', 'Lambert_Conformal_Conic_2SP'"
+        )
 
     # first shift the geom to the "center of the world"
     geom_shftd = shift(
@@ -1814,9 +1816,9 @@ def applyBuffer(
         geom_shftd_epsg = transform(geom_shftd, toSRS=applyBufferInSRS)
         # apply buffer
         geom_shftd_buf_epsg = geom_shftd_epsg.Buffer(buffer)
-        assert (
-            geom_shftd_buf_epsg.IsValid()
-        ), f"geom in EPSG:{applyBufferInSRS} invalid after buffering."
+        assert geom_shftd_buf_epsg.IsValid(), (
+            f"geom in EPSG:{applyBufferInSRS} invalid after buffering."
+        )
         # clip to +/-90° lat "world window" (shrink window by tolerance and transform to EPSG)
         _worldbox_epsg = transform(
             polygon(
@@ -1850,9 +1852,9 @@ def applyBuffer(
         # geom is sometimes invalid after transformation, if so try to fix with zero-buffer trick
         if not geom_shftd_buf.IsValid():
             geom_shftd_buf = geom_shftd_buf.Buffer(0)
-        assert (
-            geom_shftd_buf.IsValid()
-        ), f"buffered geom invalid after re-transformation to initial SRS."
+        assert geom_shftd_buf.IsValid(), (
+            f"buffered geom invalid after re-transformation to initial SRS."
+        )
     else:
         # apply buffer in unit of geom SRS
         geom_shftd_buf = geom_shftd.Buffer(buffer)
@@ -1864,9 +1866,9 @@ def applyBuffer(
             geom.Centroid().GetY() if applyBufferInSRS is False else 0
         ),  # same as above
     )
-    assert (
-        geom_buf.IsValid()
-    ), f"buffered geom in initial SRS invalid after shifting it back to initial longitude."
+    assert geom_buf.IsValid(), (
+        f"buffered geom in initial SRS invalid after shifting it back to initial longitude."
+    )
     if split in ["none", None]:
         # no splitting of protruding geoms required, return as is
         return geom_buf
