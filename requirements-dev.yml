@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  # Does not run on Macos-14 and Macos-15 due to gdal
   - python >=3.8,<=3.10
   - pytest
   - pytest-cov
@@ -16,7 +17,7 @@ dependencies:
   - descartes
   - pandas >=1.1.3,<=2.3.1
   - numpy >=1.19.5,<=1.26.4
-  - scipy >=1.6.0,<=1.13.1
+  - scipy >=1.6.0,<=1.15.2
   - scikit-learn >=1.3.0,<=1.7.1
   - gdal>=2.4.0, 3.4.*
   - smopy >=0.0.7,<=0.0.8
