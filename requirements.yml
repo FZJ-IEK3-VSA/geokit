@@ -1,6 +1,7 @@
 name: geokit
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # - python
   # - pytest
@@ -19,4 +20,3 @@ dependencies:
   - scikit-learn
   - gdal>=2.4.0, 3.4.*
   - smopy
-
