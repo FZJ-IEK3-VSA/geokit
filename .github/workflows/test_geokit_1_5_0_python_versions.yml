@@ -18,15 +18,15 @@ jobs:
             matrix:
                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
                 # Min
-                os: ["ubuntu-24.04"]
+                # os: ["ubuntu-24.04"]
                 # All tested
-                # os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","macos-14","macos-15","windows-2025","windows-2022"]
+                os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","macos-14","macos-15","windows-2025","windows-2022"]
                 # Not tested because it fails on gdal
                 # os: ["macos-14","macos-15"]
                 # Proper version
-                python_version: ["3.8","3.9","3.10"]
+                python_version: ["3.10"]
                 # Failing version
-                # python_version: ["3.7","3.11"] 
+                # python_version: ["3.7","3.8","3.9","3.11"] 
         steps:
             - name: Setup Conda
               uses: conda-incubator/setup-miniconda@v3
