@@ -47,7 +47,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[15]": "gdal =${{ matrix.gdal_version }}"
+#                   "dependencies[14]": "gdal =${{ matrix.gdal_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
@@ -66,10 +66,7 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
-#                     cd geokit
-#                     ls
-#                     echo "Second ls terminated"
 #                     echo "start pytest"
-#                     conda run -n test_env python -m pytest -v -k "not RegionMask_indicateValues and not RegionMask_indicateFeatures"
+#                     conda run -n test_env python -m pytest -vv
 #                     echo "Pytest done"
 

@@ -40,7 +40,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[16]": "smopy =${{ matrix.smopy_version }}"
+#                   "dependencies[15]": "smopy =${{ matrix.smopy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
@@ -60,9 +60,6 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
-#                     cd geokit
-#                     ls
-#                     echo "Second ls terminated"
 #                     echo "start pytest"
-#                     conda run -n test_env python -m pytest
+#                     conda run -n test_env python -m pytest -vv
 #                     echo "Pytest done"

@@ -45,7 +45,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[14]": "scikit-learn =${{ matrix.scikit_learn_version }}"
+#                   "dependencies[13]": "scikit-learn =${{ matrix.scikit_learn_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
@@ -65,9 +65,6 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
-#                     cd geokit
-#                     ls
-#                     echo "Second ls terminated"
 #                     echo "start pytest"
-#                     conda run -n test_env python -m pytest
+#                     conda run -n test_env python -m pytest -vv
 #                     echo "Pytest done"

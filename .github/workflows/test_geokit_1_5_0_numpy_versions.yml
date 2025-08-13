@@ -46,7 +46,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[12]": "numpy =${{ matrix.numpy_version }}"
+#                   "dependencies[11]": "numpy =${{ matrix.numpy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
@@ -65,9 +65,6 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
-#                     cd geokit
-#                     ls
-#                     echo "Second ls terminated"
 #                     echo "start pytest"
-#                     conda run -n test_env python -m pytest
+#                     conda run -n test_env python -m pytest -vv
 #                     echo "Pytest done"
