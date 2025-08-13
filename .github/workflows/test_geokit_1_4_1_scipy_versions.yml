@@ -18,9 +18,9 @@
 #             matrix:
 #                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
 #                 # Min
-#                 # os: ["ubuntu-24.04"]
+#                 os: ["ubuntu-24.04"]
 #                 # Full tested set
-#                 os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","windows-2025","windows-2022"]
+#                 # os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","windows-2025","windows-2022"]
 #                 # Not tested because it fails on gdal
 #                 # os: ["macos-14","macos-15"]
 #                 # Proper versions               
