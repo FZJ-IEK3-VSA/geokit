@@ -55,9 +55,9 @@
 #                     ls
 #                     echo "LS Done"
 #                     mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
-#                     conda run -n test_env python pip install -e . --no-deps
+#                     mamba run -n test_env python pip install -e . --no-deps
 #                     echo "Installation done"
-#                     conda list -n test_env
+#                     mamba list -n test_env
 #                     echo "libraries printed" 
 #             - name: Run pytest for geokit
 #               shell: pwsh
@@ -65,6 +65,7 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
+#                     cd geokit
 #                     echo "start pytest"
-#                     conda run -n test_env python -m pytest -vv
+#                     mamba run -n test_env python -m pytest -vv
 #                     echo "Pytest done"
