@@ -1,4 +1,4 @@
-# name: Test Geokit 1.4.0 for Pandas Versions
+# name: Test Geokit 1.4.1 for Smopy Versions
 # on: 
 #   workflow_dispatch:
 #     inputs:
@@ -6,26 +6,21 @@
 #         description: 'Manual run' 
 #   push:
 #     branches: 
-#       - version/1.4.0
+#       - version/1.4.1
 #   # Allows to trigger the workflow manually
     
 # jobs:
 #     TestGeokitForNumpyVersions:
-#         name: pandas=${{ matrix.pandas_version }},${{ matrix.os }}
+#         name: smopy_version=${{ matrix.smopy_version }},${{ matrix.os }}
 #         runs-on: ${{ matrix.os }}
 #         strategy:
 #             fail-fast: false
 #             matrix:
 #                 # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
-#                 # Min
-#                 # os: ["ubuntu-24.04"]
 #                 os: ["ubuntu-24.04","ubuntu-22.04", "macos-13","windows-2025","windows-2022"]
 #                 # Not tested because it fails on gdal
-#                 # os: ["macos-14","macos-15"]
-#                 # Working version
-#                 pandas_version: ["2.3.1","2.3.0","2.2.3","2.2.2","2.2.1","2.2.0","2.1.4","2.1.3","2.1.2","2.1.1","2.1.0","2.0.3","2.0.2","2.0.1","2.0.0","1.5.3","1.5.2","1.5.1","1.5.0","1.4.4","1.4.3","1.4.2","1.4.1","1.4.0","1.3.5","1.3.4","1.3.3","1.3.2","1.3.1","1.3.0","1.2.5","1.2.4","1.2.3","1.2.2","1.2.1","1.2.0","1.1.5","1.1.4","1.1.3"]                
-#                 # Failing version
-#                 # pandas_version: ["1.1.2","1.1.1","1.1.0","1.0.5","1.0.4","1.0.3","1.0.2","1.0.1","1.0.0","0.25.3"] 
+#                 # os: ["macos-14","macos-15"]              
+#                 smopy_version: ["0.0.7","0.0.8"] 
 #         steps:
 #             - name: Setup Conda
 #               uses: conda-incubator/setup-miniconda@v3
@@ -44,7 +39,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[11]": "pandas =${{ matrix.pandas_version }}"
+#                   "dependencies[16]": "smopy =${{ matrix.smopy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
@@ -52,7 +47,7 @@
 #               run: |
 #                     ls
 #                     echo "LS Done"
-#                     conda config --add channels nodefaults -conda-forge
+#                     conda config --add channels nodefaults conda-forge
 #                     mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
 #                     conda run -n test_env python pip install -e . --no-deps
 #                     echo "Installation done"
