@@ -70,6 +70,6 @@ jobs:
                     ls
                     echo "Second ls terminated"
                     echo "start pytest"
-                    conda run -n test_env python -m pytest -v -k "not RegionMask_indicateValues and not RegionMask_indicateFeatures" geokit/test
+                    conda run -n test_env python -m pytest -v -k "not RegionMask_indicateValues and not RegionMask_indicateFeatures"
                     echo "Pytest done"
 
