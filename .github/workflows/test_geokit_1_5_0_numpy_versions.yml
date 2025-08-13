@@ -65,7 +65,6 @@
 #                     echo "Start ls"
 #                     ls
 #                     echo "ls terminated"
-#                     cd geokit
 #                     echo "start pytest"
 #                     mamba run -n test_env python -m pytest -vv
 #                     echo "Pytest done"
