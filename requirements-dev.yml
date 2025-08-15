@@ -7,9 +7,8 @@ dependencies:
   - pytest <=8.4.1
   - pytest-xdist <=3.8.0
   - pytest-cov <=6.2.1
+  - nbconvert <=7.16.6
   - jupyter <=1.1.1
-  - notebook <=7.4.4
-  - jupyterlab <=4.4.5
   - descartes <=1.1.0
   - pip <=25.2
   - matplotlib <=3.9.1
@@ -20,8 +19,8 @@ dependencies:
   - gdal 3.4.2|3.4.3
   - smopy 0.0.7|0.0.8
   - geopandas <=0.14.4
-  - nbconvert <=7.16.6
   - pooch <=1.8.2
   - typeguard <=4.4.4
   - structlog <=25.4.0
   - rich <=14.1.0
+  - psutil <=7.0.0
