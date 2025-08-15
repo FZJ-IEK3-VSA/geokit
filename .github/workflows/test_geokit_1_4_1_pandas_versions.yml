@@ -44,7 +44,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[11]": "pandas =${{ matrix.pandas_version }}"
+#                   "dependencies[9]": "pandas =${{ matrix.pandas_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
