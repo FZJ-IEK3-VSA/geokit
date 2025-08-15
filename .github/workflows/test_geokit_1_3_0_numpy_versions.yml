@@ -47,7 +47,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[12]": "numpy =${{ matrix.numpy_version }}"
+#                   "dependencies[10]": "numpy =${{ matrix.numpy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh

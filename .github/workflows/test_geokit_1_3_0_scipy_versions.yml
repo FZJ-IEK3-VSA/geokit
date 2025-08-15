@@ -47,7 +47,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[13]": "scipy =${{ matrix.scipy_version }}"
+#                   "dependencies[11]": "scipy =${{ matrix.scipy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh

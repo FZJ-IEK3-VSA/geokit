@@ -48,7 +48,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[14]": "scikit-learn =${{ matrix.scikit_learn_version }}"
+#                   "dependencies[12]": "scikit-learn =${{ matrix.scikit_learn_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh

@@ -44,7 +44,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[16]": "smopy =${{ matrix.smopy_version }}"
+#                   "dependencies[13]": "smopy =${{ matrix.smopy_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
