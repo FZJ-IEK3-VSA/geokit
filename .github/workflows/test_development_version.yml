@@ -4,13 +4,13 @@ on:
   # Allows to trigger the workflow manually
   workflow_dispatch:
     branches: [ master ]
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    # Some Examples for cron syntax https://crontab.guru/Examples.html
-    # Schedules job at any point after 12 pm
-    - cron: "0 0 * * *"
-    # Weekly after sunday
-    # - cron: 0 0 * * 0
+  # schedule:
+  #   # * is a special character in YAML so you have to quote this string
+  #   # Some Examples for cron syntax https://crontab.guru/Examples.html
+  #   # Schedules job at any point after 12 pm
+  #   - cron: "0 0 * * *"
+  #   # Weekly after sunday
+  #   # - cron: 0 0 * * 0
 
 jobs:
   TestGeokitDevLocal:
@@ -39,19 +39,19 @@ jobs:
           miniforge-version: latest
           channels: conda-forge
           activate-environment: geokit_env
-          conda-remove-defaults: true
+          conda-remove-defaults: "true"
       - name: Run tests
         shell: pwsh
         run: |
           ls
           echo "LS Done"
           mamba env create --name geokit_env --yes --file requirements-dev.yml
-          conda run --name geokit_env pip install -e . --no-deps
+          mamba run --name geokit_env pip install -e . --no-deps
           echo "Installation done"
-          conda list --name geokit_env
+          mamba list --name geokit_env
           echo "libaries printed"
           echo "start pytest"
-          conda run --name geokit_env pytest -vv
+          mamba run --name geokit_env pytest -vv
           echo "Pytest done"
       - name: Run Examples
         shell: pwsh
