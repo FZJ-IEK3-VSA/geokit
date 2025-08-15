@@ -43,13 +43,13 @@ jobs:
                 valueFile: 'requirements-dev.yml'
                 commitChange: false
                 method: CreateOrUpdate
-                # The number in brackets after "dependencies[10]" needs adjusting when 
+                # The number in brackets after "dependencies[...]" needs adjusting when 
                 # dependencies are added or removed. This number represents the position
                 #of the dependency in the 'requirements-dev.yml' file, starting from '0'
                 # for the first dependency.
                 changes: |
                   {
-                  "dependencies[13]": "gdal =${{ matrix.gdal_version }}"
+                  "dependencies[11]": "gdal =${{ matrix.gdal_version }}"
                   }
             - name: Install libraries
               shell: pwsh

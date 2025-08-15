@@ -41,7 +41,7 @@ jobs:
                 valueFile: 'requirements-dev.yml'
                 commitChange: false
                 method: CreateOrUpdate
-                # The number in the brackets needs behind at "dependencies[10]" needs to ab adjusted when dependencies are
+                # The number in the brackets needs behind at "dependencies[...]" needs to ab adjusted when dependencies are
                 # added or removed. It represents the position of the dependency in the "requirements-dev.yml" file starting
                 # with the first dependency as "0".
                 changes: |
