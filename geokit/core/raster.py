@@ -18,7 +18,7 @@ from geokit.core import srs as SRS
 from geokit.core import extent as EXTENT
 from geokit.core import util as UTIL
 from geokit.core.location import Location, LocationSet
-
+from osgeo.gdal import Driver
 
 class GeoKitRasterError(UTIL.GeoKitError):
     pass
@@ -2042,7 +2042,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
 
 
 def contours(
-    source, contourEdges, polygonize=True, unpack=True, **kwargs
+    source, contourEdges: list[float] | None, polygonize: bool = True, unpack: bool = True, **kwargs
 ) -> pd.DataFrame:
     """Create contour geometries at specified edges for the given raster data
 
@@ -2060,7 +2060,7 @@ def contours(
     source : Anything acceptable by loadRaster()
         The raster datasource to operate on
 
-    contourEdges : [float,]
+    contourEdges : list[float] | None
         The edges to search for withing the raster dataset
           * This parameter can be set as "None", in which case an additional
             argument should be given to specify how the edges should be determined
@@ -2090,13 +2090,19 @@ def contours(
     # Open raster
     raster = loadRaster(source)
     band = raster.GetRasterBand(1)
+    # TODO: Should a warning be printed in case there are multiple 
+    # bands?
+    # if raster.RasterCount>1:
+
+    #    Warning.warn("There are mutliple bands in the dataset.
+    # The contour is obtained for the first one"")
     rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 
     # Make temporary vector
-    driver = gdal.GetDriverByName("Memory")
-    source = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
+    driver: Driver = gdal.GetDriverByName("Memory")
+    source: gdal.Dataset = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
 
-    layer = source.CreateLayer(
+    layer: ogr.Layer = source.CreateLayer(
         "", rasterSRS, ogr.wkbPolygon if polygonize else ogr.wkbLineString
     )
     field = ogr.FieldDefn("DN", ogr.OFTInteger)
@@ -2120,11 +2126,13 @@ def contours(
 
     IDs = []
     geoms = []
+    iterator_n = 0
     for ftrid in range(layer.GetFeatureCount()):
-        ftr = layer.GetFeature(ftrid)
+        ftr: ogr.Feature = layer.GetFeature(ftrid)
         geom = ftr.GetGeometryRef()
         value = ftr.GetField(0)
-
+        print(iterator_n)
+        iterator_n = iterator_n+1
         if unpack:
             for gi in range(geom.GetGeometryCount()):
                 geoms.append(geom.GetGeometryRef(gi).Clone())
@@ -2133,8 +2141,11 @@ def contours(
             geoms.append(geom.Clone())
             IDs.append(value)
 
+    countour_data_frame = pd.DataFrame(dict(geom=geoms, ID=IDs))
+
+    
     # return geoms
-    return pd.DataFrame(dict(geom=geoms, ID=IDs))
+    return countour_data_frame
 
 
 def warp(
@@ -2425,13 +2436,13 @@ def warp(
 
 def sieve(
     source,
-    threshold=100,
-    connectedness=8,
-    mask="none",
-    quiet_flag=False,
-    output=None,
+    threshold: int = 100,
+    connectedness: Literal[4, 8] = 8,
+    mask = "none",
+    quiet_flag: bool = False,
+    output: str | None = None,
     **kwargs,
-):
+) -> gdal.Dataset | str:
     """
     Removes raster polygons smaller than a provided threshold size (in pixels) and
     replaces them with the pixel value of the largest neighbour polygon.
