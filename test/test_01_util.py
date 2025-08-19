@@ -93,11 +93,14 @@ def test_fitBoundsTo():
         startAtZero=False,  # default
         expand=True,
     )
-    assert outBounds3 == (
-        50.0,
-        6.8,
-        53.0,
-        7.8,
+    assert (
+        outBounds3
+        == (
+            50.0,
+            6.8,
+            53.0,
+            7.8,
+        )
     )  # outBounds now fully include inBounds and height/width are multiples of dx/dy, but bounds entries are not necessarily multiples
     # require expansion AND that each bounds entry must be a multiple of dx/dy
     outBounds4 = util.fitBoundsTo(

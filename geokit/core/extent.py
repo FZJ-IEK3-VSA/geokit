@@ -189,7 +189,9 @@ class Extent(object):
         return Extent.fromTile(t.xi, t.yi, t.zoom)
 
     @staticmethod
-    def fromVector(source, where: str|None=None, geom: ogr.Geometry|None=None) -> "Extent":
+    def fromVector(
+        source, where: str | None = None, geom: ogr.Geometry | None = None
+    ) -> "Extent":
         """Create extent around the contemts of a vector source
 
         Parameters:
@@ -1047,7 +1049,7 @@ class Extent(object):
             pixelWidth=pixelWidth,
             pixelHeight=pixelHeight,
             srs=self.srs,
-            **kwargs
+            **kwargs,
         )
 
     def _quickRaster(self, pixelWidth, pixelHeight, **kwargs):
@@ -1172,7 +1174,7 @@ class Extent(object):
             pixelHeight=pixelHeight,
             srs=self.srs,
             bounds=self.xyXY,
-            **kwargs
+            **kwargs,
         )
 
     def rasterize(self, source, pixelWidth, pixelHeight, strict=True, **kwargs):
@@ -1222,7 +1224,7 @@ class Extent(object):
             pixelHeight=pixelHeight,
             srs=self.srs,
             bounds=self.xyXY,
-            **kwargs
+            **kwargs,
         )
 
     def extractFeatures(self, source, **kwargs):
@@ -1294,7 +1296,7 @@ class Extent(object):
         warpArgs=None,
         processor=None,
         resampleAlg="bilinear",
-        **mutateArgs
+        **mutateArgs,
     ):
         """Convenience function for geokit.raster.mutateRaster which automatically
         warps the raster to the extent's area and srs before mutating
@@ -1373,7 +1375,7 @@ class Extent(object):
                 pixelWidth=pixelWidth,
                 pixelHeight=pixelWidth,
                 strict=True,
-                **warpArgs
+                **warpArgs,
             )
         else:
             if not "srs" in mutateArgs:
@@ -1387,7 +1389,7 @@ class Extent(object):
                 pixelWidth=pixelWidth,
                 pixelHeight=pixelWidth,
                 strict=False,
-                **warpArgs
+                **warpArgs,
             )
 
         # mutate the source
@@ -1396,7 +1398,9 @@ class Extent(object):
         else:
             return source
 
-    def clipRaster(self, source, output: None | str = None, **kwargs) -> None | gdal.Dataset:
+    def clipRaster(
+        self, source, output: None | str = None, **kwargs
+    ) -> None | gdal.Dataset:
         """Clip a given raster source to the calling Extent
 
         Parameters:
@@ -1418,7 +1422,7 @@ class Extent(object):
         opts = gdal.TranslateOptions(
             projWin=[self.xMin, self.yMax, self.xMax, self.yMin],
             projWinSRS=self.srs,
-            **kwargs
+            **kwargs,
         )
 
         if output is None:
@@ -1429,7 +1433,9 @@ class Extent(object):
 
         return ds if output is None else output
 
-    def contoursFromRaster(self, raster, contourEdges: list[float], transformGeoms: bool = True, **kwargs) -> pd.DataFrame:
+    def contoursFromRaster(
+        self, raster, contourEdges: list[float], transformGeoms: bool = True, **kwargs
+    ) -> pd.DataFrame:
         """Convenience wrapper for geokit.raster.contours which automatically
         clips a raster to the invoked Extent
 
@@ -1532,9 +1538,11 @@ class Extent(object):
                 if source is None:
                     yield (xi, yi, zoom)
                 else:
-                    yield source.replace("{z}", str(zoom)).replace(
-                        "{x}", str(xi)
-                    ).replace("{y}", str(yi))
+                    yield (
+                        source.replace("{z}", str(zoom))
+                        .replace("{x}", str(xi))
+                        .replace("{y}", str(yi))
+                    )
 
     def subTiles(self, zoom, asGeom=False):
         """Generates tile Extents at a given zoom level which encompass the envoking Extent.
@@ -1693,7 +1701,7 @@ class Extent(object):
             master_raster,
             sources,
             resampleAlg=_warpKwargs.pop("resampleAlg", "near"),
-            **_warpKwargs
+            **_warpKwargs,
         )
 
         if output is not None:
@@ -1709,7 +1717,7 @@ class Extent(object):
         tilesize=256,
         maxtiles=100,
         ax=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Draws a basemap using the "smopy" python package
@@ -1758,5 +1766,5 @@ class Extent(object):
             tilesize=tilesize,
             maxtiles=maxtiles,
             ax=ax,
-            **kwargs
+            **kwargs,
         )

@@ -309,19 +309,21 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 
     """
     pass
+
     def wrapper1(kernel):
         pass
+
         def wrapper2(matrix):
             # get the original matrix sizes
             yN, xN = matrix.shape
 
             # make a padded version of the matrix
-            
+
             # paddedMatrix = (
             #     np.ones((yN + 2 * size, xN + 2 * size),) * edgeValue
             # )
-            paddedMatrix = (
-                np.full(shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue) 
+            paddedMatrix = np.full(
+                shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue
             )
             paddedMatrix[size:-size, size:-size] = matrix
 
@@ -533,7 +535,7 @@ def drawImage(
     rightMargin=0,
     topMargin=0,
     bottomMargin=0,
-    **kwargs
+    **kwargs,
 ):
     """Draw a matrix as an image on a matplotlib canvas
 

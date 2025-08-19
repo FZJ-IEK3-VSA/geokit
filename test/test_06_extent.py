@@ -674,7 +674,6 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-
     path_aachen_shape_file = get_test_data(file_name="aachenShapefile.shp")
 
     ext = Extent.fromVector(path_aachen_shape_file)
@@ -702,5 +701,6 @@ def test_Extent_mosiacTiles():
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     test_Extent_contoursFromRaster()

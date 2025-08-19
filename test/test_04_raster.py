@@ -514,7 +514,6 @@ def test_contours():
 
 
 def test_warp():
-
     # Test 1a: Change resolution and save to disk
     d1 = raster.warp(
         CLC_RASTER_PATH,
@@ -755,5 +754,6 @@ def test_rasterCellNo():
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     test_contours()
