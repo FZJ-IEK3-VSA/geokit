@@ -1,0 +1,48 @@
+on:
+  push:
+    branches: "**"
+
+jobs:
+  TestGDALversions:
+    name: Test GDAL ${{ matrix.gdal-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest] # macos-latest, macos-13, windows-latest, windows-2022 , ubuntu-22.04, ubuntu-latest]
+        gdal-version: ["3.4", "3.5", "3.6", "3.7", "3.8", "3.9","3.10", "3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          activate-environment: geokit_env
+          conda-remove-defaults: true
+      - name: Update values.yaml
+        uses: fjogeleit/yaml-update-action@main
+        with:
+          valueFile: 'requirements-dev.yml'
+          commitChange: false
+          method: CreateOrUpdate
+          changes: |
+            {
+            "dependencies[14]": "gdal =${{ matrix.gdal_version }}"
+            }
+      - name: Create Env with GDAL ${{ matrix.gdal-version }}
+        shell: pwsh
+        run: |
+          mamba env create --name geokit_env --yes --file requirements-dev.yml
+          conda run --name geokit_env pip install -e . --no-deps
+          echo "Installation done"
+          conda list --name geokit_env
+          echo "libaries printed"
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          echo "start pytest"
+          conda run --name geokit_env pytest test\test_10_gdal.py -vv
+          echo "Pytest done"

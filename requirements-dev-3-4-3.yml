@@ -1,0 +1,28 @@
+name: geokit_env
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python
+  - pytest
+  - pytest-xdist
+  - pytest-cov
+  - jupyter
+  - notebook
+  - jupyterlab
+  - descartes
+  - pip
+  - matplotlib
+  - pandas
+  - numpy
+  - scipy
+  - scikit-learn
+  - gdal =3.4.3
+  - smopy
+  - geopandas
+  - nbconvert
+  - pooch
+  - typeguard
+  - structlog
+  - rich
+  - psutil
