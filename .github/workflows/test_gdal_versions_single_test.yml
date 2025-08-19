@@ -44,5 +44,5 @@ jobs:
         run: |
           
           echo "start pytest"
-          conda run --name geokit_env pytest test/test_10_gdal.py -vv
+          conda run --name geokit_env pytest -vv
           echo "Pytest done"
