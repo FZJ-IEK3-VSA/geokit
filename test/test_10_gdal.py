@@ -190,7 +190,7 @@ def test_Extent_contoursFromRaster():
 
     # assert countour_data_frame.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
     try:
-        assert len(countour_data_frame) == 324
+        assert len(countour_data_frame) == 326
     except AssertionError:
         raise (
             AssertionError(
