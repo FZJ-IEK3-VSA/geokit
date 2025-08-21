@@ -120,7 +120,7 @@ def gdalType(s):
 
 def createRaster(
     bounds,
-    output: None | str | pathlib.Path = None,
+    output: None | str = None,
     pixelWidth=100,
     pixelHeight=100,
     dtype=None,
@@ -135,7 +135,7 @@ def createRaster(
     offset=0,
     creationOptions=dict(),
     **kwargs,
-):
+) -> gdal.Dataset | str:
     """Create a raster file
 
     NOTE:
@@ -192,12 +192,12 @@ def createRaster(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
@@ -212,17 +212,18 @@ def createRaster(
     scale : numeric; optional
         The scaling value given to apply to all values
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     offset : numeric; optional
         The offset value given to apply to all values
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     Returns:
     --------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: The path to the output is returned (for easy opening)
+    * If 'output' is a string: The path to the output is returned (for easy opening).
+                                It has to be saved as geotiff with .tif suffix.
 
     """
     # Check for existing file
@@ -271,10 +272,12 @@ def createRaster(
     opts = ["{}={}".format(k, v) for k, v in opts.items()]
 
     if output is None:
-        driver = gdal.GetDriverByName("Mem")  # create a raster in memory
+        driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
         raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
     else:
-        driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
+        driver: gdal.Driver = gdal.GetDriverByName(
+            "GTiff"
+        )  # Create a raster in storage
         raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
 
     if raster is None:
@@ -292,7 +295,7 @@ def createRaster(
             raster.SetProjection(rasterSRS.ExportToWkt())
 
         # Fill the raster will zeros, null values, or initial values (if given)
-        band = raster.GetRasterBand(1)
+        band: gdal.Band = raster.GetRasterBand(1)
         if scale is not None:
             band.SetScale(scale)
         if offset is not None:
@@ -468,7 +471,7 @@ def extractMatrix(
         If True, the matrix will search for no data values and change them to
         numpy.nan
         * Data type will always result in a float, so be careful with large
-          matricies
+          matrices
 
     returnBounds : bool; optional
         If True, return the computed bounds along with the matrix data
@@ -1361,7 +1364,7 @@ def mutateRaster(
         If True, then before mutating the matrix extracted from the source will have
         pixels equal to its 'noData' value converted to numpy.nan
         * Data type will always result in a float, so be careful with large
-          matricies
+          matrices
 
     output : str; optional
         A path to an output file
@@ -1386,7 +1389,7 @@ def mutateRaster(
     integer identifiers
 
     >>> def calcSuitability( data ):
-    >>>     # create an ouptut matrix
+    >>>     # create an output matrix
     >>>     outputMatrix = numpy.zeros( data.shape )
     >>>
     >>>     # do the processing
@@ -1426,7 +1429,7 @@ def mutateRaster(
     # Ensure returned matrix is okay
     if processedData.shape != sourceData.shape:
         raise GeoKitRasterError(
-            "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",
+            "Processed matrix does not have the correct shape \nIs {0} \nShould be {1}",
             format(processedData.shape, sourceData.shape),
         )
     del sourceData
@@ -1459,16 +1462,16 @@ def mutateRaster(
 
 
 def indexToCoord(
-    yi,
-    xi,
+    yi: int,
+    xi: int,
     source=None,
-    asPoint=False,
+    asPoint: bool = False,
     bounds=None,
     dx=None,
     dy=None,
     yAtTop=True,
     srs=None,
-):
+) -> ogr.Geometry | tuple[int | int]:
     """Convert the index of a raster to coordinate values.
 
     Parameters:
@@ -1539,8 +1542,8 @@ def drawSmopyMap(
     bounds,
     zoom,
     tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    tilesize=256,
-    maxtiles=100,
+    tilesize: int = 256,
+    maxtiles: int = 100,
     ax=None,
     attribution="© OpenStreetMap contributors",
     attribution_size=12,
@@ -1653,11 +1656,11 @@ def drawRaster(
     ax=None,
     resolution=None,
     cutline=None,
-    figsize=(12, 12),
-    xlim=None,
-    ylim=None,
-    fontsize=16,
-    hideAxis=False,
+    figsize: tuple[int, int] = (12, 12),
+    xlim: tuple[int, int] = None,
+    ylim: tuple[int, int] = None,
+    fontsize: int = 16,
+    hideAxis: bool = False,
     cbar=True,
     cbarPadding=0.01,
     cbarTitle=None,
