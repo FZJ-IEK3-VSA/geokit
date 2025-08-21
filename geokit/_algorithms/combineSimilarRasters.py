@@ -48,7 +48,7 @@ def combineSimilarRasters(
     allowPreWarp : bool, optional
         If True, minor deviations in raster context will be aligned by a
         preprocessing warping step.
-    **kwargs 
+    **kwargs
         Will be passed on to geokit.raster.createRaster().
     Returns:
     ----------
@@ -195,9 +195,7 @@ def combineSimilarRasters(
                 _bounds_Ymin + _info.yWinSize * y_ref,
             )
             # warp the data to the new context
-                _bounds_Xmin+_info.xWinSize*x_ref, 
-                _bounds_Ymin+_info.yWinSize*y_ref,
-                )
+            print(datetime.datetime.now(), "warp", flush=True)
             _dswarped = warp(
                 source=_ds,
                 resampleAlg="near",
@@ -209,6 +207,13 @@ def combineSimilarRasters(
                 noData=_info.noData,
                 fill=_info.noData,
             )
+            # add a safety check - data matrices must have remained the same!
+            print(datetime.datetime.now(), "safety check", flush=True)
+            _mx = extractMatrix(_ds)
+            _mxwarped = extractMatrix(_dswarped)
+            assert _mx.shape == _mxwarped.shape
+            assert (_mx == _mxwarped).all()
+            del _mx, _mxwarped
             _datasets.append(_dswarped)
         # overwrite datasets and calculate a new infoset with updated rasterInfo
         datasets = _datasets
