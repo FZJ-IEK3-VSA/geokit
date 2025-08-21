@@ -48,7 +48,7 @@
 #                 method: CreateOrUpdate
 #                 changes: |
 #                   {
-#                   "dependencies[15]": "gdal=${{ matrix.gdal_version }}"
+#                   "dependencies[15]": "gdal =${{ matrix.gdal_version }}"
 #                   }
 #             - name: Install libraries
 #               shell: pwsh
