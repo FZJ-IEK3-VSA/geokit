@@ -48,6 +48,8 @@ def combineSimilarRasters(
     allowPreWarp : bool, optional
         If True, minor deviations in raster context will be aligned by a
         preprocessing warping step.
+    **kwargs 
+        Will be passed on to geokit.raster.createRaster().
     Returns:
     ----------
     output dataset: osgeo.gdal.Dataset
