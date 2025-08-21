@@ -749,8 +749,6 @@ def get_common_dtype(dtypes, fallback=11):
     # make sure all dtypes are GDAL type numbers
     if not all([isinstance(d, int) for d in dtypes]):
         raise TypeError(f"All dtypes must be integers (GDAL Enum Codes)")
-    if not (isinstance(fallback, int) or fallback is None):
-        raise TypeError(f"fallback must be an integer (GDAL Enum Code) if not None")
     # create a mapper which dtype can be converted into which others without precision losses
     # use OrderedDict to sort from most lightweight (preferred) to most versatile (required)
     dtype_compatibilities = OrderedDict(
