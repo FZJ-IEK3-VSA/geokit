@@ -703,3 +703,4 @@ def test_Extent_mosiacTiles():
 
 if __name__ == "__main__":
     test_Extent_mosiacTiles()
+    test_Extent_mutateRaster()
