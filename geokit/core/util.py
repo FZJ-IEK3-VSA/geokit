@@ -775,11 +775,13 @@ def get_common_dtype(dtypes, fallback=11):
         raise ValueError(
             f"fallback must be a known GDAL Enum Code if not None. Select from: {', '.join(sorted(dtype_compatibilities.keys()))}"
         )
-    # get the "lowest common denominator" dtype
-    for _type in dtype_compatibilities.keys():
-        # check if _type can store all input types
-        if all(_type in dtype_compatibilities[d] for d in dtypes):
-            return _type
+    # if all dtypes are known, check if they can be converted into eachother
+    if all([d in dtype_compatibilities for d in dtypes]):
+        # get the "lowest common denominator" dtype
+        for _type in dtype_compatibilities.keys():
+            # check if _type can store all input types
+            if all(_type in dtype_compatibilities[d] for d in dtypes):
+                return _type
     # we have not found a suitable dtype, return fallback or raise error
     if fallback:
         return fallback
