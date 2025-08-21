@@ -1,0 +1,84 @@
+name: Test Geokit for Gdal Versions
+on: 
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Manual run' 
+  pull_request:
+    branches: 
+      - master
+
+  # Allows to trigger the workflow manually
+    
+jobs:
+    TestGeokitForGdalVersions:
+        name: gdal=${{ matrix.gdal_version }},${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                # https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
+                os: ["ubuntu-24.04","ubuntu-22.04","macos-13","macos-14","macos-15","windows-2025","windows-2022"]
+                # Proper Gdal Versions
+                gdal_version: ["3.4.2","3.4.3"]
+                # Failing Versions 
+                # gdal_version: ["2.4.3","2.4.4","3.3.2","3.3.3",]
+        steps:
+            - name: Setup Conda
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                miniforge-version: latest
+                channels: conda-forge,nodefaults
+                activate-environment: test_env
+                conda-remove-defaults: "true"  
+            - name: Checkout geokit
+              uses: actions/checkout@v4        
+            # The next step involves editing the requirements-dev.yml file. This serves two purposes:
+            # 1. It tests the other dependency ranges stated in the requirements-dev.yml file.
+            # 2. It enables the ">", "<", "<=" and ">=" operators to be specified, which are not directly 
+            # available via the mamba install... interface.
+            - name: Update values.yaml
+              uses: fjogeleit/yaml-update-action@main
+              with:
+                valueFile: 'requirements-dev.yml'
+                commitChange: false
+                method: CreateOrUpdate
+                # The number in brackets after "dependencies[...]" needs adjusting when 
+                # dependencies are added or removed. This number represents the position
+                #of the dependency in the 'requirements-dev.yml' file, starting from '0'
+                # for the first dependency.
+                changes: |
+                  {
+                  "dependencies[11]": "gdal =${{ matrix.gdal_version }}"
+                  }
+            - name: Install libraries
+              shell: pwsh
+              id: install-step
+              run: |
+                    ls
+                    echo "LS Done"
+                    mamba env create --file=requirements-dev.yml -c conda-forge -c nodefaults -n test_env 
+                    mamba run -n test_env python pip install -e . --no-deps
+                    echo "Installation done"
+                    mamba list -n test_env
+                    echo "libraries printed" 
+            - name: Run pytest for geokit
+              shell: pwsh
+              run: |
+                    echo "ls terminated"
+                    echo "start pytest"
+                    mamba run -n test_env python -m pytest -vv
+                    echo "Pytest done"
+            - name: Run Examples
+              shell: pwsh
+              run: |
+                    ls
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_01_srs.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_02_geometry.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_03_vector.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_04_raster.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_05_Extent.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_06_RegionMask.ipynb
+                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_07_GeographyHandling.ipynb
+                    
+

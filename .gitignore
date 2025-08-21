@@ -21,6 +21,8 @@ testing/results/*.cpg
 testing/results/*.csv
 testing/results/eligibility_plots
 
+geokit/test/
+
 # Example results
 Examples/*.tif
 Examples/*.shp
