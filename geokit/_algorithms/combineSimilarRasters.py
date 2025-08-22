@@ -82,14 +82,22 @@ def checkSimilarRasters(
             raise GeoKitError(f"dy mismatch between datasets.")
         # bounds shift must be an exact/close match to a multiple of dx/dy
         diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
-        multx = diffx / rInfo.dx
-        if not np.isclose(diffx / round(multx, 0), rInfo.dx, rtol=rtol, atol=0):
+        if not (
+            diffx == 0
+            or np.isclose(
+                diffx / round(diffx / rInfo.dx, 0), rInfo.dx, rtol=rtol, atol=0
+            )
+        ):
             raise GeoKitError(
                 f"horizontal bounds shift between datasets is not a multiple of dx."
             )
         diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
-        multy = diffy / rInfo.dy
-        if not np.isclose(diffy / round(multy, 0), rInfo.dy, rtol=rtol, atol=0):
+        if not (
+            diffy == 0
+            or np.isclose(
+                diffy / round(diffy / rInfo.dy, 0), rInfo.dy, rtol=rtol, atol=0
+            )
+        ):
             raise GeoKitError(
                 f"vertical bounds shift between datasets is not a multiple of dy."
             )
