@@ -218,25 +218,3 @@ def get_all_test_data_dict() -> _OrderedDict[str, str]:
     for current_file_name in all_file_name_dict.keys():
         _test_data_[current_file_name] = get_test_data(file_name=current_file_name)
     return _test_data_
-
-
-if __name__ == "__main__":
-    root_dir = pathlib.Path(__file__).parent.parent
-    # hash_dict = create_hash_dict(
-    #     list_of_file_paths=[
-    #         root_dir.joinpath("data/aachenShapefile.dbf"),
-    #         root_dir.joinpath("data/aachenShapefile.prj"),
-    #         root_dir.joinpath("data/aachenShapefile.qpj"),
-    #         root_dir.joinpath("data/aachenShapefile.shp"),
-    #         root_dir.joinpath("data/aachenShapefile.shx"),
-    #     ]
-    # )
-    hash_dict = create_hash_dict(
-        list_of_file_paths=[
-            root_dir.joinpath(
-                r"C:\Programming\geokit_shithab_gdal_update\geokit\geokit\data\test_raster_3x3.tif"
-            ),
-        ]
-    )
-    pass
-    # print(hash_dict)
