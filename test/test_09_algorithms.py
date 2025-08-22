@@ -13,7 +13,6 @@ from test.helpers import (
 
 
 def test_checkSimilarRasters():
-
     # PREPARE DATA
 
     # get these test raster paths with exactly matching contexts from disk

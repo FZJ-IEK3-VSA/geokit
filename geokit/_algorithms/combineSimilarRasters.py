@@ -31,9 +31,9 @@ def checkSimilarRasters(
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
-    assert (
-        isinstance(rtol, (int, float)) and rtol >= 0
-    ), f"rtol must be a float or int >= 0"
+    assert isinstance(rtol, (int, float)) and rtol >= 0, (
+        f"rtol must be a float or int >= 0"
+    )
     # ensure we have a list of raster datasets
     if isinstance(datasets, str):
         datasets = glob(datasets)
@@ -298,7 +298,7 @@ def combineSimilarRasters(
         if verbose:
             print(
                 datetime.datetime.now(),
-                f"Now adding raster No. {i+1}/{len(datasets)}",
+                f"Now adding raster No. {i + 1}/{len(datasets)}",
             )
         # create dataset extent
         dExtent = Extent(boundsSet[i], srs=srs_ref)
