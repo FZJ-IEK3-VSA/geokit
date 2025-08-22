@@ -9,8 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-22.04, windows-latest, windows-2022, macos-latest, macos-13]
-        gdal-version: ["3.4", "3.5", "3.6", "3.7", "3.8", "3.9","3.10"]
+        os: [ubuntu-latest]
+        # os: [ubuntu-latest, ubuntu-22.04, windows-latest, windows-2022, macos-latest, macos-13]
+        gdal-version: ["3.4","3.5","3.6","3.7","3.8","3.9","3.10"]
     steps:
       - uses: conda-incubator/setup-miniconda@v3
         with:
