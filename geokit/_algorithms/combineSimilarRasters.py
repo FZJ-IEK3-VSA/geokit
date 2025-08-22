@@ -16,7 +16,7 @@ from geokit.raster import createRaster, extractMatrix, rasterInfo, warp, loadRas
 def checkSimilarRasters(
     datasets,
     rtol=0,
-    ):
+):
     """
     Parameters
     ----------
@@ -24,7 +24,7 @@ def checkSimilarRasters(
         glob string path describing datasets to combine, alternatively list of
         gdal.Datasets or iterable object with paths.
     rtol : int, float, optional
-        The relative tolerance that is allowed for numeric deviations. By 
+        The relative tolerance that is allowed for numeric deviations. By
         default 0, i.e. an exact match (within data type accuracy) is required.
 
     Returns:
@@ -32,28 +32,35 @@ def checkSimilarRasters(
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
-    assert isinstance(rtol, (int, float)) and rtol >=0,\
-        f"rtol must be a float or int >= 0"
+    assert (
+        isinstance(rtol, (int, float)) and rtol >= 0
+    ), f"rtol must be a float or int >= 0"
     # ensure we have a list of raster datasets
     if isinstance(datasets, str):
         datasets = glob(datasets)
         if len(datasets) == 0:
-            raise FileNotFoundError(f"datasets given as a string but does not lead to any existing files: '{datasets}'")
+            raise FileNotFoundError(
+                f"datasets given as a string but does not lead to any existing files: '{datasets}'"
+            )
         datasets.sort()
     if not isinstance(datasets, list):
         raise TypeError(f"datasets must be a list")
-    
+
     # check and load all datasets
     _datasets = []
     for dataset in datasets:
         if isinstance(dataset, str):
             if not os.path.isfile(dataset):
-                raise FileNotFoundError(f"datsets string entry is not an existing file: '{dataset}'")
+                raise FileNotFoundError(
+                    f"datsets string entry is not an existing file: '{dataset}'"
+                )
             _datasets.append(loadRaster(dataset))
         elif isinstance(dataset, gdal.Dataset):
             _datasets.append(dataset)
         else:
-            raise TypeError(f"datasets must contain only string or osgeo.gdal.Dataset entries.")
+            raise TypeError(
+                f"datasets must contain only string or osgeo.gdal.Dataset entries."
+            )
     datasets = _datasets
 
     # get all raster infos
@@ -69,15 +76,19 @@ def checkSimilarRasters(
         if not np.isclose(infoDataset[0].dy, rInfo.dy, rtol=rtol, atol=0):
             raise ValueError(f"dy mismatch between datasets.")
         # bounds shift must be an exact/close match to a multiple of dx/dy
-        diffx = infoDataset[0].bounds[0]-rInfo.bounds[0]
-        multx = diffx/rInfo.dx
-        if not np.isclose(diffx/round(multx,0), rInfo.dx, rtol=rtol, atol=0):
-            raise ValueError(f"horizontal bounds shift between datasets is not a multiple of dx.")
-        diffy = infoDataset[0].bounds[1]-rInfo.bounds[1]
-        multy = diffy/rInfo.dy
-        if not np.isclose(diffy/round(multy,0), rInfo.dy, rtol=rtol, atol=0):
-            raise ValueError(f"vertical bounds shift between datasets is not a multiple of dy.")
-        
+        diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
+        multx = diffx / rInfo.dx
+        if not np.isclose(diffx / round(multx, 0), rInfo.dx, rtol=rtol, atol=0):
+            raise ValueError(
+                f"horizontal bounds shift between datasets is not a multiple of dx."
+            )
+        diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
+        multy = diffy / rInfo.dy
+        if not np.isclose(diffy / round(multy, 0), rInfo.dy, rtol=rtol, atol=0):
+            raise ValueError(
+                f"vertical bounds shift between datasets is not a multiple of dy."
+            )
+
     # make sure the datatypes are the same or can be combined
     dtypes = [rInfo.dtype for rInfo in infoDataset]
     if rtol == 0 and not len(set(dtypes)):
@@ -85,9 +96,9 @@ def checkSimilarRasters(
         raise TypeError(f"dtypes or rasters differ but rtol is zero.")
     elif rtol > 0:
         # accept different dtypes as long as they can be combined into one
-        get_common_dtype(dtypes=dtypes, fallback=None) # fail if no common dtype
-    # return list of preloaded, similar datasets 
-    return datasets     
+        get_common_dtype(dtypes=dtypes, fallback=None)  # fail if no common dtype
+    # return list of preloaded, similar datasets
+    return datasets
 
 
 def combineSimilarRasters(
