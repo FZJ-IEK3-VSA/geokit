@@ -9,6 +9,7 @@ analysis/regions/*
 # file types to ignore
 #*.ipynb
 *.aux.xml
+.ruff_cache
 
 # Remove things in testing results dir
 testing/results/*.tif
@@ -19,6 +20,8 @@ testing/results/*.prj
 testing/results/*.cpg
 testing/results/*.csv
 testing/results/eligibility_plots
+
+geokit/test/
 
 # Example results
 Examples/*.tif
