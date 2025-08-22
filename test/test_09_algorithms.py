@@ -45,6 +45,11 @@ def test_combineSimilarRasters():
         updateMeta=False,
         allowPreWarp=True,
     )
+    # make sure that the output raster/matrix remains the same - no changes in the process
+    mx2 = raster.extractMatrix(new_rstr2)
+    assert mx2.shape == (1535, 1736)
+    assert mx2.sum() == 38610800
+    np.median(mx2, axis=0).mean() == 16.028225806451612 # this would change if the matrix was transposed
 
     assert np.isclose(
         raster.extractMatrix(new_rstr),
