@@ -16,11 +16,11 @@ dependencies:
   - scipy <=1.16.1
   - scikit-learn <=1.7.1
   - gdal >=3.4.0,<=3.103
-  - smopy 0.0.7 | 0.0.8
+  - smopy 0.0.7|0.0.8
   - geopandas <=1.1.1
   - nbconvert <=7.16.6
   - pooch <=1.8.2
   - typeguard <=4.4.4
   - structlog <=25.4.0
   - rich <=14.1.0
-  - psutil <7.0.0
+  - psutil <=7.0.0
