@@ -97,7 +97,7 @@ def test_combineSimilarRasters():
         combiningFunc=None,
         verbose=True,
         updateMeta=False,
-        allowPreWarp=True,
+        allowNumericMismatch=True,
         meta=metadata,
     )
     # make also sure that the kwarg was passed correctly
@@ -122,7 +122,7 @@ def test_combineSimilarRasters():
         combiningFunc=None,
         verbose=True,
         updateMeta=False,
-        allowPreWarp=True,
+        allowNumericMismatch=True,
     )
     # make sure the slightly corrected output remains the same as with the unaltered rasters
     mx = raster.extractMatrix(new_rstr)
@@ -157,7 +157,7 @@ def test_combineSimilarRasters():
         combiningFunc=None,
         verbose=True,
         updateMeta=False,
-        allowPreWarp=True,
+        allowNumericMismatch=True,
     )
 
     assert np.isclose(
@@ -177,5 +177,5 @@ def test_combineSimilarRasters():
             combiningFunc=None,
             verbose=True,
             updateMeta=False,
-            allowPreWarp=False,  # not allowed to prewarp rasters to same context
+            allowNumericMismatch=False,  # not allowed to prewarp rasters to same context
         )

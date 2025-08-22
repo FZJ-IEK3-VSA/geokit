@@ -16,6 +16,7 @@ from geokit.core.raster import (
     polygonizeRaster,
     rasterCellNo,
     rasterInfo,
+    RasterInfo,
     rasterStats,
     saveRasterAsTif,
     sieve,
