@@ -236,6 +236,13 @@ def combineSimilarRasters(
             _bounds_Xmin + _info.xWinSize * dx_ref,
             _bounds_Ymin + _info.yWinSize * dy_ref,
         )
+        # make sure the number of cells would remain the same in the new bounds
+        assert round(_info.xWinSize * dx_ref / _info.dx, 0) == _info.xWinSize, (
+            f"The change in bounds width would lead to a different amount of cell columns in the original raster."
+        )
+        assert round(_info.yWinSize * dy_ref / _info.dy, 0) == _info.yWinSize, (
+            f"The change in bounds height would lead to a different amount of cell rows in the original raster."
+        )
         boundsSet.append(_bounds)
 
     # get summary info about the whole dataset group
