@@ -88,6 +88,9 @@ def checkSimilarRasters(
             raise ValueError(
                 f"vertical bounds shift between datasets is not a multiple of dy."
             )
+        # noData should be the same
+        if not infoDataset[0].noData == rInfo.noData:
+            raise GeoKitError(f"noData mismatch between datasets.")
 
     # make sure the datatypes are the same or can be combined
     dtypes = [rInfo.dtype for rInfo in infoDataset]
