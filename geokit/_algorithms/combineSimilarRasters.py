@@ -9,7 +9,13 @@ from osgeo import gdal
 
 from geokit.core.regionmask import *
 from geokit.core.util import GeoKitError, get_common_dtype
-from geokit.raster import createRaster, extractMatrix, rasterInfo, loadRaster, RasterInfo
+from geokit.raster import (
+    createRaster,
+    extractMatrix,
+    rasterInfo,
+    loadRaster,
+    RasterInfo,
+)
 
 
 def checkSimilarRasters(
