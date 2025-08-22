@@ -14,8 +14,8 @@ from geokit.raster import (
     extractMatrix,
     rasterInfo,
     loadRaster,
-    RasterInfo,
 )
+from geokit.core.raster import RasterInfo
 
 
 def checkSimilarRasters(
