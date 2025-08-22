@@ -29,8 +29,9 @@ jobs:
           method: CreateOrUpdate
           changes: |
             {
-            dependencies[12]: gdal =${{ matrix.gdal_version }}
+              "dependencies[12]": "${{ matrix.gdal_version }}"
             }
+          
       - name: Create Env with GDAL ${{ matrix.gdal_version }}
         shell: pwsh
         run: |
