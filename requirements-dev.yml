@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python 3.10>=,<=3.13.5
+  - python >=3.10,<=3.13.5
   - pytest <=8.4.1
   - pytest-xdist <=3.8.0
   - pytest-cov <=6.2.1
