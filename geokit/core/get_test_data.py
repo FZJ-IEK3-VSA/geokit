@@ -96,6 +96,7 @@ all_file_name_dict = {
     "osm_roads_minor.9.264.172.tif": "sha256:d7f54eabf297458f8f43cd1aec745c4710d7a1e2c26fed0ef3345625e3f30fa0",
     "osm_roads_minor.9.265.171.tif": "sha256:68a77d446fa5fb27b05c068d24214bd2a18135e1231b686746387b8f2aa88681",
     "osm_roads_minor.9.265.172.tif": "sha256:2a5029eee67d74a1f1e2c0d27b786a757e8687375ef4190ca2daab052aa8302e",
+    "test_raster_3x3.tif": "sha256:49e4f41d636618ef38d1a6cb6f684af2d90df4735aeaea88340f3a7fb51b1a84",
 }
 
 
@@ -230,10 +231,12 @@ if __name__ == "__main__":
     #         root_dir.joinpath("data/aachenShapefile.shx"),
     #     ]
     # )
-    # hash_dict = create_hash_dict(
-    #     list_of_file_paths=[
-    #         root_dir.joinpath(r"C:\Programming\geokit\data\aachenShapefile.qpj"),
-    #     ]
-    # )
-
+    hash_dict = create_hash_dict(
+        list_of_file_paths=[
+            root_dir.joinpath(
+                r"C:\Programming\geokit_shithab_gdal_update\geokit\geokit\data\test_raster_3x3.tif"
+            ),
+        ]
+    )
+    pass
     # print(hash_dict)

@@ -1462,8 +1462,8 @@ def mutateRaster(
 
 
 def indexToCoord(
-    yi: int,
-    xi: int,
+    yi: int | np.ndarray,
+    xi: int | np.ndarray,
     source=None,
     asPoint: bool = False,
     bounds=None,
@@ -1471,7 +1471,7 @@ def indexToCoord(
     dy=None,
     yAtTop=True,
     srs=None,
-) -> ogr.Geometry | tuple[int | int]:
+) -> ogr.Geometry | tuple[int | int] | np.ndarray:
     """Convert the index of a raster to coordinate values.
 
     Parameters:
@@ -1657,8 +1657,8 @@ def drawRaster(
     resolution=None,
     cutline=None,
     figsize: tuple[int, int] = (12, 12),
-    xlim: tuple[int, int] = None,
-    ylim: tuple[int, int] = None,
+    xlim: tuple[int, int] | None = None,
+    ylim: tuple[int, int] | None = None,
     fontsize: int = 16,
     hideAxis: bool = False,
     cbar=True,
