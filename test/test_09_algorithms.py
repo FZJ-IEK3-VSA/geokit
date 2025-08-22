@@ -1,4 +1,4 @@
-from geokit._algorithms.combineSimilarRasters import combineSimilarRasters
+from geokit._algorithms.combineSimilarRasters import checkSimilarRasters, combineSimilarRasters
 from geokit import raster, util
 import numpy as np
 import pytest
@@ -7,6 +7,84 @@ from test.helpers import (
     DIVIDED_RASTER_2_PATH,
     DIVIDED_RASTER_3_PATH,
 )
+
+
+def test_checkSimilarRasters():
+
+    # PREPARE DATA
+
+    # get these test raster paths with exactly matching contexts from disk
+    test_rasters = [DIVIDED_RASTER_1_PATH,DIVIDED_RASTER_2_PATH,DIVIDED_RASTER_3_PATH]
+    
+    # get the raster info for the first (#0) raster to adapt 
+    rInfo0 = raster.rasterInfo(test_rasters[0])
+    # create an alternative first raster with bounds slightly adapted
+    rstr_boundschanged = raster.warp(
+        source=test_rasters[0],
+        bounds=tuple(
+            np.array(rInfo0.bounds) + 0.001
+        ),  # only shift the bounds slightly upwards to the right
+        resampleAlg="near",
+    )
+    # create an alternative first raster with x-resolution slightly adapted
+    rstr_dxchanged = raster.warp(
+        source=test_rasters[0],
+            pixelWidth=0.99999999999 * rInfo0.pixelWidth,  # make it slightly smaller
+            bounds=(
+                rInfo0.bounds[0],
+                rInfo0.bounds[1],
+                rInfo0.bounds[2] * 0.99999999999,
+                rInfo0.bounds[3],
+            ),  # shrink bounds width by the same factor
+            resampleAlg="near",
+        )
+    
+    # FIRST TEST EXACT MATCH
+
+    # must work for the original rasters
+    checkSimilarRasters(
+        datasets=test_rasters,
+        rtol=0,
+        )
+    # must fail for the shifted bounds...
+    with pytest.raises(ValueError):
+        checkSimilarRasters(
+            datasets=[rstr_boundschanged]+test_rasters[1:],
+            rtol=0, # no tolerance = exact match
+            )
+    # ... and the shifted x res
+    with pytest.raises(ValueError):
+        checkSimilarRasters(
+            datasets=[rstr_dxchanged]+test_rasters[1:],
+            rtol=0, # no tolerance = exact match
+            )
+
+    # NOW CHECK SIMILAR MATCH
+
+
+    # should pass when sufficient relative tolerance is allowed...
+    checkSimilarRasters(
+        datasets=[rstr_boundschanged]+test_rasters[1:],
+        rtol=0.00001, # normal tolerance
+        )
+    # but not when rtol is too tight
+    with pytest.raises(ValueError):
+        checkSimilarRasters(
+            datasets=[rstr_boundschanged]+test_rasters[1:],
+            rtol=0.00000000001, # super narrow tolerance
+            )
+    # the same for the x-resolution mismatch
+    checkSimilarRasters(
+        datasets=[rstr_dxchanged]+test_rasters[1:],
+        rtol=0.00001, # normal tolerance
+        )
+    # and again fail for an excessively tight tolerance
+    with pytest.raises(ValueError):
+        checkSimilarRasters(
+            datasets=[rstr_dxchanged]+test_rasters[1:],
+            rtol=0.00000000001, # super narrow tolerance
+            )
+
 
 
 def test_combineSimilarRasters():
