@@ -4,14 +4,14 @@ on:
 
 jobs:
   TestGDALversions:
-    name: Test GDAL ${{ matrix.gdal-version }} on ${{ matrix.os }}
+    name: Test GDAL ${{ matrix.gdal_version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
         # os: [ubuntu-latest, ubuntu-22.04, windows-latest, windows-2022, macos-latest, macos-13]
-        gdal-version: ["3.4","3.5","3.6","3.7","3.8","3.9","3.10"]
+        gdal_version: ["3.4","3.5","3.6","3.7","3.8","3.9","3.10"]
     steps:
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -29,9 +29,9 @@ jobs:
           method: CreateOrUpdate
           changes: |
             {
-            "dependencies[12]": "gdal =${{ matrix.gdal-version }}"
+            "dependencies[12]": "gdal =${{ matrix.gdal_version }}"
             }
-      - name: Create Env with GDAL ${{ matrix.gdal-version }}
+      - name: Create Env with GDAL ${{ matrix.gdal_version }}
         shell: pwsh
         run: |
           mamba env create --name geokit_env --yes --file requirements-dev.yml
