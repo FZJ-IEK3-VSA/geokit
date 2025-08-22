@@ -69,23 +69,23 @@ def checkSimilarRasters(
     for rInfo in infoDataset[1:]:
         # same srs is required
         if not infoDataset[0].srs.IsSame(rInfo.srs):
-            raise ValueError(f"SRS mismatch between datasets.")
+            raise GeoKitError(f"SRS mismatch between datasets.")
         # pixel width and height must be same/similar
         if not np.isclose(infoDataset[0].dx, rInfo.dx, rtol=rtol, atol=0):
-            raise ValueError(f"dx mismatch between datasets.")
+            raise GeoKitError(f"dx mismatch between datasets.")
         if not np.isclose(infoDataset[0].dy, rInfo.dy, rtol=rtol, atol=0):
-            raise ValueError(f"dy mismatch between datasets.")
+            raise GeoKitError(f"dy mismatch between datasets.")
         # bounds shift must be an exact/close match to a multiple of dx/dy
         diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
         multx = diffx / rInfo.dx
         if not np.isclose(diffx / round(multx, 0), rInfo.dx, rtol=rtol, atol=0):
-            raise ValueError(
+            raise GeoKitError(
                 f"horizontal bounds shift between datasets is not a multiple of dx."
             )
         diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
         multy = diffy / rInfo.dy
         if not np.isclose(diffy / round(multy, 0), rInfo.dy, rtol=rtol, atol=0):
-            raise ValueError(
+            raise GeoKitError(
                 f"vertical bounds shift between datasets is not a multiple of dy."
             )
         # noData should be the same

@@ -50,13 +50,13 @@ def test_checkSimilarRasters():
         rtol=0,
     )
     # must fail for the shifted bounds...
-    with pytest.raises(ValueError):
+    with pytest.raises(util.GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_boundschanged] + test_rasters[1:],
             rtol=0,  # no tolerance = exact match
         )
     # ... and the shifted x res
-    with pytest.raises(ValueError):
+    with pytest.raises(util.GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_dxchanged] + test_rasters[1:],
             rtol=0,  # no tolerance = exact match
@@ -70,7 +70,7 @@ def test_checkSimilarRasters():
         rtol=0.00001,  # normal tolerance
     )
     # but not when rtol is too tight
-    with pytest.raises(ValueError):
+    with pytest.raises(util.GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_boundschanged] + test_rasters[1:],
             rtol=0.00000000001,  # super narrow tolerance
@@ -81,7 +81,7 @@ def test_checkSimilarRasters():
         rtol=0.00001,  # normal tolerance
     )
     # and again fail for an excessively tight tolerance
-    with pytest.raises(ValueError):
+    with pytest.raises(util.GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_dxchanged] + test_rasters[1:],
             rtol=0.00000000001,  # super narrow tolerance
