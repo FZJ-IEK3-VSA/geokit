@@ -83,7 +83,7 @@ def checkSimilarRasters(
         # bounds shift must be an exact/close match to a multiple of dx/dy
         diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
         if not (
-            diffx == 0
+            round(diffx / rInfo.dx, 0) == 0
             or np.isclose(
                 diffx / round(diffx / rInfo.dx, 0), rInfo.dx, rtol=rtol, atol=0
             )
@@ -93,7 +93,7 @@ def checkSimilarRasters(
             )
         diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
         if not (
-            diffy == 0
+            round(diffy / rInfo.dy, 0) == 0
             or np.isclose(
                 diffy / round(diffy / rInfo.dy, 0), rInfo.dy, rtol=rtol, atol=0
             )
