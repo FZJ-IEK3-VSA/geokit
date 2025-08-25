@@ -123,7 +123,7 @@ def combineSimilarRasters(
     combiningFunc=None,
     verbose=True,
     updateMeta=False,
-    allowNumericMismatch=True,
+    allowNumericMismatch=False,
     **kwargs,
 ):
     """
@@ -151,6 +151,7 @@ def combineSimilarRasters(
         dataset metadata will take precedence.
     allowNumericMismatch : bool, optional
         If True, minor deviations in raster context will be ignored/corrected.
+        By default False, i.e. only exactly similar rasters will be combined.
     **kwargs
         Will be passed on to geokit.raster.createRaster().
     Returns:
