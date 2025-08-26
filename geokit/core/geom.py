@@ -1853,7 +1853,7 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     if not applyBufferInSRS is False:
         # generate own geom-centered LAEA or load SRS
         if isinstance(applyBufferInSRS, str) and applyBufferInSRS.upper() == "LAEA":
-            applyBufferInSRS = SRS.centeredLAEA(geom=geom)
+            applyBufferInSRS = SRS.centeredLAEA(geom=_geom)
         else:
             try:
                 applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
@@ -1866,13 +1866,13 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
         north_srs = SRS.loadSRS(
             "+proj=aeqd +lat_0=90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
         )
-        north_dist = transform(geom, toSRS=north_srs).Distance(
+        north_dist = transform(_geom, toSRS=north_srs).Distance(
             point(0, 0, srs=north_srs)
         )
         south_srs = SRS.loadSRS(
             "+proj=aeqd +lat_0=-90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
         )
-        south_dist = transform(geom, toSRS=south_srs).Distance(
+        south_dist = transform(_geom, toSRS=south_srs).Distance(
             point(0, 0, srs=south_srs)
         )
         assert min([north_dist, south_dist]) > buffer_mtrs, (
@@ -1880,7 +1880,7 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
         )
 
         # convert geom to applyBufferInSRS
-        _geom = transform(geom, toSRS=applyBufferInSRS)
+        _geom = transform(_geom, toSRS=applyBufferInSRS)
 
     # apply buffer
     _geom_buf = _geom.Buffer(buffer)
