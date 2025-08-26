@@ -358,10 +358,15 @@ def test_transform():
     boxLAEA = geom.transform(box, toSRS=srs.centeredLAEA(geom=box))
     # now transform back to 4326 - first the original way
     box4326 = geom.transform(boxLAEA, toSRS=4326)
-    assert np.isclose(box4326.GetEnvelope(), (-179.0, 179, -1, 1)).all() # wrong but that is expected of PROJ
+    assert np.isclose(
+        box4326.GetEnvelope(), (-179.0, 179, -1, 1)
+    ).all()  # wrong but that is expected of PROJ
     # then the non-shifted way
     box4326b = geom.transform(boxLAEA, toSRS=4326, revert360degProj=True)
-    assert np.isclose(box4326b.GetEnvelope(), (179, 181, -1, 1)).all() # the right result (note that -181/-179 and 179/181 are the same on a sphere)
+    assert (
+        np.isclose(box4326b.GetEnvelope(), (179, 181, -1, 1)).all()
+    )  # the right result (note that -181/-179 and 179/181 are the same on a sphere)
+
 
 def test_extractVerticies():
     # Test polygon
@@ -605,22 +610,26 @@ def test_applyBuffer():
         geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
     )
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
-    
+
     # try again with metric geom-centric LAEA system and 10 kms (distance to pole is 0.1° lat ergo ca. 11.1 kms)
     buf = 10000  # 10kms
     buf_north_clip_LAEA = geom.applyBuffer(
-            geom=testpoint_north, buffer=buf, applyBufferInSRS="laea", split="clip"
-        )
+        geom=testpoint_north, buffer=buf, applyBufferInSRS="laea", split="clip"
+    )
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[0], -63.54229553874337)
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[1], 63.542295538743375)
-    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[2], 89.81046964488837) # nearly 1° lat diff from center
-    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[3], 89.98953035070583) # nearly 1° lat diff from center
+    assert np.isclose(
+        buf_north_clip_LAEA.GetEnvelope()[2], 89.81046964488837
+    )  # nearly 1° lat diff from center
+    assert np.isclose(
+        buf_north_clip_LAEA.GetEnvelope()[3], 89.98953035070583
+    )  # nearly 1° lat diff from center
     # check area - must be close to 3.14 * 10^8 m² (pi * r^2 with r=10kms)
     assert np.isclose(
         geom.transform(buf_north_clip_LAEA, toSRS=6933).Area(),
         np.pi * buf**2,
         atol=0,
-        rtol=0.001, # allow slightly larger tolerance due to limited number of circle segments
+        rtol=0.001,  # allow slightly larger tolerance due to limited number of circle segments
     )
 
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
@@ -628,6 +637,7 @@ def test_applyBuffer():
         buf_north_clip_LAEA = geom.applyBuffer(
             geom=testpoint_north, buffer=20000, applyBufferInSRS="laea", split="clip"
         )
+
 
 if __name__ == "__main__":
     test_applyBuffer()
