@@ -1946,7 +1946,7 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
             center_lon = (env[0] + env[1]) / 2  # x value of center axis of whole geom
 
             def fold_polygon(polygon):
-                """Function that folds a polygon geometrie ofer 90° lat line"""
+                """Function that folds a polygon geometrie over 90° lat line"""
 
                 def _fold_ring(ring):
                     """core function for every linear ring"""
