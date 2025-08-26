@@ -826,6 +826,9 @@ def transform(
     # make sure geoms is a list
     if fromSRS is None:
         fromSRS = geoms[0].GetSpatialReference()
+        assert all([g.GetSpatialReference().IsSame(fromSRS) for g in geoms]), (
+            f"geoms have different SRS."
+        )
         if fromSRS is None:
             raise GeoKitGeomError("Could not determine fromSRS from geometry")
 
