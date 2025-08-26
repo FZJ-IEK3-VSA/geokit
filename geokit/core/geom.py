@@ -1575,6 +1575,7 @@ def shift(geom, lonShift=0, latShift=0):
     """
     if not isinstance(geom, ogr.Geometry):
         raise TypeError(f"geom must be of type osgeo.ogr.Geometry")
+    geom = geom.Clone()  # do not modify input geom
     # first get srs of input geom
     _srs = geom.GetSpatialReference()
     # get the dimension of the geometry
