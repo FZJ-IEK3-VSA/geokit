@@ -1837,10 +1837,10 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
         Allows to specify an EPSG integer code or an osgeo.osr.SpatialReference
         instance to define the SRS in which the buffer will be applied, then in
         the unit of the specified EPSG. If e.g. 6933 is given, the buffer will
-        be applied in meters in a metric system. By default False, i.e. the
+        be applied in meters in a metric system. Passing "laea" (case-insensitive)
+        will generate a geometry-centered, metric Lambert Azimuthal Equal Area 
+        system in which the buffer will be applied. By default False, i.e. the
         original SRS of the geom will be used.
-        NOTE: 'Lambert_Azimuthal_Equal_Area' or 'Lambert_Conformal_Conic_2SP'
-        projections are not allowed here, use e.g. EPSG:6933 as global metric SRS. #TODO LAEA is allowed now as str
     split : str, optional
         'shift' : shift areas that exceed the antimeridian line to the other end (default)
         'clip' : remove/clip polygon parts that exceed the antimeridian
