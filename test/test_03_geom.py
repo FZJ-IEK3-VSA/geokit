@@ -18,7 +18,7 @@ import pandas as pd
 import pytest
 from osgeo import ogr
 
-from geokit import geom, vector
+from geokit import geom, vector, srs
 
 
 # box
@@ -353,6 +353,15 @@ def test_transform():
     assert t2[0].GetSpatialReference().IsSame(EPSG3035)  # "Transform srs
     assert np.isclose(sum([t.Area() for t in t2]), 83747886418.48529)  # "Transform Area
 
+    # test behavior at antimeridian
+    box = geom.box(-181, -1, -179, 1, srs=4326)
+    boxLAEA = geom.transform(box, toSRS=srs.centeredLAEA(geom=box))
+    # now transform back to 4326 - first the original way
+    box4326 = geom.transform(boxLAEA, toSRS=4326)
+    assert np.isclose(box4326.GetEnvelope(), (-179.0, 179, -1, 1)).all() # wrong but that is expected of PROJ
+    # then the non-shifted way
+    box4326b = geom.transform(boxLAEA, toSRS=4326, revert360degProj=True)
+    assert np.isclose(box4326b.GetEnvelope(), (179, 181, -1, 1)).all() # the right result (note that -181/-179 and 179/181 are the same on a sphere)
 
 def test_extractVerticies():
     # Test polygon
