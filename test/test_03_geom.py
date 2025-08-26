@@ -589,26 +589,36 @@ def test_applyBuffer():
         geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
     )
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
-    # try again with metric system and 50kms buffer
-    buf_north_clip_6933 = geom.applyBuffer(
-        geom=testpoint_north, buffer=50000, applyBufferInSRS=6933, split="clip"
+    # now try again near 90° lat
+    testpoint_north = geom.point(0, 89.9, srs=4326)
+    # first latlon buffer
+    buf_north_clip = geom.applyBuffer(
+        geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
     )
-    assert np.isclose(buf_north_clip_6933.GetEnvelope()[0], -0.5182083905606406)
-    assert np.isclose(buf_north_clip_6933.GetEnvelope()[1], 0.5182083905606406)
-    assert np.isclose(buf_north_clip_6933.GetEnvelope()[2], 83.33841323028614)
-    assert np.isclose(buf_north_clip_6933.GetEnvelope()[3], 89.99999879797518)
-    # assert buf_north_clip_6933.GetEnvelope() == (
-    #     -0.5182083905606406,
-    #     0.5182083905606406,
-    #     83.33841323028614,
-    #     89.99999879797518,
-    # )
+    assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
+    
+    # try again with metric geom-centric LAEA system and 10 kms (distance to pole is 0.1° lat ergo ca. 11.1 kms)
+    buf = 10000  # 10kms
+    buf_north_clip_LAEA = geom.applyBuffer(
+            geom=testpoint_north, buffer=buf, applyBufferInSRS="laea", split="clip"
+        )
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[0], -63.54229553874337)
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[1], 63.542295538743375)
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[2], 89.81046964488837) # nearly 1° lat diff from center
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[3], 89.98953035070583) # nearly 1° lat diff from center
+    # check area - must be close to 3.14 * 10^8 m² (pi * r^2 with r=10kms)
     assert np.isclose(
-        geom.transform(buf_north_clip_6933, toSRS=6933).Area(),
-        3926325058.480929,
+        geom.transform(buf_north_clip_LAEA, toSRS=6933).Area(),
+        np.pi * buf**2,
         atol=0,
+        rtol=0.001, # allow slightly larger tolerance due to limited number of circle segments
     )
 
+    # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
+    with pytest.raises(geom.GeoKitGeomError):
+        buf_north_clip_LAEA = geom.applyBuffer(
+            geom=testpoint_north, buffer=20000, applyBufferInSRS="laea", split="clip"
+        )
 
 if __name__ == "__main__":
     test_applyBuffer()
