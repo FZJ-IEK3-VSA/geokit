@@ -1875,9 +1875,8 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
         south_dist = transform(_geom, toSRS=south_srs).Distance(
             point(0, 0, srs=south_srs)
         )
-        assert min([north_dist, south_dist]) > buffer_mtrs, (
-            f"buffered geometry would intersect with North or South Pole."
-        )
+        if min([north_dist, south_dist]) <= buffer_mtrs: 
+            raise GeoKitGeomError(f"buffered geometry would intersect with North or South Pole.")
 
         # convert geom to applyBufferInSRS
         _geom = transform(_geom, toSRS=applyBufferInSRS)
