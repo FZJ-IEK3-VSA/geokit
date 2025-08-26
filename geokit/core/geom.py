@@ -1818,9 +1818,7 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
         raise ValueError("side must be 'left', 'right', 'main' or None")
 
 
-def applyBuffer(
-    geom, buffer, applyBufferInSRS=False, split="shift", tol=1e-6, verbose=False
-):
+def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     """
     This function applies a buffer to any geom, avoiding edge issues with geoms
     near the SRS bounds. By shifting the geom to a zero longitude, geometry
@@ -1842,110 +1840,73 @@ def applyBuffer(
         be applied in meters in a metric system. By default False, i.e. the
         original SRS of the geom will be used.
         NOTE: 'Lambert_Azimuthal_Equal_Area' or 'Lambert_Conformal_Conic_2SP'
-        projections are not allowed here, use e.g. EPSG:6933 as global metric SRS.
+        projections are not allowed here, use e.g. EPSG:6933 as global metric SRS. #TODO LAEA is allowed now as str
     split : str, optional
         'shift' : shift areas that exceed the antimeridian line to the other end (default)
         'clip' : remove/clip polygon parts that exceed the antimeridian
         'none' : do not split geoms at all that cross the antimeridian
-    tol : int, float, optional
-        Geoms protruding over the +/-90° latitude line will be clipped to 90°
-        plus/minus this tolerance in degrees to avoid geometry issues due to
-        distortions during SRS transformation. By default 1E-6.
-    verbose : boolean, optional
-        If True, additional notifications will be printed when geometry has to
-        be clipped to enable retransformation to initial SRS. By default False.
     """
+    # create copy and extract SRS
+    _srs = geom.GetSpatialReference()
+    _geom = geom.Clone()
+
     if not applyBufferInSRS is False:
-        try:
-            applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
-        except:
-            raise ValueError(
-                f"applyBufferInSRS {applyBufferInSRS} is not a known SRS to geokit.srs.loadSRS()"
-            )
-        assert not applyBufferInSRS.GetAttrValue("PROJECTION") in [
-            "Lambert_Azimuthal_Equal_Area",
-            "Lambert_Conformal_Conic_2SP",
-        ], (
-            f"SRS projection must not be in: 'Lambert_Azimuthal_Equal_Area', 'Lambert_Conformal_Conic_2SP'"
+        # generate own geom-centered LAEA or load SRS
+        if isinstance(applyBufferInSRS, str) and applyBufferInSRS.upper() == "LAEA":
+            applyBufferInSRS = SRS.centeredLAEA(geom=geom)
+        else:
+            try:
+                applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
+            except:
+                raise ValueError(
+                    f"applyBufferInSRS {applyBufferInSRS} is not a known SRS to geokit.srs.loadSRS()"
+                )
+        # make sure the poles are far enough to allow the planned buffer
+        buffer_mtrs = buffer * applyBufferInSRS.GetLinearUnits()
+        north_srs = SRS.loadSRS(
+            "+proj=aeqd +lat_0=90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
+        )
+        north_dist = transform(geom, toSRS=north_srs).Distance(
+            point(0, 0, srs=north_srs)
+        )
+        south_srs = SRS.loadSRS(
+            "+proj=aeqd +lat_0=-90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
+        )
+        south_dist = transform(geom, toSRS=south_srs).Distance(
+            point(0, 0, srs=south_srs)
+        )
+        assert min([north_dist, south_dist]) > buffer_mtrs, (
+            f"buffered geometry would intersect with North or South Pole."
         )
 
-    # first shift the geom to the "center of the world"
-    geom_shftd = shift(
-        geom,
-        lonShift=-geom.Centroid().GetX(),
-        latShift=(
-            -geom.Centroid().GetY() if applyBufferInSRS is False else 0
-        ),  # latitudinal shift would distort latlon-to-metric conversion
+        # convert geom to applyBufferInSRS
+        _geom = transform(geom, toSRS=applyBufferInSRS)
+
+    # apply buffer
+    _geom_buf = _geom.Buffer(buffer)
+    assert _geom_buf.IsValid(), f"buffered geom invalid after applying buffer."
+    # make sure that the buffered geom was not already partially projected by 360° if crossing antimeridian
+    # envelope diffs on either side must be equal to buffer with 1% tolerance
+    assert np.isclose(
+        _geom.GetEnvelope()[0] - _geom_buf.GetEnvelope()[0], buffer, atol=0, rtol=0.01
+    ) and np.isclose(
+        _geom_buf.GetEnvelope()[1] - _geom.GetEnvelope()[1], buffer, atol=0, rtol=0.01
+    ), (
+        f"buffered geom envelope does not match unbuffered geom envelope plus buffers on both sides."
     )
-    if applyBufferInSRS:
-        # transform to applyBufferInSRS srs
-        geom_shftd_epsg = transform(geom_shftd, toSRS=applyBufferInSRS)
-        # apply buffer
-        geom_shftd_buf_epsg = geom_shftd_epsg.Buffer(buffer)
-        assert geom_shftd_buf_epsg.IsValid(), (
-            f"geom in EPSG:{applyBufferInSRS} invalid after buffering."
+
+    # now retransform to original srs if needed
+    if not applyBufferInSRS is False:
+        _geom_buf = transform(_geom_buf, toSRS=_srs)
+
+    # now split if needed
+    if not (split is None or isinstance(split, str) and split.upper() == "NONE"):
+        _geom_buf = fixOutOfBoundsGeoms(_geom_buf, how=split)
+        assert _geom_buf.IsValid(), (
+            f"buffered and re-transformed geom invalid after '{split}' operation"
         )
-        # clip to +/-90° lat "world window" (shrink window by tolerance and transform to EPSG)
-        _worldbox_epsg = transform(
-            polygon(
-                [
-                    (-180 + tol, -90 + tol),
-                    (-180 + tol, 90 - tol),
-                    (180 - tol, 90 - tol),
-                    (180 - tol, -90 + tol),
-                ],
-                srs=4326,
-            ),
-            toSRS=applyBufferInSRS,
-        )
-        _env = geom_shftd_buf_epsg.GetEnvelope()
-        if (
-            _worldbox_epsg.GetEnvelope()[2] < _env[2]
-            or _worldbox_epsg.GetEnvelope()[3] > _env[3]
-        ):
-            # the vertical dimension exceeds the "world window", clip to worldbox to avoid geoms extending over +/-90° lat
-            geom_shftd_buf_epsg = geom_shftd_buf_epsg.Intersection(_worldbox_epsg)
-            _env_new = geom_shftd_buf_epsg.GetEnvelope()
-            if verbose:
-                print(f"NOTE: geometry was clipped vertically.", flush=True)
-            if _env_new[0] < _env[0] or _env_new[1] < _env[1] and not split == "clip":
-                # longitudinal clip, this is not supposed to happen since the geom has been shifted longitudinally!
-                warnings.warn("geometry was clipped horizontally!", Warning)
-        # reconvert to original SRS, still centered on (0,0)
-        geom_shftd_buf = transform(
-            geom_shftd_buf_epsg, toSRS=geom.GetSpatialReference()
-        )
-        # geom is sometimes invalid after transformation, if so try to fix with zero-buffer trick
-        if not geom_shftd_buf.IsValid():
-            geom_shftd_buf = geom_shftd_buf.Buffer(0)
-        assert geom_shftd_buf.IsValid(), (
-            f"buffered geom invalid after re-transformation to initial SRS."
-        )
-    else:
-        # apply buffer in unit of geom SRS
-        geom_shftd_buf = geom_shftd.Buffer(buffer)
-    # shift back to the original centroid location
-    geom_buf = shift(
-        geom_shftd_buf,
-        lonShift=geom.Centroid().GetX(),
-        latShift=(
-            geom.Centroid().GetY() if applyBufferInSRS is False else 0
-        ),  # same as above
-    )
-    assert geom_buf.IsValid(), (
-        f"buffered geom in initial SRS invalid after shifting it back to initial longitude."
-    )
-    if split in ["none", None]:
-        # no splitting of protruding geoms required, return as is
-        return geom_buf
-    elif split == "clip":
-        # clip protruding elements
-        return fixOutOfBoundsGeoms(geom=geom_buf, how="clip")
-    elif split == "shift":
-        # split and shift and re-merge protruding polygon parts
-        return fixOutOfBoundsGeoms(geom=geom_buf, how="shift")
-    else:
-        raise ValueError(f"split argument must be either 'none', 'clip' or 'shift'.")
+
+    return _geom_buf
 
 
 def fixOutOfBoundsGeoms(geom, how="shift"):
