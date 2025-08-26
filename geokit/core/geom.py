@@ -1897,7 +1897,7 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
 
     # now retransform to original srs if needed
     if not applyBufferInSRS is False:
-        _geom_buf = transform(_geom_buf, toSRS=_srs)
+        _geom_buf = transform(_geom_buf, toSRS=_srs, revert360degProj=True)
 
     # now split if needed
     if not (split is None or isinstance(split, str) and split.upper() == "NONE"):
