@@ -763,7 +763,9 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS="europe_m", fromSRS=None, segment=None):
+def transform(
+    geoms, toSRS="europe_m", fromSRS=None, revert360degProj=False, segment=None
+):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:
@@ -780,6 +782,13 @@ def transform(geoms, toSRS="europe_m", fromSRS=None, segment=None):
         The srs of the input geometries
           * Only needed if an SRS cannot be inferred from the geometry inputs or
             is, for whatever reason, the geometry's SRS is wrong
+
+    revert360degProj : bool; optional
+        If True, will revert the 360° shift that is applied by PROJ to points
+        beyond the antimeridian when transforming to EPSG:4326 to avoid invalid,
+        distorted geometries when points are only partially shifted. Will then
+        devliver a geometry that may partially be outside the -180° to 180°
+        longitude range. By default False.
 
     segment : float; optional
         An optional segmentation length to apply to the input geometries BEFORE
@@ -835,6 +844,59 @@ def transform(geoms, toSRS="europe_m", fromSRS=None, segment=None):
     r = [g.Transform(trx) for g in geoms]
     if sum(r) > 0:  # check fro errors
         raise GeoKitGeomError("Errors in geometry transformations")
+
+    if revert360degProj and toSRS.IsSame(SRS.loadSRS(4326)):
+
+        def _revert_antimeridian_proj(geom, max_width=180):
+            """Shift back points across the antimeridian to undo the effect of the PROJ function."""
+
+            def _shift_points(g):
+                """Shifts points back by +/-360° if PROJ shifted them due to the antimeridian"""
+                prev_x, _, _ = g.GetPoint(0)
+                for j in range(1, g.GetPointCount()):
+                    x, y, z = g.GetPoint(j)
+                    dx = x - prev_x
+                    if dx > max_width:
+                        x -= 360
+                    elif dx < -max_width:
+                        x += 360
+                    g.SetPoint(j, x, y, z)
+                    prev_x = x
+                return geom
+
+            # apply at different levels (directly to lines, indirectly to rings per polygon or recursively to multi-polygons/lines)
+            geom_type = geom.GetGeometryType()
+            if geom_type in (ogr.wkbPolygon, ogr.wkbPolygon25D):
+                for i in range(geom.GetGeometryCount()):
+                    _shift_points(geom.GetGeometryRef(i))
+            elif geom_type in (
+                ogr.wkbMultiPolygon,
+                ogr.wkbMultiPolygon25D,
+                ogr.wkbMultiLineString,
+                ogr.wkbMultiLineString25D,
+            ):
+                for i in range(geom.GetGeometryCount()):
+                    _revert_antimeridian_proj(geom.GetGeometryRef(i), max_width)
+            elif geom_type in (ogr.wkbLineString, ogr.wkbLineString25D):
+                _shift_points(geom)
+            # points are returned unchanged since here the projection across the antimeridian is desired
+            return geom
+
+        # polygons or lines crossing the antimeridian may have been distorted by PROJ operation
+        geoms = [_revert_antimeridian_proj(geom=g) for g in geoms]
+
+    # make sure all geoms are valid
+    try:
+        assert all(
+            [g.IsValid() for g in geoms]
+        )  # no msg, fall back to except only if needed to save time
+    except:
+        geoms = [
+            g.Buffer(0) for g in geoms
+        ]  # trick to reset boundary of unnecessarily invalid geoms
+        assert all([g.IsValid() for g in geoms]), (
+            f"Some geometries are invalid after transformation"
+        )
 
     # Done!
     if returnSingle:
