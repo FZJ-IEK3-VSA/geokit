@@ -137,7 +137,7 @@ def test_Extent_contoursFromRaster():
     opt = "FIXED_LEVELS="
     for edge in contourEdges:
         opt += str(edge) + ","
-    args.append(opt[:-2])
+    args.append(opt[:-1])
 
     # Determine contours
     result = gdal.ContourGenerateEx(band, layer, options=args)
@@ -156,13 +156,13 @@ def test_Extent_contoursFromRaster():
     ##
 
     try:
-        assert len(countour_data_frame) == 324
+        assert len(countour_data_frame) == 326
     except AssertionError:
         raise (
             AssertionError(
                 " The length of the data frame was "
                 + str(len(countour_data_frame))
-                + " even though 324 was expected"
+                + " even though 326 was expected"
             )
         )
     try:
@@ -170,7 +170,7 @@ def test_Extent_contoursFromRaster():
     except AssertionError:
         raise (
             AssertionError(
-                " The area was"
+                " The area was "
                 + str(countour_data_frame.iloc[63].geom.Area())
                 + " even though 285000.2699996233 was expected"
             )
@@ -180,17 +180,11 @@ def test_Extent_contoursFromRaster():
     except AssertionError:
         raise (
             AssertionError(
-                " The index was"
+                " The index was "
                 + str(countour_data_frame.iloc[63].geom.Area())
                 + " even though 285000.2699996233 was expected"
             )
         )
-
-    assert len(countour_data_frame) == 324
-    assert np.isclose(
-        countour_data_frame.iloc[63].geom.Area(), 285000.2699996233
-    )  # index of geom changed from 61 to 63 with GDAL >= 3.0.0
-    assert countour_data_frame.iloc[63].ID == 1
 
 
 def test_contours_3x3_raster_example():
@@ -231,7 +225,7 @@ def test_contours_3x3_raster_example():
     opt = "FIXED_LEVELS="
     for edge in contourEdges:
         opt += str(edge) + ","
-    args.append(opt[:-2])
+    args.append(opt[:-1])
 
     # Determine contours
     result = gdal.ContourGenerateEx(band, layer, options=args)
@@ -248,15 +242,21 @@ def test_contours_3x3_raster_example():
             geoms.append(geom.GetGeometryRef(gi).Clone())
             IDs.append(value)
     countour_data_frame = pd.DataFrame(dict(geom=geoms, ID=IDs))
+    # import geokit as gk
 
+    # path_to_file = pathlib.Path(__file__).parent.joinpath(
+    #     "gdal_3_11_3_contours_3x3.png"
+    # )
+    # gk.drawGeoms(countour_data_frame)
+    # plt.savefig(path_to_file)
     try:
-        assert len(countour_data_frame) == 2
+        assert len(countour_data_frame) == 3
     except AssertionError:
         raise (
             AssertionError(
                 " The length of the data frame was "
                 + str(len(countour_data_frame))
-                + " even though 2 was expected"
+                + " even though 3 was expected"
             )
         )
     try:
@@ -264,18 +264,23 @@ def test_contours_3x3_raster_example():
     except AssertionError:
         raise (
             AssertionError(
-                " The area was"
+                " The area was "
                 + str(countour_data_frame.iloc[0].geom.Area())
                 + " even though 4.4999970000059974 was expected"
             )
         )
     try:
-        assert np.isclose(countour_data_frame.iloc[1].geom.Area(), 4.5000029999940026)
+        assert np.isclose(countour_data_frame.iloc[1].geom.Area(), 3)
     except AssertionError:
         raise (
             AssertionError(
-                " The area was"
+                " The area was "
                 + str(countour_data_frame.iloc[1].geom.Area())
-                + " even though 4.5000029999940026 was expected"
+                + " even though 3 was expected"
             )
         )
+
+
+if __name__ == "__main__":
+    test_Extent_contoursFromRaster()
+    test_contours_3x3_raster_example()
