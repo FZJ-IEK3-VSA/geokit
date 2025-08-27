@@ -45,10 +45,12 @@ def test_gdal_warp_basic():
     assert arr_inmem.shape == arr_reload.shape, (
         f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
     )
+
     # expected_mean = 16.264478  # Expected mean value based on the warped raster
     assert np.isclose(arr_inmem.mean(), arr_reload.mean(), rtol=1e-3), (
         f"Mean mismatch: got {arr_inmem.mean()} vs {arr_reload.mean()}"
     )
+
     # Assert arrays match exactly (bitwise)
     assert np.array_equal(arr_inmem, arr_reload), "Warped array differs after reload"
     os.remove(output_path)
