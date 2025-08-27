@@ -8,6 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.4.4"
       - name: Check Linter
         run: ruff check --output-format=github . --config ruff.toml
       - name: Check Format
