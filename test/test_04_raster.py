@@ -576,6 +576,37 @@ def test_warp():
     assert np.isclose(v4, v5, atol=0).all()
 
 
+def test_warpLike():
+    _rstr = raster.warpLike(
+        dataSource=SINGLE_HILL_PATH,
+        contextSource=ELEVATION_PATH,
+    )
+    assert np.isclose(
+        raster.rasterInfo(_rstr).bounds,
+        raster.rasterInfo(ELEVATION_PATH).bounds,
+        rtol=0.001,
+    ).all()
+    assert raster.rasterInfo(_rstr).srs.IsSame(raster.rasterInfo(ELEVATION_PATH).srs)
+
+    # must fail with meta and copyMetaData = True
+    with pytest.raises(raster.GeoKitRasterError):
+        _rstr = raster.warpLike(
+            dataSource=SINGLE_HILL_PATH,
+            contextSource=ELEVATION_PATH,
+            copyMetadata=True,
+            meta={"must": "fail"},  # combination with copyMetadata is impossible
+        )
+
+    # check forced kwargs
+    _rstr = raster.warpLike(
+        dataSource=SINGLE_HILL_PATH,
+        contextSource=ELEVATION_PATH,
+        copyMetadata=False,
+        dtype=5,
+    )
+    assert raster.rasterInfo(_rstr).dtype == 5
+
+
 @pytest.fixture()
 def sieve_ds():
     data_arr = np.array(
