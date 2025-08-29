@@ -2421,19 +2421,19 @@ def warp(
 
 def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
     """
-    Convenience function to warp a raster to the context of another raster 
+    Convenience function to warp a raster to the context of another raster
     as returned from a call to rasterInfo(contextSource).
 
     dataSource : Anything acceptable by loadRaster()
         The raster data source to draw
     contextSource : Anything acceptable by loadRaster()
-        The raster context source to draw, i.e. the data source raster will be 
+        The raster context source to draw, i.e. the data source raster will be
         warped to this pixelWidth, pixelHeight, bounds, extent, srs etc.
     copyMetadata : bool, optional
         If True, the metadata of the dataSource raster will be copied, else
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
-        All kwargs will be passed on to raster.warp().     
+        All kwargs will be passed on to raster.warp().
     """
     if UTIL.isRaster(dataSource):
         dataInfo = rasterInfo(dataSource)
@@ -2443,11 +2443,13 @@ def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
         contextInfo = rasterInfo(contextSource)
     if not isinstance(contextInfo, RasterInfo):
         raise GeoKitRasterError("Could not understand contextSource")
-    
+
     # first get data-related parameters from DATA source
     if copyMetadata:
         if "meta" in kwargs:
-            raise GeoKitRasterError("If metadata is given as 'meta' in kwargs, copyMetadata cannot be True!")
+            raise GeoKitRasterError(
+                "If metadata is given as 'meta' in kwargs, copyMetadata cannot be True!"
+            )
         meta = dataInfo.meta
     else:
         meta = kwargs.pop("meta", None)
