@@ -1,3 +1,4 @@
+import inspect
 import os
 import pathlib
 import sys
@@ -2450,11 +2451,15 @@ def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
         meta = dataInfo.meta
     else:
         meta = kwargs.pop("meta", None)
+    print(meta)
     dtype = kwargs.pop("dtype", dataInfo.dtype)
     noData = kwargs.pop("noData", dataInfo.noData)
     if "cutline" in kwargs:
         # make sure that the cells outside are filled with noData if not specified
         fill = kwargs.pop("fill", dataInfo.noData)
+    else:
+        # set to default of warp() function for consistent behavior
+        fill = inspect.signature(warp).parameters["fill"].default
 
     # then get context related parameters from CONTEXT source
     bounds = kwargs.pop("bounds", contextInfo.bounds)
