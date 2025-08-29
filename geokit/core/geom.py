@@ -819,7 +819,7 @@ def transform(
         try:
             geoms = list(geoms)
         except Exception as e:
-            msg = "Could not determine geometry SRS"
+            msg = "Geoms is neither an osgeo.ogr.Geometry instance nor an iterable that can be converted to a list."
             warnings.warn(msg, UserWarning)
             raise e
 
