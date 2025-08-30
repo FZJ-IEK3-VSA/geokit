@@ -133,12 +133,6 @@ def test_extractValues():
         assert np.isclose(v.xOffset, real[0], rtol=1e-4)
         assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
-    # check also for multi-dimensional window
-    v1b = raster.extractValues(CLC_RASTER_PATH, points, mode="average")
-    for v, real in zip(v1b.itertuples(), realValue):
-        assert v1b.data == real
-
-    pass
     # test flipped
     v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
 
@@ -227,6 +221,11 @@ def test_interpolateValues():
         func=lambda d, xo, yo: d.max(),
     )
     assert np.isclose(v, 12)  # func
+
+    # check also for multi-dimensional window (multiple cells window + multiple points)
+    points = [(6.06590, 50.51939), (6.02141, 50.61491), (6.371634, 50.846025)]
+    v = raster.interpolateValues(CLC_RASTER_PATH, points, mode="average")
+    assert np.isclose(v, np.array([31.83673469, 14.75510204, 7.08163265])).all()
 
 
 def test_extractMatrix():
