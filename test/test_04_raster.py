@@ -133,6 +133,11 @@ def test_extractValues():
         assert np.isclose(v.xOffset, real[0], rtol=1e-4)
         assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
+    # check also for multi-dimensional window
+    v1b = raster.extractValues(CLC_RASTER_PATH, points, mode="average")
+    for v, real in zip(v1b.itertuples(), realValue):
+        assert v1b.data == real
+
     pass
     # test flipped
     v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
