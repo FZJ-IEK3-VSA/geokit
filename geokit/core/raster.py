@@ -236,6 +236,12 @@ def createRaster(
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
+        # check if the directory exists
+        elif not os.path.isdir(os.path.dirname(output)):
+            raise FileNotFoundError(
+                f"Output directory does not exist: {os.path.dirname(output)}"
+            )
+
         # check if writeable:
         if not os.access(os.path.dirname(output), os.W_OK):
             print(os.path.dirname(output))

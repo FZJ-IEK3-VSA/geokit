@@ -1,19 +1,134 @@
 import os
-import sys
 from glob import glob
-from json import dumps
-from os.path import basename
+import numpy as np
+import statistics
 from warnings import warn
+import datetime
 
 from osgeo import gdal
 
 from geokit.core.regionmask import *
-from geokit.core.util import GeoKitError
-from geokit.raster import createRaster, extractMatrix, rasterInfo
+from geokit.core.util import GeoKitError, get_common_dtype, nodata_equal
+from geokit.raster import (
+    createRaster,
+    extractMatrix,
+    rasterInfo,
+    loadRaster,
+)
+from geokit.core.raster import RasterInfo
+
+
+def checkSimilarRasters(
+    datasets,
+    rtol=0,
+):
+    """
+    Parameters
+    ----------
+    datasets : string or list
+        glob string path describing datasets to combine, alternatively list of
+        gdal.Datasets or iterable object with paths.
+    rtol : int, float, optional
+        The relative tolerance that is allowed for numeric deviations. By
+        default 0, i.e. an exact match (within data type accuracy) is required.
+
+    Returns:
+    ----------
+    output datasets: list
+        List of osgeo.gdal.Datasets with similar contexts.
+    """
+    assert isinstance(rtol, (int, float)) and rtol >= 0, (
+        f"rtol must be a float or int >= 0"
+    )
+    # ensure we have a list of raster datasets
+    if isinstance(datasets, str):
+        datasets = glob(datasets)
+        if len(datasets) == 0:
+            raise FileNotFoundError(
+                f"datasets given as a string but does not lead to any existing files: '{datasets}'"
+            )
+        datasets.sort()
+    if not isinstance(datasets, list):
+        raise TypeError(f"datasets must be a list")
+
+    # check and load all datasets
+    _datasets = []
+    for dataset in datasets:
+        if isinstance(dataset, str):
+            if not os.path.isfile(dataset):
+                raise FileNotFoundError(
+                    f"datsets string entry is not an existing file: '{dataset}'"
+                )
+            _datasets.append(loadRaster(dataset))
+        elif isinstance(dataset, gdal.Dataset):
+            _datasets.append(dataset)
+        else:
+            raise TypeError(
+                f"datasets must contain only string or osgeo.gdal.Dataset entries."
+            )
+    datasets = _datasets
+
+    # get all raster infos
+    infoDataset = [rasterInfo(d) for d in datasets]
+    # check all relevant variables
+    for rInfo in infoDataset[1:]:
+        # same srs is required
+        if not infoDataset[0].srs.IsSame(rInfo.srs):
+            raise GeoKitError(f"SRS mismatch between datasets.")
+        # pixel width and height must be same/similar
+        if not np.isclose(infoDataset[0].dx, rInfo.dx, rtol=rtol, atol=0):
+            raise GeoKitError(f"dx mismatch between datasets.")
+        if not np.isclose(infoDataset[0].dy, rInfo.dy, rtol=rtol, atol=0):
+            raise GeoKitError(f"dy mismatch between datasets.")
+        # bounds shift must be an exact/close match to a multiple of dx/dy
+        diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
+        if not (
+            round(diffx / rInfo.dx, 0) == 0
+            or np.isclose(
+                diffx / round(diffx / rInfo.dx, 0), rInfo.dx, rtol=rtol, atol=0
+            )
+        ):
+            raise GeoKitError(
+                f"horizontal bounds shift between datasets is not a multiple of dx."
+            )
+        diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
+        if not (
+            round(diffy / rInfo.dy, 0) == 0
+            or np.isclose(
+                diffy / round(diffy / rInfo.dy, 0), rInfo.dy, rtol=rtol, atol=0
+            )
+        ):
+            raise GeoKitError(
+                f"vertical bounds shift between datasets is not a multiple of dy."
+            )
+        # # noData should be the same
+        # if not infoDataset[0].noData == rInfo.noData:
+        #     raise GeoKitError(f"noData mismatch between datasets.")
+
+        # noData equality
+        if not nodata_equal(infoDataset[0].noData, rInfo.noData):
+            raise GeoKitError("noData mismatch between datasets.")
+
+    # make sure the datatypes are the same or can be combined
+    dtypes = [rInfo.dtype for rInfo in infoDataset]
+    if rtol == 0 and not len(set(dtypes)):
+        # no tolerance allowed - assume dtypes must also match exactly
+        raise TypeError(f"dtypes or rasters differ but rtol is zero.")
+    elif rtol > 0:
+        # accept different dtypes as long as they can be combined into one
+        get_common_dtype(dtypes=dtypes, fallback=None)  # fail if no common dtype
+    # return list of preloaded, similar datasets
+    return datasets
 
 
 def combineSimilarRasters(
-    datasets, output=None, combiningFunc=None, verbose=True, updateMeta=False, **kwargs
+    datasets,
+    output=None,
+    combiningFunc=None,
+    verbose=True,
+    updateMeta=False,
+    allowNumericMismatch=False,
+    **kwargs,
 ):
     """
     Combines several similar raster files into one single raster file.
@@ -21,21 +136,37 @@ def combineSimilarRasters(
     Parameters
     ----------
     datasets : string or list
-        glob string path describing datasets to combine, alternatively list of gdal.Datasets or iterable object with paths.
+        glob string path describing datasets to combine, alternatively list of
+        gdal.Datasets or iterable object with paths.
     output : string, optional
-        Filepath to output raster file. If it is an existing file, datasets will be added to output. Recommended to create a new file everytime though. If None, no output dataset will be loaded or created on disk and output dataset kept in memory only, by default None
+        Filepath to output raster file. If it is an existing file, datasets will
+        be added to output. Recommended to create a new file everytime though.
+        If None, no output dataset will be loaded or created on disk and output
+        dataset kept in memory only, by default None
     combiningFunc : [type], optional
         Allows customized functions to combine matrices, by default None
     verbose : bool, optional
-        If True, additional status print stamenets will be issued, by default True
+        If True, additional status print stamenets will be issued, by default
+        True
     updateMeta : bool, optional
-        If True, metadata of output dataset will be a combination of all input rasters, by default False
-
+        If True, metadata of output dataset will be a combination of all input
+        rasters, by default False.
+        NOTE: In the case of multiple values for the metadata keys, the last
+        dataset metadata will take precedence.
+    allowNumericMismatch : bool, optional
+        If True, minor deviations in raster context will be ignored/corrected.
+        By default False, i.e. only exactly similar rasters will be combined.
+    **kwargs
+        Will be passed on to geokit.raster.createRaster().
     Returns:
     ----------
     output dataset: osgeo.gdal.Dataset
         Raster file containing the combined matrices of all input datasets.
     """
+    if not isinstance(allowNumericMismatch, bool):
+        raise TypeError(f"allowNumericMismatch must be boolean.")
+
+    # CHECK AND PREPROCESS INPUT DATASETS
 
     # Ensure we have a list of raster datasets
     if isinstance(datasets, str):
@@ -48,53 +179,111 @@ def combineSimilarRasters(
     else:  # assume datasets is iterable
         datasets = list(datasets)
 
+    # make sure we do actually have rasters and they are all indeed "similar"
     if len(datasets) == 0:
         raise GeoKitError("No datasets given")
+    rtol = 0
+    if allowNumericMismatch:
+        rtol = 0.0001  # allow a numeric deviation of 0.01%
+    datasets = checkSimilarRasters(datasets=datasets, rtol=rtol)
 
-    # Determine info for all datasets
+    # GET REFERENCE CONTEXT FOR THE OUTPUT RASTER
+
+    # determine info for all datasets
     infoSet = [rasterInfo(d) for d in datasets]
 
-    # Ensure all input rasters share resolution, srs, datatype, and noData
-    for info in infoSet[1:]:
-        if not info.srs.IsSame(infoSet[0].srs):
-            raise GeoKitError("SRS does not match in datasets")
-        if not (info.dx == infoSet[0].dx and info.dy == infoSet[0].dy):
-            raise GeoKitError("Resolution does not match in datasets")
-        if not (info.dtype == infoSet[0].dtype):
-            raise GeoKitError("Datatype does not match in datasets")
+    # get reference srs - are all the same thanks to checkSimilarRasters
+    srs_ref = infoSet[0].srs
 
-    # Get summary info about the whole dataset group
-    dataXMin = min([i.xMin for i in infoSet])
-    dataXMax = max([i.xMax for i in infoSet])
-    dataYMin = min([i.yMin for i in infoSet])
-    dataYMax = max([i.yMax for i in infoSet])
+    # get the unique actual dtypes in input rasters
+    dtypes = sorted(set([_i.dtype for _i in infoSet]))
+    # now get the most lightweight commonly useable dtype
+    dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
+
+    # get the reference resolution in x and y dir as the most commonly used value
+    dx_ref = statistics.mode([_i.pixelWidth for _i in infoSet])
+    dy_ref = statistics.mode([_i.pixelHeight for _i in infoSet])
+
+    # try to align all bounds to the first matching raster which has correct x_ref and y_ref resolution
+    i_match = next(
+        (
+            i
+            for i, (x, y) in enumerate(
+                zip(
+                    [_i.pixelWidth for _i in infoSet],
+                    [_i.pixelHeight for _i in infoSet],
+                )
+            )
+            if x == dx_ref and y == dy_ref
+        ),
+        None,
+    )
+    if i_match is not None:
+        # we have a "perfect" raster, use the min. bounds of that one as reference for all other rasters
+        boundsXmin_ref = infoSet[i_match].bounds[0]
+        boundsYmin_ref = infoSet[i_match].bounds[2]
+    else:
+        # we do not have any raster which matches both r_ref any y_ref in its resolution. Simply use the first raster.
+        boundsXmin_ref = infoSet[0].bounds[0]
+        boundsYmin_ref = infoSet[0].bounds[2]
+        if verbose:
+            print(
+                datetime.datetime.now(),
+                f"NOTE: None of the rasters matches both reference resolutions in x and y direction. Use first raster bounds as reference.",
+                flush=True,
+            )
+
+    # calculate the possibly adapted bounds for all datasets
+    boundsSet = []
+    for _info in infoSet:
+        # calculate the new bounds by aligning bottom left corner with boundsXmin_ref/boundsYmin_ref + multiple of cell size
+        _bounds_Xmin = (
+            boundsXmin_ref + round((_info.bounds[0] - boundsXmin_ref) / dx_ref) * dx_ref
+        )
+        _bounds_Ymin = (
+            boundsYmin_ref + round((_info.bounds[1] - boundsYmin_ref) / dy_ref) * dy_ref
+        )
+        _bounds = (
+            _bounds_Xmin,
+            _bounds_Ymin,
+            _bounds_Xmin + _info.xWinSize * dx_ref,
+            _bounds_Ymin + _info.yWinSize * dy_ref,
+        )
+        # make sure the number of cells would remain the same in the new bounds
+        assert round(_info.xWinSize * dx_ref / _info.dx, 0) == _info.xWinSize, (
+            f"The change in bounds width would lead to a different amount of cell columns in the original raster."
+        )
+        assert round(_info.yWinSize * dy_ref / _info.dy, 0) == _info.yWinSize, (
+            f"The change in bounds height would lead to a different amount of cell rows in the original raster."
+        )
+        boundsSet.append(_bounds)
+
+    # get summary info about the whole dataset group
+    dataXMin = min([i[0] for i in boundsSet])
+    dataXMax = max([i[2] for i in boundsSet])
+    dataYMin = min([i[1] for i in boundsSet])
+    dataYMax = max([i[3] for i in boundsSet])
+
+    # get noData value from kwargs, else take from dataset infos
+    noData_ref = kwargs.pop("noData", None)
+    if noData_ref is None:
+        noDataSet = set([i.noData for i in infoSet])
+        assert len(noDataSet) == 1  # make sure, is enforced by checkSimilarRasters
+        noData_ref = noDataSet.pop()
 
     # Maybe create a new output dataset
     if isinstance(output, str):
-        if not os.path.isfile(output):  # we will need to create a output source
-            # Determine no data value
-            noDataValue = kwargs.pop("noData", None)
-
-            if noDataValue is None:
-                noDataSet = set([i.noData for i in infoSet])
-                if len(noDataSet) == 1:
-                    noDataValue = noDataSet.pop()
-
-            # Create Raster
-            dx = infoSet[0].dx
-            dy = infoSet[0].dy
-            dtype = infoSet[0].dtype
-            srs = infoSet[0].srs
-
+        if not os.path.isfile(output):
+            # we will need to create a output source
             createRaster(
                 bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
                 output=output,
-                dtype=dtype,
-                pixelWidth=dx,
-                pixelHeight=dy,
-                noData=noDataValue,
-                srs=srs,
-                fill=noDataValue,
+                dtype=dtype_ref,
+                pixelWidth=dx_ref,
+                pixelHeight=dy_ref,
+                noData=noData_ref,
+                srs=srs_ref,
+                fill=noData_ref,
                 **kwargs,
             )
         else:
@@ -102,47 +291,27 @@ def combineSimilarRasters(
                 "WARNING: Overwriting existing output file. Sometimes writing to an non empty output fails. Recommended to write to a non existing location instead and include maser into datasets."
             )
     elif output is None:
-        # Determine no data value
-        noDataValue = kwargs.pop("noData", None)
-
-        if noDataValue is None:
-            noDataSet = set([i.noData for i in infoSet])
-            if len(noDataSet) == 1:
-                noDataValue = noDataSet.pop()
-
-        # Create Raster
-        dx = infoSet[0].dx
-        dy = infoSet[0].dy
-        dtype = infoSet[0].dtype
-        srs = infoSet[0].srs
-
+        # create raster in memory
         outputDS = createRaster(
             bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
-            dtype=dtype,
-            pixelWidth=dx,
-            pixelHeight=dy,
-            noData=noDataValue,
-            srs=srs,
-            fill=noDataValue,
+            dtype=dtype_ref,
+            pixelWidth=dx_ref,
+            pixelHeight=dy_ref,
+            noData=noData_ref,
+            srs=srs_ref,
+            fill=noData_ref,
             **kwargs,
         )
     else:
-        sys.exist(
+        raise TypeError(
             "output must be None or a str formatted file path to an existing output file or a file to be created."
         )
 
-    # Open output dataset if required and check parameters
+    # open output dataset if required and check parameters
     if not output is None:
         outputDS = gdal.Open(output, gdal.GA_Update)
     mInfo = rasterInfo(outputDS)
     mExtent = Extent(mInfo.bounds, srs=mInfo.srs)
-
-    if not mInfo.srs.IsSame(infoSet[0].srs):
-        raise GeoKitError("SRS's do not match output dataset")
-    if not (mInfo.dx == infoSet[0].dx and mInfo.dy == infoSet[0].dy):
-        raise GeoKitError("Resolution's do not match output dataset")
-    if not (mInfo.dtype == infoSet[0].dtype):
-        raise GeoKitError("Datatype's do not match output dataset")
 
     outputBand = outputDS.GetRasterBand(1)
 
@@ -153,12 +322,12 @@ def combineSimilarRasters(
     # Add each dataset to output
     for i in range(len(datasets)):
         if verbose:
-            if isinstance(datasets[i], str):
-                print(f"{i + 1}/{len(datasets)} ({basename(datasets[i])})")
-            else:
-                print(f"{i + 1}/{len(datasets)}")
+            print(
+                datetime.datetime.now(),
+                f"Now adding raster No. {i + 1}/{len(datasets)}",
+            )
         # create dataset extent
-        dExtent = Extent(infoSet[i].bounds, srs=infoSet[i].srs)
+        dExtent = Extent(boundsSet[i], srs=srs_ref)
 
         # extract the dataset's matrix
         dMatrix = extractMatrix(datasets[i])
@@ -177,8 +346,20 @@ def combineSimilarRasters(
 
         # create selector
         if not combiningFunc is None:
+            # update rasterInfo since we might have slightly changed cell/bounds info
+            rInfo_dict = infoSet[i]._asdict()
+            rInfo_dict["bounds"] = boundsSet[i]
+            rInfo_dict["pixelWidth"] = dx_ref
+            rInfo_dict["pixelHeight"] = dy_ref
+            rInfo_dict["dx"] = dx_ref
+            rInfo_dict["dy"] = dy_ref
+            rInfo_dict["xMin"] = boundsSet[i][0]
+            rInfo_dict["yMin"] = boundsSet[i][1]
+            rInfo_dict["xMax"] = boundsSet[i][2]
+            rInfo_dict["yMax"] = boundsSet[i][3]
+            rInfo_upd = RasterInfo(**rInfo_dict)
             writeMatrix = combiningFunc(
-                mMatrix=mMatrix, mInfo=mInfo, dMatrix=dMatrix, dInfo=infoSet[i]
+                mMatrix=mMatrix, mInfo=mInfo, dMatrix=dMatrix, dInfo=rInfo_upd
             )
         elif not infoSet[i].noData is None:
             sel = dMatrix != infoSet[i].noData
