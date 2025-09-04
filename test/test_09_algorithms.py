@@ -41,17 +41,12 @@ def test_checkSimilarRasters():
         resampleAlg="near",
     )
 
-    rstr_noData_NaN_1 = raster.warp(
-        source=test_rasters[0],
+    # create a set of rasters with noData set to NaN
+    test_rasters_noData_NaN = [raster.warp(
+        source=rstr,
         resampleAlg="near",
         noData=np.NaN,
-    )
-    
-    rstr_noData_NaN_2 = raster.warp(
-        source=test_rasters[1],
-        resampleAlg="near",
-        noData=np.NaN,
-    )
+    ) for rstr in test_rasters]
     
     # FIRST TEST EXACT MATCH
 
@@ -62,7 +57,7 @@ def test_checkSimilarRasters():
     )
     # this should pass in order to allow NaN == NaN
     checkSimilarRasters(
-        datasets=[rstr_noData_NaN_1, rstr_noData_NaN_2],
+        datasets=test_rasters_noData_NaN,
         rtol=0,  
     )
     
