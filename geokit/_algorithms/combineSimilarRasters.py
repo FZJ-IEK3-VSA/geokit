@@ -104,7 +104,7 @@ def checkSimilarRasters(
         # # noData should be the same
         # if not infoDataset[0].noData == rInfo.noData:
         #     raise GeoKitError(f"noData mismatch between datasets.")
-        
+
         # noData equality
         if not nodata_equal(infoDataset[0].noData, rInfo.noData):
             raise GeoKitError("noData mismatch between datasets.")
@@ -385,4 +385,3 @@ def combineSimilarRasters(
     outputBand.ComputeBandStats(0)
 
     return outputDS
-

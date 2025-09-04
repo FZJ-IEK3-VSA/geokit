@@ -786,6 +786,7 @@ def get_common_dtype(dtypes, fallback=11):
     else:
         raise TypeError(f"No commonly useable GDAL dtype found for dtypes: {dtypes}")
 
+
 def nodata_equal(a, b):
     if a is None and b is None:
         return True
