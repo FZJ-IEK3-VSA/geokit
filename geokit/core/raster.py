@@ -1034,7 +1034,7 @@ def extractValues(
 
     for _src, _inds in src_mapper.items():
         # get the indices of the points for which data has been extracted already
-        _xtrct = [i for i, v in enumerate(values) if pd.notnull(v)]
+        _xtrct = [i for i, v in enumerate(values) if np.all(pd.notnull(v))]
         # deduct them from the inds here (they may have been extracted already from an overlapping _src tile)
         _inds = list(set(_inds) - set(_xtrct))
 
