@@ -49,6 +49,7 @@ def test_gdal_warp_basic():
     # expected_mean = 16.264478  # Expected mean value based on the warped raster
     assert np.isclose(arr_inmem.mean(), arr_reload.mean(), rtol=1e-3), (
         f"Mean mismatch: got {arr_inmem.mean()} vs {arr_reload.mean()}"
+
     )
 
     # Assert arrays match exactly (bitwise)
