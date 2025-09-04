@@ -12,6 +12,8 @@ from types import GeneratorType
 
 import numpy as np
 import pandas as pd
+import matplotlib.axis
+
 from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
@@ -306,15 +308,22 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     >>>      return goodValues.mean()
 
     """
+    pass
 
     def wrapper1(kernel):
+        pass
+
         def wrapper2(matrix):
             # get the original matrix sizes
             yN, xN = matrix.shape
 
             # make a padded version of the matrix
-            paddedMatrix = (
-                np.ones((yN + 2 * size, xN + 2 * size), dtype=matrix.dtype) * edgeValue
+
+            # paddedMatrix = (
+            #     np.ones((yN + 2 * size, xN + 2 * size),) * edgeValue
+            # )
+            paddedMatrix = np.full(
+                shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue
             )
             paddedMatrix[size:-size, size:-size] = matrix
 
@@ -505,16 +514,16 @@ AxHands = namedtuple("AxHands", "ax handles cbar")
 
 
 def drawImage(
-    matrix,
-    ax=None,
-    xlim=None,
-    ylim=None,
-    yAtTop=True,
-    scaling=1,
-    fontsize=16,
+    matrix: np.ndarray,
+    ax: matplotlib.axis.Axis | None = None,
+    xlim: tuple[float | float] | None = None,
+    ylim: tuple[float | float] | None = None,
+    yAtTop: bool = True,
+    scaling: float = 1,
+    fontsize: int = 16,
     hideAxis=False,
-    figsize=(12, 12),
-    cbar=True,
+    figsize: tuple[float | float] = (12, 12),
+    cbar: bool = True,
     cbarPadding=0.01,
     cbarTitle=None,
     vmin=None,
@@ -535,14 +544,14 @@ def drawImage(
     matrix : numpy.ndarray
         The matrix data to draw
 
-    ax : matplotlib axis; optional
+    ax : matplotlib.axis.Axis; optional
         The axis to draw the geometries on
           * If not given, a new axis is generated and returned
 
-    xlim : (float, float); optional
+    xlim : tuple[float, float]; optional
         The x-axis limits to draw the marix on
 
-    ylim : (float, float); optional
+    ylim : tuple[float, float]; optional
         The y-axis limits to draw the marix on
 
     yAtTop : bool; optional
@@ -551,9 +560,9 @@ def drawImage(
     scaling : numeric; optional
         An integer factor by which to scale the matrix before plotting
 
-    figsize : (int, int); optional
+    figsize : tuple[float, float]; optional
         The figure size to create when generating a new axis
-          * If resultign figure looks wierd, altering the figure size is your best
+          * If resulting figure looks weird, altering the figure size is your best
             bet to make it look nicer
 
     fontsize : int; optional
