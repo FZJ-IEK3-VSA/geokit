@@ -46,7 +46,7 @@ def test_checkSimilarRasters():
         raster.warp(
             source=rstr,
             resampleAlg="near",
-            noData=np.NaN,
+            noData=np.nan,
         )
         for rstr in test_rasters
     ]
