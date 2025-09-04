@@ -2,6 +2,8 @@ from geokit import Extent, LocationSet, error, raster, srs, util, vector
 from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
 
+import numpy as np
+
 
 def test_Extent___init__():
     # basic
@@ -546,7 +548,7 @@ def test_Extent_mutateRaster():
 
     # test a simple clip
     r = ex.mutateRaster(CLC_RASTER_PATH, output=result("extent_mutateRaster1.tif"))
-    mat = raster.extractMatrix(r)
+    mat = raster.extractMatrix(source=r)
     assert np.isclose(mat.mean(), 17.14654805)
 
     # test a clip and warp
@@ -562,7 +564,7 @@ def test_Extent_mutateRaster():
     assert np.isclose(mat2.mean(), 17.14768769)
 
     # simple processor
-    @util.KernelProcessor(1, edgeValue=-9999)
+    @util.KernelProcessor(size=1, edgeValue=-9999)
     def max_3x3(mat):
         goodValues = mat[mat != -9999].flatten()
         return goodValues.max()
@@ -700,5 +702,3 @@ def test_Extent_mosiacTiles():
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
 
 
-if __name__ == "__main__":
-    test_Extent_mosiacTiles()

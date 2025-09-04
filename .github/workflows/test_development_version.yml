@@ -1,6 +1,6 @@
-# on:
-  # push:
-  #   branches: ["**"]
+on:
+  push:
+    branches: ["**"]
   # # Allows to trigger the workflow manually
   # workflow_dispatch:
   #   branches: [ master ]
