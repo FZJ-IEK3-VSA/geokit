@@ -49,14 +49,14 @@ def test_gdal_warp_basic():
     # expected_mean = 16.264478  # Expected mean value based on the warped raster
     assert np.isclose(arr_inmem.mean(), arr_reload.mean(), rtol=1e-3), (
         f"Mean mismatch: got {arr_inmem.mean()} vs {arr_reload.mean()}"
-
     )
 
     # Assert arrays match exactly (bitwise)
     assert np.array_equal(arr_inmem, arr_reload), "Warped array differs after reload"
     os.remove(output_path)
 
-# Single-threshold isoband (≥0.5) 
+
+# Single-threshold isoband (≥0.5)
 def test_ContourGenerateEx_single_isoband():
     contourEdges = [0.5]
     # Open raster file
@@ -105,6 +105,7 @@ def test_ContourGenerateEx_single_isoband():
     assert countour_data_frame.shape[0] == 114  # geom count
     assert np.isclose(total_area, 0.20382200000004147)
     assert np.isclose(countour_data_frame.ID[59], 1)
+
 
 # Multi-level isobands using interger step sizes
 def test_ContourGenerateEx_multilevel_isobands():
@@ -188,6 +189,7 @@ def test_ContourGenerateEx_multilevel_isobands():
                 + " even though 285000.2699996233 was expected"
             )
         )
+
 
 # Multi-level isobands using interger step sizes on a small raster (3x3)
 def test_ContourGenerateEx_3x3_raster():
@@ -282,5 +284,3 @@ def test_ContourGenerateEx_3x3_raster():
                 + " even though 3 was expected"
             )
         )
-
-

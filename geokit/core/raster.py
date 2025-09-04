@@ -934,9 +934,7 @@ def extractValues(
         source = [loadRaster(s) for s in source]
     except:
         raise TypeError(
-
             "At least one source cannot be loaded by geokit.raster.loadRaster()."
-
         )
     srs = None
     for s in source:
@@ -2608,7 +2606,7 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         points = [points]
     assert hasattr(points, "__iter__"), (
         "points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
-)
+    )
 
     if isinstance(points[0], ogr.Geometry):
         if not all([p.GetGeometryName() == "POINT" for p in points]):
@@ -2627,8 +2625,7 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
             ]
         ), (
             "All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
-)
-
+        )
 
     # get bounds, cellWidth and cellHeight from the inputs
     if source is not None:
@@ -2671,7 +2668,6 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
             "cellHeight must be an int or float."
         )
         assert isinstance(cellWidth, (int, float)), "cellWidth must be an int or float."
-
 
         # calculate the raster width and height in Nos of cells
         rasterWidth = (bounds[2] - bounds[0]) / cellWidth

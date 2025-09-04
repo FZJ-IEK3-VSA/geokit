@@ -700,5 +700,3 @@ def test_Extent_mosiacTiles():
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
-
-
