@@ -785,3 +785,14 @@ def get_common_dtype(dtypes, fallback=11):
         return fallback
     else:
         raise TypeError(f"No commonly useable GDAL dtype found for dtypes: {dtypes}")
+
+def nodata_equal(a, b):
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    try:
+        # handle floats/NaN
+        return (a == b) or (np.isnan(a) and np.isnan(b))
+    except TypeError:
+        return a == b
