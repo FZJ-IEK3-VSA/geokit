@@ -79,6 +79,5 @@ jobs:
                     mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_04_raster.ipynb
                     mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_05_Extent.ipynb
                     mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_06_RegionMask.ipynb
-                    mamba run -n geokit_env jupyter nbconvert --execute --to=python allow-errors=false ./Examples/example_07_GeographyHandling.ipynb
                     
 

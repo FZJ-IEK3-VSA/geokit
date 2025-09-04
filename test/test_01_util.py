@@ -136,3 +136,22 @@ def test_drawImage():
 @pytest.mark.skip("No test implemented for: util.KernelProcessor")
 def test_KernelProcessor():
     assert False
+
+
+def test_get_common_dtype():
+    dtypes = [7, 2, 3, 5, 3]  # must yield 7 as the most versatile
+    out = util.get_common_dtype(dtypes=dtypes, fallback=11)
+    assert out == 7
+
+    dtypes = [7, 2, 3, 5, 3, 10]  # 7 cannot be represented by 10, so use 11
+    out = util.get_common_dtype(dtypes=dtypes, fallback=11)
+    assert out == 11
+
+    dtypes = [7, 2, 3, 5, 3, 10, 15]  # 15 is not a known datatype!
+    # one option is to use fallback
+    fallback = 11
+    out = util.get_common_dtype(dtypes=dtypes, fallback=fallback)
+    assert out == fallback
+    # another to raise an error
+    with pytest.raises(TypeError):
+        out = util.get_common_dtype(dtypes=dtypes, fallback=None)

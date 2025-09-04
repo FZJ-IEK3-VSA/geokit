@@ -6,6 +6,7 @@ from os.path import isfile
 import numpy as np
 import smopy
 from osgeo import gdal, ogr, osr
+import pandas as pd
 
 from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
@@ -87,7 +88,7 @@ class Extent(object):
         self._box = GEOM.box(self.xMin, self.yMin, self.xMax, self.yMax, srs=self.srs)
 
     @staticmethod
-    def from_xXyY(bounds, srs="latlon"):
+    def from_xXyY(bounds, srs="latlon") -> "Extent":
         """Create an Extent from explicitly defined boundaries
 
         Parameters:
@@ -107,7 +108,7 @@ class Extent(object):
         return Extent(bounds[0], bounds[2], bounds[1], bounds[3], srs=srs)
 
     @staticmethod
-    def fromGeom(geom):
+    def fromGeom(geom) -> "Extent":
         """Create extent around a given geometry
 
         Parameters:
@@ -127,7 +128,7 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=geom.GetSpatialReference())
 
     @staticmethod
-    def fromTile(xi, yi, zoom):
+    def fromTile(xi, yi, zoom) -> "Extent":
         """Generates an Extent corresponding to tiles used for "slippy maps"
 
         Parameters:
@@ -159,7 +160,7 @@ class Extent(object):
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
     @staticmethod
-    def fromTileAt(x, y, zoom, srs):
+    def fromTileAt(x, y, zoom, srs) -> "Extent":
         """Generates an Extent corresponding to tiles used for "slippy maps"
         at the coordinates ('x','y') in the 'srs' reference system
 
@@ -188,7 +189,9 @@ class Extent(object):
         return Extent.fromTile(t.xi, t.yi, t.zoom)
 
     @staticmethod
-    def fromVector(source, where=None, geom=None):
+    def fromVector(
+        source, where: str | None = None, geom: ogr.Geometry | None = None
+    ) -> "Extent":
         """Create extent around the contemts of a vector source
 
         Parameters:
@@ -246,7 +249,7 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=dsInfo.srs)
 
     @staticmethod
-    def fromLocationSet(locs):
+    def fromLocationSet(locs) -> "Extent":
         """Create extent around the contents of a LocationSet object
 
         Parameters:
@@ -262,7 +265,7 @@ class Extent(object):
         return Extent(lonMin, latMin, lonMax, latMax, srs=SRS.EPSG4326)
 
     @staticmethod
-    def fromWKT(wkt, delimiter="|"):
+    def fromWKT(wkt, delimiter="|") -> "Extent":
         """Create extent from a Well-Known_Text string
 
         * Actually the input should be two WKT strings seperated by a "|" character
@@ -286,7 +289,7 @@ class Extent(object):
         return Extent.fromGeom(geom)
 
     @staticmethod
-    def load(source, **kwargs):
+    def load(source, **kwargs) -> "Extent":
         """Attempts to load an Extent from a variety of inputs in the most
         appropriate manner
 
@@ -329,7 +332,7 @@ class Extent(object):
         raise GeoKitExtentError("Could not load the source")
 
     @staticmethod
-    def _fromInfo(info):
+    def _fromInfo(info) -> "Extent":
         """GeoKit internal
 
         Creates an Extent from rasterInfo's returned value
@@ -337,44 +340,44 @@ class Extent(object):
         return Extent(info.xMin, info.yMin, info.xMax, info.yMax, srs=info.srs)
 
     @property
-    def xyXY(self):
+    def xyXY(self) -> tuple[float, float, float, float]:
         """Returns a tuple of the extent boundaries in order:
         xMin, yMin, xMax, yMax"""
         return (self.xMin, self.yMin, self.xMax, self.yMax)
 
     @property
-    def xXyY(self):
+    def xXyY(self) -> tuple[float, float, float, float]:
         """Returns a tuple of the extent boundaries in order:
         xMin, xMax, yMin, yMax"""
         return (self.xMin, self.xMax, self.yMin, self.yMax)
 
     @property
-    def xYXy(self):
+    def xYXy(self) -> tuple[float, float, float, float]:
         """Returns a tuple of the extent boundaries in order:
         xMin, yMax, xMax, yMin"""
         return (self.xMin, self.yMax, self.xMax, self.yMin)
 
     @property
-    def yxYX(self):
+    def yxYX(self) -> tuple[float, float, float, float]:
         """Returns a tuple of the extent boundaries in order:
         yMin, xMin, yMax, xMax"""
         return (self.yMin, self.xMin, self.yMax, self.xMax)
 
     @property
-    def YxyX(self):
+    def YxyX(self) -> tuple[float, float, float, float]:
         """Returns a tuple of the extent boundaries in order:
         yMax, xMin, yMin, xMax"""
         return (self.yMax, self.xMin, self.yMin, self.xMax)
 
     @property
-    def ylim(self):
+    def ylim(self) -> tuple[float, float]:
         """Returns a tuple of the y-axis extent boundaries in order:
         yMin, yMax
         """
         return (self.yMin, self.yMax)
 
     @property
-    def xlim(self):
+    def xlim(self) -> tuple[float, float]:
         """Returns a tuple of the x-axis extent boundaries in order:
         xMin, xMax
         """
@@ -426,7 +429,7 @@ class Extent(object):
     def __str__(self):
         return "(%.5f,%.5f,%.5f,%.5f)" % self.xyXY
 
-    def exportWKT(self, delimiter="|"):
+    def exportWKT(self, delimiter="|") -> str:
         """Export the extent to a Well-Known_Text string
 
         * Actually the will be two WKT strings seperated by a "|" character
@@ -445,7 +448,7 @@ class Extent(object):
             self.box.ExportToWkt(), delimiter, self.srs.ExportToWkt()
         )
 
-    def pad(self, pad, percent=False):
+    def pad(self, pad, percent=False) -> "Extent":
         """Pad the extent in all directions
 
         Parameters:
@@ -488,7 +491,7 @@ class Extent(object):
             srs=self.srs,
         )
 
-    def shift(self, dx=0, dy=0):
+    def shift(self, dx=0, dy=0) -> "Extent":
         """Shift the extent in the X and/or Y dimensions
 
         Parameters:
@@ -554,7 +557,7 @@ class Extent(object):
 
         return True
 
-    def fit(self, unit, dtype=None, start_raster=None):
+    def fit(self, unit, dtype=None, start_raster=None) -> "Extent":
         """Fit the extent to a given pixel resolution
 
         Note:
@@ -1395,8 +1398,10 @@ class Extent(object):
         else:
             return source
 
-    def clipRaster(self, source, output=None, **kwargs):
-        """Clip a given raster source to the caling Extent
+    def clipRaster(
+        self, source, output: None | str = None, **kwargs
+    ) -> None | gdal.Dataset:
+        """Clip a given raster source to the calling Extent
 
         Parameters:
         -----------
@@ -1428,15 +1433,17 @@ class Extent(object):
 
         return ds if output is None else output
 
-    def contoursFromRaster(self, raster, contourEdges, transformGeoms=True, **kwargs):
-        """Convenience wrapper for geokit.raster.contours which autmatically
+    def contoursFromRaster(
+        self, raster, contourEdges: list[float], transformGeoms: bool = True, **kwargs
+    ) -> pd.DataFrame:
+        """Convenience wrapper for geokit.raster.contours which automatically
         clips a raster to the invoked Extent
 
         Parameters:
         -----------
         raster : The raster datasource to warp from
 
-        contourEdges : [float,]
+        contourEdges : list[float]
             The edges to search for withing the raster dataset
             * This parameter can be set as "None", in which case an additional
                 argument should be given to specify how the edges should be determined
@@ -1444,7 +1451,7 @@ class Extent(object):
                 - Ex. "LEVEL_INTERVAL=10", contourEdges=None
 
         transformGeoms : bool
-            If True, geometries are transformed to the Extent's SRS, otehrwise they
+            If True, geometries are transformed to the Extent's SRS, otherwise they
             are left in their native SRS
 
         kwargs
@@ -1460,6 +1467,7 @@ class Extent(object):
             'ID' -> The associated contour edge for each object
 
         """
+        pass
         raster = self.clipRaster(raster)
         geoms = RASTER.contours(raster, contourEdges, **kwargs)
 
