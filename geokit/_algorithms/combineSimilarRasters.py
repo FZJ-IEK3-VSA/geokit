@@ -8,7 +8,7 @@ import datetime
 from osgeo import gdal
 
 from geokit.core.regionmask import *
-from geokit.core.util import GeoKitError, get_common_dtype
+from geokit.core.util import GeoKitError, get_common_dtype, nodata_equal
 from geokit.raster import (
     createRaster,
     extractMatrix,
@@ -101,9 +101,13 @@ def checkSimilarRasters(
             raise GeoKitError(
                 f"vertical bounds shift between datasets is not a multiple of dy."
             )
-        # noData should be the same
-        if not infoDataset[0].noData == rInfo.noData:
-            raise GeoKitError(f"noData mismatch between datasets.")
+        # # noData should be the same
+        # if not infoDataset[0].noData == rInfo.noData:
+        #     raise GeoKitError(f"noData mismatch between datasets.")
+        
+        # noData equality
+        if not nodata_equal(infoDataset[0].noData, rInfo.noData):
+            raise GeoKitError("noData mismatch between datasets.")
 
     # make sure the datatypes are the same or can be combined
     dtypes = [rInfo.dtype for rInfo in infoDataset]
@@ -381,3 +385,4 @@ def combineSimilarRasters(
     outputBand.ComputeBandStats(0)
 
     return outputDS
+

@@ -41,6 +41,18 @@ def test_checkSimilarRasters():
         resampleAlg="near",
     )
 
+    rstr_noData_NaN_1 = raster.warp(
+        source=test_rasters[0],
+        resampleAlg="near",
+        noData=np.NaN,
+    )
+    
+    rstr_noData_NaN_2 = raster.warp(
+        source=test_rasters[1],
+        resampleAlg="near",
+        noData=np.NaN,
+    )
+    
     # FIRST TEST EXACT MATCH
 
     # must work for the original rasters
@@ -48,6 +60,12 @@ def test_checkSimilarRasters():
         datasets=test_rasters,
         rtol=0,
     )
+    # this should pass in order to allow NaN == NaN
+    checkSimilarRasters(
+        datasets=[rstr_noData_NaN_1, rstr_noData_NaN_2],
+        rtol=0,  
+    )
+    
     # must fail for the shifted bounds...
     with pytest.raises(util.GeoKitError):
         checkSimilarRasters(
@@ -85,7 +103,6 @@ def test_checkSimilarRasters():
             datasets=[rstr_dxchanged] + test_rasters[1:],
             rtol=0.00000000001,  # super narrow tolerance
         )
-
 
 def test_combineSimilarRasters():
     # first test the straightforward way with aligned rasters
