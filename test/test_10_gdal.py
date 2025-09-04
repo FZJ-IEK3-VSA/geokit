@@ -55,8 +55,8 @@ def test_gdal_warp_basic():
     assert np.array_equal(arr_inmem, arr_reload), "Warped array differs after reload"
     os.remove(output_path)
 
-
-def test_contours_pure_gdal():
+# Single-threshold isoband (≥0.5) 
+def test_ContourGenerateEx_single_isoband():
     contourEdges = [0.5]
     # Open raster file
     ds = gdal.Open(AACHEN_ELIGIBILITY_RASTER, 0)
@@ -105,8 +105,8 @@ def test_contours_pure_gdal():
     assert np.isclose(total_area, 0.20382200000004147)
     assert np.isclose(countour_data_frame.ID[59], 1)
 
-
-def test_Extent_contoursFromRaster():
+# Multi-level isobands using interger step sizes
+def test_ContourGenerateEx_multilevel_isobands():
     ###
     contourEdges = [
         1,
@@ -188,8 +188,8 @@ def test_Extent_contoursFromRaster():
             )
         )
 
-
-def test_contours_3x3_raster_example():
+# Multi-level isobands using interger step sizes on a small raster (3x3)
+def test_ContourGenerateEx_3x3_raster():
     # Configuration option for the output
     # https://gdal.org/en/stable/programs/gdal_contour.html
 
@@ -283,6 +283,3 @@ def test_contours_3x3_raster_example():
         )
 
 
-if __name__ == "__main__":
-    test_Extent_contoursFromRaster()
-    test_contours_3x3_raster_example()
