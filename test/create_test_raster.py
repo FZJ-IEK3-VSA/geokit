@@ -32,7 +32,6 @@ def create_test_raster_3x4():
         srs=srs,
         output=str(output_path),
     )
-    pass
 
 
 def create_test_raster_3x4():
@@ -60,7 +59,6 @@ def create_test_raster_3x4():
         srs=srs,
         output=str(output_path),
     )
-    pass
 
 
 def plot_3x3():
@@ -71,4 +69,3 @@ def plot_3x3():
     )
     raster_plot
     plt.show()
-    pass

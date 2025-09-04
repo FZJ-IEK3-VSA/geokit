@@ -702,5 +702,3 @@ def test_Extent_mosiacTiles():
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
 
 
-if __name__ == "__main__":
-    test_Extent_contoursFromRaster()
