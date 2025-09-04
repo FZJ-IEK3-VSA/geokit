@@ -1,3 +1,4 @@
+import inspect
 import os
 import pathlib
 import sys
@@ -2448,6 +2449,70 @@ def warp(
     if cutline is not None:
         del tempdir
     return destRas
+
+
+def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
+    """
+    Convenience function to warp a raster to the context of another raster
+    as returned from a call to rasterInfo(contextSource).
+
+    dataSource : Anything acceptable by loadRaster()
+        The raster data source to draw
+    contextSource : Anything acceptable by loadRaster()
+        The raster context source to draw, i.e. the data source raster will be
+        warped to this pixelWidth, pixelHeight, bounds, extent, srs etc.
+    copyMetadata : bool, optional
+        If True, the metadata of the dataSource raster will be copied, else
+        metadata will be empty or as possibly provided in kwargs. Defaults to False.
+    **kwargs
+        All kwargs will be passed on to raster.warp().
+    """
+    if UTIL.isRaster(dataSource):
+        dataInfo = rasterInfo(dataSource)
+    if not isinstance(dataInfo, RasterInfo):
+        raise GeoKitRasterError("Could not understand dataSource")
+    if UTIL.isRaster(contextSource):
+        contextInfo = rasterInfo(contextSource)
+    if not isinstance(contextInfo, RasterInfo):
+        raise GeoKitRasterError("Could not understand contextSource")
+
+    # first get data-related parameters from DATA source
+    if copyMetadata:
+        if "meta" in kwargs:
+            raise GeoKitRasterError(
+                "If metadata is given as 'meta' in kwargs, copyMetadata cannot be True!"
+            )
+        meta = dataInfo.meta
+    else:
+        meta = kwargs.pop("meta", None)
+    print(meta)
+    dtype = kwargs.pop("dtype", dataInfo.dtype)
+    noData = kwargs.pop("noData", dataInfo.noData)
+    if "cutline" in kwargs:
+        # make sure that the cells outside are filled with noData if not specified
+        fill = kwargs.pop("fill", dataInfo.noData)
+    else:
+        # set to default of warp() function for consistent behavior
+        fill = inspect.signature(warp).parameters["fill"].default
+
+    # then get context related parameters from CONTEXT source
+    bounds = kwargs.pop("bounds", contextInfo.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", contextInfo.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", contextInfo.pixelHeight)
+    srs = kwargs.pop("srs", contextInfo.srs)
+
+    return warp(
+        source=dataSource,
+        bounds=bounds,
+        pixelWidth=pixelWidth,
+        pixelHeight=pixelHeight,
+        dtype=dtype,
+        srs=srs,
+        noData=noData,
+        meta=meta,
+        fill=fill,
+        **kwargs,
+    )
 
 
 # --------------------------------------------------------------------------------------------
