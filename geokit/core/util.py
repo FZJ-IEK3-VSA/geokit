@@ -12,6 +12,8 @@ from types import GeneratorType
 
 import numpy as np
 import pandas as pd
+import matplotlib.axis
+
 from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
@@ -306,15 +308,22 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     >>>      return goodValues.mean()
 
     """
+    pass
 
     def wrapper1(kernel):
+        pass
+
         def wrapper2(matrix):
             # get the original matrix sizes
             yN, xN = matrix.shape
 
             # make a padded version of the matrix
-            paddedMatrix = (
-                np.ones((yN + 2 * size, xN + 2 * size), dtype=matrix.dtype) * edgeValue
+
+            # paddedMatrix = (
+            #     np.ones((yN + 2 * size, xN + 2 * size),) * edgeValue
+            # )
+            paddedMatrix = np.full(
+                shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue
             )
             paddedMatrix[size:-size, size:-size] = matrix
 
@@ -505,16 +514,16 @@ AxHands = namedtuple("AxHands", "ax handles cbar")
 
 
 def drawImage(
-    matrix,
-    ax=None,
-    xlim=None,
-    ylim=None,
-    yAtTop=True,
-    scaling=1,
-    fontsize=16,
+    matrix: np.ndarray,
+    ax: matplotlib.axis.Axis | None = None,
+    xlim: tuple[float | float] | None = None,
+    ylim: tuple[float | float] | None = None,
+    yAtTop: bool = True,
+    scaling: float = 1,
+    fontsize: int = 16,
     hideAxis=False,
-    figsize=(12, 12),
-    cbar=True,
+    figsize: tuple[float | float] = (12, 12),
+    cbar: bool = True,
     cbarPadding=0.01,
     cbarTitle=None,
     vmin=None,
@@ -535,14 +544,14 @@ def drawImage(
     matrix : numpy.ndarray
         The matrix data to draw
 
-    ax : matplotlib axis; optional
+    ax : matplotlib.axis.Axis; optional
         The axis to draw the geometries on
           * If not given, a new axis is generated and returned
 
-    xlim : (float, float); optional
+    xlim : tuple[float, float]; optional
         The x-axis limits to draw the marix on
 
-    ylim : (float, float); optional
+    ylim : tuple[float, float]; optional
         The y-axis limits to draw the marix on
 
     yAtTop : bool; optional
@@ -551,9 +560,9 @@ def drawImage(
     scaling : numeric; optional
         An integer factor by which to scale the matrix before plotting
 
-    figsize : (int, int); optional
+    figsize : tuple[float, float]; optional
         The figure size to create when generating a new axis
-          * If resultign figure looks wierd, altering the figure size is your best
+          * If resulting figure looks weird, altering the figure size is your best
             bet to make it look nicer
 
     fontsize : int; optional
@@ -731,3 +740,69 @@ def compare_geoms(geoms_1, geoms_2):
     equal = map(lambda g1, g2: g1.Equals(g2), geoms_1, geoms_2)
 
     return list(equal)
+
+
+def get_common_dtype(dtypes, fallback=11):
+    """
+    This auxiliary function returns the most lightweight GDAL datatype that is
+    commonly useable (without precision loss) for a given list of GDAL dtypes.
+
+    dtypes : list
+        List of integers (GDAL Enum Codes).
+    fallback : int, optional
+        An optional fallback GDAL dtype if no common dtype can be identified.
+        Set to None to raise an Error in such cases, else must be a known GDAL
+        Enum Code. By default 11 (CFloat64), can represent basically all other
+        dtypes (except extremely large float64 edge cases).
+    """
+    # make sure all dtypes are GDAL type numbers
+    if not all([isinstance(d, int) for d in dtypes]):
+        raise TypeError(f"All dtypes must be integers (GDAL Enum Codes)")
+    # create a mapper which dtype can be converted into which others without precision losses
+    # use OrderedDict to sort from most lightweight (preferred) to most versatile (required)
+    dtype_compatibilities = OrderedDict(
+        [
+            (1, [1, 2, 3, 4, 5, 13, 14, 6, 7, 8, 9, 10, 11]),  # Byte (GDT_Byte)
+            (12, [12, 3, 5, 14, 6, 7, 8, 9, 10, 11]),  # Int8 (GDT_Int8)
+            (2, [2, 3, 4, 5, 13, 14, 6, 7, 8, 9, 10, 11]),  # UInt16 (GDT_UInt16)
+            (3, [3, 5, 14, 6, 7, 8, 9, 10, 11]),  # Int16 (GDT_Int16)
+            (4, [4, 13, 6, 7, 9, 10, 11]),  # UInt32 (GDT_UInt32)
+            (5, [5, 14, 6, 7, 9, 10, 11]),  # Int32 (GDT_Int32)
+            (13, [13, 7, 11]),  # UInt64 (GDT_UInt64)
+            (14, [14, 7, 11]),  # Int64 (GDT_Int64)
+            (6, [6, 7, 10, 11]),  # Float32 (GDT_Float32)
+            (7, [7, 11]),  # Float64 (GDT_Float64)
+            (8, [8, 9, 10, 11]),  # CInt16 (GDT_CInt16)
+            (9, [9, 11]),  # CInt32 (GDT_CInt32)
+            (10, [10, 11]),  # CFloat32 (GDT_CFloat32)
+            (11, [11]),  # CFloat64 (GDT_CFloat64)
+        ]
+    )
+    if not (fallback is None or fallback in dtype_compatibilities.keys()):
+        raise ValueError(
+            f"fallback must be a known GDAL Enum Code if not None. Select from: {', '.join(sorted(dtype_compatibilities.keys()))}"
+        )
+    # if all dtypes are known, check if they can be converted into eachother
+    if all([d in dtype_compatibilities for d in dtypes]):
+        # get the "lowest common denominator" dtype
+        for _type in dtype_compatibilities.keys():
+            # check if _type can store all input types
+            if all(_type in dtype_compatibilities[d] for d in dtypes):
+                return _type
+    # we have not found a suitable dtype, return fallback or raise error
+    if fallback:
+        return fallback
+    else:
+        raise TypeError(f"No commonly useable GDAL dtype found for dtypes: {dtypes}")
+
+
+def nodata_equal(a, b):
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    try:
+        # handle floats/NaN
+        return (a == b) or (np.isnan(a) and np.isnan(b))
+    except TypeError:
+        return a == b

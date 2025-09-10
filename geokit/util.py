@@ -11,4 +11,5 @@ from geokit.core.util import (
     isRaster,
     isVector,
     scaleMatrix,
+    get_common_dtype,
 )
