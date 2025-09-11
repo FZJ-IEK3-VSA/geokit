@@ -11,17 +11,7 @@ analysis/regions/*
 *.aux.xml
 .ruff_cache
 
-# Remove things in testing results dir
-testing/results/*.tif
-testing/results/*.shp
-testing/results/*.dbf
-testing/results/*.shx
-testing/results/*.prj
-testing/results/*.cpg
-testing/results/*.csv
-testing/results/eligibility_plots
 
-geokit/test/
 
 # Example results
 Examples/*.tif
@@ -42,3 +32,5 @@ Examples/*.gpkg
 .pytest_cache/*
 
 
+asd.py
+registry_file.txt
