@@ -4,9 +4,9 @@ from glob import glob
 from os.path import isfile
 
 import numpy as np
+import pandas as pd
 import smopy
 from osgeo import gdal, ogr, osr
-import pandas as pd
 
 from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
@@ -153,9 +153,7 @@ class Extent(object):
         tl = smopy.num2deg(xi - 0.0, yi + 1.0, zoom)[::-1]
         br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
-        o = SRS.xyTransform(
-            [tl, br], fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat="xy"
-        )
+        o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat="xy")
 
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
@@ -189,9 +187,7 @@ class Extent(object):
         return Extent.fromTile(t.xi, t.yi, t.zoom)
 
     @staticmethod
-    def fromVector(
-        source, where: str | None = None, geom: ogr.Geometry | None = None
-    ) -> "Extent":
+    def fromVector(source, where: str | None = None, geom: ogr.Geometry | None = None) -> "Extent":
         """Create extent around the contemts of a vector source
 
         Parameters:
@@ -444,9 +440,7 @@ class Extent(object):
         string
 
         """
-        return "{}{}{}".format(
-            self.box.ExportToWkt(), delimiter, self.srs.ExportToWkt()
-        )
+        return "{}{}{}".format(self.box.ExportToWkt(), delimiter, self.srs.ExportToWkt())
 
     def pad(self, pad, percent=False) -> "Extent":
         """Pad the extent in all directions
@@ -509,9 +503,7 @@ class Extent(object):
         Extent
 
         """
-        return Extent(
-            self.xMin + dx, self.yMin + dy, self.xMax + dx, self.yMax + dy, srs=self.srs
-        )
+        return Extent(self.xMin + dx, self.yMin + dy, self.xMax + dx, self.yMax + dy, srs=self.srs)
 
     def fitsResolution(self, unit, tolerance=1e-6):
         """Test if calling Extent first around the given unit(s) (at least within
@@ -657,9 +649,7 @@ class Extent(object):
         if not srs is None:
             srs = SRS.loadSRS(srs)
             if not srs.IsSame(self.srs):
-                xy = SRS.xyTransform(
-                    x, y, fromSRS=self.srs, toSRS=srs, outputFormat="xy"
-                )
+                xy = SRS.xyTransform(x, y, fromSRS=self.srs, toSRS=srs, outputFormat="xy")
 
                 x = xy.x
                 y = xy.y
@@ -966,9 +956,7 @@ class Extent(object):
         yOff = int(np.round(tmpY))
 
         if not (np.isclose(xOff, tmpX) and np.isclose(yOff, tmpY)):
-            raise GeoKitExtentError(
-                "The extents are not relatable on the given resolution"
-            )
+            raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Get window sizes
         tmpX = (extent.xMax - extent.xMin) / dx
@@ -978,9 +966,7 @@ class Extent(object):
         yWin = int(np.round(tmpY))
 
         if not (np.isclose(xWin, tmpX) and np.isclose(yWin, tmpY)):
-            raise GeoKitExtentError(
-                "The extents are not relatable on the given resolution"
-            )
+            raise GeoKitExtentError("The extents are not relatable on the given resolution")
 
         # Done!
         return IndexSet(xOff, yOff, xWin, yWin, xOff + xWin, yOff + yWin)
@@ -1041,9 +1027,7 @@ class Extent(object):
 
         """
         if not self.fitsResolution((pixelWidth, pixelHeight)):
-            raise GeoKitExtentError(
-                "The given resolution does not fit to the Extent boundaries"
-            )
+            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
         return RASTER.createRaster(
             bounds=self.xyXY,
             pixelWidth=pixelWidth,
@@ -1083,9 +1067,7 @@ class Extent(object):
             "The given resolution does not fit to the Extent boundaries"
         )
 
-        return UTIL.quickRaster(
-            bounds=self.xyXY, dx=pixelWidth, dy=pixelHeight, srs=self.srs, **kwargs
-        )
+        return UTIL.quickRaster(bounds=self.xyXY, dx=pixelWidth, dy=pixelHeight, srs=self.srs, **kwargs)
 
     def extractMatrix(self, source, strict=True, **kwargs):
         """Convenience wrapper around geokit.raster.extractMatrix(). Extracts the
@@ -1123,9 +1105,7 @@ class Extent(object):
             if not Extent._fromInfo(ri).contains(self, (ri.dx, ri.dy)):
                 raise GeoKitExtentError("Extent does not fit the raster's resolution")
 
-        return RASTER.extractMatrix(
-            source, bounds=self.xyXY, boundsSRS=self.srs, **kwargs
-        )
+        return RASTER.extractMatrix(source, bounds=self.xyXY, boundsSRS=self.srs, **kwargs)
 
     def warp(self, source, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.raster.warp() which automatically sets the
@@ -1165,9 +1145,7 @@ class Extent(object):
 
         """
         if strict and not self.fitsResolution((pixelWidth, pixelHeight)):
-            raise GeoKitExtentError(
-                "The given resolution does not fit to the Extent boundaries"
-            )
+            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
         return RASTER.warp(
             source=source,
             pixelWidth=pixelWidth,
@@ -1215,9 +1193,7 @@ class Extent(object):
 
         """
         if strict and not self.fitsResolution((pixelWidth, pixelHeight)):
-            raise GeoKitExtentError(
-                "The given resolution does not fit to the Extent boundaries"
-            )
+            raise GeoKitExtentError("The given resolution does not fit to the Extent boundaries")
         return VECTOR.rasterize(
             source=source,
             pixelWidth=pixelWidth,
@@ -1354,9 +1330,7 @@ class Extent(object):
         if warpArgs is None:
             warpArgs = {}
 
-        if (
-            processor is None
-        ):  # We wont do a mutation without a processor, since everything else
+        if processor is None:  # We wont do a mutation without a processor, since everything else
             # can be handled by Warp. Therefore we pass on any 'output' that is
             # given to the warping stage, unless one was already given
             warpArgs["output"] = warpArgs.get("output", mutateArgs.get("output", None))
@@ -1365,9 +1339,7 @@ class Extent(object):
         # TODO: Should the warping be updated to use Extent.clipRaster???
         if matchContext:
             if pixelWidth is None or pixelHeight is None:
-                raise GeoKitExtentError(
-                    "pixelWidth and pixelHeight must be provided when matchContext is True"
-                )
+                raise GeoKitExtentError("pixelWidth and pixelHeight must be provided when matchContext is True")
 
             source = self.warp(
                 source,
@@ -1398,9 +1370,7 @@ class Extent(object):
         else:
             return source
 
-    def clipRaster(
-        self, source, output: None | str = None, **kwargs
-    ) -> None | gdal.Dataset:
+    def clipRaster(self, source, output: None | str = None, **kwargs) -> None | gdal.Dataset:
         """Clip a given raster source to the calling Extent
 
         Parameters:
@@ -1538,11 +1508,7 @@ class Extent(object):
                 if source is None:
                     yield (xi, yi, zoom)
                 else:
-                    yield (
-                        source.replace("{z}", str(zoom))
-                        .replace("{x}", str(xi))
-                        .replace("{y}", str(yi))
-                    )
+                    yield (source.replace("{z}", str(zoom)).replace("{x}", str(xi)).replace("{y}", str(yi)))
 
     def subTiles(self, zoom, asGeom=False):
         """Generates tile Extents at a given zoom level which encompass the envoking Extent.
@@ -1691,9 +1657,7 @@ class Extent(object):
             inputs[key] = getattr(ri, key)
         inputs.update(kwargs)
 
-        ext = self.castTo(inputs.pop("srs")).fit(
-            (inputs["pixelWidth"], inputs["pixelHeight"])
-        )
+        ext = self.castTo(inputs.pop("srs")).fit((inputs["pixelWidth"], inputs["pixelHeight"]))
 
         output = inputs.pop("output", None)
         master_raster = ext._quickRaster(**inputs)

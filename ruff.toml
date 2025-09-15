@@ -21,4 +21,12 @@ ignore = [
     "E741", # Ambiguous variable name: `l`
     "E721", # E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
     "E722", # Do not use bare `except`
+    "E501",
 ]
+unfixable = ["F401"]
+
+
+[lint.pycodestyle]
+max-doc-length = 120
+# E501 reports lines that exceed the length of 100.
+max-line-length = 120
