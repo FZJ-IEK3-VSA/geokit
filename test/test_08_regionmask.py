@@ -106,9 +106,7 @@ def test_RegionMask_fromGeom():
 
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
-    rm0 = RegionMask.fromVector(
-        AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1
-    )
+    rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)
     assert rm0.mask.sum() == 90296
 
     # fromVector - ID select
@@ -126,9 +124,7 @@ def test_RegionMask_fromVector():
     assert np.isclose(rm1.mask.sum() * 100 * 100, g.Area(), rtol=1e-3)
 
     # fromVector - 'where' select
-    rm2 = RegionMask.fromVector(
-        MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkey'"
-    )
+    rm2 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkey'")
 
     assert rm2.extent == Extent(6.83, 49.52, 7.53, 49.94)
     assert rm2.attributes["id"] == 3
@@ -140,9 +136,7 @@ def test_RegionMask_fromVector():
 
     # fromVector - 'where' select fail no features
     try:
-        rm3 = RegionMask.fromVector(
-            MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'"
-        )
+        rm3 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'")
         assert False
     except error.GeoKitRegionMaskError as e:
         assert str(e) == "Zero features found"
@@ -151,9 +145,7 @@ def test_RegionMask_fromVector():
 
     # fromVector - 'where' finds many features
     try:
-        rm4 = RegionMask.fromVector(
-            MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'"
-        )
+        rm4 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'")
         assert False
     except error.GeoKitRegionMaskError as e:
         assert "Multiple fetures found" in str(e)
@@ -257,14 +249,10 @@ def test_RegionMask_drawGeometry():
 
 def test_RegionMask_applyMask():
     # setup
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001
-    )
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
 
     data1 = np.arange(rm.mask.size).reshape(rm.mask.shape)
-    data2 = np.arange(rm.mask.shape[0] * 3 * rm.mask.shape[1] * 3).reshape(
-        (rm.mask.shape[0] * 3, rm.mask.shape[1] * 3)
-    )
+    data2 = np.arange(rm.mask.shape[0] * 3 * rm.mask.shape[1] * 3).reshape((rm.mask.shape[0] * 3, rm.mask.shape[1] * 3))
 
     # test applying
     data1 = rm.applyMask(data1, noData=np.nan)
@@ -296,9 +284,7 @@ def test_RegionMask_indicateValues():
         multiProcess = False
     # Setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
-    res1 = rm.indicateValues(
-        CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
-    )
+    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess)
     # Testing valueMin (with srs change), with multiProcess by default
     with warnings.catch_warnings():
         # make sure no failed multiprocessing warning was raised
@@ -306,24 +292,18 @@ def test_RegionMask_indicateValues():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res1 = rm.indicateValues(
-            CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
-        )
+        res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess)
 
     assert np.isclose(res1.sum(), 30969.6796875, 1e-6)
     assert np.isclose(res1.std(), 0.3489773, 1e-6)
 
     # Testing valueMax (with srs change)
-    res2 = rm.indicateValues(
-        CLC_RASTER_PATH, value=(None, 24), multiProcess=multiProcess
-    )
+    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None, 24), multiProcess=multiProcess)
     assert np.isclose(res2.sum(), 82857.5078125, 1e-6)
     assert np.isclose(res2.std(), 0.4867994, 1e-6)
 
     # Testing valueEquals (with srs change)
-    res3 = rm.indicateValues(
-        CLC_RASTER_PATH, value=7, resampleAlg="cubic", multiProcess=multiProcess
-    )
+    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic", multiProcess=multiProcess)
     assert np.isclose(res3.sum(), 580.9105835, 1e-4)
     assert np.isclose(res3.std(), 0.0500924, 1e-6)
 
@@ -397,9 +377,7 @@ def test_RegionMask_indicateFeatures():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res = rm.indicateFeatures(
-            NATURA_PATH, where="SITECODE='DE5404303'", multiProcess=multiProcess
-        )
+        res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'", multiProcess=multiProcess)
 
     assert np.isclose(res.sum(), 649, 1e-6)
     assert np.isclose(res.std(), 0.0646270, 1e-6)
@@ -497,9 +475,7 @@ def test_RegionMask_subTiles():
 
 
 def test_RegionMask_createRaster():
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001
-    )
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
 
     # Create a raster like the mask
     ds = rm.createRaster()
@@ -539,9 +515,7 @@ def test_RegionMask_createRaster():
 def test_RegionMask_warp():
     # setup
     rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05))
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005
-    )
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
 
     # basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
@@ -613,9 +587,7 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
 
     # where statement and resolution div
-    rasterize_3 = rm.rasterize(
-        AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float
-    )
+    rasterize_3 = rm.rasterize(AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float)
 
     assert rasterize_3.dtype == np.float64
     assert rasterize_3.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)

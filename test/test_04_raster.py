@@ -182,9 +182,7 @@ def test_extractValues():
 
     v4 = raster.extractValues(sources, pts)
 
-    assert np.allclose(
-        v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True
-    )
+    assert np.allclose(v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True)
 
 
 # A nicer way to get a single value
@@ -193,24 +191,16 @@ def test_extractValues():
 def test_interpolateValues():
     point = (4061794.7, 3094718.4)
 
-    v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="near"
-    )
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_m", mode="near")
     assert np.isclose(v, 3)
 
-    v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="linear-spline"
-    )
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_m", mode="linear-spline")
     assert np.isclose(v, 4.572732)  # linear-spline
 
-    v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="cubic-spline"
-    )
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_m", mode="cubic-spline")
     assert np.isclose(v, 2.4197586642)  # cubic-spline
 
-    v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="average"
-    )
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_m", mode="average")
     assert np.isclose(v, 9.0612244898)  # average
 
     v = raster.interpolateValues(
@@ -267,9 +257,7 @@ def test_gradient():
     # create a sloping surface dataset
     x, y = np.meshgrid(np.abs(np.arange(-100, 100)), np.abs(np.arange(-150, 150)))
     arr = np.ones((300, 200)) + 0.01 * y + x * 0.03
-    slopingDS = raster.createRaster(
-        bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None
-    )
+    slopingDS = raster.createRaster(bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None)
 
     # do tests
     total = raster.gradient(slopingDS, mode="total", asMatrix=True)
@@ -295,24 +283,14 @@ def test_gradient():
 
     aspect = raster.gradient(slopingDS, mode="dir", asMatrix=True)
     assert np.isclose(aspect.mean(), 0.0101786336761)  # aspect - mean
-    assert np.isclose(
-        180 * aspect[10, 10] / np.pi, -18.4349488229
-    )  # aspect - nw quartile
-    assert np.isclose(
-        180 * aspect[200, 10] / np.pi, 18.4349488229
-    )  # aspect - sw quartile
-    assert np.isclose(
-        180 * aspect[10, 150] / np.pi, -161.565051177
-    )  # aspect - ne quartile
-    assert np.isclose(
-        180 * aspect[200, 150] / np.pi, 161.565051177
-    )  # aspect - se quartile
+    assert np.isclose(180 * aspect[10, 10] / np.pi, -18.4349488229)  # aspect - nw quartile
+    assert np.isclose(180 * aspect[200, 10] / np.pi, 18.4349488229)  # aspect - sw quartile
+    assert np.isclose(180 * aspect[10, 150] / np.pi, -161.565051177)  # aspect - ne quartile
+    assert np.isclose(180 * aspect[200, 150] / np.pi, 161.565051177)  # aspect - se quartile
 
     # calculate elevation slope
     output = result("slope_calculation.tif")
-    slopeDS = raster.gradient(
-        ELEVATION_PATH, factor="latlonToM", output=output, overwrite=True
-    )
+    slopeDS = raster.gradient(ELEVATION_PATH, factor="latlonToM", output=output, overwrite=True)
     slopeMat = raster.extractMatrix(output)
 
     assert np.isclose(slopeMat.mean(), 0.0663805622803)  # elevation slope
@@ -353,9 +331,7 @@ def test_mutateRaster():
 
     # Process Raster with a simple processor (flip check)
     output2f = output = result("algorithms_mutateRaster_2f.tif")
-    raster.mutateRaster(
-        CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f
-    )
+    raster.mutateRaster(CLC_FLIPCHECK_PATH, processor=isOdd, overwrite=True, output=output2f)
     res2f = gdal.Open(output2f)
 
     info2f = raster.rasterInfo(res2f)
@@ -390,9 +366,7 @@ def test_createRasterLike():
     assert np.isclose(data, newdata / 2).all()
 
     # From raster, with output
-    raster.createRasterLike(
-        source, data=data * 3, output=result("createRasterLike_A.tif")
-    )
+    raster.createRasterLike(source, data=data * 3, output=result("createRasterLike_A.tif"))
     newdata = raster.extractMatrix(result("createRasterLike_A.tif"))
     assert np.isclose(data, newdata / 3).all()
 
@@ -426,9 +400,7 @@ def test_indexToCoord():
     assert np.isclose(xy, np.array([[4013150.0, 3110450.0]])).all()
 
     # Test multiple indexes
-    xy = raster.indexToCoord(
-        xi=np.array([10, 11, 22, 5]), yi=np.array([5, 5, 3, 5]), source=rasterSource
-    )
+    xy = raster.indexToCoord(xi=np.array([10, 11, 22, 5]), yi=np.array([5, 5, 3, 5]), source=rasterSource)
     assert np.isclose(
         xy,
         np.array(
@@ -466,9 +438,7 @@ def test_drawRaster():
     plt.savefig(result("drawRaster-3.png"), dpi=100)
 
     # cutline
-    r = raster.drawRaster(
-        AACHEN_URBAN_LC, cutline=AACHEN_SHAPE_PATH, resolution=0.001, srs=4326
-    )
+    r = raster.drawRaster(AACHEN_URBAN_LC, cutline=AACHEN_SHAPE_PATH, resolution=0.001, srs=4326)
     plt.savefig(result("drawRaster-4.png"), dpi=100)
 
     assert True
@@ -479,17 +449,13 @@ def test_polygonizeRaster():
     assert np.isclose(geoms.shape[0], 423)  # geom count
     is3 = geoms.value == 3
     assert np.isclose(is3.sum(), 2)  # value count
-    assert np.isclose(
-        geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208
-    )  # geom area
+    assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208)  # geom area
 
     geoms = raster.polygonizeRaster(AACHEN_URBAN_LC, flat=True)
     assert np.isclose(geoms.shape[0], 3)  # geom count
     is3 = geoms.value == 3
     assert np.isclose(is3.sum(), 1)  # value count
-    assert np.isclose(
-        geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208
-    )  # geom area
+    assert np.isclose(geoms.geom[is3].apply(lambda x: x.Area()).sum(), 120529999.18190208)  # geom area
 
     geoms = raster.polygonizeRaster(RASTER_GDAL_244, flat=True)
     assert np.equal(geoms.shape[0], 2)  # geom count
@@ -539,9 +505,7 @@ def test_warp():
     assert np.array_equal(v1, v2)
 
     # Test 2: change resolution to memory
-    d3 = raster.warp(
-        CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200
-    )
+    d3 = raster.warp(CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200)
     v3 = raster.extractMatrix(d3)
     assert np.isclose(v1, v3, atol=0).all()
 

@@ -27,9 +27,7 @@ res = _test.ImportFromEPSG(4326)
 
 # Quick check if gdal loaded properly
 if not res == 0:
-    raise RuntimeError(
-        "GDAL did not load properly. Check your 'GDAL_DATA' environment variable"
-    )
+    raise RuntimeError("GDAL did not load properly. Check your 'GDAL_DATA' environment variable")
 
 ######################################################################################
 # An few errors just for me!
@@ -209,9 +207,7 @@ def scaleMatrix(mat, scale, strict=True):
         # ensure scale is a factor of both xSize and ySize
         if strict:
             if not (mat.shape[0] % yScale == 0 and mat.shape[1] % xScale == 0):
-                raise GeoKitError(
-                    "Matrix can only be scaled down by a factor of it's dimensions"
-                )
+                raise GeoKitError("Matrix can only be scaled down by a factor of it's dimensions")
             yPad = 0
             xPad = 0
         else:
@@ -245,9 +241,7 @@ def scaleMatrix(mat, scale, strict=True):
             # fix the bottom edge EXCLUDING the bot-left point
             out[-1, :-1] *= xScale / (xScale - xPad)
         if yPad > 0:
-            out[-1, -1] *= (
-                yScale * xScale / (yScale - yPad) / (xScale - xPad)
-            )  # fix the bot-left point
+            out[-1, -1] *= yScale * xScale / (yScale - yPad) / (xScale - xPad)  # fix the bot-left point
 
     else:  # we have both a scaleup and a scale down
         raise GeoKitError("Dimensions must be scaled in the same direction")
@@ -322,20 +316,14 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
             # paddedMatrix = (
             #     np.ones((yN + 2 * size, xN + 2 * size),) * edgeValue
             # )
-            paddedMatrix = np.full(
-                shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue
-            )
+            paddedMatrix = np.full(shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue)
             paddedMatrix[size:-size, size:-size] = matrix
 
             # apply kernel to each pixel
-            output = np.zeros(
-                (yN, xN), dtype=matrix.dtype if outputType is None else outputType
-            )
+            output = np.zeros((yN, xN), dtype=matrix.dtype if outputType is None else outputType)
             for yi in range(yN):
                 for xi in range(xN):
-                    slicedMatrix = paddedMatrix[
-                        yi : 2 * size + yi + 1, xi : 2 * size + xi + 1
-                    ]
+                    slicedMatrix = paddedMatrix[yi : 2 * size + yi + 1, xi : 2 * size + xi + 1]
 
                     if passIndex:
                         output[yi, xi] = kernel(slicedMatrix, xi=xi, yi=yi)
@@ -376,9 +364,7 @@ def quickVector(geom, output=None):
         dataSource = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
 
     # Create the layer and write feature
-    layer = dataSource.CreateLayer(
-        "", geom[0].GetSpatialReference(), geom[0].GetGeometryType()
-    )
+    layer = dataSource.CreateLayer("", geom[0].GetSpatialReference(), geom[0].GetGeometryType())
 
     for g in geom:
         feature = ogr.Feature(layer.GetLayerDefn())
@@ -408,11 +394,7 @@ def fitBoundsTo(
     except TypeError:
         xMin, yMin, xMax, yMax = bounds.xyXY
 
-    if (
-        enforce
-        or (bounds[2] - bounds[0]) % dx != 0
-        or (startAtZero and (bounds[2] % dx != 0 or bounds[0] % dx != 0))
-    ):
+    if enforce or (bounds[2] - bounds[0]) % dx != 0 or (startAtZero and (bounds[2] % dx != 0 or bounds[0] % dx != 0)):
         # if expand is demanded or necessary because width would be 0
         if expand or np.round(bounds[0] / dx) * dx == np.round(bounds[2] / dx) * dx:
             # expand such that the original bounds are always fully contained
@@ -422,11 +404,7 @@ def fitBoundsTo(
             # round to the nearest cell resolution value
             xMin = np.round(bounds[0] / dx) * dx
             xMax = np.round(bounds[2] / dx) * dx
-    if (
-        enforce
-        or (bounds[3] - bounds[1]) % dy != 0
-        or (startAtZero and (bounds[3] % dy != 0 or bounds[1] % dy != 0))
-    ):
+    if enforce or (bounds[3] - bounds[1]) % dy != 0 or (startAtZero and (bounds[3] % dy != 0 or bounds[1] % dy != 0)):
         # if expand is demanded or necessary because height would be 0
         if expand or np.round(bounds[1] / dy) * dy == np.round(bounds[3] / dy) * dy:
             # expand such that the original bounds are always fully contained

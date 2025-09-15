@@ -14,9 +14,7 @@ if not "GDAL_DATA" in _environ:
     from sys import executable as _executable
 
     for d in [
-        _join(
-            _dirname(_executable), "Library", "share", "gdal"
-        ),  # Common location on windows
+        _join(_dirname(_executable), "Library", "share", "gdal"),  # Common location on windows
         _join(_dirname(_executable), "..", "share", "gdal"),
     ]:  # Common location on linux
         if _isdir(d):

@@ -23,9 +23,7 @@ def test_countFeatures():
     assert vector.countFeatures(MULTI_FTR_SHAPE_PATH) == 4
 
     #  same SRS, geom filter
-    cnt = vector.countFeatures(
-        MULTI_FTR_SHAPE_PATH, geom=geom.box(5.89, 48.77, 6.89, 49.64, srs=EPSG4326)
-    )
+    cnt = vector.countFeatures(MULTI_FTR_SHAPE_PATH, geom=geom.box(5.89, 48.77, 6.89, 49.64, srs=EPSG4326))
     assert cnt == 2
 
     # different SRS, geom filter
@@ -56,11 +54,7 @@ def test_extractFeatures():
     assert vi[2][1]["name"] == "hermoine"  # attribute mismatch
 
     # test clip
-    vi = list(
-        vector.extractFeatures(
-            BOXES, geom=geom.box(0, 0, 3, 3, srs=EPSG4326), asPandas=False
-        )
-    )
+    vi = list(vector.extractFeatures(BOXES, geom=geom.box(0, 0, 3, 3, srs=EPSG4326), asPandas=False))
 
     assert len(vi) == 2  # count mismatch
 
@@ -71,9 +65,7 @@ def test_extractFeatures():
     assert vi[1][1]["name"] == "ron"  # attribute mismatch
 
     # test srs change and attribute filter
-    vi = list(
-        vector.extractFeatures(BOXES, where="smart>0", srs=EPSG3035, asPandas=False)
-    )
+    vi = list(vector.extractFeatures(BOXES, where="smart>0", srs=EPSG3035, asPandas=False))
 
     assert len(vi) == 1  # count mismatch
     assert vi[0][0].GetSpatialReference().IsSame(EPSG3035)  # srs mismatch
@@ -120,9 +112,7 @@ def test_extractFeatures():
     assert vi.geom[0].Area() == 64.0  # geom area mismatch
 
     # now extract only the geom whose centroid is within this same filter geom
-    vi = vector.extractFeatures(
-        BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin"
-    )
+    vi = vector.extractFeatures(BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin")
 
     # hermoine AND harry must now be gone, so make sure we have length 1
     assert vi.shape == (1, 3)  # shape mismatch
@@ -156,9 +146,7 @@ def test_extractAndClipFeatures():
     multiFeatures["testAttr"] = 100
     box = geom.box((6.6, 49.0, 7.6, 50.0), srs=4326)
 
-    clipped = vector.extractAndClipFeatures(
-        source=multiFeatures, geom=box, where="id < 4", scaleAttrs="testAttr"
-    )
+    clipped = vector.extractAndClipFeatures(source=multiFeatures, geom=box, where="id < 4", scaleAttrs="testAttr")
 
     assert len(clipped) == 2
     assert all(np.isclose(clipped.areaShare.values, np.array([0.827164, 1.0])))
@@ -263,9 +251,7 @@ def test_createVector(tmpdir):
     vec_shp_disk = vector.extractFeatures(output_shp)
 
     assert len(vec_shp) == len(vec_shp_disk)
-    test_equal_shp = util.compare_geoms(
-        vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list()
-    )
+    test_equal_shp = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
 
     assert all(test_equal_shp)
     assert all([g.IsValid() for g in vec_shp_disk["geom"]])
@@ -274,14 +260,10 @@ def test_createVector(tmpdir):
     output_gpkg = tmpdir.mkdir("temp_2").join("mpoints_temp.gpkg").__str__()
 
     # create new vector layer in memory
-    vec_gpkg_lyr_1 = vector.extractFeatures(
-        vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326)
-    )
+    vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
 
     # create new geopackage on disk
-    vector.createVector(
-        POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326
-    )
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
 
     # append new layer to existing geopackage
     vector.createVector(
@@ -300,9 +282,7 @@ def test_createVector(tmpdir):
     vec_gpkg_lyr_1_disk = vector.extractFeatures(output_gpkg, layerName="layer_1")
 
     assert len(vec_gpkg_lyr_1) == len(vec_gpkg_lyr_1_disk)
-    test_equal_gpkg = util.compare_geoms(
-        vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list()
-    )
+    test_equal_gpkg = util.compare_geoms(vec_shp["geom"].to_list(), vec_shp_disk["geom"].to_list())
     assert all(test_equal_gpkg)
 
     assert all([g.IsValid() for g in vec_gpkg_lyr_1_disk["geom"]])
@@ -350,9 +330,7 @@ def test_mutateVector():
         assert res2["word"][i] == sentanceSmall[i]  # attribute writing
 
     # attribute and spatial filtering
-    ps3 = vector.mutateVector(
-        AACHEN_POINTS, processor=None, geom=ext_small, where="id<5"
-    )
+    ps3 = vector.mutateVector(AACHEN_POINTS, processor=None, geom=ext_small, where="id<5")
 
     res3 = vector.extractFeatures(ps3)
     assert res3.shape[0] == 4  # item count
@@ -509,10 +487,7 @@ def test_createGeoDataFrame():
 
     assert "data_column" in dfOut.columns
     assert (dfOut["data_column"] == dfIn["data_column"]).all()
-    assert (
-        gpd.points_from_xy([7, 7.5], [51, 52], [0, 0], crs="EPSG:3857")
-        == dfOut["geometry"]
-    ).all()
+    assert (gpd.points_from_xy([7, 7.5], [51, 52], [0, 0], crs="EPSG:3857") == dfOut["geometry"]).all()
     assert dfOut["geometry"].crs.to_epsg() == 3857
 
 
@@ -528,12 +503,7 @@ def test_createDataFrameFromGeoDataFrame():
     dfComp = vector.extractFeatures(AACHEN_ZONES)
     assert sorted(df.columns) == sorted(dfComp.columns)
     assert len(df) == len(dfComp)
-    assert (
-        df["geom"]
-        .iloc[0]
-        .GetSpatialReference()
-        .IsSame(dfComp["geom"].iloc[0].GetSpatialReference())
-    )
+    assert df["geom"].iloc[0].GetSpatialReference().IsSame(dfComp["geom"].iloc[0].GetSpatialReference())
     assert all([df.geom[i].Equals(dfComp.geom[i]) for i in range(len(df))])
 
 

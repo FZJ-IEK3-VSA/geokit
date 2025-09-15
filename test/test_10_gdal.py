@@ -42,9 +42,7 @@ def test_gdal_warp_basic():
     arr_reload = band_reload.ReadAsArray()
     ds_reload = None  # Close dataset after reading
     # Assert shape equality
-    assert arr_inmem.shape == arr_reload.shape, (
-        f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
-    )
+    assert arr_inmem.shape == arr_reload.shape, f"Shape mismatch: {arr_inmem.shape} vs {arr_reload.shape}"
 
     # expected_mean = 16.264478  # Expected mean value based on the warped raster
     assert np.isclose(arr_inmem.mean(), arr_reload.mean(), rtol=1e-3), (
@@ -99,9 +97,7 @@ def test_ContourGenerateEx_single_isoband():
             geoms.append(geom.GetGeometryRef(gi).Clone())
             IDs.append(value)
     countour_data_frame = pd.DataFrame(dict(geom=geoms, ID=IDs))
-    total_area = np.sum(
-        [countour_data_frame.geom[i].Area() for i in countour_data_frame.index]
-    )
+    total_area = np.sum([countour_data_frame.geom[i].Area() for i in countour_data_frame.index])
     assert countour_data_frame.shape[0] == 114  # geom count
     assert np.isclose(total_area, 0.20382200000004147)
     assert np.isclose(countour_data_frame.ID[59], 1)
@@ -164,9 +160,7 @@ def test_ContourGenerateEx_multilevel_isobands():
     except AssertionError:
         raise (
             AssertionError(
-                " The length of the data frame was "
-                + str(len(countour_data_frame))
-                + " even though 326 was expected"
+                " The length of the data frame was " + str(len(countour_data_frame)) + " even though 326 was expected"
             )
         )
     try:
@@ -259,9 +253,7 @@ def test_ContourGenerateEx_3x3_raster():
     except AssertionError:
         raise (
             AssertionError(
-                " The length of the data frame was "
-                + str(len(countour_data_frame))
-                + " even though 3 was expected"
+                " The length of the data frame was " + str(len(countour_data_frame)) + " even though 3 was expected"
             )
         )
     try:
@@ -279,8 +271,6 @@ def test_ContourGenerateEx_3x3_raster():
     except AssertionError:
         raise (
             AssertionError(
-                " The area was "
-                + str(countour_data_frame.iloc[1].geom.Area())
-                + " even though 3 was expected"
+                " The area was " + str(countour_data_frame.iloc[1].geom.Area()) + " even though 3 was expected"
             )
         )
