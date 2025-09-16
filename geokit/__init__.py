@@ -7,6 +7,9 @@ from os.path import basename as _basename
 from os.path import dirname as _dirname
 from os.path import join as _join
 
+from osgeo import ogr
+
+ogr.UseExceptions()
 # from warnings import warn as _warn
 
 if not "GDAL_DATA" in _environ:
