@@ -179,6 +179,10 @@ def test_extractValues():
         geom.point(4040000, 2980000, srs=3035),  # tile 3
         geom.point(4200000, 2980000, srs=3035),  # out of bounds for all tiles
     ]
+
+    # The last point on the PTS list is intentionally out of
+    # bounds, so a warning should be raised, but this should
+    # not be displayed to the testing user.
     with pytest.warns(UserWarning):
         v4 = raster.extractValues(sources, pts)
 
