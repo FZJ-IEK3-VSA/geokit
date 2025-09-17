@@ -472,6 +472,7 @@ class LocationSet(object):
         LocationSet -> A location set of each clustered group
 
         """
+
         with warnings.catch_warnings():
             from sklearn.cluster import KMeans
 
