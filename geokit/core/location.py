@@ -472,13 +472,12 @@ class LocationSet(object):
         LocationSet -> A location set of each clustered group
 
         """
-        with warnings.catch_warnings():
-            from sklearn.cluster import KMeans
 
-            warnings.simplefilter("ignore", RuntimeWarning)
-            obs = np.column_stack([self.lons, self.lats])
+        from sklearn.cluster import KMeans
 
-            km = KMeans(n_clusters=groups, **kwargs).fit(obs)
+        obs = np.column_stack([self.lons, self.lats])
+
+        km = KMeans(n_clusters=groups, **kwargs).fit(obs)
         for i in range(groups):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
