@@ -763,7 +763,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS="europe_m", fromSRS=None, segment=None):
+def transform(geoms, toSRS="europe_laea", fromSRS=None, segment=None):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:

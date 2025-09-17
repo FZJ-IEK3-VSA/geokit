@@ -146,7 +146,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 # point transformer
 
 
-def xyTransform(*args, fromSRS="latlon", toSRS="europe_m", outputFormat="raw"):
+def xyTransform(*args, fromSRS="latlon", toSRS="europe_laea", outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Parameters:
@@ -275,17 +275,6 @@ class _SRSCOMMON:
     # basic latitude and longitude
     _europe_laea = osr.SpatialReference()
     _europe_laea.ImportFromEPSG(3035)
-    _europe_m = _europe_laea.Clone()
-
-    @property
-    def europe_m(self):
-        warnings.warn(
-            "SRSCOMMON.europe_m is deprecated and will be removed in a future release. \
-            use SRSCOMMON.europe_laea instead.",
-            DeprecationWarning,
-        )
-
-        return self._europe_m
 
     @property
     def europe_laea(self):
