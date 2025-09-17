@@ -474,9 +474,9 @@ class LocationSet(object):
         """
 
         with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
             from sklearn.cluster import KMeans
 
-            warnings.simplefilter("ignore", RuntimeWarning)
             obs = np.column_stack([self.lons, self.lats])
 
             km = KMeans(n_clusters=groups, **kwargs).fit(obs)
