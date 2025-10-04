@@ -1,4 +1,5 @@
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -471,6 +472,7 @@ class LocationSet(object):
         LocationSet -> A location set of each clustered group
 
         """
+
         from sklearn.cluster import KMeans
 
         obs = np.column_stack([self.lons, self.lats])

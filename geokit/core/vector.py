@@ -6,6 +6,7 @@ from binascii import hexlify
 from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
+from typing import Generator, Literal
 
 import numpy as np
 import pandas as pd
@@ -289,15 +290,15 @@ def listLayers(
 
 def _extractFeatures(
     source,
-    geom,
+    geom: ogr.Geometry | None | tuple,
     where,
     srs,
     onlyGeom,
     onlyAttr,
     skipMissingGeoms,
     layerName=None,
-    spatialPredicate="Touches",
-):
+    spatialPredicate: Literal["Touches", "Overlaps", "CentroidWithin"] = "Touches",
+) -> Generator:
     # Check spatialPredicate
     avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
     assert spatialPredicate in avail_predicates, (
@@ -457,18 +458,18 @@ def _extractFeatures(
 
 def extractFeatures(
     source,
-    where=None,
-    geom=None,
+    where: str | None = None,
+    geom: ogr.Geometry | None | tuple = None,
     srs=None,
-    onlyGeom=False,
-    onlyAttr=False,
-    asPandas=True,
+    onlyGeom: bool = False,
+    onlyAttr: bool = False,
+    asPandas: bool = True,
     indexCol=None,
-    skipMissingGeoms=True,
+    skipMissingGeoms: bool = True,
     layerName=None,
-    spatialPredicate="Touches",
+    spatialPredicate: Literal["Touches", "Overlaps", "CentroidWithin"] = "Touches",
     **kwargs,
-):
+) -> pd.DataFrame | pd.Series | Generator:
     """Creates a generator which extract the features contained within the source
 
     * Iteratively returns (feature-geometry, feature-fields)
@@ -1483,7 +1484,7 @@ def mutateVector(
     source,
     processor=None,
     srs=None,
-    geom=None,
+    geom: ogr.Geometry | None | tuple = None,
     where=None,
     fieldDef=None,
     output=None,

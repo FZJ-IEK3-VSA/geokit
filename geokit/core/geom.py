@@ -1,6 +1,7 @@
 import warnings
 from collections import namedtuple
 from copy import copy
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 # Geometry convenience functions
 
 
-def point(*args, srs="latlon"):
+def point(*args, srs="latlon") -> ogr.Geometry:
     """Make a simple point geometry
 
     Parameters:
@@ -67,14 +68,14 @@ def point(*args, srs="latlon"):
     return pt
 
 
-def makePoint(*args, **kwargs):
+def makePoint(*args, **kwargs) -> ogr.Geometry:
     """alias for geokit.geom.point(...)"""
     msg = "makePoint will be removed soon. Switch to 'point'"
     warnings.warn(msg, Warning)
     return point(*args, **kwargs)
 
 
-def box(*args, srs=4326):
+def box(*args, srs=4326) -> ogr.Geometry:
     """Make an ogr polygon object from extents
 
     Parameters:
@@ -258,7 +259,11 @@ def makeBox(*args, **kwargs):
     return box(*args, **kwargs)
 
 
-def polygon(outerRing, *args, srs="default"):
+def polygon(
+    outerRing: list[tuple[float, float]] | list[ogr.Geometry] | np.ndarray,
+    *args,
+    srs="default",
+) -> ogr.Geometry:
     """Creates an OGR Polygon obect from a given set of points
 
     Parameters:
@@ -1753,7 +1758,12 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
 
 
 def applyBuffer(
-    geom, buffer, applyBufferInSRS=False, split="shift", tol=1e-6, verbose=False
+    geom,
+    buffer,
+    applyBufferInSRS=False,
+    split=Literal["shift", "clip"] | None,
+    tol=1e-6,
+    verbose: bool = False,
 ):
     """
     This function applies a buffer to any geom, avoiding edge issues with geoms
