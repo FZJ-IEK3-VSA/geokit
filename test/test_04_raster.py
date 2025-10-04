@@ -793,6 +793,3 @@ def test_rasterCellNo():
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
 
-
-if __name__ == "__main__":
-    test_extractValues()
