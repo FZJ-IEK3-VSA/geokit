@@ -568,7 +568,3 @@ def test_applyGeopandasMethod():
     # ron is neither one
     assert joint.set_index("name").loc["ron", "female"] == False
     assert joint.set_index("name").loc["ron", "smart"] == 0
-
-
-if __name__ == "__main__":
-    test_extractFeatures()
