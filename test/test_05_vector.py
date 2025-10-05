@@ -121,10 +121,14 @@ def test_extractFeatures():
 
     assert vi.geom[0].Area() == 64.0  # geom area mismatch
 
-    # now extract only the geom whose centroid is within this same filter geom
+    # Note the warning that the centroid of the 'Harry Polygon'
+    # (0, 0, 1, 1, 1, 0, 0) lies exactly on the edge of the 'filtergeom' box.
+    # This behaviour is intended to inform the user of the potentially undesirable.
+    # However, it should not be thrown during testing.
     with pytest.warns(
         expected_warning=UserWarning,
     ):
+        # now extract only the geom whose centroid is within this same filter geom
         vi = vector.extractFeatures(
             BOXES, geom=_filtergeom, spatialPredicate="CentroidWithin"
         )
@@ -564,8 +568,3 @@ def test_applyGeopandasMethod():
     # ron is neither one
     assert joint.set_index("name").loc["ron", "female"] == False
     assert joint.set_index("name").loc["ron", "smart"] == 0
-
-
-if __name__ == "__main__":
-    test_applyGeopandasMethod()
-    test_extractFeatures()

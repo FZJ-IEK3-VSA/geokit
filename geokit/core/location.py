@@ -473,11 +473,13 @@ class LocationSet(object):
 
         """
 
-        from sklearn.cluster import KMeans
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            from sklearn.cluster import KMeans
 
-        obs = np.column_stack([self.lons, self.lats])
+            obs = np.column_stack([self.lons, self.lats])
 
-        km = KMeans(n_clusters=groups, **kwargs).fit(obs)
+            km = KMeans(n_clusters=groups, **kwargs).fit(obs)
         for i in range(groups):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
