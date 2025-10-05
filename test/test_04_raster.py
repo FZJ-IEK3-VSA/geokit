@@ -198,29 +198,29 @@ def test_interpolateValues():
     point = (4061794.7, 3094718.4)
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="near"
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="near"
     )
     assert np.isclose(v, 3)
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="linear-spline"
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="linear-spline"
     )
     assert np.isclose(v, 4.572732)  # linear-spline
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="cubic-spline"
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="cubic-spline"
     )
     assert np.isclose(v, 2.4197586642)  # cubic-spline
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="average"
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average"
     )
     assert np.isclose(v, 9.0612244898)  # average
 
     v = raster.interpolateValues(
         CLC_RASTER_PATH,
         point,
-        pointSRS="europe_m",
+        pointSRS="europe_laea",
         mode="func",
         func=lambda d, xo, yo: d.max(),
     )
