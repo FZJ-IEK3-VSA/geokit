@@ -1818,7 +1818,7 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
         raise ValueError("side must be 'left', 'right', 'main' or None")
 
 
-def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
+def applyBuffer(geom, buffer, srs=None, split="shift"):
     """
     This function applies a buffer to any geom, avoiding edge issues with geoms
     near the SRS bounds. By shifting the geom to a zero longitude, geometry
@@ -1833,7 +1833,7 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     buffer : int, float
         The buffer value to be applied to the geom, in unit of the SRS unless
         'bufferInEPSG6933' is True, then always in meters.
-    applyBufferInSRS : int, osgeo.osr.SpatialReference, optional
+    srs : int, osgeo.osr.SpatialReference, optional
         Allows to specify an EPSG integer code or an osgeo.osr.SpatialReference
         instance to define the SRS in which the buffer will be applied, then in
         the unit of the specified EPSG. If e.g. 6933 is given, the buffer will
@@ -1850,19 +1850,19 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     _srs = geom.GetSpatialReference()
     _geom = geom.Clone()
 
-    if not applyBufferInSRS is False:
+    if not srs is None:
         # generate own geom-centered LAEA or load SRS
-        if isinstance(applyBufferInSRS, str) and applyBufferInSRS.upper() == "LAEA":
-            applyBufferInSRS = SRS.centeredLAEA(geom=_geom)
+        if isinstance(srs, str) and srs.upper() == "LAEA":
+            srs = SRS.centeredLAEA(geom=_geom)
         else:
             try:
-                applyBufferInSRS = SRS.loadSRS(applyBufferInSRS)
+                srs = SRS.loadSRS(srs)
             except:
                 raise ValueError(
-                    f"applyBufferInSRS {applyBufferInSRS} is not a known SRS to geokit.srs.loadSRS()"
+                    f"srs {srs} is not a known SRS to geokit.srs.loadSRS()"
                 )
         # make sure the poles are far enough to allow the planned buffer
-        buffer_mtrs = buffer * applyBufferInSRS.GetLinearUnits()
+        buffer_mtrs = buffer * srs.GetLinearUnits()
         north_srs = SRS.loadSRS(
             "+proj=aeqd +lat_0=90 +lon_0=0 +datum=WGS84 +units=m +no_defs"
         )
@@ -1880,8 +1880,8 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
                 f"buffered geometry would intersect with North or South Pole."
             )
 
-        # convert geom to applyBufferInSRS
-        _geom = transform(_geom, toSRS=applyBufferInSRS)
+        # convert geom to srs
+        _geom = transform(_geom, toSRS=srs)
 
     # apply buffer
     _geom_buf = _geom.Buffer(buffer)
@@ -1897,7 +1897,7 @@ def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     )
 
     # now retransform to original srs if needed
-    if not applyBufferInSRS is False:
+    if not srs is None:
         _geom_buf = transform(_geom_buf, toSRS=_srs, revert360degProj=True)
 
     # now split if needed

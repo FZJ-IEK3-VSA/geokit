@@ -566,24 +566,24 @@ def test_applyBuffer():
     testpoint_equator = geom.point(-179.9, 0, srs=4326)
     # first test latlon buffer
     buf_none = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="none"
+        geom=testpoint_equator, buffer=1.0, srs=None, split="none"
     )
     assert np.isclose(buf_none.GetEnvelope(), (-180.9, -178.9, -1.0, 1.0), atol=0).all()
     assert np.isclose(buf_none.Area(), np.pi, rtol=0.001)
     buf_shift = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="shift"
+        geom=testpoint_equator, buffer=1.0, srs=None, split="shift"
     )
     assert np.isclose(
         buf_shift.GetEnvelope(), (-180.0, +180.0, -1.0, 1.0), atol=0
     ).all()
     assert np.isclose(buf_shift.Area(), buf_none.Area(), rtol=0.001)
     buf_clip = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, applyBufferInSRS=False, split="clip"
+        geom=testpoint_equator, buffer=1.0, srs=None, split="clip"
     )
     assert np.isclose(buf_clip.GetEnvelope(), (-180.0, -178.9, -1.0, 1.0), atol=0).all()
     # then do metric buffer with 50 kms
     buf_clip_6933 = geom.applyBuffer(
-        geom=testpoint_equator, buffer=50000, applyBufferInSRS=6933, split="clip"
+        geom=testpoint_equator, buffer=50000, srs=6933, split="clip"
     )
     assert np.isclose(
         buf_clip_6933.GetEnvelope(),
@@ -600,21 +600,21 @@ def test_applyBuffer():
     testpoint_north = geom.point(0, 89.9, srs=4326)
     # first latlon buffer
     buf_north_clip = geom.applyBuffer(
-        geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
+        geom=testpoint_north, buffer=1, srs=None, split="clip"
     )
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
     # now try again near 90° lat
     testpoint_north = geom.point(0, 89.9, srs=4326)
     # first latlon buffer
     buf_north_clip = geom.applyBuffer(
-        geom=testpoint_north, buffer=1, applyBufferInSRS=False, split="clip"
+        geom=testpoint_north, buffer=1, srs=None, split="clip"
     )
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
 
     # try again with metric geom-centric LAEA system and 10 kms (distance to pole is 0.1° lat ergo ca. 11.1 kms)
     buf = 10000  # 10kms
     buf_north_clip_LAEA = geom.applyBuffer(
-        geom=testpoint_north, buffer=buf, applyBufferInSRS="laea", split="clip"
+        geom=testpoint_north, buffer=buf, srs="laea", split="clip"
     )
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[0], -63.54229553874337)
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[1], 63.542295538743375)
@@ -635,7 +635,7 @@ def test_applyBuffer():
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
     with pytest.raises(geom.GeoKitGeomError):
         buf_north_clip_LAEA = geom.applyBuffer(
-            geom=testpoint_north, buffer=20000, applyBufferInSRS="laea", split="clip"
+            geom=testpoint_north, buffer=20000, srs="laea", split="clip"
         )
 
 
