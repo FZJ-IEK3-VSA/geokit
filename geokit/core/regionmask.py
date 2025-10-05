@@ -77,7 +77,7 @@ class RegionMask(object):
 
     """
 
-    DEFAULT_SRS = "europe_m"
+    DEFAULT_SRS = "europe_laea"
     DEFAULT_RES = 100
     DEFAULT_PAD = None
 
