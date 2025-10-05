@@ -61,7 +61,7 @@ def test_loadSRS():
     assert s1.IsSame(s3)
 
     # test an invalid srs, must raise error
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AssertionError):
         s3 = srs.loadSRS(1000)
 
 

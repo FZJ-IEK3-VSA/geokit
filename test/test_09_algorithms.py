@@ -1,11 +1,10 @@
-import numpy as np
-import pytest
-
-from geokit import raster, util
 from geokit._algorithms.combineSimilarRasters import (
     checkSimilarRasters,
     combineSimilarRasters,
 )
+from geokit import raster, util
+import numpy as np
+import pytest
 from test.helpers import (
     DIVIDED_RASTER_1_PATH,
     DIVIDED_RASTER_2_PATH,

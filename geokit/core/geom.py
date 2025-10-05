@@ -1,7 +1,6 @@
 import warnings
 from collections import namedtuple
 from copy import copy
-from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -27,7 +26,7 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 # Geometry convenience functions
 
 
-def point(*args, srs="latlon") -> ogr.Geometry:
+def point(*args, srs="latlon"):
     """Make a simple point geometry
 
     Parameters:
@@ -68,14 +67,14 @@ def point(*args, srs="latlon") -> ogr.Geometry:
     return pt
 
 
-def makePoint(*args, **kwargs) -> ogr.Geometry:
+def makePoint(*args, **kwargs):
     """alias for geokit.geom.point(...)"""
     msg = "makePoint will be removed soon. Switch to 'point'"
     warnings.warn(msg, Warning)
     return point(*args, **kwargs)
 
 
-def box(*args, srs=4326) -> ogr.Geometry:
+def box(*args, srs=4326):
     """Make an ogr polygon object from extents
 
     Parameters:
@@ -259,11 +258,7 @@ def makeBox(*args, **kwargs):
     return box(*args, **kwargs)
 
 
-def polygon(
-    outerRing: list[tuple[float, float]] | list[ogr.Geometry] | np.ndarray,
-    *args,
-    srs="default",
-) -> ogr.Geometry:
+def polygon(outerRing, *args, srs="default"):
     """Creates an OGR Polygon obect from a given set of points
 
     Parameters:
@@ -768,7 +763,9 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS="europe_laea", fromSRS=None, segment=None):
+def transform(
+    geoms, toSRS="europe_m", fromSRS=None, revert360degProj=False, segment=None
+):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:
@@ -1821,14 +1818,7 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
         raise ValueError("side must be 'left', 'right', 'main' or None")
 
 
-def applyBuffer(
-    geom,
-    buffer,
-    applyBufferInSRS=False,
-    split=Literal["shift", "clip"] | None,
-    tol=1e-6,
-    verbose: bool = False,
-):
+def applyBuffer(geom, buffer, applyBufferInSRS=False, split="shift"):
     """
     This function applies a buffer to any geom, avoiding edge issues with geoms
     near the SRS bounds. By shifting the geom to a zero longitude, geometry

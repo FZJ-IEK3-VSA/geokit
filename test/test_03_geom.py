@@ -1,9 +1,3 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import pytest
-from osgeo import ogr
-
-from geokit import geom, vector, srs
 from test.helpers import (
     EPSG3035,
     EPSG4326,
@@ -18,6 +12,14 @@ from test.helpers import (
     pointsInAachen4326,
     result,
 )
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import pytest
+from osgeo import ogr
+
+from geokit import geom, vector, srs
+
 
 # box
 def test_box():
@@ -346,7 +348,7 @@ def test_transform():
         complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None
     )
 
-    t2 = geom.transform(polygons, toSRS="europe_laea", segment=0.1)
+    t2 = geom.transform(polygons, toSRS="europe_m", segment=0.1)
     assert len(t2) == 3  # "Transform Count
     assert t2[0].GetSpatialReference().IsSame(EPSG3035)  # "Transform srs
     assert np.isclose(sum([t.Area() for t in t2]), 83747886418.48529)  # "Transform Area
