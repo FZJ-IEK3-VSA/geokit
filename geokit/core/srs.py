@@ -20,7 +20,6 @@ class GeoKitSRSError(UTIL.GeoKitError):
 
 
 def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
-    
     """
     Load a spatial reference system (SRS) from various sources.
 
@@ -35,10 +34,10 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
           * WKT string
           * 'laea' — creates a Lambert Azimuthal Equal Area projection
             (optionally centered on a geometry)
-            
+
     geom : osgeo.ogr.Geometry, optional
         Geometry to center the projection on if 'laea' is used.
-        
+
     **kwargs :
         Passed directly to `SRSCOMMON.laea(**kwargs)`, allowing
         customization such as `lon`, `lat`, or `name`.
@@ -47,7 +46,7 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
     -------
     osr.SpatialReference
     """
-    
+
     # Do initial check of source
     if isinstance(source, osr.SpatialReference):
         return source
@@ -56,19 +55,18 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
 
     # Create an empty SRS
     srs = osr.SpatialReference()
-    
+
     # Check if source is a string
     if isinstance(source, str):
-        
         src_upper = source.strip().upper()
-        
+
         # Handle special LAEA case
         if src_upper == "LAEA":
             # merge geom into kwargs if provided
             if geom is not None and "geom" not in kwargs:
                 kwargs["geom"] = geom
             return SRSCOMMON.laea(**kwargs)
-        
+
         elif hasattr(SRSCOMMON, source):
             # assume a name for one of the common SRS's was given
             srs = SRSCOMMON[source]
@@ -341,7 +339,7 @@ class _SRSCOMMON:
 
         Units: Meters"""
         return self._sadc_laea
-    
+
     @staticmethod
     def laea(**kwargs):
         """

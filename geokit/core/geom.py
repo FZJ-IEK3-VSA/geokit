@@ -1857,7 +1857,7 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
             srs = SRS.loadSRS(srs, geom=_geom)
         except Exception as e:
             raise ValueError(f"Invalid SRS '{srs}': {e}")
-        
+
         # make sure the poles are far enough to allow the planned buffer
         buffer_mtrs = buffer * srs.GetLinearUnits()
         north_srs = SRS.loadSRS(
@@ -1880,8 +1880,8 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
         if srs is not None and not srs.IsSame(_srs_orig):
             # convert geom to srs
             _geom = transform(_geom, toSRS=srs)
-   
-    else: 
+
+    else:
         srs = _srs_orig
 
     # apply buffer
