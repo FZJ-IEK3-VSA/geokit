@@ -1833,7 +1833,7 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
     buffer : int, float
         The buffer value to be applied to the geom, in unit of the SRS unless
         'bufferInEPSG6933' is True, then always in meters.
-    srs : int, osgeo.osr.SpatialReference, optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         Allows to specify an EPSG integer code or an osgeo.osr.SpatialReference
         instance to define the SRS in which the buffer will be applied, then in
         the unit of the specified EPSG. If e.g. 6933 is given, the buffer will
@@ -1847,20 +1847,17 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
         'none' : do not split geoms at all that cross the antimeridian
     """
     # create copy and extract SRS
-    _srs = geom.GetSpatialReference()
+    _srs_orig = geom.GetSpatialReference()
     _geom = geom.Clone()
 
-    if not srs is None:
+    if srs is not None:
         # generate own geom-centered LAEA or load SRS
-        if isinstance(srs, str) and srs.upper() == "LAEA":
-            srs = SRS.centeredLAEA(geom=_geom)
-        else:
-            try:
-                srs = SRS.loadSRS(srs)
-            except:
-                raise ValueError(
-                    f"srs {srs} is not a known SRS to geokit.srs.loadSRS()"
-                )
+        try:
+            # allow LAEA or EPSG or SRS object
+            srs = SRS.loadSRS(srs, geom=_geom)
+        except Exception as e:
+            raise ValueError(f"Invalid SRS '{srs}': {e}")
+        
         # make sure the poles are far enough to allow the planned buffer
         buffer_mtrs = buffer * srs.GetLinearUnits()
         north_srs = SRS.loadSRS(
@@ -1880,8 +1877,12 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
                 f"buffered geometry would intersect with North or South Pole."
             )
 
-        # convert geom to srs
-        _geom = transform(_geom, toSRS=srs)
+        if srs is not None and not srs.IsSame(_srs_orig):
+            # convert geom to srs
+            _geom = transform(_geom, toSRS=srs)
+   
+    else: 
+        srs = _srs_orig
 
     # apply buffer
     _geom_buf = _geom.Buffer(buffer)
@@ -1897,8 +1898,8 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
     )
 
     # now retransform to original srs if needed
-    if not srs is None:
-        _geom_buf = transform(_geom_buf, toSRS=_srs, revert360degProj=True)
+    if srs is not None and not srs.IsSame(_srs_orig):
+        _geom_buf = transform(_geom_buf, toSRS=_srs_orig, revert360degProj=True)
 
     # now split if needed
     if not (split is None or isinstance(split, str) and split.upper() == "NONE"):
