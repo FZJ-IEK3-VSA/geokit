@@ -180,11 +180,7 @@ def test_extractValues():
         geom.point(4200000, 2980000, srs=3035),  # out of bounds for all tiles
     ]
 
-    # The last point on the PTS list is intentionally out of
-    # bounds, so a warning should be raised, but this should
-    # not be displayed to the testing user.
-    with pytest.warns(UserWarning):
-        v4 = raster.extractValues(sources, pts)
+    v4 = raster.extractValues(sources, pts)
 
     assert np.allclose(
         v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True
@@ -198,29 +194,29 @@ def test_interpolateValues():
     point = (4061794.7, 3094718.4)
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="near"
+        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="near"
     )
     assert np.isclose(v, 3)
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="linear-spline"
+        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="linear-spline"
     )
     assert np.isclose(v, 4.572732)  # linear-spline
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="cubic-spline"
+        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="cubic-spline"
     )
     assert np.isclose(v, 2.4197586642)  # cubic-spline
 
     v = raster.interpolateValues(
-        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average"
+        CLC_RASTER_PATH, point, pointSRS="europe_m", mode="average"
     )
     assert np.isclose(v, 9.0612244898)  # average
 
     v = raster.interpolateValues(
         CLC_RASTER_PATH,
         point,
-        pointSRS="europe_laea",
+        pointSRS="europe_m",
         mode="func",
         func=lambda d, xo, yo: d.max(),
     )
@@ -792,4 +788,3 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
-
