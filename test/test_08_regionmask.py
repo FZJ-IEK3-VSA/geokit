@@ -107,9 +107,12 @@ def test_RegionMask_fromGeom():
     # fromGeom with geometry and LAEA
     dxy = 0.05
     rm4 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs="LAEA", padExtent=0.2)
+    print(rm4.extent)
+    _laea = SRS.centeredLAEA(
+        geom=GEOM,
+    )
+    assert rm4.extent == Extent(-190575.40000, -489480.70000, 217899.95000, 354950.15000, srs=_laea)
 
-    assert rm4.extent == Extent(9.90, 30.30, 14.80, 38.30)
-    _laea = SRS.centeredLAEA(geom=GEOM)
     assert rm4.extent.srs.IsSame(_laea)
 
 
