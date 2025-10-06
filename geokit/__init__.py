@@ -11,6 +11,7 @@ from os.path import join as _join
 from osgeo import ogr
 
 ogr.UseExceptions()
+gdal.SetConfigOption("OGR_GEOMETRY_ACCEPT_UNCLOSED_RING", "YES")
 
 if not "GDAL_DATA" in _environ:
     from os.path import isdir as _isdir
