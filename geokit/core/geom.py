@@ -748,7 +748,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS="europe_laea", fromSRS=None, revert360degProj=False, segment=None):
+def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:
@@ -759,7 +759,6 @@ def transform(geoms, toSRS="europe_laea", fromSRS=None, revert360degProj=False, 
 
     toSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the output geometries
-          * If no given, a Europe-centered relational system (EPSG3035) is chosen
 
     fromSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the input geometries
