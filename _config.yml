@@ -12,6 +12,7 @@ logo: docs/visualizations/logos/fzj_logo.svg
 
 execute:
   execute_notebooks: "force"
+  timeout: 1000
 
 # Define the name of the latex output file for PDF builds
 latex:
@@ -45,7 +46,7 @@ sphinx:
 
   config:
     autoapi_dirs: ["./geokit"]
-    autoapi_root: "./docs"
+    autoapi_root: "."
     autoapi_add_toctree_entry: false
     autoapi_file_patterns: ["*.py"]
     autosummary_generate: false
