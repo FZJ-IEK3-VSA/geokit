@@ -1,10 +1,11 @@
+import numpy as np
+import pytest
+
+from geokit import raster, util
 from geokit._algorithms.combineSimilarRasters import (
     checkSimilarRasters,
     combineSimilarRasters,
 )
-from geokit import raster, util
-import numpy as np
-import pytest
 from test.helpers import (
     DIVIDED_RASTER_1_PATH,
     DIVIDED_RASTER_2_PATH,
@@ -23,9 +24,7 @@ def test_checkSimilarRasters():
     # create an alternative first raster with bounds slightly adapted
     rstr_boundschanged = raster.warp(
         source=test_rasters[0],
-        bounds=tuple(
-            np.array(rInfo0.bounds) + 0.001
-        ),  # only shift the bounds slightly upwards to the right
+        bounds=tuple(np.array(rInfo0.bounds) + 0.001),  # only shift the bounds slightly upwards to the right
         resampleAlg="near",
     )
     # create an alternative first raster with x-resolution slightly adapted
@@ -122,9 +121,7 @@ def test_combineSimilarRasters():
     rInfo1 = raster.rasterInfo(DIVIDED_RASTER_1_PATH)
     DIVIDED_RASTER_1_SHIFTED = raster.warp(
         source=DIVIDED_RASTER_1_PATH,
-        bounds=tuple(
-            np.array(rInfo1.bounds) + 0.001
-        ),  # only shift the bounds slightly upwards to the right
+        bounds=tuple(np.array(rInfo1.bounds) + 0.001),  # only shift the bounds slightly upwards to the right
         resampleAlg="near",
     )
     new_rstr2 = combineSimilarRasters(
@@ -146,9 +143,7 @@ def test_combineSimilarRasters():
     # make sure that the output raster/matrix remains the same - no changes in the process
     assert mx2.shape == (1535, 1736)
     assert mx2.sum() == 38610800
-    np.median(
-        mx2, axis=0
-    ).mean() == 16.028225806451612  # this would change if the matrix was transposed
+    np.median(mx2, axis=0).mean() == 16.028225806451612  # this would change if the matrix was transposed
 
     # test again with pixel res deviation
     DIVIDED_RASTER_1_SHRUNK = raster.warp(

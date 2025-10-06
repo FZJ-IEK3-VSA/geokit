@@ -1,8 +1,8 @@
+import numpy as np
+
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
 from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
-
-import numpy as np
 
 
 def test_Extent___init__():
@@ -510,9 +510,7 @@ def test_Extent_mutateVector():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(4326)
 
     # Test simple clipping
-    vi = ex.mutateVector(
-        AACHEN_ZONES, matchContext=False, output=result("extent_mutateVector1.shp")
-    )
+    vi = ex.mutateVector(AACHEN_ZONES, matchContext=False, output=result("extent_mutateVector1.shp"))
     info = vector.vectorInfo(vi)
     assert np.isclose(info.count, 101)
     assert info.srs.IsSame(EPSG3035)
@@ -569,9 +567,7 @@ def test_Extent_mutateRaster():
         goodValues = mat[mat != -9999].flatten()
         return goodValues.max()
 
-    r = ex.mutateRaster(
-        CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif")
-    )
+    r = ex.mutateRaster(CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif"))
     mat3 = raster.extractMatrix(r)
     assert np.isclose(mat3.mean(), 19.27040301)
 
@@ -598,9 +594,7 @@ def test_Extent_clipRaster():
 def test_Extent_contoursFromRaster():
     if gdal.__version__ >= "3.0.0":
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(
-            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
-        )
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
@@ -611,9 +605,7 @@ def test_Extent_contoursFromRaster():
 
     elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(
-            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
-        )
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
@@ -688,9 +680,7 @@ def test_Extent_mosiacTiles():
     # data_folder_path = pathlib.Path(path_to_last_data).parent
     data_folder_path = pathlib.Path(path_aachen_shape_file).parent
 
-    string_path_with_variables = str(
-        data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif")
-    )
+    string_path_with_variables = str(data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif"))
     ras = ext.tileMosaic(
         string_path_with_variables,
         9,

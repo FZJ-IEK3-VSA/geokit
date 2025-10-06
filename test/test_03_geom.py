@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from osgeo import ogr
 
-from geokit import geom, vector, srs
+from geokit import geom, srs, vector
 from test.helpers import (
     EPSG3035,
     EPSG4326,
@@ -185,9 +185,9 @@ def test_polygon():
     assert poly5.GetEnvelope() == (6.02141, 6.371634, 50.51939, 50.846025)
 
 
-@pytest.mark.skip("No test implemented for: geom.empty")
-def test_empty():
-    assert False
+# @pytest.mark.skip("No test implemented for: geom.empty")
+# def test_empty():
+#     assert False
 
 
 def test_convertWKT():
@@ -244,14 +244,10 @@ def test_polygonizeMatrix():
     assert np.isclose(g3.geom[0].Area(), 7.0)
 
     # set a boundary and srs context
-    g4 = geom.polygonizeMatrix(
-        complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None
-    )
+    g4 = geom.polygonizeMatrix(complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
     # polygonizeMatrix: contexted area
     assert np.isclose(g4.geom[0].Area(), 175.0)
-    assert (
-        g4.geom[0].GetSpatialReference().IsSame(EPSG3035)
-    )  # polygonizeMatrix: contexted srs
+    assert g4.geom[0].GetSpatialReference().IsSame(EPSG3035)  # polygonizeMatrix: contexted srs
 
 
 def test_polygonizeMask():
@@ -296,13 +292,9 @@ def test_polygonizeMask():
     assert np.isclose(g3.Area(), 10.0)  # polygonizeMask: flattened area
 
     # set a boundary and srs context
-    g4 = geom.polygonizeMask(
-        complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None
-    )
+    g4 = geom.polygonizeMask(complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
     assert np.isclose(g4.Area(), 250.0)  # polygonizeMask: contexted area
-    assert g4.GetSpatialReference().IsSame(
-        EPSG3035
-    )  # error("polygonizeMask: contexted srs
+    assert g4.GetSpatialReference().IsSame(EPSG3035)  # error("polygonizeMask: contexted srs
 
 
 def test_flatten():
@@ -343,9 +335,7 @@ def test_transform():
         dtype=bool,
     )
 
-    polygons = geom.polygonizeMask(
-        complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None
-    )
+    polygons = geom.polygonizeMask(complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
 
     t2 = geom.transform(polygons, toSRS="europe_laea", segment=0.1)
     assert len(t2) == 3  # "Transform Count
@@ -357,14 +347,12 @@ def test_transform():
     boxLAEA = geom.transform(box, toSRS=srs.centeredLAEA(geom=box))
     # now transform back to 4326 - first the original way
     box4326 = geom.transform(boxLAEA, toSRS=4326)
-    assert np.isclose(
-        box4326.GetEnvelope(), (-179.0, 179, -1, 1)
-    ).all()  # wrong but that is expected of PROJ
+    assert np.isclose(box4326.GetEnvelope(), (-179.0, 179, -1, 1)).all()  # wrong but that is expected of PROJ
     # then the non-shifted way
     box4326b = geom.transform(boxLAEA, toSRS=4326, revert360degProj=True)
-    assert (
-        np.isclose(box4326b.GetEnvelope(), (179, 181, -1, 1)).all()
-    )  # the right result (note that -181/-179 and 179/181 are the same on a sphere)
+    assert np.isclose(
+        box4326b.GetEnvelope(), (179, 181, -1, 1)
+    ).all()  # the right result (note that -181/-179 and 179/181 are the same on a sphere)
 
 
 def test_extractVerticies():
@@ -489,9 +477,7 @@ def test_divideMultipolygonIntoEasternAndWesternPart():
     ).all()
 
     # make sure extraction of right geom is always the same
-    right_geom = geom.divideMultipolygonIntoEasternAndWesternPart(
-        FJI_geom, side="right"
-    )
+    right_geom = geom.divideMultipolygonIntoEasternAndWesternPart(FJI_geom, side="right")
 
     assert np.isclose(
         right_geom.GetEnvelope(),
@@ -509,12 +495,8 @@ def test_divideMultipolygonIntoEasternAndWesternPart():
 def test_fixOutOfBoundsGeoms():
     # generate circles near and crossing the antimeridian, merge to multipolygon
     testcircle = geom.point(0, 0).Buffer(1)
-    testcircleeast = geom.shift(
-        testcircle, lonShift=-179.5
-    )  # extends over entimeridian in the East
-    testcirclewest = geom.shift(
-        testcircle, lonShift=+180.8
-    )  # extends over entimeridian in the West
+    testcircleeast = geom.shift(testcircle, lonShift=-179.5)  # extends over entimeridian in the East
+    testcirclewest = geom.shift(testcircle, lonShift=+180.8)  # extends over entimeridian in the West
     multi = testcirclewest.Union(testcircleeast)
 
     # clip off the parts extending over antimeridian
@@ -564,26 +546,16 @@ def test_applyBuffer():
     # generate point at lat = 0 to apply a test buffer
     testpoint_equator = geom.point(-179.9, 0, srs=4326)
     # first test latlon buffer
-    buf_none = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, srs=None, split="none"
-    )
+    buf_none = geom.applyBuffer(geom=testpoint_equator, buffer=1.0, srs=None, split="none")
     assert np.isclose(buf_none.GetEnvelope(), (-180.9, -178.9, -1.0, 1.0), atol=0).all()
     assert np.isclose(buf_none.Area(), np.pi, rtol=0.001)
-    buf_shift = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, srs=None, split="shift"
-    )
-    assert np.isclose(
-        buf_shift.GetEnvelope(), (-180.0, +180.0, -1.0, 1.0), atol=0
-    ).all()
+    buf_shift = geom.applyBuffer(geom=testpoint_equator, buffer=1.0, srs=None, split="shift")
+    assert np.isclose(buf_shift.GetEnvelope(), (-180.0, +180.0, -1.0, 1.0), atol=0).all()
     assert np.isclose(buf_shift.Area(), buf_none.Area(), rtol=0.001)
-    buf_clip = geom.applyBuffer(
-        geom=testpoint_equator, buffer=1.0, srs=None, split="clip"
-    )
+    buf_clip = geom.applyBuffer(geom=testpoint_equator, buffer=1.0, srs=None, split="clip")
     assert np.isclose(buf_clip.GetEnvelope(), (-180.0, -178.9, -1.0, 1.0), atol=0).all()
     # then do metric buffer with 50 kms
-    buf_clip_6933 = geom.applyBuffer(
-        geom=testpoint_equator, buffer=50000, srs=6933, split="clip"
-    )
+    buf_clip_6933 = geom.applyBuffer(geom=testpoint_equator, buffer=50000, srs=6933, split="clip")
     assert np.isclose(
         buf_clip_6933.GetEnvelope(),
         (
@@ -598,31 +570,21 @@ def test_applyBuffer():
     # now try again near 90° lat
     testpoint_north = geom.point(0, 89.9, srs=4326)
     # first latlon buffer
-    buf_north_clip = geom.applyBuffer(
-        geom=testpoint_north, buffer=1, srs=None, split="clip"
-    )
+    buf_north_clip = geom.applyBuffer(geom=testpoint_north, buffer=1, srs=None, split="clip")
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
     # now try again near 90° lat
     testpoint_north = geom.point(0, 89.9, srs=4326)
     # first latlon buffer
-    buf_north_clip = geom.applyBuffer(
-        geom=testpoint_north, buffer=1, srs=None, split="clip"
-    )
+    buf_north_clip = geom.applyBuffer(geom=testpoint_north, buffer=1, srs=None, split="clip")
     assert np.isclose(buf_north_clip.GetEnvelope(), (-1, +1, 88.9, 90), atol=0).all()
 
     # try again with metric geom-centric LAEA system and 10 kms (distance to pole is 0.1° lat ergo ca. 11.1 kms)
     buf = 10000  # 10kms
-    buf_north_clip_LAEA = geom.applyBuffer(
-        geom=testpoint_north, buffer=buf, srs="laea", split="clip"
-    )
+    buf_north_clip_LAEA = geom.applyBuffer(geom=testpoint_north, buffer=buf, srs="laea", split="clip")
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[0], -63.54229553874337)
     assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[1], 63.542295538743375)
-    assert np.isclose(
-        buf_north_clip_LAEA.GetEnvelope()[2], 89.81046964488837
-    )  # nearly 1° lat diff from center
-    assert np.isclose(
-        buf_north_clip_LAEA.GetEnvelope()[3], 89.98953035070583
-    )  # nearly 1° lat diff from center
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[2], 89.81046964488837)  # nearly 1° lat diff from center
+    assert np.isclose(buf_north_clip_LAEA.GetEnvelope()[3], 89.98953035070583)  # nearly 1° lat diff from center
     # check area - must be close to 3.14 * 10^8 m² (pi * r^2 with r=10kms)
     assert np.isclose(
         geom.transform(buf_north_clip_LAEA, toSRS=6933).Area(),
@@ -633,9 +595,7 @@ def test_applyBuffer():
 
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
     with pytest.raises(geom.GeoKitGeomError):
-        buf_north_clip_LAEA = geom.applyBuffer(
-            geom=testpoint_north, buffer=20000, srs="laea", split="clip"
-        )
+        buf_north_clip_LAEA = geom.applyBuffer(geom=testpoint_north, buffer=20000, srs="laea", split="clip")
 
 
 if __name__ == "__main__":

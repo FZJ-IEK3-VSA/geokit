@@ -153,9 +153,7 @@ list_of_all_shape_file_extensions = [
 
 def get_test_data(
     file_name: str,
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
     no_download: bool = True,
 ) -> str:
     if file_name not in all_file_name_dict:
@@ -188,9 +186,7 @@ def get_test_data(
 
 
 def get_all_shape_files(
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
     no_download: bool = True,
 ):
     for current_file in all_file_name_dict.keys():
@@ -203,9 +199,7 @@ def get_all_shape_files(
     return path_to_all_shape_files
 
 
-def create_hash_dict(
-    list_of_file_paths: list[pathlib.Path], alg: str = "sha256"
-) -> dict[str, str]:
+def create_hash_dict(list_of_file_paths: list[pathlib.Path], alg: str = "sha256") -> dict[str, str]:
     output_dict = {}
     for current_file_path in list_of_file_paths:
         hash = pooch.file_hash(fname=current_file_path, alg=alg)

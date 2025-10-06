@@ -127,12 +127,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
             "If geom is not passed, lat and lon must be given as float values."
         )
     else:
-        assert isinstance(geom, ogr.Geometry), (
-            "geom must be given as osgeo.ogr.Geometry class object if not None."
-        )
-        assert lat is None and lon is None, (
-            "If geom is given, lat and lon must not be given."
-        )
+        assert isinstance(geom, ogr.Geometry), "geom must be given as osgeo.ogr.Geometry class object if not None."
+        assert lat is None and lon is None, "If geom is given, lat and lon must not be given."
 
     # check if lat/lon can be used or if it must be extracted from geom first
     if not geom is None:
@@ -302,9 +298,7 @@ class _SRSCOMMON:
         return self._europe_laea
 
     # define a centered LAEA on the centroid lat/lon of ECOWAS region
-    _ecowas_laea = centeredLAEA(
-        lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS"
-    )
+    _ecowas_laea = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS")
 
     @property
     def ecowas_laea(self):
@@ -316,9 +310,7 @@ class _SRSCOMMON:
         return self._ecowas_laea
 
     # define a centered LAEA on the centroid lat/lon of SADC region
-    _sadc_laea = centeredLAEA(
-        lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC"
-    )
+    _sadc_laea = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC")
 
     @property
     def sadc_laea(self):

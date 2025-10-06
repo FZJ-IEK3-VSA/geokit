@@ -1,21 +1,21 @@
-import os
-from glob import glob
-import numpy as np
-import statistics
-from warnings import warn
 import datetime
+import os
+import statistics
+from glob import glob
+from warnings import warn
 
+import numpy as np
 from osgeo import gdal
 
+from geokit.core.raster import RasterInfo
 from geokit.core.regionmask import *
 from geokit.core.util import GeoKitError, get_common_dtype, nodata_equal
 from geokit.raster import (
     createRaster,
     extractMatrix,
-    rasterInfo,
     loadRaster,
+    rasterInfo,
 )
-from geokit.core.raster import RasterInfo
 
 
 def checkSimilarRasters(
@@ -37,16 +37,12 @@ def checkSimilarRasters(
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
-    assert isinstance(rtol, (int, float)) and rtol >= 0, (
-        f"rtol must be a float or int >= 0"
-    )
+    assert isinstance(rtol, (int, float)) and rtol >= 0, f"rtol must be a float or int >= 0"
     # ensure we have a list of raster datasets
     if isinstance(datasets, str):
         datasets = glob(datasets)
         if len(datasets) == 0:
-            raise FileNotFoundError(
-                f"datasets given as a string but does not lead to any existing files: '{datasets}'"
-            )
+            raise FileNotFoundError(f"datasets given as a string but does not lead to any existing files: '{datasets}'")
         datasets.sort()
     if not isinstance(datasets, list):
         raise TypeError(f"datasets must be a list")
@@ -56,16 +52,12 @@ def checkSimilarRasters(
     for dataset in datasets:
         if isinstance(dataset, str):
             if not os.path.isfile(dataset):
-                raise FileNotFoundError(
-                    f"datsets string entry is not an existing file: '{dataset}'"
-                )
+                raise FileNotFoundError(f"datsets string entry is not an existing file: '{dataset}'")
             _datasets.append(loadRaster(dataset))
         elif isinstance(dataset, gdal.Dataset):
             _datasets.append(dataset)
         else:
-            raise TypeError(
-                f"datasets must contain only string or osgeo.gdal.Dataset entries."
-            )
+            raise TypeError(f"datasets must contain only string or osgeo.gdal.Dataset entries.")
     datasets = _datasets
 
     # get all raster infos
@@ -84,23 +76,15 @@ def checkSimilarRasters(
         diffx = infoDataset[0].bounds[0] - rInfo.bounds[0]
         if not (
             round(diffx / rInfo.dx, 0) == 0
-            or np.isclose(
-                diffx / round(diffx / rInfo.dx, 0), rInfo.dx, rtol=rtol, atol=0
-            )
+            or np.isclose(diffx / round(diffx / rInfo.dx, 0), rInfo.dx, rtol=rtol, atol=0)
         ):
-            raise GeoKitError(
-                f"horizontal bounds shift between datasets is not a multiple of dx."
-            )
+            raise GeoKitError(f"horizontal bounds shift between datasets is not a multiple of dx.")
         diffy = infoDataset[0].bounds[1] - rInfo.bounds[1]
         if not (
             round(diffy / rInfo.dy, 0) == 0
-            or np.isclose(
-                diffy / round(diffy / rInfo.dy, 0), rInfo.dy, rtol=rtol, atol=0
-            )
+            or np.isclose(diffy / round(diffy / rInfo.dy, 0), rInfo.dy, rtol=rtol, atol=0)
         ):
-            raise GeoKitError(
-                f"vertical bounds shift between datasets is not a multiple of dy."
-            )
+            raise GeoKitError(f"vertical bounds shift between datasets is not a multiple of dy.")
         # # noData should be the same
         # if not infoDataset[0].noData == rInfo.noData:
         #     raise GeoKitError(f"noData mismatch between datasets.")
@@ -237,12 +221,8 @@ def combineSimilarRasters(
     boundsSet = []
     for _info in infoSet:
         # calculate the new bounds by aligning bottom left corner with boundsXmin_ref/boundsYmin_ref + multiple of cell size
-        _bounds_Xmin = (
-            boundsXmin_ref + round((_info.bounds[0] - boundsXmin_ref) / dx_ref) * dx_ref
-        )
-        _bounds_Ymin = (
-            boundsYmin_ref + round((_info.bounds[1] - boundsYmin_ref) / dy_ref) * dy_ref
-        )
+        _bounds_Xmin = boundsXmin_ref + round((_info.bounds[0] - boundsXmin_ref) / dx_ref) * dx_ref
+        _bounds_Ymin = boundsYmin_ref + round((_info.bounds[1] - boundsYmin_ref) / dy_ref) * dy_ref
         _bounds = (
             _bounds_Xmin,
             _bounds_Ymin,
@@ -338,9 +318,7 @@ def combineSimilarRasters(
         idx = mExtent.findWithin(dExtent, (mInfo.dx, mInfo.dy), yAtTop=mInfo.yAtTop)
 
         # Get output data
-        mMatrix = outputBand.ReadAsArray(
-            xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin
-        )
+        mMatrix = outputBand.ReadAsArray(xoff=idx.xStart, yoff=idx.yStart, win_xsize=idx.xWin, win_ysize=idx.yWin)
         if mMatrix is None:
             raise GeoKitError("mMatrix is None")
 
@@ -358,9 +336,7 @@ def combineSimilarRasters(
             rInfo_dict["xMax"] = boundsSet[i][2]
             rInfo_dict["yMax"] = boundsSet[i][3]
             rInfo_upd = RasterInfo(**rInfo_dict)
-            writeMatrix = combiningFunc(
-                mMatrix=mMatrix, mInfo=mInfo, dMatrix=dMatrix, dInfo=rInfo_upd
-            )
+            writeMatrix = combiningFunc(mMatrix=mMatrix, mInfo=mInfo, dMatrix=dMatrix, dInfo=rInfo_upd)
         elif not infoSet[i].noData is None:
             sel = dMatrix != infoSet[i].noData
             mMatrix[sel] = dMatrix[sel]
