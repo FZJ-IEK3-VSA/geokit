@@ -118,24 +118,24 @@ def test_fitBoundsTo():
     )  # outBounds now fully include inBounds and each entry is a multiple of dx/dy
 
 
-@pytest.mark.skip("No test implemented for: util.quickVector")
-def test_quickVector():
-    assert False
+# @pytest.mark.skip("No test implemented for: util.quickVector")
+# def test_quickVector():
+#     assert False
 
 
-@pytest.mark.skip("No test implemented for: util.quickRaster")
-def test_quickRaster():
-    assert False
+# @pytest.mark.skip("No test implemented for: util.quickRaster")
+# def test_quickRaster():
+#     assert False
 
 
-@pytest.mark.skip("No test implemented for: util.drawImage")
-def test_drawImage():
-    assert False
+# @pytest.mark.skip("No test implemented for: util.drawImage")
+# def test_drawImage():
+#     assert False
 
 
-@pytest.mark.skip("No test implemented for: util.KernelProcessor")
-def test_KernelProcessor():
-    assert False
+# @pytest.mark.skip("No test implemented for: util.KernelProcessor")
+# def test_KernelProcessor():
+#     assert False
 
 
 def test_get_common_dtype():

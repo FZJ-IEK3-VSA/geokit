@@ -1,7 +1,6 @@
 import pytest
 
-from geokit import srs, vector, geom
-
+from geokit import geom, srs, vector
 from test.helpers import (
     AACHEN_SHAPE_PATH,
     MASK_DATA,
@@ -62,7 +61,7 @@ def test_loadSRS():
     assert s1.IsSame(s3)
 
     # test an invalid srs, must raise error
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         s3 = srs.loadSRS(1000)
 
     # --- Geometry-centered LAEA test ---

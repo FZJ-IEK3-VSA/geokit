@@ -1084,30 +1084,8 @@ def createVector(
     # driver = gdal.GetDriverByName("ESRI Shapefile")
     # dataSource = driver.Create(output, 0, 0)
 
-    if output is not None and overwrite:
-        # Search for directory
-        if os.path.dirname(output) == "":  # If no directory is given, assume current directory
-            output = os.path.join(os.getcwd(), output)
-
-        elif not os.path.isdir(os.path.dirname(output)):  # If directory does not exist, raise error
-            raise FileNotFoundError(f"Directory {os.path.dirname(output)} does not exist")
-
-        # Remove file if it exists
-        if os.path.isfile(output):
-            os.remove(output)
-
-        driver = ogr.GetDriverByName(driverName)
-        dataSource = driver.CreateDataSource(output)
-
-    elif output is not None and overwrite is False:
-        warnings.warn("Overwriting existing file")
-        dataSource = ogr.Open(output, 1)
-        assert dataSource is not None, f"Could not open {output}"
-
-    else:
-        # driver = ogr.GetDriverByName("Memory")
-        # dataSource = driver.CreateDataSource("")
-
+    if output is None:
+        # Create datasource if no output path is provided
         driver = gdal.GetDriverByName("Memory")
 
         # Using 'Create' from a Memory driver leads to an error. But creating
@@ -1120,11 +1098,30 @@ def createVector(
         dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
         t.cleanup()
         del tmp_dataSource, tmp_driver, t
+    elif output is not None:
+        # Create datasource if output path is provided
+        if overwrite is True:
+            # Search for directory
+            if os.path.dirname(output) == "":  # If no directory is given, assume current directory
+                output = os.path.join(os.getcwd(), output)
 
+            elif not os.path.isdir(os.path.dirname(output)):  # If directory does not exist, raise error
+                raise FileNotFoundError(f"Directory {os.path.dirname(output)} does not exist")
+
+            # Remove file if it exists
+            if os.path.isfile(output):
+                os.remove(output)
+
+            driver = ogr.GetDriverByName(driverName)
+            dataSource = driver.CreateDataSource(output)
+
+        elif overwrite is False:
+            dataSource = ogr.Open(output, 1)
+            assert dataSource is not None, f"Could not open {output}"
     # Wrap the whole writing function in a 'try' statement in case it fails
     try:
         # Create the layer
-        if output is not None and overwrite == False:
+        if output is not None and overwrite is False:
             layerName = layerName
             assert layerName not in listLayers(output), (
                 f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."

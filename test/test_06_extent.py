@@ -1,8 +1,8 @@
+import numpy as np
+
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
 from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
-
-import numpy as np
 
 
 def test_Extent___init__():

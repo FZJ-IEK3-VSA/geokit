@@ -185,9 +185,9 @@ def test_polygon():
     assert poly5.GetEnvelope() == (6.02141, 6.371634, 50.51939, 50.846025)
 
 
-@pytest.mark.skip("No test implemented for: geom.empty")
-def test_empty():
-    assert False
+# @pytest.mark.skip("No test implemented for: geom.empty")
+# def test_empty():
+#     assert False
 
 
 def test_convertWKT():

@@ -153,9 +153,9 @@ def test_RegionMask_fromVector():
         assert False
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_load():
-    print("RegionMask_load not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_load():
+#     print("RegionMask_load not tested...")
 
 
 def test_RegionMask_pixelRes():
@@ -182,9 +182,9 @@ def test_RegionMask_buildMask():
     assert np.isclose(rm.mask.std(), 0.498273451386)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_area():
-    print("RegionMask_area not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_area():
+#     print("RegionMask_area not tested...")
 
 
 def test_RegionMask_buildGeometry():
@@ -232,19 +232,19 @@ def test_RegionMask_vector():
     assert util.isVector(rm2._vector)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask__repr_svg_():
-    print("RegionMask__repr_svg_ not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask__repr_svg_():
+#     print("RegionMask__repr_svg_ not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_drawMask():
-    print("RegionMask_drawMask not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_drawMask():
+#     print("RegionMask_drawMask not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_drawGeometry():
-    print("RegionMask_drawGeometry not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_drawGeometry():
+#     print("RegionMask_drawGeometry not tested...")
 
 
 def test_RegionMask_applyMask():
@@ -267,9 +267,9 @@ def test_RegionMask_applyMask():
     # rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask__returnBlank():
-    print("RegionMask__returnBlank not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask__returnBlank():
+#     print("RegionMask__returnBlank not tested...")
 
 
 def test_RegionMask_indicateValues():
@@ -436,14 +436,14 @@ def test_RegionMask_indicateFeatures():
     assert (res4 == res4b).all()
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_indicateGeoms():
-    print("RegionMask_indicateGeoms not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_indicateGeoms():
+#     print("RegionMask_indicateGeoms not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_subRegions():
-    print("RegionMask_subRegions not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_subRegions():
+#     print("RegionMask_subRegions not tested...")
 
 
 def test_RegionMask_subTiles():
@@ -596,39 +596,39 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_extractFeatures():
-    print("RegionMask_extractFeatures not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_extractFeatures():
+#     print("RegionMask_extractFeatures not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_mutateVector():
-    print("RegionMask_mutateVector not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_mutateVector():
+#     print("RegionMask_mutateVector not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_mutateRaster():
-    print("RegionMask_mutateRaster not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_mutateRaster():
+#     print("RegionMask_mutateRaster not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromRaster():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromRaster():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMatrix():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMatrix():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMask():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMask():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMask():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMask():
+#     print("Nothing to do :(")
 
 
 if __name__ == "__main__":
