@@ -18,7 +18,7 @@ parts:
       - file: Examples/example_04_raster.ipynb
       - file: Examples/example_05_Extent.ipynb
       - file: Examples/example_06_RegionMask.ipynb
-      - file: Examples/example_07_GeographyHandling.ipynb
+      - file: Examples/example_07_determine_offshore_turbine_depths.ipynb
 
   - caption: API
     chapters:
