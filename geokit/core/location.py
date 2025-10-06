@@ -91,7 +91,7 @@ class Location(object):
     def fromString(self, srs=None):
         """Initialize a Location Object by providing a string
 
-        * Must be formated like such: "(5.12243,52,11342)"
+        * Must be formatted like such: "(5.12243,52,11342)"
         * Whitespace is okay
         * Will only take the FIRST match it finds
 

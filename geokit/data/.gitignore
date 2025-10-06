@@ -1,9 +1,9 @@
 # Archives
-GEBCO_bathymetry_tiles.zip
+gebco_tiles.zip
 iho.zip
 turbine_locations shapefile.zip
 
 # Folder
-GEBCO_bathymetry_tiles/
+gebco_tiles/
 iho/
 turbine_locations shapefile/

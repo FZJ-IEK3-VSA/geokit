@@ -43,7 +43,7 @@ class RegionMask(object):
     boolean values) of.
 
     * The extent of the generated mask matrix is the tightest fit around the region
-      in units of the pixel resolution. However, the extenT can be defined explcitly
+      in units of the pixel resolution. However, the extent can be defined explcitly
       if desired
     * The region can be manipulated as a vector polygon via the ".geometry"
       attribute, which exposes the geometry as an ogr.Geometry. To incoporate this
@@ -199,8 +199,8 @@ class RegionMask(object):
         self.attributes = {} if attributes is None else attributes
 
     @staticmethod
-    def fromMask(extent, mask, attributes=None):
-        """Make a RegionMask directly from amask matrix and extent
+    def fromMask(extent, mask, attributes=None) -> "RegionMask":
+        """Make a RegionMask directly from a mask matrix and extent
 
         Note:
         -----
@@ -252,7 +252,7 @@ class RegionMask(object):
         padExtent=DEFAULT_PAD,
         attributes=None,
         **k,
-    ):
+    ) -> "RegionMask":
         """Make a RasterMask from a given geometry
 
         Parameters:
@@ -319,7 +319,7 @@ class RegionMask(object):
         padExtent=DEFAULT_PAD,
         limitOne=True,
         **kwargs,
-    ):
+    ) -> "RegionMask":
         """Make a RasterMask from a given vector source
 
         Note:
@@ -405,7 +405,7 @@ class RegionMask(object):
         )
 
     @staticmethod
-    def load(region, start_raster=None, **kwargs):
+    def load(region, start_raster=None, **kwargs) -> "RegionMask":
         """Tries to initialize and return a RegionMask in the most appropriate way.
 
         Note:

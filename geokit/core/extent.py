@@ -264,14 +264,14 @@ class Extent(object):
     def fromWKT(wkt, delimiter="|") -> "Extent":
         """Create extent from a Well-Known_Text string
 
-        * Actually the input should be two WKT strings seperated by a "|" character
+        * Actually the input should be two WKT strings separated by a "|" character
         * These correspond to "<A Geometry WKT>|<an SRS WKT>"
 
         Parameters:
         -----------
         wkt : The string to be processed
 
-        delimiter : The delimiter which seperates the two WKT sections
+        delimiter : The delimiter which separates the two WKT sections
 
         Returns:
         --------
@@ -428,12 +428,12 @@ class Extent(object):
     def exportWKT(self, delimiter="|") -> str:
         """Export the extent to a Well-Known_Text string
 
-        * Actually the will be two WKT strings seperated by a "|" character
+        * Actually the will be two WKT strings separated by a "|" character
         * These correspond to "<A Geometry WKT>|<an SRS WKT>"
 
         Parameters:
         -----------
-        delimiter : The delimiter which seperates the two WKT sections
+        delimiter : The delimiter which separates the two WKT sections
 
         Returns:
         --------
