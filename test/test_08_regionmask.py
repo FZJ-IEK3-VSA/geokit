@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
+from geokit import srs as SRS
 from test.helpers import *
 
 
@@ -75,7 +76,7 @@ def test_RegionMask_fromMask():
 
 def test_RegionMask_fromGeom():
     # fromGeom with wkt
-    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), pixelRes=1000)
+    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), srs=3035, pixelRes=1000)
     assert rm1.extent.xXyY == (4330000.0, 4728000.0, 835000.0, 1682000.0)
     assert rm1.extent.srs.IsSame(EPSG3035)
     assert rm1.mask.sum() == 79274
@@ -102,6 +103,14 @@ def test_RegionMask_fromGeom():
     g = GEOM.Clone()
     g.TransformTo(EPSG4326)
     assert np.isclose(rm3.mask.sum() * dxy * dxy, g.Area(), rtol=1e-3)
+
+    # fromGeom with geometry and LAEA
+    dxy = 0.05
+    rm4 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs="LAEA", padExtent=0.2)
+
+    assert rm4.extent == Extent(9.90, 30.30, 14.80, 38.30)
+    _laea = SRS.centeredLAEA(geom=GEOM)
+    assert rm4.extent.srs.IsSame(_laea)
 
 
 def test_RegionMask_fromVector():
@@ -632,4 +641,4 @@ def test_RegionMask_rasterize():
 
 
 if __name__ == "__main__":
-    test_RegionMask_indicateValues()
+    test_RegionMask_fromGeom()

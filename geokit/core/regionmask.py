@@ -77,7 +77,6 @@ class RegionMask(object):
 
     """
 
-    DEFAULT_SRS = "europe_laea"
     DEFAULT_RES = 100
     DEFAULT_PAD = None
 
@@ -245,8 +244,8 @@ class RegionMask(object):
     @staticmethod
     def fromGeom(
         geom,
+        srs,
         pixelRes=DEFAULT_RES,
-        srs=DEFAULT_SRS,
         start_raster=None,
         extent=None,
         padExtent=DEFAULT_PAD,
@@ -287,10 +286,18 @@ class RegionMask(object):
         RegionMask
 
         """
-        srs = SRS.loadSRS(srs)
+
         # make sure we have a geometry with an srs
         if isinstance(geom, str):
+            assert not (isinstance(srs, str) and srs.upper() == "LAEA"), "srs cannot be LAEA when geom is WKT"
+            srs = SRS.loadSRS(srs)
             geom = GEOM.convertWKT(geom, srs)
+        elif isinstance(srs, str) and srs.upper() == "LAEA":
+            # First convert to epsg 4326 to get lat lon centroid then generate centered LAEA
+            geom = GEOM.transform(geoms=geom, toSRS=4326)
+            srs = SRS.loadSRS(source="laea", geom=geom)
+        else:
+            srs = SRS.loadSRS(srs)
 
         # clone to make sure we're free of outside dependencies
         # convert to regionmask srs to ensure that rm.geometry.GetSpatialReference() is equal to rm.srs
@@ -310,11 +317,11 @@ class RegionMask(object):
     @staticmethod
     def fromVector(
         source,
+        srs,
         where=None,
         geom=None,
         start_raster=None,
         pixelRes=DEFAULT_RES,
-        srs=DEFAULT_SRS,
         extent=None,
         padExtent=DEFAULT_PAD,
         limitOne=True,
@@ -373,11 +380,12 @@ class RegionMask(object):
         RegionMask
 
         """
+
         # Get all geoms which fit the search criteria
         if isinstance(where, int):
-            geom, attr = VECTOR.extractFeature(source=source, where=where, srs=srs)
+            geom, attr = VECTOR.extractFeature(source=source, where=where, srs=4326)
         else:
-            ftrs = list(VECTOR.extractFeatures(source=source, where=where, srs=srs, asPandas=False))
+            ftrs = list(VECTOR.extractFeatures(source=source, where=where, srs=4326, asPandas=False))
 
             if len(ftrs) == 0:
                 raise GeoKitRegionMaskError("Zero features found")
@@ -391,6 +399,8 @@ class RegionMask(object):
                     )
                 geom = GEOM.flatten([f.geom for f in ftrs])
                 attr = None
+        srs = SRS.loadSRS(srs, geom=geom)
+        geom = GEOM.transform(geoms=geom, toSRS=srs)
 
         # Done!
         return RegionMask.fromGeom(
