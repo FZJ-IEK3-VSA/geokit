@@ -172,17 +172,17 @@ def test_RegionMask_fromVector():
 
 def test_RegionMask_pixelRes():
     # test succeed
-    rm1 = RegionMask.fromMask(Extent(0, 0, 100, 100, srs=EPSG3035), MASK_DATA)
+    rm1 = RegionMask.fromMask(extent=Extent(0, 0, 100, 100, srs=EPSG3035), mask=MASK_DATA)
     ps = rm1.pixelRes
     assert ps == 1
 
     # test fail
-    rm2 = RegionMask.fromMask(Extent(0, 0, 100, 200, srs=EPSG3035), MASK_DATA)
+    rm2 = RegionMask.fromMask(extent=Extent(0, 0, 100, 200, srs=EPSG3035), mask=MASK_DATA)
     try:
         ps = rm2.pixelRes
         assert False
     except error.GeoKitRegionMaskError as e:
-        assert str(e) == "pixelRes only accessable when pixelWidth equals pixelHeight"
+        assert str(e) == "pixelRes only accessible when pixelWidth equals pixelHeight"
     else:
         assert False
 
