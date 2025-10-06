@@ -23,7 +23,7 @@ build:
       html:
         - conda list
         - echo ls
-        - conda run --name latest sphinx-build -T -b html -d -D language=en . $READTHEDOCS_OUTPUT/html
+        - conda run --name latest sphinx-build -T -b html -D language=en . $READTHEDOCS_OUTPUT/html
 conda:
   environment: requirements-dev.yml
 
