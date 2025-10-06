@@ -757,7 +757,7 @@ def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
         The geometry or geometries to transform
           * All geometries must have the same spatial reference
 
-    toSRS : Anything acceptable to geokit.srs.loadSRS(); optional
+    toSRS : Anything acceptable to geokit.srs.loadSRS()
         The srs of the output geometries
 
     fromSRS : Anything acceptable to geokit.srs.loadSRS(); optional
