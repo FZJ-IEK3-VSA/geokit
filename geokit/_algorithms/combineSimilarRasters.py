@@ -1,21 +1,21 @@
-import os
-from glob import glob
-import numpy as np
-import statistics
-from warnings import warn
 import datetime
+import os
+import statistics
+from glob import glob
+from warnings import warn
 
+import numpy as np
 from osgeo import gdal
 
+from geokit.core.raster import RasterInfo
 from geokit.core.regionmask import *
 from geokit.core.util import GeoKitError, get_common_dtype, nodata_equal
 from geokit.raster import (
     createRaster,
     extractMatrix,
-    rasterInfo,
     loadRaster,
+    rasterInfo,
 )
-from geokit.core.raster import RasterInfo
 
 
 def checkSimilarRasters(

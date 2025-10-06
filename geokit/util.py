@@ -8,8 +8,8 @@ from geokit.core.util import (
     compare_geoms,
     drawImage,
     fitBoundsTo,
+    get_common_dtype,
     isRaster,
     isVector,
     scaleMatrix,
-    get_common_dtype,
 )

@@ -10,10 +10,9 @@ from glob import glob
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from types import GeneratorType
 
+import matplotlib.axis
 import numpy as np
 import pandas as pd
-import matplotlib.axis
-
 from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
