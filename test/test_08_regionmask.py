@@ -119,7 +119,7 @@ def test_RegionMask_fromVector():
     assert rm0.mask.sum() == 90296
 
     # fromVector - ID select
-    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1)
+    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1, srs=3035)
 
     assert rm1.extent == Extent(4069100, 2867000, 4109400, 2954000, srs=EPSG3035)
     assert rm1.attributes["name"] == "dog"
@@ -198,7 +198,7 @@ def test_RegionMask_buildMask():
 
 def test_RegionMask_buildGeometry():
     # setup
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     rm2.buildMask()  # Be sure the mask is in place
 
     # Get the "real" geometry
@@ -217,7 +217,7 @@ def test_RegionMask_buildGeometry():
 
 
 def test_RegionMask_vectorPath():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vectorPath
 
     # Temp vector is created
@@ -229,7 +229,7 @@ def test_RegionMask_vectorPath():
 
 
 def test_RegionMask_vector():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vector
     vec.GetLayer()
 
@@ -377,7 +377,7 @@ def test_RegionMask_indicateFeatures():
     else:
         multiProcess = False
     # setup
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     # Simple case (with multiProcess by default)
     with warnings.catch_warnings():
@@ -456,7 +456,7 @@ def test_RegionMask_indicateFeatures():
 
 
 def test_RegionMask_subTiles():
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     tiles = list(rm.subTiles(9, checkIntersect=False))
     assert len(tiles) == 4
@@ -523,7 +523,7 @@ def test_RegionMask_createRaster():
 
 def test_RegionMask_warp():
     # setup
-    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05))
+    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=3035)
     rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
 
     # basic warp Raster
