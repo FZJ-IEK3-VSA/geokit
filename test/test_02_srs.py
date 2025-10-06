@@ -50,7 +50,6 @@ def test_xyTransform(points, fromSRS, toSRS, expected):
 
 
 def test_loadSRS():
-    s3 = srs.loadSRS(1000)
     # Test creating an osr SRS object
     s1 = srs.loadSRS(srs.EPSG4326)
     # Test an EPSG identifier
