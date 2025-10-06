@@ -87,7 +87,10 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
-    assert srs.Validate() == 0, f"Created srs is invalid."
+    if srs.Validate() == 0:
+        raise RuntimeError(f"Created srs is invalid.")
+
+    # assert srs.Validate() == 0, f"Created srs is invalid."
 
     return srs
 
