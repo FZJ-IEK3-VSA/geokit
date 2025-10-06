@@ -46,3 +46,5 @@ Examples/*.gpkg
 .pytest_cache/*
 
 
+asd.py
+registry_file.txt

@@ -1,0 +1,54 @@
+on:
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  TestPushCondaForgeDev:
+    name: Test conda-forge development version on ${{ matrix.runner_tag }} for scipy=${{ matrix.python_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag:
+          [
+            "ubuntu-24.04",
+            "ubuntu-22.04",
+            "macos-13",
+            "macos-14",
+            "macos-15",
+            "windows-2025",
+            "windows-2022",
+          ]
+        python_version:
+          [
+            "1.7.2",
+            "1.7.3",
+            "1.8.0",
+            "1.8.1",
+            "1.9.0",
+            "1.9.1",
+            "1.9.2",
+            "1.9.3",
+            "1.10.0",
+            "1.10.1",
+            "1.11.0",
+            "1.11.1",
+            "1.11.2",
+            "1.11.3",
+            "1.11.4",
+            "1.12.0",
+            "1.13.0",
+            "1.13.1",
+            "1.14.0",
+            "1.14.1",
+            "1.15.0",
+            "1.15.1",
+            "1.15.2",
+          ]
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: requirements-dev.yml
+      ipynb_example_folder: "Examples"
+      library_name: "python"
+      library_version: ${{ matrix.python_version }}
+      dependency_position_env_file: "7"

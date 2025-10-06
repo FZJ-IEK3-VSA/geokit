@@ -1,5 +1,7 @@
+import numpy as np
+
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
-from geokit.get_test_data import get_all_shape_files, get_test_data, get_test_shape_file
+from geokit.core.get_test_data import get_all_shape_files, get_test_data
 from test.helpers import *
 
 
@@ -508,9 +510,7 @@ def test_Extent_mutateVector():
     ex = Extent.fromVector(AACHEN_SHAPE_PATH).castTo(4326)
 
     # Test simple clipping
-    vi = ex.mutateVector(
-        AACHEN_ZONES, matchContext=False, output=result("extent_mutateVector1.shp")
-    )
+    vi = ex.mutateVector(AACHEN_ZONES, matchContext=False, output=result("extent_mutateVector1.shp"))
     info = vector.vectorInfo(vi)
     assert np.isclose(info.count, 101)
     assert info.srs.IsSame(EPSG3035)
@@ -546,7 +546,7 @@ def test_Extent_mutateRaster():
 
     # test a simple clip
     r = ex.mutateRaster(CLC_RASTER_PATH, output=result("extent_mutateRaster1.tif"))
-    mat = raster.extractMatrix(r)
+    mat = raster.extractMatrix(source=r)
     assert np.isclose(mat.mean(), 17.14654805)
 
     # test a clip and warp
@@ -562,14 +562,12 @@ def test_Extent_mutateRaster():
     assert np.isclose(mat2.mean(), 17.14768769)
 
     # simple processor
-    @util.KernelProcessor(1, edgeValue=-9999)
+    @util.KernelProcessor(size=1, edgeValue=-9999)
     def max_3x3(mat):
         goodValues = mat[mat != -9999].flatten()
         return goodValues.max()
 
-    r = ex.mutateRaster(
-        CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif")
-    )
+    r = ex.mutateRaster(CLC_RASTER_PATH, processor=max_3x3, output=result("extent_mutateRaster3.tif"))
     mat3 = raster.extractMatrix(r)
     assert np.isclose(mat3.mean(), 19.27040301)
 
@@ -596,9 +594,7 @@ def test_Extent_clipRaster():
 def test_Extent_contoursFromRaster():
     if gdal.__version__ >= "3.0.0":
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(
-            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
-        )
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
@@ -609,9 +605,7 @@ def test_Extent_contoursFromRaster():
 
     elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(
-            AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True
-        )
+        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
 
         assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
         assert len(geoms) == 95
@@ -620,11 +614,7 @@ def test_Extent_contoursFromRaster():
 
 
 def test_Extent_subTiles():
-    ext = Extent.fromVector(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
-    )
+    ext = Extent.fromVector(get_test_data(file_name="aachenShapefile.shp"))
 
     tiles = [Extent.fromTile(t.xi, t.yi, t.zoom) for t in ext.subTiles(9)]
 
@@ -665,11 +655,7 @@ def test_Extent_subTiles():
 
 
 def test_Extent_tileBox():
-    ext = Extent.fromVector(
-        get_test_shape_file(
-            file_name_without_extension="aachenShapefile", extension=".shp"
-        )
-    )
+    ext = Extent.fromVector(get_test_data(file_name="aachenShapefile.shp"))
     ext_box = ext.tileBox(12)
 
     assert np.isclose(ext_box.xMin, 655523.954574)
@@ -680,9 +666,7 @@ def test_Extent_tileBox():
 
 
 def test_Extent_mosiacTiles():
-    path_aachen_shape_file = get_test_shape_file(
-        file_name_without_extension="aachenShapefile", extension=".shp"
-    )
+    path_aachen_shape_file = get_test_data(file_name="aachenShapefile.shp")
 
     ext = Extent.fromVector(path_aachen_shape_file)
 
@@ -696,9 +680,7 @@ def test_Extent_mosiacTiles():
     # data_folder_path = pathlib.Path(path_to_last_data).parent
     data_folder_path = pathlib.Path(path_aachen_shape_file).parent
 
-    string_path_with_variables = str(
-        data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif")
-    )
+    string_path_with_variables = str(data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif"))
     ras = ext.tileMosaic(
         string_path_with_variables,
         9,
@@ -708,7 +690,3 @@ def test_Extent_mosiacTiles():
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
-
-
-if __name__ == "__main__":
-    test_Extent_mosiacTiles()

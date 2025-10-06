@@ -1,6 +1,6 @@
 import pytest
 
-from geokit import srs, vector
+from geokit import geom, srs, vector
 from test.helpers import (
     AACHEN_SHAPE_PATH,
     MASK_DATA,
@@ -61,8 +61,19 @@ def test_loadSRS():
     assert s1.IsSame(s3)
 
     # test an invalid srs, must raise error
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         s3 = srs.loadSRS(1000)
+
+    # --- Geometry-centered LAEA test ---
+    point = geom.convertWKT("POINT (10 45)", srs=4326)
+    laea_centered = srs.loadSRS("laea", geom=point)
+    assert isinstance(laea_centered, osr.SpatialReference)
+    assert laea_centered.Validate() == 0
+    # Confirm that the latitude_of_center / longitude_of_center match the geometry centroid
+    lat0 = float(laea_centered.GetProjParm("latitude_of_center"))
+    lon0 = float(laea_centered.GetProjParm("longitude_of_center"))
+    assert pytest.approx(lat0, rel=1e-3) == 45
+    assert pytest.approx(lon0, rel=1e-3) == 10
 
 
 def test_centeredLAEA():

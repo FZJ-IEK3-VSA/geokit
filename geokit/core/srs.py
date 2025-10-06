@@ -19,27 +19,34 @@ class GeoKitSRSError(UTIL.GeoKitError):
 # Basic loader
 
 
-def loadSRS(source) -> osr.SpatialReference:
+def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
     """
     Load a spatial reference system (SRS) from various sources.
 
-    Parameters:
-    -----------
-    source : Many things....
-        The SRS to load
-
-        Example of acceptable objects are...
+    Parameters
+    ----------
+    source : str | int | osr.SpatialReference | None
+        The SRS to load. Can be:
           * osr.SpatialReference object
-          * An EPSG integer ID
-          * A standardized srs str definition such as 'EPSG:4326' or 'ESRI:53003'
-          * a string corresponding to one of the systems found in geokit.srs.SRSCOMMON
-          * a WKT string
+          * EPSG integer ID
+          * Standardized SRS string like 'EPSG:4326'
+          * Common SRS name in SRSCOMMON (e.g. 'europe_laea')
+          * WKT string
+          * 'laea' — creates a Lambert Azimuthal Equal Area projection
+            (optionally centered on a geometry)
 
-    Returns:
-    --------
+    geom : osgeo.ogr.Geometry, optional
+        Geometry to center the projection on if 'laea' is used.
+
+    **kwargs :
+        Passed directly to `SRSCOMMON.laea(**kwargs)`, allowing
+        customization such as `lon`, `lat`, or `name`.
+
+    Returns
+    -------
     osr.SpatialReference
-
     """
+
     # Do initial check of source
     if isinstance(source, osr.SpatialReference):
         return source
@@ -51,7 +58,16 @@ def loadSRS(source) -> osr.SpatialReference:
 
     # Check if source is a string
     if isinstance(source, str):
-        if hasattr(SRSCOMMON, source):
+        src_upper = source.strip().upper()
+
+        # Handle special LAEA case
+        if src_upper == "LAEA":
+            # merge geom into kwargs if provided
+            if geom is not None and "geom" not in kwargs:
+                kwargs["geom"] = geom
+            return SRSCOMMON.laea(**kwargs)
+
+        elif hasattr(SRSCOMMON, source):
             # assume a name for one of the common SRS's was given
             srs = SRSCOMMON[source]
         else:
@@ -111,12 +127,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
             "If geom is not passed, lat and lon must be given as float values."
         )
     else:
-        assert isinstance(geom, ogr.Geometry), (
-            "geom must be given as osgeo.ogr.Geometry class object if not None."
-        )
-        assert lat is None and lon is None, (
-            "If geom is given, lat and lon must not be given."
-        )
+        assert isinstance(geom, ogr.Geometry), "geom must be given as osgeo.ogr.Geometry class object if not None."
+        assert lat is None and lon is None, "If geom is given, lat and lon must not be given."
 
     # check if lat/lon can be used or if it must be extracted from geom first
     if not geom is None:
@@ -146,7 +158,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 # point transformer
 
 
-def xyTransform(*args, fromSRS="latlon", toSRS="europe_m", outputFormat="raw"):
+def xyTransform(*args, fromSRS="latlon", toSRS="europe_laea", outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Parameters:
@@ -275,17 +287,6 @@ class _SRSCOMMON:
     # basic latitude and longitude
     _europe_laea = osr.SpatialReference()
     _europe_laea.ImportFromEPSG(3035)
-    _europe_m = _europe_laea.Clone()
-
-    @property
-    def europe_m(self):
-        warnings.warn(
-            "SRSCOMMON.europe_m is deprecated and will be removed in a future release. \
-            use SRSCOMMON.europe_laea instead.",
-            DeprecationWarning,
-        )
-
-        return self._europe_m
 
     @property
     def europe_laea(self):
@@ -297,9 +298,7 @@ class _SRSCOMMON:
         return self._europe_laea
 
     # define a centered LAEA on the centroid lat/lon of ECOWAS region
-    _ecowas_laea = centeredLAEA(
-        lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS"
-    )
+    _ecowas_laea = centeredLAEA(lon=0.782051665138668, lat=13.564515698612, name="LAEA ECOWAS")
 
     @property
     def ecowas_laea(self):
@@ -311,9 +310,7 @@ class _SRSCOMMON:
         return self._ecowas_laea
 
     # define a centered LAEA on the centroid lat/lon of SADC region
-    _sadc_laea = centeredLAEA(
-        lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC"
-    )
+    _sadc_laea = centeredLAEA(lon=26.6605715570689, lat=-14.5952938182064, name="LAEA SADC")
 
     @property
     def sadc_laea(self):
@@ -323,6 +320,31 @@ class _SRSCOMMON:
 
         Units: Meters"""
         return self._sadc_laea
+
+    @staticmethod
+    def laea(**kwargs):
+        """
+        Return a Lambert Azimuthal Equal Area (LAEA) projection.
+
+        Parameters
+        ----------
+        **kwargs :
+            Keyword arguments passed directly to `centeredLAEA()`. Common options include:
+            - geom : osgeo.ogr.Geometry
+                Geometry used to center the projection.
+            - lon : float
+                Longitude of the projection center (used if no geom is given).
+            - lat : float
+                Latitude of the projection center (used if no geom is given).
+            - name : str
+                Optional name for the projection.
+
+        Returns
+        -------
+        osr.SpatialReference
+            The resulting Spatial Reference System.
+        """
+        return centeredLAEA(**kwargs)
 
     # basic getter
     def __getitem__(self, name):

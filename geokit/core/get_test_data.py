@@ -1,4 +1,5 @@
 import pathlib
+from collections import OrderedDict as _OrderedDict
 from typing import Literal
 
 import pooch
@@ -95,24 +96,15 @@ all_file_name_dict = {
     "osm_roads_minor.9.264.172.tif": "sha256:d7f54eabf297458f8f43cd1aec745c4710d7a1e2c26fed0ef3345625e3f30fa0",
     "osm_roads_minor.9.265.171.tif": "sha256:68a77d446fa5fb27b05c068d24214bd2a18135e1231b686746387b8f2aa88681",
     "osm_roads_minor.9.265.172.tif": "sha256:2a5029eee67d74a1f1e2c0d27b786a757e8687375ef4190ca2daab052aa8302e",
+    "test_raster_3x3.tif": "sha256:49e4f41d636618ef38d1a6cb6f684af2d90df4735aeaea88340f3a7fb51b1a84",
 }
 
 
-def get_test_data(
+def _get_test_data(
     file_name: str,
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path,
     no_download: bool = True,
 ) -> str:
-    if file_name not in all_file_name_dict:
-        raise Exception(
-            "The requested file,"
-            + str(file_name)
-            + " , is not included in the test and example data dictionary. Perhaps it's a typo? The following files can be retrieved from the test and example data dictionary: \n\n"
-            + str(list(all_file_name_dict.keys()))
-        )
-
     if no_download is False:
         odie = pooch.create(
             # Use the default cache folder for the operating system
@@ -159,51 +151,42 @@ list_of_all_shape_file_extensions = [
 ]
 
 
-def get_test_shape_file(
-    file_name_without_extension: str,
-    extension: Literal[
-        ".shp",
-        ".dbf",
-        ".shx",
-        ".prj",
-        ".sbn",
-        ".sbx",
-        ".ain",
-        ".aih",
-        ".ixs",
-        ".mxs",
-        ".atx",
-        ".shp.xml",
-        ".cpg",
-        ".qix",
-    ],
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+def get_test_data(
+    file_name: str,
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
     no_download: bool = True,
 ) -> str:
-    file_name = file_name_without_extension + extension
-    return_path = get_test_data(
+    if file_name not in all_file_name_dict:
+        raise Exception(
+            "The requested file,"
+            + str(file_name)
+            + " , is not included in the test and example data dictionary. Perhaps it's a typo? The following files can be retrieved from the test and example data dictionary: \n\n"
+            + str(list(all_file_name_dict.keys()))
+        )
+    file_extension = pathlib.Path(file_name).suffix
+    file_name = pathlib.Path(file_name).name
+
+    return_path = _get_test_data(
         file_name=file_name,
         data_cache_folder=data_cache_folder,
         no_download=no_download,
     )
+    return_path_str = str(return_path)
+    if file_extension in list_of_all_shape_file_extensions:
+        for additional_shape_file_extension in list_of_all_shape_file_extensions:
+            additional_file_name = str(file_name + str(additional_shape_file_extension))
+            if additional_file_name in all_file_name_dict:
+                _get_test_data(
+                    file_name=additional_file_name,
+                    data_cache_folder=data_cache_folder,
+                    no_download=no_download,
+                )
 
-    for additional_file_type in list_of_all_shape_file_extensions:
-        additional_file_name = file_name_without_extension + additional_file_type
-        if additional_file_name in all_file_name_dict:
-            get_test_data(
-                file_name=additional_file_name,
-                data_cache_folder=data_cache_folder,
-                no_download=no_download,
-            )
-    return return_path
+    return return_path_str
 
 
 def get_all_shape_files(
-    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
-        "data"
-    ),
+    data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
     no_download: bool = True,
 ):
     for current_file in all_file_name_dict.keys():
@@ -216,9 +199,7 @@ def get_all_shape_files(
     return path_to_all_shape_files
 
 
-def create_hash_dict(
-    list_of_file_paths: list[pathlib.Path], alg: str = "sha256"
-) -> dict[str, str]:
+def create_hash_dict(list_of_file_paths: list[pathlib.Path], alg: str = "sha256") -> dict[str, str]:
     output_dict = {}
     for current_file_path in list_of_file_paths:
         hash = pooch.file_hash(fname=current_file_path, alg=alg)
@@ -226,21 +207,8 @@ def create_hash_dict(
     return output_dict
 
 
-if __name__ == "__main__":
-    root_dir = pathlib.Path(__file__).parent.parent
-    # hash_dict = create_hash_dict(
-    #     list_of_file_paths=[
-    #         root_dir.joinpath("data/aachenShapefile.dbf"),
-    #         root_dir.joinpath("data/aachenShapefile.prj"),
-    #         root_dir.joinpath("data/aachenShapefile.qpj"),
-    #         root_dir.joinpath("data/aachenShapefile.shp"),
-    #         root_dir.joinpath("data/aachenShapefile.shx"),
-    #     ]
-    # )
-    # hash_dict = create_hash_dict(
-    #     list_of_file_paths=[
-    #         root_dir.joinpath(r"C:\Programming\geokit\data\aachenShapefile.qpj"),
-    #     ]
-    # )
-
-    # print(hash_dict)
+def get_all_test_data_dict() -> _OrderedDict[str, str]:
+    _test_data_ = _OrderedDict()
+    for current_file_name in all_file_name_dict.keys():
+        _test_data_[current_file_name] = get_test_data(file_name=current_file_name)
+    return _test_data_

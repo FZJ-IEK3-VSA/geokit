@@ -1,4 +1,5 @@
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -91,7 +92,7 @@ class Location(object):
     def fromString(self, srs=None):
         """Initialize a Location Object by providing a string
 
-        * Must be formated like such: "(5.12243,52,11342)"
+        * Must be formatted like such: "(5.12243,52,11342)"
         * Whitespace is okay
         * Will only take the FIRST match it finds
 
@@ -236,11 +237,7 @@ class Location(object):
         elif isinstance(loc, UTIL.Feature):
             output = Location.fromPointGeom(loc.geom)
 
-        elif (
-            isinstance(loc, tuple)
-            or isinstance(loc, list)
-            or isinstance(loc, np.ndarray)
-        ) and len(loc) == 2:
+        elif (isinstance(loc, tuple) or isinstance(loc, list) or isinstance(loc, np.ndarray)) and len(loc) == 2:
             if srs is None or srs == 4326 or srs == "latlon":
                 output = Location(lon=loc[0], lat=loc[1])
             else:
@@ -296,9 +293,7 @@ class LocationSet(object):
                 self._locations = LocationSet(locations["geom"])[:]
             else:
                 try:  # Try loading all locations one at a time
-                    self._locations = np.array(
-                        [Location.load(l, srs=srs) for l in locations]
-                    )
+                    self._locations = np.array([Location.load(l, srs=srs) for l in locations])
                 except GeoKitLocationError as err:
                     try:
                         # Try loading the input as as single Location
@@ -368,9 +363,7 @@ class LocationSet(object):
             )
             return self._bounds4326
         else:
-            geoms = GEOM.transform(
-                [l.geom for l in self._locations], fromSRS=SRS.EPSG4326, toSRS=srs
-            )
+            geoms = GEOM.transform([l.geom for l in self._locations], fromSRS=SRS.EPSG4326, toSRS=srs)
 
             yVals = np.array([g.GetY() for g in geoms])
             xVals = np.array([g.GetX() for g in geoms])
@@ -471,11 +464,13 @@ class LocationSet(object):
         LocationSet -> A location set of each clustered group
 
         """
-        from sklearn.cluster import KMeans
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            from sklearn.cluster import KMeans
 
-        obs = np.column_stack([self.lons, self.lats])
+            obs = np.column_stack([self.lons, self.lats])
 
-        km = KMeans(n_clusters=groups, **kwargs).fit(obs)
+            km = KMeans(n_clusters=groups, **kwargs).fit(obs)
         for i in range(groups):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
@@ -510,18 +505,10 @@ class LocationSet(object):
         latDiv = np.median(self.lats)
 
         if lon and lat:
-            yield LocationSet(
-                self[(self.lons < lonDiv) & (self.lats < latDiv)], _skip_check=True
-            )
-            yield LocationSet(
-                self[(self.lons >= lonDiv) & (self.lats < latDiv)], _skip_check=True
-            )
-            yield LocationSet(
-                self[(self.lons < lonDiv) & (self.lats >= latDiv)], _skip_check=True
-            )
-            yield LocationSet(
-                self[(self.lons >= lonDiv) & (self.lats >= latDiv)], _skip_check=True
-            )
+            yield LocationSet(self[(self.lons < lonDiv) & (self.lats < latDiv)], _skip_check=True)
+            yield LocationSet(self[(self.lons >= lonDiv) & (self.lats < latDiv)], _skip_check=True)
+            yield LocationSet(self[(self.lons < lonDiv) & (self.lats >= latDiv)], _skip_check=True)
+            yield LocationSet(self[(self.lons >= lonDiv) & (self.lats >= latDiv)], _skip_check=True)
 
         elif lon and not lat:
             yield LocationSet(self[(self.lons < lonDiv)], _skip_check=True)
