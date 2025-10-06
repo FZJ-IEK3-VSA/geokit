@@ -22,7 +22,7 @@ parts:
 
   - caption: API
     chapters:
-      - file: docs/geokit/index.rst
+      - file: geokit/index.rst
   - caption: FAQ
     chapters:
       - file: docs/FAQ.md
