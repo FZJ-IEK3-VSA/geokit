@@ -275,7 +275,7 @@ def test_LocationSet_splitKMeans():
     pts = [(-1, -1), (-1, -1.5), (2, 1), (2, 1.5), (2, -1), (2, -1.5), (2, -1.25)]
     locs = LocationSet(pts)
 
-    sublocsGen = locs.splitKMeans(groups=3, random_state=0)
+    sublocsGen = locs.splitKMeans(groups=3, random_state=0, n_init=10)
 
     sublocs = list(sublocsGen)
 
