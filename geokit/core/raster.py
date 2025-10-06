@@ -123,7 +123,7 @@ def createRaster(
     pixelWidth=100,
     pixelHeight=100,
     dtype=None,
-    srs="europe_m",
+    srs="europe_laea",
     compress=True,
     noData=None,
     overwrite: bool = True,
