@@ -269,7 +269,6 @@ class RegionMask(object):
         srs : Anything acceptable to geokit.srs.loadSRS()
             The srs context of the generated RegionMask object
             * This srs is superseded by the srs in an explicitly defined extent
-            * The default srs EPSG3035 is only valid for a European context
 
         extent : Extent object
             The geospatial context of the generated region mask
@@ -362,7 +361,6 @@ class RegionMask(object):
         srs : Anything acceptable to geokit.srs.loadSRS()
             The srs context of the generated RegionMask object
             * This srs is superseded by the srs in an explicitly defined extent
-            * The default srs EPSG3035 is only valid for a European context
 
         extent : Extent object
             The geospatial context of the generated region mask
