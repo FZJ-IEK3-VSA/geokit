@@ -27,7 +27,7 @@ build:
         - ls -lR
         - echo $READTHEDOCS_OUTPUT
         # by the time of testing $READTHEDOCS_OUTPUT=_readthedocs
-        - conda run --name latest sphinx-build -vv -T -b html --jobs auto -D language=en . $READTHEDOCS_OUTPUT/html
+        - conda run --name latest sphinx-build -vvv -T -b html --jobs auto -D language=en . $READTHEDOCS_OUTPUT/html
         - ls -lR
 conda:
   environment: requirements-dev.yml
