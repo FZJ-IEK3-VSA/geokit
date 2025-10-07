@@ -30,5 +30,4 @@ dependencies:
   - nbconvert <=7.16.6
   - jupyter-book
   - sphinx-autoapi
-  # - astroid <=3.3.8
-  - astroid <=3.3.11
+  - astroid <=3.3.11 # This fixes a broken constraint limit of sphinx-autoapi

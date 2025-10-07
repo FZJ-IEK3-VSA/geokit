@@ -38,10 +38,13 @@ html:
 only_build_toc_files: true
 sphinx:
   extra_extensions:
+    # Automatically generates API documentation from docstrings
     - autoapi.extension
+    # Is required by autoapi to extract docstrings from modules
     - sphinx.ext.autodoc
-    - sphinx.ext.autosummary
+    # Enables further docstring styles such as google and numpy
     - sphinx.ext.napoleon
+    - sphinx.ext.autosummary
 
   config:
     # Needs to point the source code the package that should be documented by autoapi
@@ -53,8 +56,9 @@ sphinx:
     autoapi_keep_files: true
     autoapi_generate_api_docs: true
     suppress_warnings: ["etoc.toctree"]
-    autoapi_python_class_content: "both"
+    # Use Google docstrings
     napoleon_google_docstring: True
+    autoapi_python_class_content: "both"
     napoleon_include_init_with_doc: True
     autodoc_typehints: "description"
     # exclude_patterns : ['_build', '_templates','autoapi','visualizations','knowledge_articles','documentation']
