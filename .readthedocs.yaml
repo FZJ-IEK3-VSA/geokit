@@ -19,13 +19,15 @@ build:
       - conda run --name latest pip install -e . --no-deps
       - conda run --name latest jupyter-book config sphinx .
       - echo "Creation of config.py is terminated"
+      - cat conf.py
+      - echo "conf.py content printed"
     build:
       html:
         - conda list
         - ls -lR
         - echo $READTHEDOCS_OUTPUT
         # by the time of testing $READTHEDOCS_OUTPUT=_readthedocs
-        - conda run --name latest sphinx-build -T -b html --jobs auto -D language=en . $READTHEDOCS_OUTPUT/html
+        - conda run --name latest sphinx-build -vv -T -b html --jobs auto -D language=en . $READTHEDOCS_OUTPUT/html
         - ls -lR
 conda:
   environment: requirements-dev.yml
