@@ -30,3 +30,4 @@ dependencies:
   - nbconvert <=7.16.6
   - jupyter-book
   - sphinx-autoapi
+  - astroid <=3.3.8
