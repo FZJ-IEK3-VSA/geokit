@@ -41,14 +41,13 @@ sphinx:
     - autoapi.extension
     - sphinx.ext.autodoc
     - sphinx.ext.autosummary
-    - sphinx.ext.inheritance_diagram
     - sphinx.ext.napoleon
 
   config:
     # Needs to point the source code the package that should be documented by autoapi
     autoapi_dirs: ["./geokit"]
     # autoapi_root defines where the output of the autoapi is printed
-    autoapi_root: "_readthedocs"
+    autoapi_root: "./_readthedocs"
     autoapi_add_toctree_entry: false
     autoapi_file_patterns: ["*.py"]
     autoapi_keep_files: true
@@ -61,5 +60,3 @@ sphinx:
     # exclude_patterns : ['_build', '_templates','autoapi','visualizations','knowledge_articles','documentation']
 
   autoapi_options: ["show-module-summary"]
-  # autoapi_options:
-  #   show-module-summary: true
