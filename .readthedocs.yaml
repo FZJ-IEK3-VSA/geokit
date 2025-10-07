@@ -24,6 +24,7 @@ build:
         - conda list
         - ls -lR
         - echo $READTHEDOCS_OUTPUT
+        # by the time of testing $READTHEDOCS_OUTPUT=_readthedocs
         - conda run --name latest sphinx-build -T -b html --jobs auto -D language=en . $READTHEDOCS_OUTPUT/html
         - ls -lR
 conda:

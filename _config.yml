@@ -45,18 +45,21 @@ sphinx:
     - sphinx.ext.napoleon
 
   config:
+    # Needs to point the source code the package that should be documented by autoapi
     autoapi_dirs: ["./geokit"]
-    autoapi_root: "."
+    # autoapi_root defines where the output of the autoapi is printed
+    autoapi_root: "_readthedocs"
     autoapi_add_toctree_entry: false
     autoapi_file_patterns: ["*.py"]
-    autosummary_generate: false
     autoapi_keep_files: true
     autoapi_generate_api_docs: true
     suppress_warnings: ["etoc.toctree"]
     autoapi_python_class_content: "both"
     napoleon_google_docstring: True
     napoleon_include_init_with_doc: True
+    autodoc_typehints: "description"
     # exclude_patterns : ['_build', '_templates','autoapi','visualizations','knowledge_articles','documentation']
 
-  autoapi_options:
-    show-module-summary: true
+  autoapi_options: ["show-module-summary"]
+  # autoapi_options:
+  #   show-module-summary: true

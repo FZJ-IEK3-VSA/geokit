@@ -1,6 +1,9 @@
 # Table of contents
 # Learn more at https://jupyterbook.org/customize/toc.html
 
+# The table of contents needs to be at the root level of the package because it is not possible to
+# define relative parent folders within this table of contents file.
+
 format: jb-book
 root: docs/contents.md
 
@@ -22,7 +25,8 @@ parts:
 
   - caption: API
     chapters:
-      - file: geokit/index.rst
+      # The API documentation is written to the folder
+      - file: _readthedocs/geokit/index.rst
   - caption: FAQ
     chapters:
       - file: docs/FAQ.md

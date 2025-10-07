@@ -38,6 +38,8 @@ Examples/*.prj
 Examples/*.cpg
 Examples/*.csv
 Examples/*.gpkg
+_readthedocs/
+
 
 # Extras
 .vscode/settings.json
