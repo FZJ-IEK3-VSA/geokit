@@ -271,6 +271,7 @@ def test_createVector(tmpdir):
 
     # create new geopackage on disk
     vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326, driverName="GPKG")
+    assert os.path.isfile(output_gpkg)
 
     # append new layer to existing geopackage
     vector.createVector(
