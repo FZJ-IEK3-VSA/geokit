@@ -45,7 +45,7 @@ def loadVector(x):
     """
     if isinstance(x, str) and not os.path.isfile(x):
         raise FileNotFoundError(f"Vector file not found: {x}")
-    
+
     if isinstance(x, str):
         ds = gdal.OpenEx(x)
     else:
