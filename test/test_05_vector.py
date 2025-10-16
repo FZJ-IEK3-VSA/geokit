@@ -270,7 +270,7 @@ def test_createVector(tmpdir):
     vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
 
     # create new geopackage on disk
-    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326, driverName="GPKG")
 
     # append new layer to existing geopackage
     vector.createVector(
