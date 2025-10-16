@@ -8,9 +8,10 @@ from os.path import dirname as _dirname
 from os.path import join as _join
 
 # from warnings import warn as _warn
-from osgeo import ogr
+from osgeo import gdal, ogr
 
 ogr.UseExceptions()
+gdal.SetConfigOption("OGR_GEOMETRY_ACCEPT_UNCLOSED_RING", "YES")
 
 if not "GDAL_DATA" in _environ:
     from os.path import isdir as _isdir

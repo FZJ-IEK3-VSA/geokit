@@ -15,7 +15,7 @@ dependencies:
   - gdal 3.4.3|3.9.3|3.10
   - smopy 0.0.7|0.0.8
   - geopandas <=1.1.1
-  - nbconvert <=7.16.6
+  - nbval
   - pooch <=1.8.2
   - structlog <=25.4.0
   - rich <=14.1.0
@@ -28,3 +28,5 @@ dependencies:
   # - ruff
   # - typeguard <=4.4.4
   # - nbconvert <=7.16.6
+  # - jupyter-book
+  # - sphinx-autoapi

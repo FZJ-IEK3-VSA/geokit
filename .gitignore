@@ -10,8 +10,24 @@ analysis/regions/*
 #*.ipynb
 *.aux.xml
 .ruff_cache
+docs/html
+docs/jupyter_execute
+docs/_build
+docs/autoapi
+docs/geokit
+docs/combineSimilarRasters
+_build
+conf.py
 
-
+# Remove things in testing results dir
+testing/results/*.tif
+testing/results/*.shp
+testing/results/*.dbf
+testing/results/*.shx
+testing/results/*.prj
+testing/results/*.cpg
+testing/results/*.csv
+testing/results/eligibility_plots
 
 # Example results
 Examples/*.tif
@@ -22,6 +38,8 @@ Examples/*.prj
 Examples/*.cpg
 Examples/*.csv
 Examples/*.gpkg
+_readthedocs/
+
 
 # Extras
 .vscode/settings.json
