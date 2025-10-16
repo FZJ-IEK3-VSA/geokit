@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
+from geokit import srs as SRS
 from test.helpers import *
 
 
@@ -75,7 +76,7 @@ def test_RegionMask_fromMask():
 
 def test_RegionMask_fromGeom():
     # fromGeom with wkt
-    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), pixelRes=1000)
+    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), srs=3035, pixelRes=1000)
     assert rm1.extent.xXyY == (4330000.0, 4728000.0, 835000.0, 1682000.0)
     assert rm1.extent.srs.IsSame(EPSG3035)
     assert rm1.mask.sum() == 79274
@@ -103,6 +104,17 @@ def test_RegionMask_fromGeom():
     g.TransformTo(EPSG4326)
     assert np.isclose(rm3.mask.sum() * dxy * dxy, g.Area(), rtol=1e-3)
 
+    # fromGeom with geometry and LAEA
+    dxy = 0.05
+    rm4 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs="LAEA", padExtent=0.2)
+    print(rm4.extent)
+    _laea = SRS.centeredLAEA(
+        geom=GEOM,
+    )
+    assert rm4.extent == Extent(-190575.40000, -489480.70000, 217899.95000, 354950.15000, srs=_laea)
+
+    assert rm4.extent.srs.IsSame(_laea)
+
 
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
@@ -110,7 +122,7 @@ def test_RegionMask_fromVector():
     assert rm0.mask.sum() == 90296
 
     # fromVector - ID select
-    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1)
+    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1, srs=3035)
 
     assert rm1.extent == Extent(4069100, 2867000, 4109400, 2954000, srs=EPSG3035)
     assert rm1.attributes["name"] == "dog"
@@ -160,17 +172,17 @@ def test_RegionMask_fromVector():
 
 def test_RegionMask_pixelRes():
     # test succeed
-    rm1 = RegionMask.fromMask(Extent(0, 0, 100, 100, srs=EPSG3035), MASK_DATA)
+    rm1 = RegionMask.fromMask(extent=Extent(0, 0, 100, 100, srs=EPSG3035), mask=MASK_DATA)
     ps = rm1.pixelRes
     assert ps == 1
 
     # test fail
-    rm2 = RegionMask.fromMask(Extent(0, 0, 100, 200, srs=EPSG3035), MASK_DATA)
+    rm2 = RegionMask.fromMask(extent=Extent(0, 0, 100, 200, srs=EPSG3035), mask=MASK_DATA)
     try:
         ps = rm2.pixelRes
         assert False
     except error.GeoKitRegionMaskError as e:
-        assert str(e) == "pixelRes only accessable when pixelWidth equals pixelHeight"
+        assert str(e) == "pixelRes only accessible when pixelWidth equals pixelHeight"
     else:
         assert False
 
@@ -189,7 +201,7 @@ def test_RegionMask_buildMask():
 
 def test_RegionMask_buildGeometry():
     # setup
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     rm2.buildMask()  # Be sure the mask is in place
 
     # Get the "real" geometry
@@ -208,7 +220,7 @@ def test_RegionMask_buildGeometry():
 
 
 def test_RegionMask_vectorPath():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vectorPath
 
     # Temp vector is created
@@ -220,7 +232,7 @@ def test_RegionMask_vectorPath():
 
 
 def test_RegionMask_vector():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vector
     vec.GetLayer()
 
@@ -368,7 +380,7 @@ def test_RegionMask_indicateFeatures():
     else:
         multiProcess = False
     # setup
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     # Simple case (with multiProcess by default)
     with warnings.catch_warnings():
@@ -447,7 +459,7 @@ def test_RegionMask_indicateFeatures():
 
 
 def test_RegionMask_subTiles():
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     tiles = list(rm.subTiles(9, checkIntersect=False))
     assert len(tiles) == 4
@@ -514,7 +526,7 @@ def test_RegionMask_createRaster():
 
 def test_RegionMask_warp():
     # setup
-    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05))
+    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=3035)
     rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
 
     # basic warp Raster
@@ -632,4 +644,4 @@ def test_RegionMask_rasterize():
 
 
 if __name__ == "__main__":
-    test_RegionMask_indicateValues()
+    test_RegionMask_fromGeom()

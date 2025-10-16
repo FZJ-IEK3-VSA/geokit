@@ -87,7 +87,8 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     # assert that the srs is valid (may be invalid if e.g. wrong integer codes were passed)
-    assert srs.Validate() == 0, f"Created srs is invalid."
+    if srs.Validate() != 0:
+        raise RuntimeError(f"Created srs is invalid.")
 
     return srs
 
@@ -158,7 +159,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 # point transformer
 
 
-def xyTransform(*args, fromSRS="latlon", toSRS="europe_laea", outputFormat="raw"):
+def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Parameters:

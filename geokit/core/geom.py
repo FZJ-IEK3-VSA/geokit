@@ -748,7 +748,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS="europe_laea", fromSRS=None, revert360degProj=False, segment=None):
+def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
     """Transform a geometry, or a list of geometries, from one SRS to another
 
     Parameters:
@@ -757,9 +757,8 @@ def transform(geoms, toSRS="europe_laea", fromSRS=None, revert360degProj=False, 
         The geometry or geometries to transform
           * All geometries must have the same spatial reference
 
-    toSRS : Anything acceptable to geokit.srs.loadSRS(); optional
+    toSRS : Anything acceptable to geokit.srs.loadSRS()
         The srs of the output geometries
-          * If no given, a Europe-centered relational system (EPSG3035) is chosen
 
     fromSRS : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the input geometries
@@ -1820,7 +1819,7 @@ def applyBuffer(geom, buffer, srs=None, split="shift"):
         if min([north_dist, south_dist]) <= buffer_mtrs:
             raise GeoKitGeomError(f"buffered geometry would intersect with North or South Pole.")
 
-        if srs is not None and not srs.IsSame(_srs_orig):
+        if not srs.IsSame(_srs_orig):
             # convert geom to srs
             _geom = transform(_geom, toSRS=srs)
 

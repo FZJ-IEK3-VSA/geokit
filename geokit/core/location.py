@@ -141,7 +141,7 @@ class Location(object):
         return Location(lon=g.GetX(), lat=g.GetY())
 
     @staticmethod
-    def fromXY(x, y, srs=3035):
+    def fromXY(x, y, srs):
         """Initialize a Location Object by providing a n X and Y coordinate
 
         Parameters
@@ -181,7 +181,7 @@ class Location(object):
         g = self.geom
         return GEOM.transform(g, toSRS=srs)
 
-    def asXY(self, srs=3035):
+    def asXY(self, srs):
         """Extract the Location as an (X,Y) tuple in an arbitrary SRS
 
         Parameters
@@ -421,14 +421,13 @@ class LocationSet(object):
         else:
             return GEOM.transform(geoms4326, fromSRS=SRS.EPSG4326, toSRS=srs)
 
-    def asXY(self, srs=3035):
+    def asXY(self, srs):
         """Create an Nx2 array of x and y coordinates for all locations in the set
 
         Parameters
         ----------
         srs : Anything acceptable to gk.srs.loadSRS; optional
             The srs for output coordinates
-            * if not given, EPSG3035 coordinates are assumed
 
         Returns:
         --------
