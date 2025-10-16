@@ -159,7 +159,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 # point transformer
 
 
-def xyTransform(*args, toSRS, fromSRS="latlon", outputFormat="raw"):
+def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
     """Transform xy points between coordinate systems
 
     Parameters:
@@ -171,7 +171,7 @@ def xyTransform(*args, toSRS, fromSRS="latlon", outputFormat="raw"):
             The srs of the output points
 
         fromSRS : Anything acceptable by geokit.srs.loadSRS
-            The srs of the input points, by default EPSG:4326.
+            The srs of the input points
 
         outputFormat : str
             Determine return value format
