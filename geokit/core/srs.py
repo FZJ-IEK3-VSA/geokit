@@ -234,7 +234,7 @@ Tile = namedtuple("Tile", "xi yi zoom")
 
 
 def tileIndexAt(x, y, zoom, srs):
-    """Get the "slippy tile" index at the given zoom, around the
+    """Get the "slippery tile" index at the given zoom, around the
     coordinates ('x', 'y') within the specified 'srs'.
     """
     srs = loadSRS(srs)

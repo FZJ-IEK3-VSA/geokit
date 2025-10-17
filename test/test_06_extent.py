@@ -415,7 +415,7 @@ def test_Extent_extractMatrix():
     mat2 = ex.extractMatrix(CLC_FLIPCHECK_PATH)
     assert np.isclose(mat2.sum(), 392284)
 
-    # Make sure matricies are the same
+    # Make sure matrices are the same
     assert np.isclose(mat1, mat2).all()
 
     # test fail since the given extent does not fit in the grid of the raster

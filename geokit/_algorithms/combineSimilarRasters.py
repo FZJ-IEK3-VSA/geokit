@@ -52,7 +52,7 @@ def checkSimilarRasters(
     for dataset in datasets:
         if isinstance(dataset, str):
             if not os.path.isfile(dataset):
-                raise FileNotFoundError(f"datsets string entry is not an existing file: '{dataset}'")
+                raise FileNotFoundError(f"datasets string entry is not an existing file: '{dataset}'")
             _datasets.append(loadRaster(dataset))
         elif isinstance(dataset, gdal.Dataset):
             _datasets.append(dataset)
@@ -124,7 +124,7 @@ def combineSimilarRasters(
         gdal.Datasets or iterable object with paths.
     output : string, optional
         Filepath to output raster file. If it is an existing file, datasets will
-        be added to output. Recommended to create a new file everytime though.
+        be added to output. Recommended to create a new file every time though.
         If None, no output dataset will be loaded or created on disk and output
         dataset kept in memory only, by default None
     combiningFunc : [type], optional
@@ -182,7 +182,7 @@ def combineSimilarRasters(
 
     # get the unique actual dtypes in input rasters
     dtypes = sorted(set([_i.dtype for _i in infoSet]))
-    # now get the most lightweight commonly useable dtype
+    # now get the most lightweight commonly usable dtype
     dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
 
     # get the reference resolution in x and y dir as the most commonly used value

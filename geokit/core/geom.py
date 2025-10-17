@@ -126,7 +126,7 @@ def box(*args, srs=4326):
 
 
 def tile(xi, yi, zoom):
-    """Generates a box corresponding to a tile used for "slippy maps".
+    """Generates a box corresponding to a tile used for "slippery maps".
 
     Parameters:
     -----------
@@ -198,7 +198,7 @@ def subTiles(geom, zoom, checkIntersect=True, asGeom=False):
         The zoom level to generate tiles on
 
     checkIntersect : bool
-        If True, only tiles which overlap the given geomtry are returned
+        If True, only tiles which overlap the given geometry are returned
 
     asGeom : bool
         If True, geometry object corresponding to each tile is yielded,
@@ -252,7 +252,7 @@ def makeBox(*args, **kwargs):
 
 
 def polygon(outerRing, *args, srs="default"):
-    """Creates an OGR Polygon obect from a given set of points.
+    """Creates an OGR Polygon object from a given set of points.
 
     Parameters:
     -----------
@@ -346,7 +346,7 @@ def makePolygon(*args, **kwargs):
 
 
 def line(points, srs=4326):
-    """Creates an OGR Line obect from a given set of points.
+    """Creates an OGR Line object from a given set of points.
 
     Parameters:
     -----------
@@ -398,7 +398,7 @@ def empty(gtype, srs=None):
     -----------
     gtpe : str
         The geometry type to make
-          * Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, ect...
+          * Point, MultiPoint, Line, MultiLine, Polygon, MultiPolygon, etc...
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometry to create
@@ -425,7 +425,7 @@ def makeEmpty(*args, **kwargs):
 
 
 def extractVerticies(geom):
-    """Get all verticies found on the geometry as a Nx2 numpy.ndarray."""
+    """Get all vertices found on the geometry as a Nx2 numpy.ndarray."""
     isMulti = "MULTI" in geom.GetGeometryName()
     # Check geometry type
     if "LINE" in geom.GetGeometryName():
@@ -529,7 +529,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
         Determines the boundary context for the given matrix and will scale
         the resulting geometry's coordinates accordingly
           * If a boundary is not given, the geometry coordinates will
-            correspond to the mask's indicies
+            correspond to the mask's indices
           * If the boundary is given as an Extent object, an srs input is not
             required
 
@@ -702,7 +702,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
         Determines the boundary context for the given mask and will scale
         the resulting geometry's coordinates accordingly
           * If a boundary is not given, the geometry coordinates will
-            correspond to the mask's indicies
+            correspond to the mask's indices
           * If the boundary is given as an Extent object, an srs input is not
             required
 
@@ -717,7 +717,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
         overlapping issues
           * The total amount shrunk should be very very small
           * Generally this should be left as True unless it is ABSOLUTELY
-            neccessary to maintain the same area
+            necessary to maintain the same area
 
     Returns:
     --------
@@ -818,7 +818,7 @@ def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
         [g.Segmentize(segment) for g in geoms]
 
     r = [g.Transform(trx) for g in geoms]
-    if sum(r) > 0:  # check fro errors
+    if sum(r) > 0:  # check for errors
         raise GeoKitGeomError("Errors in geometry transformations")
 
     if revert360degProj and toSRS.IsSame(SRS.loadSRS(4326)):
@@ -1116,7 +1116,7 @@ def drawGeoms(
 
     simplificationFactor : float; optional
         The level to which geometries should be simplified. It can be thought of
-        as the number of verticies allowed in either the X or Y dimension across
+        as the number of vertices allowed in either the X or Y dimension across
         the figure
           * A higher value means a more detailed plot, but may take longer to draw
 
@@ -1126,7 +1126,7 @@ def drawGeoms(
 
     figsize : (int, int); optional
         The figure size to create when generating a new axis
-          * If resultign figure looks wierd, altering the figure size is your best
+          * If resultign figure looks weird, altering the figure size is your best
             bet to make it look nicer
 
     xlim : (float, float); optional
@@ -1510,7 +1510,7 @@ def partition(geom, targetArea, growStep=None, _startPoint=0):
 
     if gArea < 2 * targetArea:  # use a slightly smalled target area when the whole geometry
         #  is close to twice the target area in order to increase the
-        #  liklihood of a usable leftover
+        #  likelihood of a usable leftover
         workingTarget = 0.9 * targetArea
     else:
         workingTarget = targetArea
@@ -1672,7 +1672,7 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
     dividing the sub polys into one Eastern and one Western polygon list which
     is returned as multipolygons.
     NOTE: This function only works for already shifted subpolygons with an
-    overall envelope betweeen -180° and +180° longitude.
+    overall envelope between -180° and +180° longitude.
 
     Parameters
     ----------
@@ -1894,7 +1894,7 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
             center_lon = (env[0] + env[1]) / 2  # x value of center axis of whole geom
 
             def fold_polygon(polygon):
-                """Function that folds a polygon geometrie over 90° lat line."""
+                """Function that folds a polygon geometry over 90° lat line."""
 
                 def _fold_ring(ring):
                     """Core function for every linear ring."""
@@ -1910,10 +1910,10 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
                             x_new = (_x_new + 180) % 360
                             if y > 90:
                                 y_new = 180 - y
-                                y_new = min(y_new, 90.0 - 1e-6)  # avoid that geoms touch eachother at the pole
+                                y_new = min(y_new, 90.0 - 1e-6)  # avoid that geoms touch each other at the pole
                             elif y < -90:
                                 y_new = -180 - y
-                                y_new = max(y_new, -90.0 + 1e-6)  # avoid that geoms touch eachother at the pole
+                                y_new = max(y_new, -90.0 + 1e-6)  # avoid that geoms touch each other at the pole
                         new_ring.AddPoint(x_new, y_new)  # create new ring point
                     return new_ring
 

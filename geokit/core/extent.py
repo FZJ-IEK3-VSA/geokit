@@ -71,7 +71,7 @@ class Extent(object):
             xMin, yMin, xMax, yMax = args
         else:
             raise GeoKitExtentError(
-                "Incorrect number of positional arguments givin in init (accepts 1 or 4). Is an srs given as 'srs=...'?"
+                "Incorrect number of positional arguments given in init (accepts 1 or 4). Is an srs given as 'srs=...'?"
             )
 
         # Ensure good inputs
@@ -126,7 +126,7 @@ class Extent(object):
 
     @staticmethod
     def fromTile(xi, yi, zoom) -> "Extent":
-        """Generates an Extent corresponding to tiles used for "slippy maps".
+        """Generates an Extent corresponding to tiles used for "slippery maps".
 
         Parameters:
         -----------
@@ -155,7 +155,7 @@ class Extent(object):
 
     @staticmethod
     def fromTileAt(x, y, zoom, srs) -> "Extent":
-        """Generates an Extent corresponding to tiles used for "slippy maps"
+        """Generates an Extent corresponding to tiles used for "slippery maps"
         at the coordinates ('x','y') in the 'srs' reference system.
 
         Parameters:
@@ -1299,7 +1299,7 @@ class Extent(object):
         if warpArgs is None:
             warpArgs = {}
 
-        if processor is None:  # We wont do a mutation without a processor, since everything else
+        if processor is None:  # We won't do a mutation without a processor, since everything else
             # can be handled by Warp. Therefore we pass on any 'output' that is
             # given to the warping stage, unless one was already given
             warpArgs["output"] = warpArgs.get("output", mutateArgs.get("output", None))
@@ -1382,7 +1382,7 @@ class Extent(object):
         raster : The raster datasource to warp from
 
         contourEdges : list[float]
-            The edges to search for withing the raster dataset
+            The edges to search for within the raster dataset
             * This parameter can be set as "None", in which case an additional
                 argument should be given to specify how the edges should be determined
                 - See the documentation of "GDALContourGenerateEx"
@@ -1475,7 +1475,7 @@ class Extent(object):
                     yield (source.replace("{z}", str(zoom)).replace("{x}", str(xi)).replace("{y}", str(yi)))
 
     def subTiles(self, zoom, asGeom=False):
-        """Generates tile Extents at a given zoom level which encompass the envoking Extent.
+        """Generates tile Extents at a given zoom level which encompass the invoking Extent.
 
         Parameters:
         -----------

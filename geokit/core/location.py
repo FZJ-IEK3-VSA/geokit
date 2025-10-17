@@ -241,7 +241,7 @@ class Location(object):
                 output = Location(lon=loc[0], lat=loc[1])
             else:
                 output = Location.fromXY(x=loc[0], y=loc[1], srs=srs)
-        else:  # Assume iteratable
+        else:  # Assume iterable
             raise GeoKitLocationError("Could not understand location input:", loc)
 
         return output

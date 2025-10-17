@@ -1,6 +1,6 @@
 # Documentation Formatting
 
-Geokit orients iself at the [PyAnsis documentation style](https://dev.docs.pyansys.com/doc-style/formatting-tools.html).
+Geokit orients itself at the [PyAnsis documentation style](https://dev.docs.pyansys.com/doc-style/formatting-tools.html).
 
 It uses the the following tools:
 

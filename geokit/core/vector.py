@@ -135,7 +135,7 @@ def ogrType(s):
 def filterLayer(layer, geom=None, where=None):
     """GeoKit internal.
 
-    Filters an ogr Layer object accordint to a geometry and where statement
+    Filters an ogr Layer object according to a geometry and where statement
     """
     if not geom is None:
         if isinstance(geom, ogr.Geometry):
@@ -923,7 +923,7 @@ def createVector(
     geoms : ogr.Geometry or [ogr.Geometry, ] or pandas.DataFrane
         The geometries to write into the vector file
         * If a DataFrame is given, it must have a column called 'geom'
-        * All geometries must share the same type (point, line, polygon, ect...)
+        * All geometries must share the same type (point, line, polygon, etc...)
         * All geometries must share the same SRS
         * If geometry SRS differs from the 'srs' input, then all geometries will
           be projected to the input srs
@@ -974,11 +974,11 @@ def createVector(
 
     checkAllGeoms : bool, optional
         If True, all geoms will be asserted in object type and exact srs. Else, only
-        the first geom in the geom column/iterable will be checked fpr performance reasons.
+        the first geom in the geom column/iterable will be checked for performance reasons.
         By default False.
 
     overwrite : bool; optional
-        Determines whether the prexisting files should be overwritten
+        Determines whether the preexisting files should be overwritten
         * Only used when output is not None
 
     Returns:
@@ -1036,7 +1036,7 @@ def createVector(
 
         # Create geoms
         for i in range(len(geoms)):
-            # clone just incase the geometry is tethered outside of function
+            # clone just in case the geometry is tethered outside of function
             finalGeoms.append(geoms[i].Clone())
             if doTransform:
                 finalGeoms[i].Transform(trx)  # Do transform if necessary
@@ -1059,7 +1059,7 @@ def createVector(
     # Determine geometry types
     types = set()
     for g in geoms:
-        # Get a set of all geometry type-names (POINT, POLYGON, ect...)
+        # Get a set of all geometry type-names (POINT, POLYGON, etc...)
         types.add(g.GetGeometryName())
 
     if types.issubset({"POINT", "MULTIPOINT"}):
@@ -1081,7 +1081,7 @@ def createVector(
         driver = gdal.GetDriverByName("Memory")
 
         # Using 'Create' from a Memory driver leads to an error. But creating
-        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
+        #  a temporary shapefile driver (it does not actually produce a file, I think)
         #  and then using 'CreateCopy' seems to work
         tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
         t = TemporaryDirectory()
@@ -1331,7 +1331,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
     Returns
     -------
     gpd.GeoDataFrame
-        Same as the previos, just as an GeodataFrame
+        Same as the previous, just as an GeodataFrame
     """
     assert isinstance(dfGeokit, pd.DataFrame)
     assert "geom" in dfGeokit.columns
@@ -1361,7 +1361,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
         else:
             values[col] = list(dfGeokit[col])
 
-    # get srs as Well knwon text
+    # get srs as Well known text
     crs = dfGeokit.geom.iloc[0].GetSpatialReference().ExportToWkt()
 
     # create gdf and set index
@@ -1383,7 +1383,7 @@ def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
     Returns
     -------
     pd.DataFrame
-        Same as the previos, just as an geokit-style dataframe with 'geom'
+        Same as the previous, just as an geokit-style dataframe with 'geom'
         column with osgeo.ogr.Geometry objects.
     """
     assert isinstance(gdf, pd.DataFrame)
@@ -1603,7 +1603,7 @@ def rasterize(
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -1622,12 +1622,12 @@ def rasterize(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     overwrite : bool
         A flag to overwrite a pre-existing output file

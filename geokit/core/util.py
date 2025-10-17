@@ -283,7 +283,7 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     Example:
     --------
     * Say we want to make a processor which calculates the average of pixels
-      which are within a distance of 2 indicies. In other words, we want the
+      which are within a distance of 2 indices. In other words, we want the
       average of a 5x5 matrix centered around each pixel.
     * Assume that we can use the value -9999 as a no data value
 
@@ -520,10 +520,10 @@ def drawImage(
           * If not given, a new axis is generated and returned
 
     xlim : tuple[float, float]; optional
-        The x-axis limits to draw the marix on
+        The x-axis limits to draw the matrix on
 
     ylim : tuple[float, float]; optional
-        The y-axis limits to draw the marix on
+        The y-axis limits to draw the matrix on
 
     yAtTop : bool; optional
         If True, the first row of data should be plotted at the top of the image
@@ -715,7 +715,7 @@ def compare_geoms(geoms_1, geoms_2):
 def get_common_dtype(dtypes, fallback=11):
     """
     This auxiliary function returns the most lightweight GDAL datatype that is
-    commonly useable (without precision loss) for a given list of GDAL dtypes.
+    commonly usable (without precision loss) for a given list of GDAL dtypes.
 
     dtypes : list
         List of integers (GDAL Enum Codes).
@@ -752,7 +752,7 @@ def get_common_dtype(dtypes, fallback=11):
         raise ValueError(
             f"fallback must be a known GDAL Enum Code if not None. Select from: {', '.join(sorted(dtype_compatibilities.keys()))}"
         )
-    # if all dtypes are known, check if they can be converted into eachother
+    # if all dtypes are known, check if they can be converted into each other
     if all([d in dtype_compatibilities for d in dtypes]):
         # get the "lowest common denominator" dtype
         for _type in dtype_compatibilities.keys():
@@ -763,7 +763,7 @@ def get_common_dtype(dtypes, fallback=11):
     if fallback:
         return fallback
     else:
-        raise TypeError(f"No commonly useable GDAL dtype found for dtypes: {dtypes}")
+        raise TypeError(f"No commonly usable GDAL dtype found for dtypes: {dtypes}")
 
 
 def nodata_equal(a, b):

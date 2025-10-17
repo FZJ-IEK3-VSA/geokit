@@ -164,7 +164,7 @@ def createRaster(
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -278,7 +278,7 @@ def createRaster(
     if raster is None:
         raise GeoKitRasterError("Failed to create raster")
 
-    # Do the rest in a "try" statement so that a failure wont bind the source
+    # Do the rest in a "try" statement so that a failure won't bind the source
     try:
         raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
 
@@ -547,7 +547,7 @@ def extractMatrix(
         data = data.astype(np.float64)
         data[data == noData] = np.nan
 
-    # make sure we are returing data in the 'flipped-y' orientation
+    # make sure we are returning data in the 'flipped-y' orientation
     if not isFlipped(source):
         data = data[::-1, :]
 
@@ -1061,7 +1061,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
                     data = data[::-1, :]
 
             if winRange == 0:
-                # If winRange is 0, theres no need to return a 2D matrix
+                # If winRange is 0, there's no need to return a 2D matrix
                 data = data[0][0]
 
             # Append to values
@@ -1313,7 +1313,7 @@ def mutateRaster(
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -1457,7 +1457,7 @@ def indexToCoord(
         except:
             xMin, yMin, xMax, yMax = bounds.xyXY
 
-    # Caclulate coordinates
+    # Calculate coordinates
     if yAtTop:
         x = xMin + dx * (xi + 0.5)
         y = yMax - dy * (yi + 0.5)
@@ -1641,7 +1641,7 @@ def drawRaster(
         * Lower resolution means more pixels to draw and can be a burden on
           memory
         * If a tuple is given, resolutions in the X and Y direction are expected
-        * Changing the resolution fron the inherent resolution requires a warp
+        * Changing the resolution from the inherent resolution requires a warp
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
@@ -1655,7 +1655,7 @@ def drawRaster(
 
     figsize : (int, int); optional
         The figure size to create when generating a new axis
-          * If resultign figure looks wierd, altering the figure size is your best
+          * If resultign figure looks weird, altering the figure size is your best
             bet to make it look nicer
 
     xlim : (float, float); optional
@@ -1998,7 +1998,7 @@ def contours(
     operates on the user-specified edges AND applies the 'Marching Squares'
     algorithm
 
-    See the gdal function "GDALContourGenerateEx" for mor information on the
+    See the gdal function "GDALContourGenerateEx" for more information on the
     specifics of this algorithm
 
     Parameters:
@@ -2007,7 +2007,7 @@ def contours(
         The raster datasource to operate on
 
     contourEdges : list[float] | None
-        The edges to search for withing the raster dataset
+        The edges to search for within the raster dataset
           * This parameter can be set as "None", in which case an additional
             argument should be given to specify how the edges should be determined
             - See the documentation of "GDALContourGenerateEx"
@@ -2040,7 +2040,7 @@ def contours(
     # bands?
     # if raster.RasterCount>1:
 
-    #    Warning.warn("There are mutliple bands in the dataset.
+    #    Warning.warn("There are multiple bands in the dataset.
     # The contour is obtained for the first one"")
     rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 

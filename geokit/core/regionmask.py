@@ -43,10 +43,10 @@ class RegionMask(object):
     boolean values) of.
 
     * The extent of the generated mask matrix is the tightest fit around the region
-      in units of the pixel resolution. However, the extent can be defined explcitly
+      in units of the pixel resolution. However, the extent can be defined explicitly
       if desired
     * The region can be manipulated as a vector polygon via the ".geometry"
-      attribute, which exposes the geometry as an ogr.Geometry. To incoporate this
+      attribute, which exposes the geometry as an ogr.Geometry. To incorporate this
       into other vector-handeling libraries it is suggested to use the
       ".ExportToWkt()" method available via OGR.
     * The region can be manipulated as a raster matrix via the ".mask" attribute
@@ -388,7 +388,7 @@ class RegionMask(object):
             else:
                 if limitOne:
                     raise GeoKitRegionMaskError(
-                        "Multiple fetures found. If you are okay with this, set 'limitOne' to False"
+                        "Multiple features found. If you are okay with this, set 'limitOne' to False"
                     )
                 geom = GEOM.flatten([f.geom for f in ftrs])
                 attr = None
@@ -581,7 +581,7 @@ class RegionMask(object):
         Use this to create a temporary file associated with the RegionMask which
         will be deleted when the RM goes out of scope.
 
-        !! BEWARE OF EXTERNAL DEPENDANCIES WHEN THE RM IS GOING OUT OF SCOPE,
+        !! BEWARE OF EXTERNAL DEPENDENCIES WHEN THE RM IS GOING OUT OF SCOPE,
         THIS WILL CAUSE A LOT OF ISSUES !!
         """
         if not hasattr(self, "_TMPDIR"):
@@ -607,7 +607,7 @@ class RegionMask(object):
           matrix dimensions match
 
         * The RM's mask can only be scaled UP, and the given matrix's dimensions
-          must be mutiples of the mask's dimensions
+          must be multiples of the mask's dimensions
 
         Parameters:
         -----------
@@ -775,8 +775,8 @@ class RegionMask(object):
               - If either value is "None", then the range is assumed to be unbounded on that side
             * If any other iterable : The list of exact values to accept
             * If str : The formatted set of elements to accept
-              - Each element in the set is seperated by a ","
-              - Each element must be either a singluar numeric value, or a range
+              - Each element in the set is separated by a ","
+              - Each element must be either a singular numeric value, or a range
               - A range element begins with either "[" or "(", and ends with either "]" or ")"
                 and should have an '-' in between
                 - "[" and "]" imply inclusivity
@@ -875,7 +875,7 @@ class RegionMask(object):
             If given, then geometries will be simplified (using ogr.Geometry.Simplify)
             using the specified value before being buffered
             - Using this can drastically decrease the time it takes to perform the
-              bufferring procedure, but can decrease accuracy if it is too high
+              buffering procedure, but can decrease accuracy if it is too high
 
         prunePatchSize: numeric; optional
             If given, then isolated non-indicated patches below the given size
@@ -1018,7 +1018,7 @@ class RegionMask(object):
                 noData=noData,
                 matchContext=False,
             )
-            print(f"Memory useage during calc:", str(usage()), "MB")
+            print(f"Memory usage during calc:", str(usage()), "MB")
 
             # Warp onto region
             if warpDType is None:
@@ -1131,7 +1131,7 @@ class RegionMask(object):
                     )
                     return
 
-            # apply a threshold incase of funky warping issues
+            # apply a threshold in case of funky warping issues
             final[final > 1.0] = 1
             final[final < 0.0] = 0
 
@@ -1310,7 +1310,7 @@ class RegionMask(object):
             If given, then geometries will be simplified (using ogr.Geometry.Simplify)
             using the specified value before being buffered
             - Using this can drastically decrease the time it takes to perform the
-            bufferring procedure, but can decrease accuracy if it is too high
+            buffering procedure, but can decrease accuracy if it is too high
 
         multiProcess: boolean, optional
             If True, multiple parallel processes will be spawned within the function to
@@ -1362,8 +1362,8 @@ class RegionMask(object):
                     keepAttributes=False,
                     _slim=True,
                     **kwargs,
-                )  # big ram increase, much bigger than actual file size. wont bereleased either!!!
-                print(f"Memory useage during calc:", str(usage()), "MB")
+                )  # big ram increase, much bigger than actual file size. won't bereleased either!!!
+                print(f"Memory usage during calc:", str(usage()), "MB")
 
                 where = None  # Set where to None since the filtering has already been done
 
@@ -1566,7 +1566,7 @@ class RegionMask(object):
                 count += 1
 
     def subTiles(self, zoom, checkIntersect=True, asGeom=False):
-        """Generates tile Extents at a given zoom level which encompass the envoking Regionmask.
+        """Generates tile Extents at a given zoom level which encompass the invoking Regionmask.
 
         Parameters:
         -----------
@@ -2072,7 +2072,7 @@ class RegionMask(object):
             )
 
     def polygonizeMatrix(self, matrix, flat=False, shrink=True, _raw=False):
-        """Convenience wrapper for geokit.geom.polygonizeMatrix which autmatically
+        """Convenience wrapper for geokit.geom.polygonizeMatrix which automatically
         sets the 'bounds' and 'srs' inputs. The matrix data is assumed to span the
         RegionMask exactly.
 
@@ -2112,7 +2112,7 @@ class RegionMask(object):
         )
 
     def polygonizeMask(self, mask, bounds=None, srs=None, flat=True, shrink=True):
-        """Convenience wrapper for geokit.geom.polygonizeMask which autmatically
+        """Convenience wrapper for geokit.geom.polygonizeMask which automatically
         sets the 'bounds' and 'srs' inputs. The mask data is assumed to span the
         RegionMask exactly.
 
@@ -2134,7 +2134,7 @@ class RegionMask(object):
             overlapping issues
               * The total amount shrunk should be very very small
               * Generally this should be left as True unless it is ABSOLUTELY
-                neccessary to maintain the same area
+                necessary to maintain the same area
 
         Returns:
         --------
@@ -2158,7 +2158,7 @@ class RegionMask(object):
         raster : The raster datasource to warp from
 
         contourEdges : [float,]
-            The edges to search for withing the raster dataset
+            The edges to search for within the raster dataset
             * This parameter can be set as "None", in which case an additional
                 argument should be given to specify how the edges should be determined
                 - See the documentation of "GDALContourGenerateEx"
@@ -2186,7 +2186,7 @@ class RegionMask(object):
         return geoms
 
     def contoursFromMatrix(self, matrix, contourEdges, contoursKwargs={}, createRasterKwargs={}):
-        """Convenience wrapper for geokit.raster.contours which autmatically
+        """Convenience wrapper for geokit.raster.contours which automatically
         creates a raster for the given matrix (which is assumed to match the
         domain of the RegionMask).
 
@@ -2197,7 +2197,7 @@ class RegionMask(object):
               * Must be 2 dimensional
 
         contourEdges : [float,]
-            The edges to search for withing the raster dataset
+            The edges to search for within the raster dataset
             * This parameter can be set as "None", in which case an additional
                 argument should be given to specify how the edges should be determined
                 - See the documentation of "GDALContourGenerateEx"
@@ -2232,7 +2232,7 @@ class RegionMask(object):
         contoursKwargs={},
         createRasterKwargs={},
     ):
-        """Convenience wrapper for geokit.raster.contours which autmatically
+        """Convenience wrapper for geokit.raster.contours which automatically
         creates a raster for the given mask (which is assumed to match the
         domain of the RegionMask), and extracts the geometries which are indicated
         in the mask as "True".
