@@ -1,4 +1,4 @@
-"""The GeoKit library is a collection of general geospatial operations"""
+"""The GeoKit library is a collection of general geospatial operations."""
 
 # maybe set GDAL_DATA variable
 import pathlib

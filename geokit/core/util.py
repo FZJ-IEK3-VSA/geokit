@@ -1,4 +1,4 @@
-"""The Util sub-module contains a number of generally helpful utility functions, classes, and constants"""
+"""The Util sub-module contains a number of generally helpful utility functions, classes, and constants."""
 
 import os
 import re
@@ -42,7 +42,7 @@ class GeoKitError(Exception):
 
 def isVector(source):
     """
-    Test if loadVector fails for the given input
+    Test if loadVector fails for the given input.
 
     Parameters:
     -----------
@@ -52,7 +52,6 @@ def isVector(source):
     Returns:
     --------
     bool -> True if the given input is a vector
-
     """
 
     if isinstance(source, gdal.Dataset):
@@ -74,7 +73,7 @@ def isVector(source):
 
 def isRaster(source):
     """
-    Test if loadRaster fails for the given input
+    Test if loadRaster fails for the given input.
 
     Parameters:
     -----------
@@ -84,7 +83,6 @@ def isRaster(source):
     Returns:
     --------
     bool -> True if the given input is a raster
-
     """
     if isinstance(source, gdal.Dataset):
         try:
@@ -149,37 +147,34 @@ def scaleMatrix(mat, scale, strict=True):
 
     numpy.ndarray
 
-
     Examples:
     ---------
 
     INPUT       Scaling Factor      Output
-    -----       --------------      ------
+    --------------------------------------
 
     | 1 2 |             2           | 1 1 2 2 |
     | 3 4 |                         | 1 1 2 2 |
                                     | 3 3 4 4 |
                                     | 3 3 4 4 |
 
-
     | 1 1 1 1 |        -2           | 1.5  2.0 |
     | 2 2 3 3 |                     | 5.25 6.75|
     | 4 4 5 5 |
     | 6 7 8 9 |
 
-
     | 1 1 1 1 |        -3           | 2.55  3.0 |
     | 2 2 3 3 |   * strict=False    | 7.0    9  |
     | 4 4 5 5 |
+
     | 6 7 8 9 |       *padded*
-                    -------------
+                    --------------------------
                    | 1 1 1 1 0 0 |
                    | 2 2 3 3 0 0 |
                    | 4 4 5 5 0 0 |
                    | 6 7 8 9 0 0 |
                    | 0 0 0 0 0 0 |
                    | 0 0 0 0 0 0 |
-
     """
 
     # unpack scale
@@ -253,7 +248,7 @@ def scaleMatrix(mat, scale, strict=True):
 
 def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     """A decorator which automates the production of kernel processors for use
-    in mutateRaster (although it could really used for processing any matrix)
+    in mutateRaster (although it could really used for processing any matrix).
 
     Parameters:
     -----------
@@ -299,7 +294,6 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     >>>
     >>>      # Return the mean
     >>>      return goodValues.mean()
-
     """
     pass
 
@@ -342,7 +336,7 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 
 
 def quickVector(geom, output=None):
-    """GeoKit internal for quickly creating a vector datasource"""
+    """GeoKit internal for quickly creating a vector datasource."""
     # Create a quick vector source
 
     if isinstance(geom, ogr.Geometry):
@@ -429,7 +423,7 @@ def quickRaster(
     scale=None,
     offset=None,
 ):
-    """GeoKit internal for quickly creating a raster datasource"""
+    """GeoKit internal for quickly creating a raster datasource."""
 
     # bounds = fitBoundsTo(bounds, dx, dy)
 
@@ -514,7 +508,7 @@ def drawImage(
     bottomMargin=0,
     **kwargs,
 ):
-    """Draw a matrix as an image on a matplotlib canvas
+    """Draw a matrix as an image on a matplotlib canvas.
 
     Parameters:
     -----------
@@ -598,7 +592,6 @@ def drawImage(
        'handles' -> All geometry handles which were created in the order they were
                     drawn
        'cbar' -> The colorbar handle if it was drawn
-
     """
     # Create an axis, if needed
     if isinstance(ax, AxHands):

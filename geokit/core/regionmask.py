@@ -74,7 +74,6 @@ class RegionMask(object):
     * RegionMask.load( ... )
         - This function tries to determine which of the other initializers
           should be used based off the input
-
     """
 
     DEFAULT_RES = 100
@@ -84,7 +83,7 @@ class RegionMask(object):
         """The default constructor for RegionMask objects. Creates a RegionMask
         directly from a matrix mask and a given extent (and optionally a geometry).
         Pixel resolution is calculated in accordance with the shape of the mask
-        mask and the provided extent
+        mask and the provided extent.
 
         * Generally one should use the '.load' or else one of the '.fromXXX'
           methods to create RegionMasks
@@ -119,7 +118,6 @@ class RegionMask(object):
 
         attributes : dict
             Keyword attributes and values to carry along with the RegionMask
-
         """
         # Check for bad input
         if mask is None and geom is None:
@@ -199,7 +197,7 @@ class RegionMask(object):
 
     @staticmethod
     def fromMask(extent, mask, attributes=None) -> "RegionMask":
-        """Make a RegionMask directly from a mask matrix and extent
+        """Make a RegionMask directly from a mask matrix and extent.
 
         Note:
         -----
@@ -227,7 +225,6 @@ class RegionMask(object):
         Returns:
         --------
         RegionMask
-
         """
 
         # get pixelWidth and pixelHeight
@@ -252,7 +249,7 @@ class RegionMask(object):
         attributes=None,
         **k,
     ) -> "RegionMask":
-        """Make a RasterMask from a given geometry
+        """Make a RasterMask from a given geometry.
 
         Parameters:
         -----------
@@ -283,7 +280,6 @@ class RegionMask(object):
         Returns:
         --------
         RegionMask
-
         """
 
         # make sure we have a geometry with an srs
@@ -326,7 +322,7 @@ class RegionMask(object):
         limitOne=True,
         **kwargs,
     ) -> "RegionMask":
-        """Make a RasterMask from a given vector source
+        """Make a RasterMask from a given vector source.
 
         Note:
         -----
@@ -376,7 +372,6 @@ class RegionMask(object):
         Returns:
         --------
         RegionMask
-
         """
 
         # Get all geoms which fit the search criteria
@@ -461,7 +456,6 @@ class RegionMask(object):
 
         padExtent : float; optional
             An amount by which to pad the extent before generating the RegionMask
-
         """
         if isinstance(region, RegionMask):
             return region
@@ -478,7 +472,8 @@ class RegionMask(object):
     def pixelRes(self):
         """The RegionMask's pixel size.
 
-        !!Only available when pixelWidth equals pixelHeight!!"""
+        !!Only available when pixelWidth equals pixelHeight!!
+        """
         if self._pixelRes is None:
             raise GeoKitRegionMaskError("pixelRes only accessible when pixelWidth equals pixelHeight")
         return self._pixelRes
@@ -489,7 +484,6 @@ class RegionMask(object):
         * The 'width' and 'height' attributes for the RegionMask are also set
           when this function is called
         * All kwargs are passed on to a call to geokit.vector.rasterize()
-
         """
         if self._geometry is None:
             raise GeoKitRegionMaskError("Cannot build mask when geometry is None")
@@ -516,7 +510,7 @@ class RegionMask(object):
         return self.mask.sum() * self.pixelWidth * self.pixelHeight
 
     def buildGeometry(self):
-        """Explicitly build the RegionMask's geometry"""
+        """Explicitly build the RegionMask's geometry."""
         if self._mask is None:
             raise GeoKitRegionMaskError("Cannot build geometry when mask is None")
 
@@ -525,7 +519,7 @@ class RegionMask(object):
 
     @property
     def geometry(self):
-        """Fetches a clone of the RegionMask's geometry as an OGR Geometry object
+        """Fetches a clone of the RegionMask's geometry as an OGR Geometry object.
 
         * If a geometry was not provided when the RegionMask was initialized,
           then one will be generated from the RegionMask's mask matrix in the
@@ -541,7 +535,7 @@ class RegionMask(object):
 
     @property
     def vectorPath(self):
-        """Returns a path to a vector path on disc which is built only once"""
+        """Returns a path to a vector path on disc which is built only once."""
 
         if self._vectorPath is None:
             self._vectorPath = self._tempFile(ext=".shp")
@@ -551,7 +545,7 @@ class RegionMask(object):
 
     @property
     def vector(self):
-        """Returns a vector saved in memory which is built only once"""
+        """Returns a vector saved in memory which is built only once."""
 
         if self._vector is None:
             self._vector = UTIL.quickVector(self.geometry)
@@ -582,7 +576,7 @@ class RegionMask(object):
         return self.svg
 
     def _tempFile(self, head="tmp", ext=".tif"):
-        """***RM INTERNAL***
+        """***RM INTERNAL***.
 
         Use this to create a temporary file associated with the RegionMask which
         will be deleted when the RM goes out of scope.
@@ -606,7 +600,7 @@ class RegionMask(object):
 
     def applyMask(self, mat, noData=0):
         """Shortcut to apply the RegionMask's mask to an array. Mainly intended
-        for internal use
+        for internal use.
 
         * When the passed matrix does not have the same extents of the given matrix,
           it is assumed that the RegionMask's mask needs to be scaled so that the
@@ -628,7 +622,6 @@ class RegionMask(object):
         Returns:
         --------
         numpy.ndarray
-
         """
         if noData is None:
             noData = 0
@@ -689,9 +682,7 @@ class RegionMask(object):
         return output
 
     def indicateValueToGeoms(self, source, value, contours=False, transformGeoms=True):
-        """
-        TODO: UPDATE ME
-        """
+        """TODO: UPDATE ME."""
         # Unpack value
         if isinstance(value, tuple):
             valueMin, valueMax = value
@@ -757,7 +748,7 @@ class RegionMask(object):
     ):
         """
         Indicates those pixels in the RegionMask which correspond to a particular
-        value, or range of values, from a given raster datasource
+        value, or range of values, from a given raster datasource.
 
         Returns a matrix matching the RegionMask's mask dimensions wherein 0 means
         the pixels is not included in the indicated set, and 1 meaning the pixel
@@ -808,7 +799,6 @@ class RegionMask(object):
                   - 33
                   - Everything above 40, including 40
 
-
         buffer : float; optional
             A buffer region to add around the indicated pixels
             * Units are in the RegionMask's srs
@@ -833,8 +823,9 @@ class RegionMask(object):
         warpDType : str or None; optional
             If given, this controls the raster datatype of the warped indication matrix.
             If not given, then a default datatype is assumed based off `resampleAlg`:
+
                reampleAlg : assumed dtype
-               ----------   -------------
+               --------------------------
                    'near' : 'uint8'
                'bilinear' : 'float32'
                   'cubic' : 'float32'
@@ -860,7 +851,6 @@ class RegionMask(object):
             geokit.RegionMask.polygonizeMask.
             - This will result in simpler geometries which are easier to grow,
               but which do not strictly follow the edges of the indicated pixels
-
 
         bufferMethod : str; optional
             An indicator determining the method to use when buffereing
@@ -906,7 +896,6 @@ class RegionMask(object):
 
         kwargs -- Passed on to RegionMask.warp()
             * Most notably: 'resampleAlg'
-
 
         Returns:
         --------
@@ -1257,7 +1246,7 @@ class RegionMask(object):
     ):
         """
         Indicates the RegionMask pixels which are found within the features (or
-        a subset of the features) contained in a given vector datasource
+        a subset of the features) contained in a given vector datasource.
 
         * A Rasterization is performed from the input data set to the
         RegionMask's mask.
@@ -1333,7 +1322,6 @@ class RegionMask(object):
         Returns:
         --------
         numpy.ndarray
-
         """
 
         def _indicateFeatures(
@@ -1530,7 +1518,7 @@ class RegionMask(object):
     def indicateGeoms(self, geom, **kwargs):
         """
         Convenience wrapper to indicate values found within a geometry (or a
-        list of geometries)
+        list of geometries).
 
         * Simply creates a new vector source from the given geometry and then
           calls RegionMask.indicateFeatures
@@ -1546,7 +1534,7 @@ class RegionMask(object):
     # Make a sub region generator
     def subRegions(self, gridSize, asMaskAndExtent=False):
         """Generate a number of sub regions on a grid which combine into the total
-        RegionMask area
+        RegionMask area.
         """
         # get useful matrix info
         yN, xN = self.mask.shape
@@ -1594,7 +1582,6 @@ class RegionMask(object):
         Returns:
         --------
         Generator of Geometries or (xi,yi,zoom) tuples
-
         """
         yield from GEOM.subTiles(self.geometry, zoom, checkIntersect=checkIntersect, asGeom=asGeom)
 
@@ -1607,7 +1594,6 @@ class RegionMask(object):
         * See geokit.util.drawImage for more info on argument options
         * Unless specified, the plotting extent is set to the RegionMask's extent
             - This only plays a role when generating a new axis
-
         """
         xlim = kwargs.pop("xlim", (self.extent.xMin, self.extent.xMax))
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
@@ -1615,12 +1601,11 @@ class RegionMask(object):
 
     def drawImage(self, matrix, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.util.drawImage which plots matrix data
-        which is assumed to match the boundaries of the RegionMask
+        which is assumed to match the boundaries of the RegionMask.
 
         * See geokit.util.drawImage for more info on argument options
         * Unless specified, the plotting extent is set to the RegionMask's extent
             - This only plays a role when generating a new axis
-
         """
         xlim = kwargs.pop("xlim", (self.extent.xMin, self.extent.xMax))
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
@@ -1633,7 +1618,7 @@ class RegionMask(object):
 
     def drawGeoms(self, geoms, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.geom.drawGeoms which plots geometries
-        which are then plotted within the context of the RegionMask
+        which are then plotted within the context of the RegionMask.
 
         * See geokit.geom.drawGeoms for more info on argument options
         * Geometries are always plotted in the RegionMask's SRS
@@ -1650,7 +1635,7 @@ class RegionMask(object):
 
     def drawSelf(self, ax=None, **kwargs):
         """Convenience wrapper around geokit.geom.drawGeoms which plots the
-        RegionMask's geometry
+        RegionMask's geometry.
 
         * See geokit.geom.drawGeoms for more info on argument options
         * Geometry are always plotted in the RegionMask's SRS
@@ -1663,7 +1648,7 @@ class RegionMask(object):
 
     def drawRaster(self, source, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.raster.drawRaster which plots a raster
-        dataset within the context of the RegionMask
+        dataset within the context of the RegionMask.
 
         * See geokit.raster.drawRaster for more info on argument options
         * The raster is always warped to the RegionMask's SRS
@@ -1680,7 +1665,7 @@ class RegionMask(object):
 
     def createRaster(self, output=None, resolutionDiv=1, **kwargs):
         """Convenience wrapper for geokit.raster.createRaster which sets 'srs',
-        'bounds', 'pixelWidth', and 'pixelHeight' inputs
+        'bounds', 'pixelWidth', and 'pixelHeight' inputs.
 
         Parameters:
         -----------
@@ -1699,7 +1684,6 @@ class RegionMask(object):
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-
         """
         pW, pH = self._resolve(resolutionDiv)
         return self.extent.createRaster(pixelWidth=pW, pixelHeight=pH, output=output, **kwargs)
@@ -1716,7 +1700,7 @@ class RegionMask(object):
         **kwargs,
     ):
         """Convenience wrapper for geokit.raster.warp() which automatically sets
-        'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
+        'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs.
 
         Note:
         -----
@@ -1761,7 +1745,6 @@ class RegionMask(object):
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-
         """
         pW, pH = self._resolve(resolutionDiv)
 
@@ -1832,7 +1815,7 @@ class RegionMask(object):
         **kwargs,
     ):
         """Convenience wrapper for geokit.vector.rasterize() which automatically
-        sets the 'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs
+        sets the 'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs.
 
         Note:
         -----
@@ -1871,7 +1854,6 @@ class RegionMask(object):
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-
         """
         pW, pH = self._resolve(resolutionDiv)
 
@@ -1930,7 +1912,7 @@ class RegionMask(object):
 
     def extractFeatures(self, source, **kwargs):
         """Convenience wrapper for geokit.vector.extractFeatures() by setting the
-        'geom' input to the RegionMask's geometry
+        'geom' input to the RegionMask's geometry.
 
         Parameters:
         -----------
@@ -1944,13 +1926,12 @@ class RegionMask(object):
         --------
         * If asPandas is True: pandas.DataFrame or pandas.Series
         * If asPandas is False: generator
-
         """
         return VECTOR.extractFeatures(source=source, geom=self.geometry, **kwargs)
 
     def mutateVector(self, source, matchContext=False, regionPad=0, **kwargs):
         """Convenience wrapper for geokit.vector.mutateVector which automatically
-        sets 'srs' and 'geom' inputs to the RegionMask's srs and geometry
+        sets 'srs' and 'geom' inputs to the RegionMask's srs and geometry.
 
         * The RegionMask's geometry is always used to select features within the
         source. If you need a broader scope, try using the RegionMask's extent's
@@ -1983,7 +1964,6 @@ class RegionMask(object):
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-
         """
         # Get the working srs
         if not matchContext:
@@ -2009,7 +1989,7 @@ class RegionMask(object):
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
         sets 'bounds'. It also warps the raster to the RegionMask's area
-        and srs before mutating
+        and srs before mutating.
 
         Note:
         -----
@@ -2057,7 +2037,6 @@ class RegionMask(object):
         --------
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
-
         """
         output = mutateArgs.pop("output", None)
         if warpArgs is None:
@@ -2122,7 +2101,6 @@ class RegionMask(object):
         pandas.DataFrame -> With columns:
                                 'geom' -> The contiguous-valued geometries
                                 'value' -> The value for each geometry
-
         """
         return GEOM.polygonizeMatrix(
             matrix,
@@ -2136,7 +2114,7 @@ class RegionMask(object):
     def polygonizeMask(self, mask, bounds=None, srs=None, flat=True, shrink=True):
         """Convenience wrapper for geokit.geom.polygonizeMask which autmatically
         sets the 'bounds' and 'srs' inputs. The mask data is assumed to span the
-        RegionMask exactly
+        RegionMask exactly.
 
         Each True-valued group of pixels will be converted to a geometry
 
@@ -2162,13 +2140,12 @@ class RegionMask(object):
         --------
         If 'flat' is True: ogr.Geometry
         else: [ogr.Geometry,  ]
-
         """
         return GEOM.polygonizeMask(mask, bounds=self.extent.xyXY, srs=self.srs, flat=flat, shrink=shrink)
 
     def contoursFromRaster(self, raster, contourEdges, applyMask=True, contoursKwargs={}, warpKwargs={}):
         """Convenience wrapper for geokit.raster.contours which automatically
-        warps a raster to the invoking RegioNmask
+        warps a raster to the invoking RegioNmask.
 
         NOTE:
         -----
@@ -2202,7 +2179,6 @@ class RegionMask(object):
         With columns:
             'geom' -> The contiguous-valued geometries
             'ID' -> The associated contour edge for each object
-
         """
         raster = self.warp(raster, applyMask=applyMask, returnMatrix=False, **warpKwargs)
         geoms = RASTER.contours(raster, contourEdges, **contoursKwargs)
@@ -2212,7 +2188,7 @@ class RegionMask(object):
     def contoursFromMatrix(self, matrix, contourEdges, contoursKwargs={}, createRasterKwargs={}):
         """Convenience wrapper for geokit.raster.contours which autmatically
         creates a raster for the given matrix (which is assumed to match the
-        domain of the RegionMask)
+        domain of the RegionMask).
 
         Parameters:
         -----------
@@ -2242,7 +2218,6 @@ class RegionMask(object):
         With columns:
             'geom' -> The contiguous-valued geometries
             'ID' -> The associated contour edge for each object
-
         """
         raster = self.createRaster(data=matrix, **createRasterKwargs)
         geoms = RASTER.contours(raster, contourEdges, **contoursKwargs)
@@ -2260,7 +2235,7 @@ class RegionMask(object):
         """Convenience wrapper for geokit.raster.contours which autmatically
         creates a raster for the given mask (which is assumed to match the
         domain of the RegionMask), and extracts the geometries which are indicated
-        in the mask as "True"
+        in the mask as "True".
 
         Parameters:
         -----------
@@ -2292,7 +2267,6 @@ class RegionMask(object):
         With columns:
             'geom' -> The contiguous-valued geometries
             'ID' -> The associated contour edge for each object
-
         """
         geomDF = self.contoursFromMatrix(
             matrix=mask,

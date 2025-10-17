@@ -31,3 +31,7 @@ dependencies:
   - jupyter-book
   - sphinx-autoapi
   - astroid <=3.3.11 # This fixes a broken constraint limit of sphinx-autoapi
+  - pydocstringformatter
+  - codespell
+  - blacken-docs
+  - interrogate

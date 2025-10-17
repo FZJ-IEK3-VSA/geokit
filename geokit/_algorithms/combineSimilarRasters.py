@@ -33,7 +33,7 @@ def checkSimilarRasters(
         default 0, i.e. an exact match (within data type accuracy) is required.
 
     Returns:
-    ----------
+    --------
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
@@ -142,8 +142,9 @@ def combineSimilarRasters(
         By default False, i.e. only exactly similar rasters will be combined.
     **kwargs
         Will be passed on to geokit.raster.createRaster().
+
     Returns:
-    ----------
+    --------
     output dataset: osgeo.gdal.Dataset
         Raster file containing the combined matrices of all input datasets.
     """
@@ -314,7 +315,7 @@ def combineSimilarRasters(
         if not infoSet[i].yAtTop:
             dMatrix = dMatrix[::-1, :]
 
-        # Calculate starting indicies
+        # Calculate starting indices
         idx = mExtent.findWithin(dExtent, (mInfo.dx, mInfo.dy), yAtTop=mInfo.yAtTop)
 
         # Get output data

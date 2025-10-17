@@ -121,7 +121,6 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
     Returns:
     --------
     osr.SpatialReference
-
     """
     if geom is None:
         assert isinstance(lat, numbers.Number) and isinstance(lon, numbers.Number), (
@@ -160,7 +159,7 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 
 
 def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
-    """Transform xy points between coordinate systems
+    """Transform xy points between coordinate systems.
 
     Parameters:
     -----------
@@ -183,7 +182,6 @@ def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
 
     list of tuples, or namedtuple
       * See the point for the 'outputFormat' argument
-
     """
     # load srs's
     fromSRS = loadSRS(fromSRS)
@@ -237,7 +235,7 @@ Tile = namedtuple("Tile", "xi yi zoom")
 
 def tileIndexAt(x, y, zoom, srs):
     """Get the "slippy tile" index at the given zoom, around the
-    coordinates ('x', 'y') within the specified 'srs'
+    coordinates ('x', 'y') within the specified 'srs'.
     """
     srs = loadSRS(srs)
 
@@ -267,7 +265,7 @@ def tileIndexAt(x, y, zoom, srs):
 
 
 class _SRSCOMMON:
-    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems
+    """The SRSCOMMON library contains shortcuts and contextual information for various commonly used projection systems.
 
     * You can access an srs in two ways (where <srs> is replaced with the SRS's name):
         1: SRSCOMMON.<srs>
@@ -280,9 +278,10 @@ class _SRSCOMMON:
 
     @property
     def latlon(self):
-        """Basic SRS for unprojected latitude and longitude coordinates
+        """Basic SRS for unprojected latitude and longitude coordinates.
 
-        Units: Degrees"""
+        Units: Degrees
+        """
         return self._latlon
 
     # basic latitude and longitude
@@ -294,8 +293,8 @@ class _SRSCOMMON:
         """Equal-Area projection centered around Europe.
 
         * Good for relational operations within Europe
-
-        Units: Meters"""
+        Units: Meters
+        """
         return self._europe_laea
 
     # define a centered LAEA on the centroid lat/lon of ECOWAS region
@@ -306,8 +305,8 @@ class _SRSCOMMON:
         """Equal-Area projection centered around ECOWAS (Western Africa).
 
         * Good for relational operations within Western Africa
-
-        Units: Meters"""
+        Units: Meters
+        """
         return self._ecowas_laea
 
     # define a centered LAEA on the centroid lat/lon of SADC region
@@ -318,8 +317,8 @@ class _SRSCOMMON:
         """Equal-Area projection centered around ECOWAS (Western Africa).
 
         * Good for relational operations within Western Africa
-
-        Units: Meters"""
+        Units: Meters
+        """
         return self._sadc_laea
 
     @staticmethod

@@ -27,7 +27,7 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 
 
 def point(*args, srs="latlon"):
-    """Make a simple point geometry
+    """Make a simple point geometry.
 
     Parameters:
     -----------
@@ -44,10 +44,9 @@ def point(*args, srs="latlon"):
     ogr.Geometry
 
     Example:
-    ------
+    --------
     point(x, y [,srs])
     point( (x, y) [,srs] )
-
     """
     if len(args) == 1:
         x, y = args[0]
@@ -66,14 +65,14 @@ def point(*args, srs="latlon"):
 
 
 def makePoint(*args, **kwargs):
-    """alias for geokit.geom.point(...)"""
+    """Alias for geokit.geom.point(...)."""
     msg = "makePoint will be removed soon. Switch to 'point'"
     warnings.warn(msg, Warning)
     return point(*args, **kwargs)
 
 
 def box(*args, srs=4326):
-    """Make an ogr polygon object from extents
+    """Make an ogr polygon object from extents.
 
     Parameters:
     -----------
@@ -90,7 +89,7 @@ def box(*args, srs=4326):
     ogr.Geometry
 
     Example:
-    ------
+    --------
     box(xMin, yMin, xMax, yMax [, srs])
     box( (xMin, yMin, xMax, yMax) [, srs])
     """
@@ -127,7 +126,7 @@ def box(*args, srs=4326):
 
 
 def tile(xi, yi, zoom):
-    """Generates a box corresponding to a tile used for "slippy maps"
+    """Generates a box corresponding to a tile used for "slippy maps".
 
     Parameters:
     -----------
@@ -146,7 +145,6 @@ def tile(xi, yi, zoom):
     Returns:
     --------
     ogr.Geometry
-
     """
     tl = smopy.num2deg(xi - 0.0, yi + 1.0, zoom)[::-1]
     br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
@@ -158,7 +156,7 @@ def tile(xi, yi, zoom):
 
 def tileAt(x, y, zoom, srs):
     """Generates a box corresponding to a tile at the coordinates 'x' and 'y'
-     in the given srs,
+     in the given srs,.
 
     Parameters:
     -----------
@@ -178,7 +176,6 @@ def tileAt(x, y, zoom, srs):
     Returns:
     --------
     ogr.Geometry
-
     """
     t = SRS.tileIndexAt(x=x, y=y, zoom=zoom, srs=srs)
 
@@ -238,7 +235,7 @@ def subTiles(geom, zoom, checkIntersect=True, asGeom=False):
 
 
 def tileize(geom, zoom):
-    """Deconstruct a given geometry into a set of tiled geometries
+    """Deconstruct a given geometry into a set of tiled geometries.
 
     Returns: Generator of ogr.Geometry objects
     """
@@ -248,14 +245,14 @@ def tileize(geom, zoom):
 
 
 def makeBox(*args, **kwargs):
-    """alias for geokit.geom.box(...)"""
+    """Alias for geokit.geom.box(...)."""
     msg = "makeBox will be removed soon. Switch to 'box'"
     warnings.warn(msg, Warning)
     return box(*args, **kwargs)
 
 
 def polygon(outerRing, *args, srs="default"):
-    """Creates an OGR Polygon obect from a given set of points
+    """Creates an OGR Polygon obect from a given set of points.
 
     Parameters:
     -----------
@@ -281,7 +278,7 @@ def polygon(outerRing, *args, srs="default"):
     ogr.Geometry
 
     Example:
-    ------
+    --------
     Make a diamond cut out of a box...
 
       box = [(-2,-2), (-2,2), (2,2), (2,-2), (-2,-2)]
@@ -342,14 +339,14 @@ def polygon(outerRing, *args, srs="default"):
 
 
 def makePolygon(*args, **kwargs):
-    """alias for geokit.geom.polygon(...)"""
+    """Alias for geokit.geom.polygon(...)."""
     msg = "makePolygon will be removed soon. Switch to 'polygon'"
     warnings.warn(msg, Warning)
     return polygon(*args, **kwargs)
 
 
 def line(points, srs=4326):
-    """Creates an OGR Line obect from a given set of points
+    """Creates an OGR Line obect from a given set of points.
 
     Parameters:
     -----------
@@ -385,7 +382,7 @@ def line(points, srs=4326):
 
 
 def makeLine(*args, **kwargs):
-    """alias for geokit.geom.line(...)"""
+    """Alias for geokit.geom.line(...)."""
     msg = "makeLine will be removed soon. Switch to 'line'"
     warnings.warn(msg, Warning)
     return line(*args, **kwargs)
@@ -393,7 +390,7 @@ def makeLine(*args, **kwargs):
 
 def empty(gtype, srs=None):
     """
-    Make a generic OGR geometry of a desired type
+    Make a generic OGR geometry of a desired type.
 
     *Not for the feint of heart*
 
@@ -421,14 +418,14 @@ def empty(gtype, srs=None):
 
 
 def makeEmpty(*args, **kwargs):
-    """alias for geokit.geom.empty(...)"""
+    """Alias for geokit.geom.empty(...)."""
     msg = "makeEmpty will be removed soon. Switch to 'empty'"
     warnings.warn(msg, Warning)
     return empty(*args, **kwargs)
 
 
 def extractVerticies(geom):
-    """Get all verticies found on the geometry as a Nx2 numpy.ndarray"""
+    """Get all verticies found on the geometry as a Nx2 numpy.ndarray."""
     isMulti = "MULTI" in geom.GetGeometryName()
     # Check geometry type
     if "LINE" in geom.GetGeometryName():
@@ -474,7 +471,7 @@ def extractVerticies(geom):
 
 
 def convertWKT(wkt, srs=None):
-    """Make a geometry from a well known text (WKT) string
+    """Make a geometry from a well known text (WKT) string.
 
     Parameters:
     -----------
@@ -495,6 +492,7 @@ def convertWKT(wkt, srs=None):
 def convertGeoJson(geojson, srs=3857):
     """Make a geometry from a well known text (WKT) string
     TODO: UPDATE!!!
+
     Parameters:
     -----------
     wkt : str
@@ -516,7 +514,7 @@ def convertGeoJson(geojson, srs=3857):
 
 
 def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _raw=False):
-    """Create a geometry set from a matrix of integer values
+    """Create a geometry set from a matrix of integer values.
 
     Each unique-valued group of pixels will be converted to a geometry
 
@@ -534,7 +532,6 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
             correspond to the mask's indicies
           * If the boundary is given as an Extent object, an srs input is not
             required
-
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs context for the given matrix and of the geometries to create
@@ -555,7 +552,6 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     pandas.DataFrame -> With columns:
                             'geom' -> The contiguous-valued geometries
                             'value' -> The value for each geometry
-
     """
 
     # Make sure we have a boolean numpy matrix
@@ -690,7 +686,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
 
 
 def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
-    """Create a geometry set from a matrix mask
+    """Create a geometry set from a matrix mask.
 
     Each True-valued group of pixels will be converted to a geometry
 
@@ -727,7 +723,6 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
     --------
     If 'flat' is True: ogr.Geometry
     else: [ogr.Geometry,  ]
-
     """
     # Make sure we have a boolean numpy matrix
     if not isinstance(mask, np.ndarray):
@@ -749,7 +744,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 
 
 def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
-    """Transform a geometry, or a list of geometries, from one SRS to another
+    """Transform a geometry, or a list of geometries, from one SRS to another.
 
     Parameters:
     -----------
@@ -783,12 +778,10 @@ def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
     --------
     ogr.Geometry or [ogr.Geometry, ]
 
-
     Note:
     -----
     When inferring the SRS from the given geometries, only the FIRST geometry
     is checked for an existing SRS
-
     """
     # make sure geoms is a list
     if isinstance(geoms, ogr.Geometry):
@@ -834,7 +827,7 @@ def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
             """Shift back points across the antimeridian to undo the effect of the PROJ function."""
 
             def _shift_points(g):
-                """Shifts points back by +/-360° if PROJ shifted them due to the antimeridian"""
+                """Shifts points back by +/-360° if PROJ shifted them due to the antimeridian."""
                 prev_x, _, _ = g.GetPoint(0)
                 for j in range(1, g.GetPointCount()):
                     x, y, z = g.GetPoint(j)
@@ -908,7 +901,7 @@ def boundsToBounds(bounds, boundsSRS, outputSRS):
 
 
 def flatten(geoms):
-    """Flatten a list of geometries into a single geometry object
+    """Flatten a list of geometries into a single geometry object.
 
     Combine geometries by iteratively union-ing neighbors (according to index)
      * example, given a list of geometries (A,B,C,D,E,F,G,H,I,J):
@@ -922,7 +915,6 @@ def flatten(geoms):
     --------
         * A list of Polygons/Multipolygons will become a single Multipolygon
         * A list of Linestrings/MultiLinestrings will become a single MultiLinestring
-
     """
     if not isinstance(geoms, list):
         geoms = list(geoms)
@@ -1083,7 +1075,7 @@ def drawGeoms(
     bottomMargin=0.01,
     **mplArgs,
 ):
-    """Draw geometries onto a matplotlib figure
+    """Draw geometries onto a matplotlib figure.
 
     * Each geometry type is displayed as an appropriate plotting type
         -> Points/ Multipoints are displayed as points using plt.plot(...)
@@ -1212,7 +1204,6 @@ def drawGeoms(
        'handles' -> All geometry handles which were created in the order they were
                     drawn
        'cbar' -> The colorbar handle if it was drawn
-
     """
     if isinstance(ax, UTIL.AxHands):
         ax = ax.ax
@@ -1438,7 +1429,7 @@ def drawGeoms(
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):
     """Partition a Polygon into some number of pieces whose areas should be close
-    to the targetArea
+    to the targetArea.
 
     WARNING: Not tested for several version. Will probably be removed later
 
@@ -1600,7 +1591,7 @@ def shift(geom, lonShift=0, latShift=0):
         latShift - (int, float) : The shift in latitudinal direction in units of the geom srs, may be positive or negative
 
     Returns :
-    --------
+    ---------
     osgeo.ogr.Geometry object of the input type with shifted coordinates
     """
     if not isinstance(geom, ogr.Geometry):
@@ -1614,7 +1605,7 @@ def shift(geom, lonShift=0, latShift=0):
 
     # define sub method to shift collection of single points
     def _movePoints(pointCollection, lonShift, latShift):
-        """Auxiliary function shifting individual points"""
+        """Auxiliary function shifting individual points."""
         points = list()
         for i in range(len(str(pointCollection).split(","))):
             points.append(pointCollection.GetPoint(i))
@@ -1685,9 +1676,9 @@ def divideMultipolygonIntoEasternAndWesternPart(geom, side="both"):
 
     Parameters
     ----------
-    geom: ogr.Geometry
+    geom : ogr.Geometry
         The geometry to split. Must be a MultiPolygon.
-    side: str, optional
+    side : str, optional
         'left' or 'right' to return the left or right side of the antimeridian
         'main' to return the side with the largest area
         'both' to return both sides as a tuple (left, right)
@@ -1903,10 +1894,10 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
             center_lon = (env[0] + env[1]) / 2  # x value of center axis of whole geom
 
             def fold_polygon(polygon):
-                """Function that folds a polygon geometrie over 90° lat line"""
+                """Function that folds a polygon geometrie over 90° lat line."""
 
                 def _fold_ring(ring):
-                    """core function for every linear ring"""
+                    """Core function for every linear ring."""
                     new_ring = ogr.Geometry(ogr.wkbLinearRing)
                     for i in range(ring.GetPointCount()):
                         x, y, *z = ring.GetPoint(i)

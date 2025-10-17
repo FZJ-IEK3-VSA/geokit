@@ -29,7 +29,7 @@ class GeoKitVectorError(UTIL.GeoKitError):
 
 def loadVector(x):
     """
-    Load a vector dataset from a path to a file on disc
+    Load a vector dataset from a path to a file on disc.
 
     Parameters:
     -----------
@@ -41,7 +41,6 @@ def loadVector(x):
     Returns:
     --------
     gdal.Dataset
-
     """
     if isinstance(x, str):
         ds = gdal.OpenEx(x)
@@ -57,7 +56,7 @@ def loadVector(x):
 
 
 def loopFeatures(source):
-    """Geokit internal
+    """Geokit internal.
 
     *Loops over an input layer's features
     * Will reset the reading counter before looping is initiated
@@ -66,7 +65,6 @@ def loopFeatures(source):
     -----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
-
     """
     if isinstance(source, str):  # assume input source is a path to a datasource
         ds = ogr.Open(source)
@@ -103,7 +101,7 @@ _ogrStrToType = {
 
 
 def ogrType(s):
-    """Tries to determine the corresponding OGR type according to the input"""
+    """Tries to determine the corresponding OGR type according to the input."""
 
     if isinstance(s, str):
         if hasattr(ogr, s):
@@ -135,7 +133,7 @@ def ogrType(s):
 
 
 def filterLayer(layer, geom=None, where=None):
-    """GeoKit internal
+    """GeoKit internal.
 
     Filters an ogr Layer object accordint to a geometry and where statement
     """
@@ -169,7 +167,7 @@ def filterLayer(layer, geom=None, where=None):
 
 def countFeatures(source, geom=None, where=None):
     """Returns the number of features found in the given source and within a
-    given geometry and/or where-statement
+    given geometry and/or where-statement.
 
     Parameters:
     -----------
@@ -192,7 +190,6 @@ def countFeatures(source, geom=None, where=None):
     Returns:
     --------
     int
-
     """
     ds = loadVector(source)
     layer = ds.GetLayer()
@@ -206,7 +203,7 @@ vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes
 
 
 def vectorInfo(source):
-    """Extract general information about a vector source
+    """Extract general information about a vector source.
 
     Determines:
 
@@ -225,7 +222,6 @@ def vectorInfo(source):
                    yMax : The source's yMax boundaries (in the srs's units),
                    count : The number of features in the source,
                    attributes : The attribute titles for the source's features,)
-
     """
     info = {}
 
@@ -261,7 +257,7 @@ def listLayers(
 
     Parameters
     ----------
-    source :  Anything acceptable by loadVector()
+    source : Anything acceptable by loadVector()
         The vector datasource to read from
 
     Returns
@@ -451,7 +447,7 @@ def extractFeatures(
     spatialPredicate="Touches",
     **kwargs,
 ):
-    """Creates a generator which extract the features contained within the source
+    """Creates a generator which extract the features contained within the source.
 
     * Iteratively returns (feature-geometry, feature-fields)
 
@@ -523,7 +519,6 @@ def extractFeatures(
     --------
     * If asPandas is True: pandas.DataFrame or pandas.Series
     * If asPandas is False: generator
-
     """
     # arrange output
     if not asPandas:
@@ -572,7 +567,7 @@ def extractFeatures(
 
 def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, **kwargs):
     """Convenience function calling extractFeatures which assumes there is only
-    one feature to extract
+    one feature to extract.
 
     * Will raise an error if multiple features are found
 
@@ -612,7 +607,6 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
     * If onlyGeom and onlyAttr are False: namedtuple -> (geom, attr)
     * If onlyGeom is True: ogr.Geometry
     * If onlyAttr is True: dict
-
     """
     if isinstance(where, int):
         ds = loadVector(source)
@@ -667,7 +661,7 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
 def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
     """Convenience function calling extractFeatures and structuring the output as
-    a pandas DataFrame
+    a pandas DataFrame.
 
     * Geometries are written to a column called 'geom'
     * Attributes are written to a column of the same name
@@ -702,7 +696,6 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     Returns:
     --------
     pandas.DataFrame
-
     """
     warnings.warn(
         "This function will be removed in favor of geokit.vector.extractFeatures",
@@ -923,7 +916,7 @@ def createVector(
     overwrite=True,
 ):
     """
-    Create a vector on disk from geometries or a DataFrame with 'geom' column
+    Create a vector on disk from geometries or a DataFrame with 'geom' column.
 
     Parameters:
     -----------
@@ -992,7 +985,6 @@ def createVector(
     --------
     * If 'output' is None: gdal.Dataset
     * If 'output' is given: None
-
     """
     if srs:
         srs = SRS.loadSRS(srs)
@@ -1217,7 +1209,7 @@ def createVector(
 
 
 def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
-    """Convert a set of geometries to a geoJSON object"""
+    """Convert a set of geometries to a geoJSON object."""
     if srs:
         srs = SRS.loadSRS(srs)
 
@@ -1329,7 +1321,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
 
 
 def createGeoDataFrame(dfGeokit: pd.DataFrame):
-    """Creates a gdf from an Reskit shape pd.DataFrame
+    """Creates a gdf from an Reskit shape pd.DataFrame.
 
     Parameters
     ----------
@@ -1381,7 +1373,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
 
 
 def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
-    """Creates a geokit-style dataframe from a geopandas geodataframe
+    """Creates a geokit-style dataframe from a geopandas geodataframe.
 
     Parameters
     ----------
@@ -1428,7 +1420,7 @@ def mutateVector(
     _slim=False,
     **kwargs,
 ):
-    """Process a vector dataset according to an arbitrary function
+    """Process a vector dataset according to an arbitrary function.
 
     Note:
     -----
@@ -1515,7 +1507,6 @@ def mutateVector(
     >>> result = processVector( <source-path>, where="value>0 AND value<10",
     >>>                         processor=growPoints )
     >>>
-
     """
     # Extract filtered features
     geoms = extractFeatures(source, geom=geom, where=where, srs=srs)
@@ -1568,7 +1559,7 @@ def rasterize(
     fill=None,
     **kwargs,
 ):
-    """Rasterize a vector datasource onto a raster context
+    """Rasterize a vector datasource onto a raster context.
 
     Note:
     -----
@@ -1647,7 +1638,6 @@ def rasterize(
     --------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
-
     """
     # Normalize some inputs
     if isinstance(source, ogr.Geometry):
