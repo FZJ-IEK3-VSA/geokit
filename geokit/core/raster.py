@@ -38,15 +38,15 @@ def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
     """
     Load a raster dataset from a path to a file on disc.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or gdal.Dataset
         * If a string is given, it is assumed as a path to a raster file on disc
         * If a gdal.Dataset is given, it is assumed to already be an open raster
           and is returned immediately
 
-    Returns:
-    --------
+    Returns
+    -------
     gdal.Dataset
     """
     if isinstance(source, str):
@@ -146,8 +146,8 @@ def createRaster(
     If a data matrix is given, and a negative pixelWidth is defined, the data
     will be flipped automatically
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     bounds : (xMin, yMix, xMax, yMax) or Extent
         The geographic extents spanned by the raster
 
@@ -217,8 +217,8 @@ def createRaster(
         - numeric
         * Must be the same datatype as the 'dtype' input (or that which is derived)
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening).
                                 It has to be saved as geotiff with .tif suffix.
@@ -349,7 +349,6 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     * Any keyword argument which is given will override values found in the
       source
     """
-
     if UTIL.isRaster(source):
         source = rasterInfo(source)
 
@@ -438,8 +437,8 @@ def extractMatrix(
     of this function requires intimate knowledge of the raster's characteristics.
     In such a case it is probably easier to use Extent.extractMatrix
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -466,8 +465,8 @@ def extractMatrix(
     returnBounds : bool; optional
         If True, return the computed bounds along with the matrix data
 
-    Returns:
-    --------
+    Returns
+    -------
     * If returnBounds is False: numpy.ndarray -> Two dimensional matrix
     * If returnBounds is True: (numpy.ndarray, tuple)
         - ndarray is matrix data
@@ -561,8 +560,8 @@ def extractMatrix(
 def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
     """Compute basic statistics of the values contained in a raster dataset.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -580,8 +579,8 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
         * See gdal.WarpOptions for more details
         * For example, 'allTouched' may be useful
 
-    Returns:
-    --------
+    Returns
+    -------
     Results from a call to scipy.stats.describe
     """
     from scipy.stats import describe
@@ -614,8 +613,8 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
 def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
     """Calculate a raster's gradient and return as a new dataset or simply a matrix.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -653,8 +652,8 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
         'createRaster'
         * Only useful when 'asMatrix' is True
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'asMatrix' is True: numpy.ndarray
     * If 'asMatrix' is False: gdal.Dataset
     """
@@ -749,8 +748,8 @@ RasterInfo = namedtuple(
 def rasterInfo(sourceDS) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster.
 
-    Returns:
-    --------
+    Returns
+    -------
     namedtuple -> ( srs: The spatial reference system (as an OGR object)
                     dtype: The datatype
                     flipY: A flag which indicates that the raster starts at the
@@ -843,12 +842,12 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
     * If the given raster is not in the 'flipped-y' orientation, the result will
       be automatically flipped
 
-    Notes:
-    ------
+    Notes
+    -----
     Generally speaking, interpolateValues() should be used instead of this function
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster() or list
         The raster datasource, can be a filepath, a raster dataset etc., see
         RASTER.loadRaster() for details. Alternatively, a list of multiple
@@ -876,8 +875,8 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         If True, an error is raised if a 'noData' value is extracted
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
-    Returns:
-    --------
+    Returns
+    -------
     * If only a single location is given:
         namedtuple -> (data : The extracted data at the location
                        xOffset : The X index distance from the location to the
@@ -1110,8 +1109,8 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
     Supports various interpolation schemes:
         'near', 'linear-spline', 'cubic-spline', 'average', or user-defined
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster() or list
         The raster datasource, can be a filepath, a raster dataset etc., see
         RASTER.loadRaster() for details. Alternatively, a list of multiple
@@ -1161,8 +1160,8 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
             - average -> 3
             - func -> 3
 
-    Returns:
-    --------
+    Returns
+    -------
     * If only a single location is given: numeric
         namedtuple -> (data : The extracted data at the location
                        xOffset : The X index distance from the location to the
@@ -1277,8 +1276,8 @@ def mutateRaster(
     of the resulting raster can be changed as long as the new boundaries are within
     the scope of the original raster, but the resolution cannot.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -1418,8 +1417,8 @@ def indexToCoord(
 ) -> ogr.Geometry | tuple[int | int] | np.ndarray:
     """Convert the index of a raster to coordinate values.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     xi : int
         The x index
         * a numpy array of ints is also acceptable
@@ -1434,8 +1433,8 @@ def indexToCoord(
     asPoint : bool
         Instruct program to return point geometries instead of x,y coordinates
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'asPoint' is True: ogr.Geometry
     * If 'asPoint' is False: tuple -> (x,y) coordinates
     """
@@ -1505,9 +1504,8 @@ def drawSmopyMap(
     you have to write "© OpenStreetMap contributors" clearly on the map. But this is different for each
     tile source!
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
         bounds : (xMin, yMix, xMax, yMax) or Extent
             The geographic extent to be drawn
 
@@ -1532,9 +1530,8 @@ def drawSmopyMap(
         kwargs
             All extra keyword arguments are passed on to matplotlib.ax.imshow
 
-    Returns:
-    --------
-
+    Returns
+    -------
         namedtuple
             * .ax     -> The axes draw on
             * .srs    -> The SRS used when drawing (will always be EPSG 3857)
@@ -1621,8 +1618,8 @@ def drawRaster(
 ):
     """Draw a raster as an image on a matplotlib canvas.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to draw
 
@@ -1722,8 +1719,8 @@ def drawRaster(
         * Determines how the warping is carried out
         * Consider using 'resampleAlg' or 'workingType' for finer control
 
-    Returns:
-    --------
+    Returns
+    -------
     A namedtuple containing:
        'ax' -> The map axis
        'handles' -> All geometry handles which were created in the order they were
@@ -1887,8 +1884,8 @@ def drawRaster(
 def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     """Polygonize a raster or an integer-valued data matrix.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to polygonize
         * The Datatype MUST be of boolean of integer type
@@ -1908,13 +1905,12 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
           * Generally this should be left as True unless it is ABSOLUTELY
             necessary to maintain the same area
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame -> With columns:
                             'geom' -> The contiguous-valued geometries
                             'value' -> The value for each geometry
     """
-
     # Load the information we will need
     source = loadRaster(source)
     band = source.GetRasterBand(1)
@@ -1992,8 +1988,8 @@ def contours(
 ) -> pd.DataFrame:
     """Create contour geometries at specified edges for the given raster data.
 
-    Notes:
-    ======
+    Notes
+    -----
     This function is similar to geokit.geom.polygonizeMatrix, although it only
     operates on the user-specified edges AND applies the 'Marching Squares'
     algorithm
@@ -2001,8 +1997,8 @@ def contours(
     See the gdal function "GDALContourGenerateEx" for more information on the
     specifics of this algorithm
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to operate on
 
@@ -2025,14 +2021,13 @@ def contours(
         * Example keys include: LEVEL_INTERVAL, LEVEL_BASE, LEVEL_EXP_BASE, NODATA
         * Do not use the key "ID_FIELD", since this is employed already
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame
 
     * The column 'geom' corresponds to generated geometry objects
     * The columns 'ID' corresponds to the associated contour edge for each object
     """
-
     # Open raster
     raster = loadRaster(source)
     band = raster.GetRasterBand(1)
@@ -2131,8 +2126,8 @@ def warp(
     Unless manually altered as keyword arguments, the gdal.Warp options
     'targetAlignedPixels' and 'copyMetadata' are both set to True
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to draw
 
@@ -2201,8 +2196,8 @@ def warp(
             setColorInterpretation --- whether to force color interpretation of
                                        input bands to output bands
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
@@ -2451,8 +2446,8 @@ def sieve(
     * If 'output' is None : gdal.Dataset
     * If 'output' is a string : The path to the output is returned (for easy opening)
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
 
     threshold (int): minimum polygon size (number of pixels) to retain.
@@ -2472,7 +2467,6 @@ def sieve(
         * All kwargs are passed on to SieveFilter()
         * See gdal.SieveFilter for more details
     """
-
     gdal.AllRegister()
 
     try:
@@ -2578,7 +2572,8 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         cellHeight (int, float, optional): The cell height in EPSG:4326 units. Defaults to None.
     NOTE: If source is given, all of the others must be None, else they must be given.
 
-    Returns:
+    Returns
+    -------
         tuple or iterable: tuple with (X, Y) cell No or an iterable thereof if multiple points were given.
     """
     # check and preprocess points inputs

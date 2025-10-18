@@ -18,6 +18,14 @@ from geokit.core import util as UTIL
 
 
 class GeoKitVectorError(UTIL.GeoKitError):
+    """Marks an error that is specific to geokit behavior.
+
+    Parameters
+    ----------
+    UTIL : _type_
+        _description_
+    """
+
     pass
 
 
@@ -31,15 +39,15 @@ def loadVector(x):
     """
     Load a vector dataset from a path to a file on disc.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or gdal.Dataset
         * If a string is given, it is assumed as a path to a vector file on disc
         * If a gdal.Dataset is given, it is assumed to already be an open vector
           and is returned immediately
 
-    Returns:
-    --------
+    Returns
+    -------
     gdal.Dataset
     """
     if isinstance(x, str):
@@ -61,8 +69,8 @@ def loopFeatures(source):
     *Loops over an input layer's features
     * Will reset the reading counter before looping is initiated
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
     """
@@ -102,7 +110,6 @@ _ogrStrToType = {
 
 def ogrType(s):
     """Tries to determine the corresponding OGR type according to the input."""
-
     if isinstance(s, str):
         if hasattr(ogr, s):
             return s
@@ -169,8 +176,8 @@ def countFeatures(source, geom=None, where=None):
     """Returns the number of features found in the given source and within a
     given geometry and/or where-statement.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -187,8 +194,8 @@ def countFeatures(source, geom=None, where=None):
 
             where = "ISO='DEU' AND POP>1000"
 
-    Returns:
-    --------
+    Returns
+    -------
     int
     """
     ds = loadVector(source)
@@ -207,13 +214,13 @@ def vectorInfo(source):
 
     Determines:
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
-    Returns:
-    --------
+    Returns
+    -------
     namedtuple -> (srs : The source's SRS system,
                    bounds : The source's boundaries (in the srs's units),
                    xMin : The source's xMin boundaries (in the srs's units),
@@ -460,8 +467,8 @@ def extractFeatures(
     * To be sure an extracted geometry fits the selection criteria, you may
       still need to do further processing or use extractAndClipFeatures()
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector data source to read from
 
@@ -515,8 +522,8 @@ def extractFeatures(
         NOTE: When filter geom is a polygon, centroids exactly on the
         filter geom boundary will NOT be extracted.
 
-    Returns:
-    --------
+    Returns
+    -------
     * If asPandas is True: pandas.DataFrame or pandas.Series
     * If asPandas is False: generator
     """
@@ -571,8 +578,8 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
 
     * Will raise an error if multiple features are found
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -602,8 +609,8 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
     onlyAttr : bool; optional
         If True, only feature attributes will be returned
 
-    Returns:
-    --------
+    Returns
+    -------
     * If onlyGeom and onlyAttr are False: namedtuple -> (geom, attr)
     * If onlyGeom is True: ogr.Geometry
     * If onlyAttr is True: dict
@@ -666,8 +673,8 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
     * Geometries are written to a column called 'geom'
     * Attributes are written to a column of the same name
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -693,8 +700,8 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
           * If srs does not match the inherent srs, all geometries will be
             transformed
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame
     """
     warnings.warn(
@@ -721,8 +728,8 @@ def extractAndClipFeatures(
     Extracts features from a source and clips them to the boundaries of a given geom.
     Optionally scales numeric attribute values linearly to the overlapping area share.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector data source to read from
 
@@ -772,8 +779,8 @@ def extractAndClipFeatures(
         minShare=0.001 overlaps by only 0.06% of its area, it will be
         disregarded. By default 0.001.
 
-    Returns:
-    --------
+    Returns
+    -------
     * pandas.DataFrame or pandas.Series
     """
     assert 0 <= minShare <= 1, f"minShare must be greater or equal to 0 and less or equal to 1.0"
@@ -918,8 +925,8 @@ def createVector(
     """
     Create a vector on disk from geometries or a DataFrame with 'geom' column.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     geoms : ogr.Geometry or [ogr.Geometry, ] or pandas.DataFrane
         The geometries to write into the vector file
         * If a DataFrame is given, it must have a column called 'geom'
@@ -981,8 +988,8 @@ def createVector(
         Determines whether the preexisting files should be overwritten
         * Only used when output is not None
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is given: None
     """
@@ -1428,8 +1435,8 @@ def mutateVector(
     the selection criteria given by 'geom' and 'where' as well as translates
     all geometries to 'srs'
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -1483,8 +1490,8 @@ def mutateVector(
             * Unless they are over written by the processor
         If False, only the newly specified attributes are kept
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is given: None
 
@@ -1568,8 +1575,8 @@ def rasterize(
     aware of this if you intend to compare value-matricies directly from rasters
     generated with this function.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or ogr.Geometry
         If str, the path to the vector file to load
         If ogr.Geometry, an Polygon geometry
@@ -1634,8 +1641,8 @@ def rasterize(
         * If set to False and an 'output' is specified which already exists,
           an error will be raised
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
@@ -1771,6 +1778,8 @@ def rasterize(
 
 def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
     """
+    Applies an arbitrary function to the data frames provided.
+
     Convenience function to apply geopandas methods to a geokit-style
     dataframe with 'geom' column with osgeo.ogr.Geometry objects.
     NOTE: All arguments besides **kwargs must be passed as positional

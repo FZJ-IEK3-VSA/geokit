@@ -46,7 +46,6 @@ def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
     -------
     osr.SpatialReference
     """
-
     # Do initial check of source
     if isinstance(source, osr.SpatialReference):
         return source
@@ -105,8 +104,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
     on a given set of latitude and longitude coordinates. Alternatively, a geom
     can be passed to center the LAEA on.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     lon : float
         The longitude of the projection's center. Required if no geom is given.
 
@@ -118,8 +117,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
         be given, instead they will be defined automatically as the coordinates
         of the region centroid.
 
-    Returns:
-    --------
+    Returns
+    -------
     osr.SpatialReference
     """
     if geom is None:
@@ -161,8 +160,8 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
     """Transform xy points between coordinate systems.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
         xy : A single, or an iterable of (x,y) tuples
             The coordinates to transform
 
@@ -177,9 +176,8 @@ def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
             * if 'raw', the raw output from osr.TransformPoints is given
             * if 'xy', or 'xyz' the points are given as named tuples
 
-    Returns:
-    --------
-
+    Returns
+    -------
     list of tuples, or namedtuple
       * See the point for the 'outputFormat' argument
     """

@@ -54,7 +54,6 @@ class Location(object):
         lat : numeric
             The location's latitude value
         """
-
         if not (isinstance(lat, float) or isinstance(lat, int)):
             raise GeoKitLocationError("lat input is not a float")
         if not (isinstance(lon, float) or isinstance(lon, int)):
@@ -103,8 +102,8 @@ class Location(object):
         srs : Anything acceptable to gk.srs.loadSRS; optional
             The srs for input coordinates
 
-        Returns:
-        --------
+        Returns
+        -------
         Locations
         """
         m = LocationMatcher.search(self)
@@ -127,8 +126,8 @@ class Location(object):
         g : ogr.Geometry
             The string to parse
 
-        Returns:
-        --------
+        Returns
+        -------
         Locations
         """
         if g.GetGeometryName() != "POINT":
@@ -154,8 +153,8 @@ class Location(object):
         srs : Anything acceptable to gk.srs.loadSRS
             The srs for input coordinates
 
-        Returns:
-        --------
+        Returns
+        -------
         Locations
         """
         g = GEOM.point(x, y, srs=srs)
@@ -173,8 +172,8 @@ class Location(object):
         srs : Anything acceptable to gk.srs.loadSRS
             The srs for the created object
 
-        Returns:
-        --------
+        Returns
+        -------
         ogr.Geometry
         """
         g = self.geom
@@ -188,8 +187,8 @@ class Location(object):
         srs : Anything acceptable to gk.srs.loadSRS
             The srs for the created tuple
 
-        Returns:
-        --------
+        Returns
+        -------
         tuple -> (X, Y)
         """
         g = self.asGeom(srs=srs)
@@ -223,8 +222,8 @@ class Location(object):
             The srs for input coordinates
             * If not given, latitude and longitude coordinates are expected
 
-        Returns:
-        --------
+        Returns
+        -------
         Locations
         """
         if isinstance(loc, Location):
@@ -345,8 +344,8 @@ class LocationSet(object):
             The srs for output coordinates
             * if not given, lat/lon coordinates are expected
 
-        Returns:
-        --------
+        Returns
+        -------
         tuple -> (xMin, yMin, xMax, yMax)
         """
         if srs == 4326 and not self._bounds4326 is None:
@@ -382,8 +381,8 @@ class LocationSet(object):
     def asString(self):
         """Create a list of string representations of all locations in the set.
 
-        Returns:
-        --------
+        Returns
+        -------
         list -> [ '(lon1,lat1)', (lon2,lat2)', ... ]
         """
         return [str(l) for l in self._locations]
@@ -405,8 +404,8 @@ class LocationSet(object):
             The srs for output coordinates
             * if not given, lat/lon coordinates are expected
 
-        Returns:
-        --------
+        Returns
+        -------
         list -> [ Geometry1, Geometry1, ... ]
         """
         srs = SRS.loadSRS(srs)
@@ -424,8 +423,8 @@ class LocationSet(object):
         srs : Anything acceptable to gk.srs.loadSRS; optional
             The srs for output coordinates
 
-        Returns:
-        --------
+        Returns
+        -------
         numpy.ndarray -> Nx2
         """
         srs = SRS.loadSRS(srs)
@@ -452,8 +451,8 @@ class LocationSet(object):
         kwargs :
             All other keyword arguments are passed on to sklearn.cluster.KMeans
 
-        Yields:
-        -------
+        Yields
+        ------
         LocationSet -> A location set of each clustered group
         """
         with warnings.catch_warnings():
@@ -486,11 +485,10 @@ class LocationSet(object):
             The search speed
             * Smaller values will take longer to converge on the true bisector
 
-        Yields:
-        -------
+        Yields
+        ------
         LocationSet -> A location set of each clustered group
         """
-
         # MAX_ATTEMPTS = 100
 
         lonDiv = np.median(self.lons)

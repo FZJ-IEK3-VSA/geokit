@@ -44,16 +44,15 @@ def isVector(source):
     """
     Test if loadVector fails for the given input.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str
         The path to the vector file to load
 
-    Returns:
-    --------
+    Returns
+    -------
     bool -> True if the given input is a vector
     """
-
     if isinstance(source, gdal.Dataset):
         if source.GetLayerCount() > 0:
             return True
@@ -75,13 +74,13 @@ def isRaster(source):
     """
     Test if loadRaster fails for the given input.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str
         The path to the raster file to load
 
-    Returns:
-    --------
+    Returns
+    -------
     bool -> True if the given input is a raster
     """
     if isinstance(source, gdal.Dataset):
@@ -117,8 +116,8 @@ def scaleMatrix(mat, scale, strict=True):
     * scaling DOWN (negative) results in a dimensionally smaller matrix where each
       value is the average of the associated 'up-scaled' block
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
         mat : numpy.ndarray or [[numeric,],]
             The data to be scaled
               * Must be two dimensional
@@ -142,14 +141,12 @@ def scaleMatrix(mat, scale, strict=True):
                 all the values which lie in those pixels, but they are corrected
                 so that the averaging does NOT take into account the padded zeros.
 
-    Returns:
-    --------
-
+    Returns
+    -------
     numpy.ndarray
 
-    Examples:
-    ---------
-
+    Examples
+    --------
     INPUT       Scaling Factor      Output
     --------------------------------------
 
@@ -176,7 +173,6 @@ def scaleMatrix(mat, scale, strict=True):
                    | 0 0 0 0 0 0 |
                    | 0 0 0 0 0 0 |
     """
-
     # unpack scale
     try:
         yScale, xScale = scale
@@ -250,8 +246,8 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     """A decorator which automates the production of kernel processors for use
     in mutateRaster (although it could really used for processing any matrix).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     size : int
         The number of pixels to expand around a center pixel
         * A 'size' of 0 would make a processing matrix with size 1x1. As in,
@@ -276,8 +272,8 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
         * The xi and yi correspond to the index of the center pixel in the
           original matrix
 
-    Returns:
-    --------
+    Returns
+    -------
     function
 
     Example:
@@ -424,7 +420,6 @@ def quickRaster(
     offset=None,
 ):
     """GeoKit internal for quickly creating a raster datasource."""
-
     # bounds = fitBoundsTo(bounds, dx, dy)
 
     # Make a raster dataset and pull the band/maskBand objects
@@ -510,8 +505,8 @@ def drawImage(
 ):
     """Draw a matrix as an image on a matplotlib canvas.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     matrix : numpy.ndarray
         The matrix data to draw
 
@@ -585,8 +580,8 @@ def drawImage(
         Additional margin to add to the left of the figure
           * Before using this, try adjusting the 'figsize'
 
-    Returns:
-    --------
+    Returns
+    -------
     A namedtuple containing:
        'ax' -> The map axis
        'handles' -> All geometry handles which were created in the order they were
@@ -706,7 +701,6 @@ def compare_geoms(geoms_1, geoms_2):
     list
         A list of booleans indicating whether each pair of geometries are equal.
     """
-
     equal = map(lambda g1, g2: g1.Equals(g2), geoms_1, geoms_2)
 
     return list(equal)

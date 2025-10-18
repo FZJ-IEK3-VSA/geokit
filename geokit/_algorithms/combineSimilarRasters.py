@@ -32,8 +32,8 @@ def checkSimilarRasters(
         The relative tolerance that is allowed for numeric deviations. By
         default 0, i.e. an exact match (within data type accuracy) is required.
 
-    Returns:
-    --------
+    Returns
+    -------
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
@@ -143,8 +143,8 @@ def combineSimilarRasters(
     **kwargs
         Will be passed on to geokit.raster.createRaster().
 
-    Returns:
-    --------
+    Returns
+    -------
     output dataset: osgeo.gdal.Dataset
         Raster file containing the combined matrices of all input datasets.
     """
