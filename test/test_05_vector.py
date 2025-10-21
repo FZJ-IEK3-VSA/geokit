@@ -6,6 +6,7 @@ import pytest
 
 from geokit import geom, raster, util, vector
 from geokit.core.get_test_data import get_test_data
+from geokit.core.vector import GeoKitVectorError
 from test.helpers import *
 
 # ogrType
@@ -161,10 +162,9 @@ def test_extractAndClipFeatures():
     assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
 
 
-# Create shape file
-
-
 def test_createVector(tmpdir):
+
+    # Create shape file
     # Setup
     out1 = result("util_shape1.shp")
     out2 = result("util_shape2.shp")
@@ -393,9 +393,7 @@ def test_mutateVector():
 
 
 def test_loadVector():
-    
-    from geokit.core.vector import GeoKitVectorError
-    
+      
     # 1) Valid vector file → returns gdal.Dataset
     test_shp_path = get_test_data(file_name="boxes.shp")
     
