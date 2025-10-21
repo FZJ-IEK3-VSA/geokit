@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from geokit import geom, raster, util, vector
+from geokit.core.get_test_data import get_test_data
 from test.helpers import *
 
 # ogrType
@@ -392,7 +393,35 @@ def test_mutateVector():
 
 
 def test_loadVector():
-    assert util.isVector(vector.loadVector(BOXES))
+    
+    from geokit.core.vector import GeoKitVectorError
+    
+    # 1) Valid vector file → returns gdal.Dataset
+    test_shp_path = get_test_data(file_name="boxes.shp")
+    
+    ds = vector.loadVector(test_shp_path)
+    assert isinstance(ds, gdal.Dataset)
+    ds = None
+
+    # 2) Passing an already-open gdal.Dataset → returns it unchanged
+    ds_open = gdal.OpenEx(test_shp_path)
+    ds_again = vector.loadVector(ds_open)
+    # same object (GDAL returns the same handle)
+    assert ds_again is ds_open
+    ds_open = None
+    ds_again = None
+
+    # 3) Non-existent path → FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        vector.loadVector("missing_path/missing.shp")
+
+    # 4) None → GeoKitVectorError
+    with pytest.raises(GeoKitVectorError):
+        vector.loadVector(None)
+
+    # 5) Wrong type → TypeError
+    with pytest.raises(TypeError):
+        vector.loadVector(123)  # not str or gdal.Dataset
 
 
 def test_vectorInfo():
