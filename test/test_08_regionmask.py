@@ -160,7 +160,7 @@ def test_RegionMask_fromVector():
         rm4 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'")
         assert False
     except error.GeoKitRegionMaskError as e:
-        assert "Multiple fetures found" in str(e)
+        assert "Multiple features found" in str(e)
     else:
         assert False
 

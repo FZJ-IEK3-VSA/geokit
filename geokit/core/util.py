@@ -1,4 +1,4 @@
-"""The Util sub-module contains a number of generally helpful utility functions, classes, and constants"""
+"""The Util sub-module contains a number of generally helpful utility functions, classes, and constants."""
 
 import os
 import re
@@ -42,19 +42,17 @@ class GeoKitError(Exception):
 
 def isVector(source):
     """
-    Test if loadVector fails for the given input
+    Test if loadVector fails for the given input.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str
         The path to the vector file to load
 
-    Returns:
-    --------
+    Returns
+    -------
     bool -> True if the given input is a vector
-
     """
-
     if isinstance(source, gdal.Dataset):
         if source.GetLayerCount() > 0:
             return True
@@ -74,17 +72,16 @@ def isVector(source):
 
 def isRaster(source):
     """
-    Test if loadRaster fails for the given input
+    Test if loadRaster fails for the given input.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str
         The path to the raster file to load
 
-    Returns:
-    --------
+    Returns
+    -------
     bool -> True if the given input is a raster
-
     """
     if isinstance(source, gdal.Dataset):
         try:
@@ -119,8 +116,8 @@ def scaleMatrix(mat, scale, strict=True):
     * scaling DOWN (negative) results in a dimensionally smaller matrix where each
       value is the average of the associated 'up-scaled' block
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
         mat : numpy.ndarray or [[numeric,],]
             The data to be scaled
               * Must be two dimensional
@@ -144,44 +141,38 @@ def scaleMatrix(mat, scale, strict=True):
                 all the values which lie in those pixels, but they are corrected
                 so that the averaging does NOT take into account the padded zeros.
 
-    Returns:
-    --------
-
+    Returns
+    -------
     numpy.ndarray
 
-
-    Examples:
-    ---------
-
+    Examples
+    --------
     INPUT       Scaling Factor      Output
-    -----       --------------      ------
+    --------------------------------------
 
     | 1 2 |             2           | 1 1 2 2 |
     | 3 4 |                         | 1 1 2 2 |
                                     | 3 3 4 4 |
                                     | 3 3 4 4 |
 
-
     | 1 1 1 1 |        -2           | 1.5  2.0 |
     | 2 2 3 3 |                     | 5.25 6.75|
     | 4 4 5 5 |
     | 6 7 8 9 |
 
-
     | 1 1 1 1 |        -3           | 2.55  3.0 |
     | 2 2 3 3 |   * strict=False    | 7.0    9  |
     | 4 4 5 5 |
+
     | 6 7 8 9 |       *padded*
-                    -------------
+                    --------------------------
                    | 1 1 1 1 0 0 |
                    | 2 2 3 3 0 0 |
                    | 4 4 5 5 0 0 |
                    | 6 7 8 9 0 0 |
                    | 0 0 0 0 0 0 |
                    | 0 0 0 0 0 0 |
-
     """
-
     # unpack scale
     try:
         yScale, xScale = scale
@@ -253,10 +244,10 @@ def scaleMatrix(mat, scale, strict=True):
 
 def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     """A decorator which automates the production of kernel processors for use
-    in mutateRaster (although it could really used for processing any matrix)
+    in mutateRaster (although it could really used for processing any matrix).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     size : int
         The number of pixels to expand around a center pixel
         * A 'size' of 0 would make a processing matrix with size 1x1. As in,
@@ -281,14 +272,14 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
         * The xi and yi correspond to the index of the center pixel in the
           original matrix
 
-    Returns:
-    --------
+    Returns
+    -------
     function
 
     Example:
     --------
     * Say we want to make a processor which calculates the average of pixels
-      which are within a distance of 2 indicies. In other words, we want the
+      which are within a distance of 2 indices. In other words, we want the
       average of a 5x5 matrix centered around each pixel.
     * Assume that we can use the value -9999 as a no data value
 
@@ -299,7 +290,6 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
     >>>
     >>>      # Return the mean
     >>>      return goodValues.mean()
-
     """
     pass
 
@@ -342,7 +332,7 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 
 
 def quickVector(geom, output=None):
-    """GeoKit internal for quickly creating a vector datasource"""
+    """GeoKit internal for quickly creating a vector datasource."""
     # Create a quick vector source
 
     if isinstance(geom, ogr.Geometry):
@@ -429,8 +419,7 @@ def quickRaster(
     scale=None,
     offset=None,
 ):
-    """GeoKit internal for quickly creating a raster datasource"""
-
+    """GeoKit internal for quickly creating a raster datasource."""
     # bounds = fitBoundsTo(bounds, dx, dy)
 
     # Make a raster dataset and pull the band/maskBand objects
@@ -514,10 +503,10 @@ def drawImage(
     bottomMargin=0,
     **kwargs,
 ):
-    """Draw a matrix as an image on a matplotlib canvas
+    """Draw a matrix as an image on a matplotlib canvas.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     matrix : numpy.ndarray
         The matrix data to draw
 
@@ -526,10 +515,10 @@ def drawImage(
           * If not given, a new axis is generated and returned
 
     xlim : tuple[float, float]; optional
-        The x-axis limits to draw the marix on
+        The x-axis limits to draw the matrix on
 
     ylim : tuple[float, float]; optional
-        The y-axis limits to draw the marix on
+        The y-axis limits to draw the matrix on
 
     yAtTop : bool; optional
         If True, the first row of data should be plotted at the top of the image
@@ -591,14 +580,13 @@ def drawImage(
         Additional margin to add to the left of the figure
           * Before using this, try adjusting the 'figsize'
 
-    Returns:
-    --------
+    Returns
+    -------
     A namedtuple containing:
        'ax' -> The map axis
        'handles' -> All geometry handles which were created in the order they were
                     drawn
        'cbar' -> The colorbar handle if it was drawn
-
     """
     # Create an axis, if needed
     if isinstance(ax, AxHands):
@@ -713,7 +701,6 @@ def compare_geoms(geoms_1, geoms_2):
     list
         A list of booleans indicating whether each pair of geometries are equal.
     """
-
     equal = map(lambda g1, g2: g1.Equals(g2), geoms_1, geoms_2)
 
     return list(equal)
@@ -722,7 +709,7 @@ def compare_geoms(geoms_1, geoms_2):
 def get_common_dtype(dtypes, fallback=11):
     """
     This auxiliary function returns the most lightweight GDAL datatype that is
-    commonly useable (without precision loss) for a given list of GDAL dtypes.
+    commonly usable (without precision loss) for a given list of GDAL dtypes.
 
     dtypes : list
         List of integers (GDAL Enum Codes).
@@ -759,7 +746,7 @@ def get_common_dtype(dtypes, fallback=11):
         raise ValueError(
             f"fallback must be a known GDAL Enum Code if not None. Select from: {', '.join(sorted(dtype_compatibilities.keys()))}"
         )
-    # if all dtypes are known, check if they can be converted into eachother
+    # if all dtypes are known, check if they can be converted into each other
     if all([d in dtype_compatibilities for d in dtypes]):
         # get the "lowest common denominator" dtype
         for _type in dtype_compatibilities.keys():
@@ -770,7 +757,7 @@ def get_common_dtype(dtypes, fallback=11):
     if fallback:
         return fallback
     else:
-        raise TypeError(f"No commonly useable GDAL dtype found for dtypes: {dtypes}")
+        raise TypeError(f"No commonly usable GDAL dtype found for dtypes: {dtypes}")
 
 
 def nodata_equal(a, b):

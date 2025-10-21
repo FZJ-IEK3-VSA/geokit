@@ -1,6 +1,4 @@
-"""
-A convenience module which automatically imports all of geokit modules into the same namespace
-"""
+"""A convenience module which automatically imports all of geokit modules into the same namespace."""
 
 from geokit import Extent, Location, LocationSet, RegionMask
 from geokit.algorithms import *
