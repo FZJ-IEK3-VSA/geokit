@@ -50,11 +50,10 @@ def loadVector(x):
     -------
     gdal.Dataset
     """
-
     if isinstance(x, str):
         if not os.path.exists(x):
             raise FileNotFoundError(f"Vector file, directory, or resource not found: {x}")
-        
+
         # Since we know the path exists, try to open it.
         ds = gdal.OpenEx(x)
         if ds is None:
@@ -68,14 +67,13 @@ def loadVector(x):
     elif isinstance(x, gdal.Dataset):
         # If it is an already-opened GDAL Dataset object.
         ds = x
-        
+
     else:
         # Handle any other invalid type
-        raise TypeError(
-            f"Invalid input type: Expected str, or gdal.Dataset, got {type(x)}"
-        )
+        raise TypeError(f"Invalid input type: Expected str, or gdal.Dataset, got {type(x)}")
 
-    return ds 
+    return ds
+
 
 # Feature looper
 
