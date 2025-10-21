@@ -8,16 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag:
-          [
-            "ubuntu-24.04",
-            "ubuntu-22.04",
-            "macos-13",
-            "macos-14",
-            "macos-15",
-            "windows-2025",
-            "windows-2022",
-          ]
+        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python_version:
           [
             "1.7.2",
