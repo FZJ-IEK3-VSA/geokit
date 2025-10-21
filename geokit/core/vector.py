@@ -43,18 +43,32 @@ def loadVector(x):
     gdal.Dataset
 
     """
-    if isinstance(x, str) and not os.path.isfile(x):
-        raise FileNotFoundError(f"Vector file not found: {x}")
 
     if isinstance(x, str):
+        if not os.path.exists(x):
+            raise FileNotFoundError(f"Vector file, directory, or resource not found: {x}")
+        
+        # Since we know the path exists, try to open it.
         ds = gdal.OpenEx(x)
-    else:
+        if ds is None:
+            # This error now clearly means path exists, but GDAL failed to open it or the file is corrupted.
+            raise GeoKitVectorError(f"Could not load input dataSource: {x}")
+
+    elif x is None:
+        # Raise and error if 'None' is passed as the object
+        raise GeoKitVectorError("Input dataSource cannot be None.")
+
+    elif isinstance(x, gdal.Dataset):
+        # If it is an already-opened GDAL Dataset object.
         ds = x
+        
+    else:
+        # Handle any other invalid type
+        raise TypeError(
+            f"Invalid input type: Expected str, or gdal.Dataset, got {type(x)}"
+        )
 
-    if ds is None:
-        raise GeoKitVectorError("Could not load input dataSource: ", str(x))
-    return ds
-
+    return ds 
 
 # Feature looper
 
