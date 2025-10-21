@@ -1,23 +1,23 @@
+import inspect
 import os
 import pathlib
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from typing import Literal
 
 import numpy as np
 import pandas as pd
-import structlog
 from osgeo import gdal, ogr
+from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
-from geokit.core import extent as EXTENT
 from geokit.core import util as UTIL
-from geokit.core.location import Location, LocationSet
+from geokit.core.location import Location
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -36,19 +36,18 @@ else:
 
 def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
     """
-    Load a raster dataset from a path to a file on disc
+    Load a raster dataset from a path to a file on disc.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or gdal.Dataset
         * If a string is given, it is assumed as a path to a raster file on disc
         * If a gdal.Dataset is given, it is assumed to already be an open raster
           and is returned immediately
 
-    Returns:
-    --------
+    Returns
+    -------
     gdal.Dataset
-
     """
     if isinstance(source, str):
         ds = gdal.Open(source, mode)
@@ -61,9 +60,7 @@ def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
 
 
 # GDAL type mapper
-_gdalIntToType = dict(
-    (v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items())
-)
+_gdalIntToType = dict((v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items()))
 _gdalType = {
     bool: "GDT_Byte",
     int: "GDT_Int32",
@@ -82,7 +79,7 @@ _gdalType = {
 
 
 def gdalType(s):
-    """Tries to determine gdal datatype from the given input type"""
+    """Tries to determine gdal datatype from the given input type."""
     if s is None:
         return "GDT_Unknown"
     elif isinstance(s, str):
@@ -121,11 +118,11 @@ def gdalType(s):
 
 def createRaster(
     bounds,
-    output: None | str | pathlib.Path = None,
+    output: None | str = None,
     pixelWidth=100,
     pixelHeight=100,
     dtype=None,
-    srs="europe_m",
+    srs=None,
     compress=True,
     noData=None,
     overwrite: bool = True,
@@ -136,8 +133,8 @@ def createRaster(
     offset=0,
     creationOptions=dict(),
     **kwargs,
-):
-    """Create a raster file
+) -> gdal.Dataset | str:
+    """Create a raster file.
 
     NOTE:
     -----
@@ -149,8 +146,8 @@ def createRaster(
     If a data matrix is given, and a negative pixelWidth is defined, the data
     will be flipped automatically
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     bounds : (xMin, yMix, xMax, yMax) or Extent
         The geographic extents spanned by the raster
 
@@ -167,7 +164,7 @@ def createRaster(
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -193,12 +190,12 @@ def createRaster(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
@@ -213,18 +210,18 @@ def createRaster(
     scale : numeric; optional
         The scaling value given to apply to all values
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     offset : numeric; optional
         The offset value given to apply to all values
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: The path to the output is returned (for easy opening)
-
+    * If 'output' is a string: The path to the output is returned (for easy opening).
+                                It has to be saved as geotiff with .tif suffix.
     """
     # Check for existing file
     if output is not None:
@@ -236,12 +233,14 @@ def createRaster(
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
+        # check if the directory exists
+        elif not os.path.isdir(os.path.dirname(output)):
+            raise FileNotFoundError(f"Output directory does not exist: {os.path.dirname(output)}")
+
         # check if writeable:
         if not os.access(os.path.dirname(output), os.W_OK):
             print(os.path.dirname(output))
-            raise PermissionError(
-                f"Writing permission error for path: {os.path.dirname(output)}"
-            )
+            raise PermissionError(f"Writing permission error for path: {os.path.dirname(output)}")
 
     # Ensure bounds is okay
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
@@ -254,11 +253,9 @@ def createRaster(
     rows = int(round((originY - bounds[1]) / abs(pixelHeight)))
 
     # Get DataType
-    if not dtype is None:  # a dtype was given, use it!
+    if dtype is not None:  # a dtype was given, use it!
         dtype = gdalType(dtype)
-    elif (
-        not data is None
-    ):  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
+    elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
         dtype = gdalType(data.dtype)
     else:  # Otherwise, just assume we want a Byte
         dtype = "GDT_Byte"
@@ -272,34 +269,32 @@ def createRaster(
     opts = ["{}={}".format(k, v) for k, v in opts.items()]
 
     if output is None:
-        driver = gdal.GetDriverByName("Mem")  # create a raster in memory
+        driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
         raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
     else:
-        driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
+        driver: gdal.Driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
         raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
 
     if raster is None:
-        raise GeoKitRasterError(f"Failed to create raster")
+        raise GeoKitRasterError("Failed to create raster")
 
-    # Do the rest in a "try" statement so that a failure wont bind the source
+    # Do the rest in a "try" statement so that a failure won't bind the source
     try:
-        raster.SetGeoTransform(
-            (originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight))
-        )
+        raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
 
         # Set the SRS
-        if not srs is None:
+        if srs is not None:
             rasterSRS = SRS.loadSRS(srs)
             raster.SetProjection(rasterSRS.ExportToWkt())
 
         # Fill the raster will zeros, null values, or initial values (if given)
-        band = raster.GetRasterBand(1)
-        if not scale is None:
+        band: gdal.Band = raster.GetRasterBand(1)
+        if scale is not None:
             band.SetScale(scale)
-        if not offset is None:
+        if offset is not None:
             band.SetOffset(offset)
 
-        if not noData is None:
+        if noData is not None:
             band.SetNoDataValue(noData)
             if fill is None and data is None:
                 band.Fill(noData)
@@ -312,9 +307,7 @@ def createRaster(
         else:
             # make sure dimension size is good
             if not (data.shape[0] == rows and data.shape[1] == cols):
-                raise GeoKitRasterError(
-                    "Raster dimensions and input data dimensions do not match"
-                )
+                raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
 
             # See if data needs flipping
             if pixelHeight < 0:
@@ -330,7 +323,7 @@ def createRaster(
         raster.FlushCache()
 
         # Write MetaData, maybe
-        if not meta is None:
+        if meta is not None:
             for k, v in meta.items():
                 raster.SetMetadataItem(k, v)
 
@@ -355,16 +348,14 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
       pixelWidth, pixelHeight, dtype, srs, noData, and meta.
     * Any keyword argument which is given will override values found in the
       source
-
     """
-
     if UTIL.isRaster(source):
         source = rasterInfo(source)
 
     if not isinstance(source, RasterInfo):
         raise GeoKitRasterError("Could not understand source")
 
-    if copyMetadata and not metadata is None:
+    if copyMetadata and metadata is not None:
         raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
     bounds = kwargs.pop("bounds", source.bounds)
@@ -438,7 +429,7 @@ def extractMatrix(
     autocorrect: bool = False,
     returnBounds: bool = False,
 ) -> np.ndarray | tuple[np.ndarray, tuple[float, float, float, float] | None]:
-    """extract all or part of a raster's band as a numpy matrix
+    """Extract all or part of a raster's band as a numpy matrix.
 
     Note:
     -----
@@ -446,8 +437,8 @@ def extractMatrix(
     of this function requires intimate knowledge of the raster's characteristics.
     In such a case it is probably easier to use Extent.extractMatrix
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -469,18 +460,17 @@ def extractMatrix(
         If True, the matrix will search for no data values and change them to
         numpy.nan
         * Data type will always result in a float, so be careful with large
-          matricies
+          matrices
 
     returnBounds : bool; optional
         If True, return the computed bounds along with the matrix data
 
-    Returns:
-    --------
+    Returns
+    -------
     * If returnBounds is False: numpy.ndarray -> Two dimensional matrix
     * If returnBounds is True: (numpy.ndarray, tuple)
         - ndarray is matrix data
         - tuple is the (xMin, yMin, xMax, yMax) of the computed bounds
-
     """
     sourceDS = loadRaster(source)  # BE sure we have a raster
     dsInfo = rasterInfo(sourceDS)
@@ -505,48 +495,34 @@ def extractMatrix(
             boundsSRS = SRS.loadSRS(boundsSRS)
             if not dsInfo.srs.IsSame(boundsSRS):
                 bounds = GEOM.boundsToBounds(bounds, boundsSRS, dsInfo.srs)
-            bounds = UTIL.fitBoundsTo(
-                bounds, dsInfo.dx, dsInfo.dy, expand=True, startAtZero=True
-            )
+            bounds = UTIL.fitBoundsTo(bounds, dsInfo.dx, dsInfo.dy, expand=True, startAtZero=True)
 
         # Find offsets
         xoff = int(np.round((bounds[0] - dsInfo.xMin) / dsInfo.dx))
         if xoff < 0:
-            raise GeoKitRasterError(
-                "The given boundary exceeds the raster's xMin value"
-            )
+            raise GeoKitRasterError("The given boundary exceeds the raster's xMin value")
 
         xwin = int(np.round((bounds[2] - dsInfo.xMin) / dsInfo.dx)) - xoff
         if xwin > dsInfo.xWinSize:
-            raise GeoKitRasterError(
-                "The given boundary exceeds the raster's xMax value"
-            )
+            raise GeoKitRasterError("The given boundary exceeds the raster's xMax value")
 
         if dsInfo.yAtTop:
             yoff = int(np.round((dsInfo.yMax - bounds[3]) / dsInfo.dy))
             if yoff < 0:
-                raise GeoKitRasterError(
-                    "The given boundary exceeds the raster's yMax value"
-                )
+                raise GeoKitRasterError("The given boundary exceeds the raster's yMax value")
 
             ywin = int(np.round((dsInfo.yMax - bounds[1]) / dsInfo.dy)) - yoff
 
             if ywin > dsInfo.yWinSize:
-                raise GeoKitRasterError(
-                    "The given boundary exceeds the raster's yMin value"
-                )
+                raise GeoKitRasterError("The given boundary exceeds the raster's yMin value")
         else:
             yoff = int(np.round((bounds[1] - dsInfo.yMin) / dsInfo.dy))
             if yoff < 0:
-                raise GeoKitRasterError(
-                    "The given boundary exceeds the raster's yMin value"
-                )
+                raise GeoKitRasterError("The given boundary exceeds the raster's yMin value")
 
             ywin = int(np.round((bounds[3] - dsInfo.yMin) / dsInfo.dy)) - yoff
             if ywin > dsInfo.yWinSize:
-                raise GeoKitRasterError(
-                    "The given boundary exceeds the raster's yMax value"
-                )
+                raise GeoKitRasterError("The given boundary exceeds the raster's yMax value")
 
     else:
         xoff = 0
@@ -558,9 +534,7 @@ def extractMatrix(
     if maskBand:
         data = mb.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
     else:
-        data = sourceBand.ReadAsArray(
-            xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin
-        )
+        data = sourceBand.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
         if dsInfo.scale is not None and dsInfo.scale != 1.0:
             data = data * dsInfo.scale
         if dsInfo.offset is not None and dsInfo.offset != 0.0:
@@ -572,7 +546,7 @@ def extractMatrix(
         data = data.astype(np.float64)
         data[data == noData] = np.nan
 
-    # make sure we are returing data in the 'flipped-y' orientation
+    # make sure we are returning data in the 'flipped-y' orientation
     if not isFlipped(source):
         data = data[::-1, :]
 
@@ -586,8 +560,8 @@ def extractMatrix(
 def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
     """Compute basic statistics of the values contained in a raster dataset.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -605,17 +579,16 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
         * See gdal.WarpOptions for more details
         * For example, 'allTouched' may be useful
 
-    Returns:
-    --------
+    Returns
+    -------
     Results from a call to scipy.stats.describe
-
     """
     from scipy.stats import describe
 
     source = loadRaster(source)
 
     # Get the matrix to calculate over
-    if not cutline is None:
+    if cutline is not None:
         source = warp(source, cutline=cutline, noData=ignoreValue, **kwargs)
 
     rawData = extractMatrix(source)
@@ -624,10 +597,10 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
     # exclude nodata and ignore values
     sel = np.ones(rawData.shape, dtype="bool")
 
-    if not ignoreValue is None:
+    if ignoreValue is not None:
         np.logical_and(rawData != ignoreValue, sel, sel)
 
-    if not dataInfo.noData is None:
+    if dataInfo.noData is not None:
         np.logical_and(rawData != dataInfo.noData, sel, sel)
 
     # compute statistics
@@ -638,10 +611,10 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
 ####################################################################
 # Gradient calculator
 def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
-    """Calculate a raster's gradient and return as a new dataset or simply a matrix
+    """Calculate a raster's gradient and return as a new dataset or simply a matrix.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -679,11 +652,10 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
         'createRaster'
         * Only useful when 'asMatrix' is True
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'asMatrix' is True: numpy.ndarray
     * If 'asMatrix' is False: gdal.Dataset
-
     """
     # Make sure source is a source
     source = loadRaster(source)
@@ -699,7 +671,7 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
         "ns",
         "aspect",
     ]
-    if not (mode in acceptable):
+    if mode not in acceptable:
         raise ValueError("'mode' not understood. Must be one of: ", acceptable)
 
     # Get the factor
@@ -774,10 +746,10 @@ RasterInfo = namedtuple(
 
 
 def rasterInfo(sourceDS) -> RasterInfo:
-    """Returns a named tuple containing information relating to the input raster
+    """Returns a named tuple containing information relating to the input raster.
 
-    Returns:
-    --------
+    Returns
+    -------
     namedtuple -> ( srs: The spatial reference system (as an OGR object)
                     dtype: The datatype
                     flipY: A flag which indicates that the raster starts at the
@@ -863,24 +835,22 @@ def rasterInfo(sourceDS) -> RasterInfo:
 ptValue = namedtuple("value", "data xOffset yOffset inBounds")
 
 
-def extractValues(
-    source, points, pointSRS="latlon", winRange=0, noDataOkay=True, _onlyValues=False
-):
+def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True, _onlyValues=False):
     """Extracts the value of a raster at a given point or collection of points.
-       Can also extract a window of values if desired
+       Can also extract a window of values if desired.
 
     * If the given raster is not in the 'flipped-y' orientation, the result will
       be automatically flipped
 
-    Notes:
-    ------
+    Notes
+    -----
     Generally speaking, interpolateValues() should be used instead of this function
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster() or list
-        The raster datasource, can be a filepath, a raster dataset etc., see 
-        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        The raster datasource, can be a filepath, a raster dataset etc., see
+        RASTER.loadRaster() for details. Alternatively, a list of multiple
         such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
@@ -905,8 +875,8 @@ def extractValues(
         If True, an error is raised if a 'noData' value is extracted
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
-    Returns:
-    --------
+    Returns
+    -------
     * If only a single location is given:
         namedtuple -> (data : The extracted data at the location
                        xOffset : The X index distance from the location to the
@@ -922,7 +892,6 @@ def extractValues(
                 - See above for column descriptions
             * Index is 0...N if 'points' input is not a LocationSet
             * Index is the LocationSet is if 'points' input is a LocationSet
-
     """
     # Be sure we have a raster and srs
     if not isinstance(source, list):
@@ -931,15 +900,14 @@ def extractValues(
     try:
         source = [loadRaster(s) for s in source]
     except:
-        raise TypeError(f"At least one source cannot be loaded by geokit.raster.loadRaster().")
+        raise TypeError("At least one source cannot be loaded by geokit.raster.loadRaster().")
     srs = None
     for s in source:
         # load file to make sure it can be interpreted by loadRaster
         if srs is None:
             srs = rasterInfo(s).srs
         else:
-            assert srs.IsSame(rasterInfo(s).srs), \
-                f"All source entries must have the same SRS."
+            assert srs.IsSame(rasterInfo(s).srs), "All source entries must have the same SRS."
 
     # generate srs for points
     pointSRS = SRS.loadSRS(pointSRS)
@@ -975,11 +943,7 @@ def extractValues(
             return tmpPt
 
         # check for an individual point input
-        if (
-            isinstance(points, Location)
-            or isinstance(points, tuple)
-            or isinstance(points, ogr.Geometry)
-        ):
+        if isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry):
             asSingle = True
             points = [
                 loadPoint(points, pointSRS),
@@ -1000,37 +964,41 @@ def extractValues(
         for s in source:
             # get bounds and filter indices of points that fall into bounds
             _bounds = rasterInfo(s).bounds
-            _indices = [i for i,p in enumerate(points) if (_bounds[0]<=p.GetX()<=_bounds[2]) and (_bounds[1]<=p.GetY()<=_bounds[3])]
+            _indices = [
+                i
+                for i, p in enumerate(points)
+                if (_bounds[0] <= p.GetX() <= _bounds[2]) and (_bounds[1] <= p.GetY() <= _bounds[3])
+            ]
             # add source as key plus list of overlapped point indices
             src_mapper[s] = _indices
     else:
         # we have only one source which must be applied to all points
         src_mapper[source[0]] = list(range(len(points)))
         # srcs = source * len(points)
-    
+
     # iterate over all unique srcs and extract the raster values for the affected points _src by _src
 
-    values = [np.nan] * len(points) # initialize values with nan for every point
-    inBounds = [False] * len(points) # initialize inbounds with False for every point
-    xOffset = [np.nan] * len(points) # initialize offsets with nan for every point
-    yOffset = [np.nan] * len(points) # initialize offsets with nan for every point
+    values = [np.nan] * len(points)  # initialize values with nan for every point
+    inBounds = [False] * len(points)  # initialize inbounds with False for every point
+    xOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
+    yOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
 
     for _src, _inds in src_mapper.items():
         # get the indices of the points for which data has been extracted already
-        _xtrct = [i for i, v in enumerate(values) if pd.notnull(v)]
+        _xtrct = [i for i, v in enumerate(values) if np.all(pd.notnull(v))]
         # deduct them from the inds here (they may have been extracted already from an overlapping _src tile)
-        _inds = list(set(_inds)-set(_xtrct))
-        
+        _inds = list(set(_inds) - set(_xtrct))
+
         if len(_inds) == 0:
             # no indices left to extract from this _src
             continue
 
         # get the points with this _src via list indices
         _points = [points[i] for i in _inds]
-        
+
         # get the raster info for this _src
         _info = rasterInfo(_src)
-        
+
         # Get x/y values as numpy arrays
         x = np.array([pt.GetX() for pt in _points])
         y = np.array([pt.GetY() for pt in _points])
@@ -1068,16 +1036,14 @@ def extractValues(
                 data = np.ones((window, window)) * np.nan
             else:
                 # Open and read from raster
-                data = band.ReadAsArray(
-                    xoff=xi, yoff=yi, win_xsize=window, win_ysize=window
-                )
+                data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
                 if (_info.scale != None) and (_info.scale != 1.0):
                     data = data * _info.scale
                 if (_info.offset != None) and (_info.offset != 0.0):
                     data = data + _info.offset
 
                 # Look for nodata
-                if not _info.noData is None:
+                if _info.noData is not None:
                     nodata = data == _info.noData
                     if nodata.any():
                         if noDataOkay:
@@ -1094,7 +1060,7 @@ def extractValues(
                     data = data[::-1, :]
 
             if winRange == 0:
-                # If winRange is 0, theres no need to return a 2D matrix
+                # If winRange is 0, there's no need to return a 2D matrix
                 data = data[0][0]
 
             # Append to values
@@ -1111,7 +1077,7 @@ def extractValues(
             inBounds[i] = ib
             xOffset[i] = x
             yOffset[i] = y
-    
+
     if np.isnan(values).any():
         # we still have NaN values left
         msg = f"WARNING: {np.isnan(values).sum()} of the given points (or extraction windows) exceed/s the source's limits. Values were replaced with nan."
@@ -1137,20 +1103,17 @@ def extractValues(
 # Shortcut for getting just the raster value
 
 
-def interpolateValues(
-    source, points, pointSRS="latlon", mode="near", func=None, winRange=None, **kwargs
-):
+def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None, winRange=None, **kwargs):
     """Interpolates the value of a raster at a given point or collection of points.
 
     Supports various interpolation schemes:
         'near', 'linear-spline', 'cubic-spline', 'average', or user-defined
 
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster() or list
-        The raster datasource, can be a filepath, a raster dataset etc., see 
-        RASTER.loadRaster() for details. Alternatively, a list of multiple 
+        The raster datasource, can be a filepath, a raster dataset etc., see
+        RASTER.loadRaster() for details. Alternatively, a list of multiple
         such raster datasources.
 
     points : (X,Y) or [(X1,Y1), (X2,Y2), ...] or Location or LocationSet()
@@ -1197,9 +1160,8 @@ def interpolateValues(
             - average -> 3
             - func -> 3
 
-
-    Returns:
-    --------
+    Returns
+    -------
     * If only a single location is given: numeric
         namedtuple -> (data : The extracted data at the location
                        xOffset : The X index distance from the location to the
@@ -1221,14 +1183,9 @@ def interpolateValues(
     >>>
     >>> result = interpolateValues( <source>, <points>, mode='func',
     >>>                             func=medianFinder, winRange=2)
-
     """
     # Determine what the user probably wants as an output
-    if (
-        isinstance(points, tuple)
-        or isinstance(points, ogr.Geometry)
-        or isinstance(points, Location)
-    ):
+    if isinstance(points, tuple) or isinstance(points, ogr.Geometry) or isinstance(points, Location):
         asSingle = True
         # make points a list of length 1 so that the rest works (will be unpacked later)
         points = [
@@ -1241,9 +1198,7 @@ def interpolateValues(
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        result = extractValues(
-            source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True
-        )
+        result = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
 
     elif mode == "linear-spline":  # use a spline interpolation scheme
         # setup inputs
@@ -1319,10 +1274,10 @@ def mutateRaster(
 ):
     """Process all pixels in a raster according to a given function. The boundaries
     of the resulting raster can be changed as long as the new boundaries are within
-    the scope of the original raster, but the resolution cannot
+    the scope of the original raster, but the resolution cannot.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource
 
@@ -1352,12 +1307,12 @@ def mutateRaster(
         If True, then before mutating the matrix extracted from the source will have
         pixels equal to its 'noData' value converted to numpy.nan
         * Data type will always result in a float, so be careful with large
-          matricies
+          matrices
 
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -1377,7 +1332,7 @@ def mutateRaster(
     integer identifiers
 
     >>> def calcSuitability( data ):
-    >>>     # create an ouptut matrix
+    >>>     # create an output matrix
     >>>     outputMatrix = numpy.zeros( data.shape )
     >>>
     >>>     # do the processing
@@ -1417,7 +1372,7 @@ def mutateRaster(
     # Ensure returned matrix is okay
     if processedData.shape != sourceData.shape:
         raise GeoKitRasterError(
-            "Processed matrix does not have the correct shape \nIs {0} \nShoud be {1}",
+            "Processed matrix does not have the correct shape \nIs {0} \nShould be {1}",
             format(processedData.shape, sourceData.shape),
         )
     del sourceData
@@ -1450,20 +1405,20 @@ def mutateRaster(
 
 
 def indexToCoord(
-    yi,
-    xi,
+    yi: int | np.ndarray,
+    xi: int | np.ndarray,
     source=None,
-    asPoint=False,
+    asPoint: bool = False,
     bounds=None,
     dx=None,
     dy=None,
     yAtTop=True,
     srs=None,
-):
+) -> ogr.Geometry | tuple[int | int] | np.ndarray:
     """Convert the index of a raster to coordinate values.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     xi : int
         The x index
         * a numpy array of ints is also acceptable
@@ -1478,13 +1433,12 @@ def indexToCoord(
     asPoint : bool
         Instruct program to return point geometries instead of x,y coordinates
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'asPoint' is True: ogr.Geometry
     * If 'asPoint' is False: tuple -> (x,y) coordinates
-
     """
-    if not source is None:
+    if source is not None:
         # Get source info
         if not isinstance(source, RasterInfo):
             source = rasterInfo(source)
@@ -1502,7 +1456,7 @@ def indexToCoord(
         except:
             xMin, yMin, xMax, yMax = bounds.xyXY
 
-    # Caclulate coordinates
+    # Calculate coordinates
     if yAtTop:
         x = xMin + dx * (xi + 0.5)
         y = yMax - dy * (yi + 0.5)
@@ -1530,15 +1484,15 @@ def drawSmopyMap(
     bounds,
     zoom,
     tileserver="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    tilesize=256,
-    maxtiles=100,
+    tilesize: int = 256,
+    maxtiles: int = 100,
     ax=None,
     attribution="© OpenStreetMap contributors",
     attribution_size=12,
     **kwargs,
 ):
     """
-    Draws a basemap using the "smopy" python package
+    Draws a basemap using the "smopy" python package.
 
     NOTE:
     * The basemap is drawn using the Smopy python package. See here: https://github.com/rossant/smopy
@@ -1550,9 +1504,8 @@ def drawSmopyMap(
     you have to write "© OpenStreetMap contributors" clearly on the map. But this is different for each
     tile source!
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
         bounds : (xMin, yMix, xMax, yMax) or Extent
             The geographic extent to be drawn
 
@@ -1577,15 +1530,12 @@ def drawSmopyMap(
         kwargs
             All extra keyword arguments are passed on to matplotlib.ax.imshow
 
-
-    Returns:
-    --------
-
+    Returns
+    -------
         namedtuple
             * .ax     -> The axes draw on
             * .srs    -> The SRS used when drawing (will always be EPSG 3857)
             * .bounds -> The boundaries of the drawn map
-
     """
     import smopy
 
@@ -1644,11 +1594,11 @@ def drawRaster(
     ax=None,
     resolution=None,
     cutline=None,
-    figsize=(12, 12),
-    xlim=None,
-    ylim=None,
-    fontsize=16,
-    hideAxis=False,
+    figsize: tuple[int, int] = (12, 12),
+    xlim: tuple[int, int] | None = None,
+    ylim: tuple[int, int] | None = None,
+    fontsize: int = 16,
+    hideAxis: bool = False,
     cbar=True,
     cbarPadding=0.01,
     cbarTitle=None,
@@ -1666,10 +1616,10 @@ def drawRaster(
     resampleAlg="med",
     **kwargs,
 ):
-    """Draw a raster as an image on a matplotlib canvas
+    """Draw a raster as an image on a matplotlib canvas.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to draw
 
@@ -1688,7 +1638,7 @@ def drawRaster(
         * Lower resolution means more pixels to draw and can be a burden on
           memory
         * If a tuple is given, resolutions in the X and Y direction are expected
-        * Changing the resolution fron the inherent resolution requires a warp
+        * Changing the resolution from the inherent resolution requires a warp
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
@@ -1702,7 +1652,7 @@ def drawRaster(
 
     figsize : (int, int); optional
         The figure size to create when generating a new axis
-          * If resultign figure looks wierd, altering the figure size is your best
+          * If resultign figure looks weird, altering the figure size is your best
             bet to make it look nicer
 
     xlim : (float, float); optional
@@ -1769,15 +1719,13 @@ def drawRaster(
         * Determines how the warping is carried out
         * Consider using 'resampleAlg' or 'workingType' for finer control
 
-
-    Returns:
-    --------
+    Returns
+    -------
     A namedtuple containing:
        'ax' -> The map axis
        'handles' -> All geometry handles which were created in the order they were
                     drawn
        'cbar' -> The colorbar handle if it was drawn
-
     """
     # Create an axis, if needed
     if isinstance(ax, UTIL.AxHands):
@@ -1839,13 +1787,7 @@ def drawRaster(
     source = loadRaster(source)
     info = rasterInfo(source)
 
-    if not (
-        srs is None
-        and resolution is None
-        and cutline is None
-        and xlim is None
-        and ylim is None
-    ):
+    if not (srs is None and resolution is None and cutline is None and xlim is None and ylim is None):
         if not (xlim is None and ylim is None):
             bounds = (
                 xlim[0],
@@ -1881,7 +1823,7 @@ def drawRaster(
 
     # Read the Data
     data = extractMatrix(source).astype(float)
-    if not cutlineFillValue is None:
+    if cutlineFillValue is not None:
         data[data == info.noData] = np.nan
 
     # Draw image
@@ -1904,7 +1846,7 @@ def drawRaster(
     # Draw Colorbar
     if cbar:
         tmp = dict(cmap=cmap, orientation="vertical")
-        if not cbargs is None:
+        if cbargs is not None:
             tmp.update(cbargs)
 
         if cbax is None:
@@ -1913,7 +1855,7 @@ def drawRaster(
             cbar = plt.colorbar(h, cax=cbax, **tmp)
 
         cbar.ax.tick_params(labelsize=fontsize)
-        if not cbarTitle is None:
+        if cbarTitle is not None:
             cbar.set_label(cbarTitle, fontsize=fontsize + 2)
 
     # Do some formatting
@@ -1921,9 +1863,9 @@ def drawRaster(
         ax.set_aspect("equal")
         ax.autoscale(enable=True)
 
-    if not xlim is None:
+    if xlim is not None:
         ax.set_xlim(*xlim)
-    if not ylim is None:
+    if ylim is not None:
         ax.set_ylim(*ylim)
 
     # Done!
@@ -1940,10 +1882,10 @@ def drawRaster(
 
 
 def polygonizeRaster(source, srs=None, flat=False, shrink=True):
-    """Polygonize a raster or an integer-valued data matrix
+    """Polygonize a raster or an integer-valued data matrix.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to polygonize
         * The Datatype MUST be of boolean of integer type
@@ -1963,14 +1905,12 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
           * Generally this should be left as True unless it is ABSOLUTELY
             necessary to maintain the same area
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame -> With columns:
                             'geom' -> The contiguous-valued geometries
                             'value' -> The value for each geometry
-
     """
-
     # Load the information we will need
     source = loadRaster(source)
     band = source.GetRasterBand(1)
@@ -2024,9 +1964,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
         finalRID = []
         for _rid in set(rid):
             smallGeomSet = geoms[rid == _rid]
-            finalGeoms.append(
-                GEOM.flatten(smallGeomSet) if len(smallGeomSet) > 1 else smallGeomSet[0]
-            )
+            finalGeoms.append(GEOM.flatten(smallGeomSet) if len(smallGeomSet) > 1 else smallGeomSet[0])
             finalRID.append(_rid)
     else:
         finalGeoms = geoms
@@ -2042,26 +1980,30 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
 
 
 def contours(
-    source, contourEdges, polygonize=True, unpack=True, **kwargs
+    source,
+    contourEdges: list[float] | None,
+    polygonize: bool = True,
+    unpack: bool = True,
+    **kwargs,
 ) -> pd.DataFrame:
-    """Create contour geometries at specified edges for the given raster data
+    """Create contour geometries at specified edges for the given raster data.
 
-    Notes:
-    ======
+    Notes
+    -----
     This function is similar to geokit.geom.polygonizeMatrix, although it only
     operates on the user-specified edges AND applies the 'Marching Squares'
     algorithm
 
-    See the gdal function "GDALContourGenerateEx" for mor information on the
+    See the gdal function "GDALContourGenerateEx" for more information on the
     specifics of this algorithm
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to operate on
 
-    contourEdges : [float,]
-        The edges to search for withing the raster dataset
+    contourEdges : list[float] | None
+        The edges to search for within the raster dataset
           * This parameter can be set as "None", in which case an additional
             argument should be given to specify how the edges should be determined
             - See the documentation of "GDALContourGenerateEx"
@@ -2079,26 +2021,29 @@ def contours(
         * Example keys include: LEVEL_INTERVAL, LEVEL_BASE, LEVEL_EXP_BASE, NODATA
         * Do not use the key "ID_FIELD", since this is employed already
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame
 
     * The column 'geom' corresponds to generated geometry objects
     * The columns 'ID' corresponds to the associated contour edge for each object
     """
-
     # Open raster
     raster = loadRaster(source)
     band = raster.GetRasterBand(1)
+    # TODO: Should a warning be printed in case there are multiple
+    # bands?
+    # if raster.RasterCount>1:
+
+    #    Warning.warn("There are multiple bands in the dataset.
+    # The contour is obtained for the first one"")
     rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 
     # Make temporary vector
-    driver = gdal.GetDriverByName("Memory")
-    source = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
+    driver: Driver = gdal.GetDriverByName("Memory")
+    source: gdal.Dataset = driver.Create("", 0, 0, 0, gdal.GDT_Unknown)
 
-    layer = source.CreateLayer(
-        "", rasterSRS, ogr.wkbPolygon if polygonize else ogr.wkbLineString
-    )
+    layer: ogr.Layer = source.CreateLayer("", rasterSRS, ogr.wkbPolygon if polygonize else ogr.wkbLineString)
     field = ogr.FieldDefn("DN", ogr.OFTInteger)
     layer.CreateField(field)
 
@@ -2120,11 +2065,13 @@ def contours(
 
     IDs = []
     geoms = []
+    iterator_n = 0
     for ftrid in range(layer.GetFeatureCount()):
-        ftr = layer.GetFeature(ftrid)
+        ftr: ogr.Feature = layer.GetFeature(ftrid)
         geom = ftr.GetGeometryRef()
         value = ftr.GetField(0)
-
+        print(iterator_n)
+        iterator_n = iterator_n + 1
         if unpack:
             for gi in range(geom.GetGeometryCount()):
                 geoms.append(geom.GetGeometryRef(gi).Clone())
@@ -2133,8 +2080,10 @@ def contours(
             geoms.append(geom.Clone())
             IDs.append(value)
 
+    countour_data_frame = pd.DataFrame(dict(geom=geoms, ID=IDs))
+
     # return geoms
-    return pd.DataFrame(dict(geom=geoms, ID=IDs))
+    return countour_data_frame
 
 
 def warp(
@@ -2168,7 +2117,7 @@ def warp(
     meta=None,
     **kwargs,
 ) -> gdal.Dataset | str:
-    """Warps a given raster source to another context
+    """Warps a given raster source to another context.
 
     * Can be used to 'warp' a raster in memory to a raster on disk
 
@@ -2177,8 +2126,8 @@ def warp(
     Unless manually altered as keyword arguments, the gdal.Warp options
     'targetAlignedPixels' and 'copyMetadata' are both set to True
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to draw
 
@@ -2247,11 +2196,10 @@ def warp(
             setColorInterpretation --- whether to force color interpretation of
                                        input bands to output bands
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
-
     """
     # open source and get info
     source = loadRaster(source)
@@ -2303,16 +2251,12 @@ def warp(
     if cutline is not None:
         if isinstance(cutline, ogr.Geometry):
             tempdir = TemporaryDirectory()
-            cutline = UTIL.quickVector(
-                cutline, output=os.path.join(tempdir.name, "tmp.shp")
-            )
+            cutline = UTIL.quickVector(cutline, output=os.path.join(tempdir.name, "tmp.shp"))
         # cutline is already a path to a vector
         elif UTIL.isVector(cutline):
             tempdir = None
         else:
-            raise GeoKitRasterError(
-                "cutline must be a Geometry or a path to a shape file"
-            )
+            raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
     # Workflow depends on whether or not we have an output
     if output is not None:  # Simply do a translate
@@ -2380,9 +2324,7 @@ def warp(
         )
 
         # Do a warp
-        result = gdal.Warp(
-            destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs
-        )
+        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
         destRas.FlushCache()
 
     # Do we have meta data?
@@ -2418,6 +2360,68 @@ def warp(
     return destRas
 
 
+def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
+    """
+    Convenience function to warp a raster to the context of another raster
+    as returned from a call to rasterInfo(contextSource).
+
+    dataSource : Anything acceptable by loadRaster()
+        The raster data source to draw
+    contextSource : Anything acceptable by loadRaster()
+        The raster context source to draw, i.e. the data source raster will be
+        warped to this pixelWidth, pixelHeight, bounds, extent, srs etc.
+    copyMetadata : bool, optional
+        If True, the metadata of the dataSource raster will be copied, else
+        metadata will be empty or as possibly provided in kwargs. Defaults to False.
+    **kwargs
+        All kwargs will be passed on to raster.warp().
+    """
+    if UTIL.isRaster(dataSource):
+        dataInfo = rasterInfo(dataSource)
+    if not isinstance(dataInfo, RasterInfo):
+        raise GeoKitRasterError("Could not understand dataSource")
+    if UTIL.isRaster(contextSource):
+        contextInfo = rasterInfo(contextSource)
+    if not isinstance(contextInfo, RasterInfo):
+        raise GeoKitRasterError("Could not understand contextSource")
+
+    # first get data-related parameters from DATA source
+    if copyMetadata:
+        if "meta" in kwargs:
+            raise GeoKitRasterError("If metadata is given as 'meta' in kwargs, copyMetadata cannot be True!")
+        meta = dataInfo.meta
+    else:
+        meta = kwargs.pop("meta", None)
+    print(meta)
+    dtype = kwargs.pop("dtype", dataInfo.dtype)
+    noData = kwargs.pop("noData", dataInfo.noData)
+    if "cutline" in kwargs:
+        # make sure that the cells outside are filled with noData if not specified
+        fill = kwargs.pop("fill", dataInfo.noData)
+    else:
+        # set to default of warp() function for consistent behavior
+        fill = inspect.signature(warp).parameters["fill"].default
+
+    # then get context related parameters from CONTEXT source
+    bounds = kwargs.pop("bounds", contextInfo.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", contextInfo.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", contextInfo.pixelHeight)
+    srs = kwargs.pop("srs", contextInfo.srs)
+
+    return warp(
+        source=dataSource,
+        bounds=bounds,
+        pixelWidth=pixelWidth,
+        pixelHeight=pixelHeight,
+        dtype=dtype,
+        srs=srs,
+        noData=noData,
+        meta=meta,
+        fill=fill,
+        **kwargs,
+    )
+
+
 # --------------------------------------------------------------------------------------------
 # Sieve raster datasets
 # --------------------------------------------------------------------------------------------
@@ -2425,20 +2429,25 @@ def warp(
 
 def sieve(
     source,
-    threshold=100,
-    connectedness=8,
+    threshold: int = 100,
+    connectedness: Literal[4, 8] = 8,
     mask="none",
-    quiet_flag=False,
-    output=None,
+    quiet_flag: bool = False,
+    output: str | None = None,
     **kwargs,
-):
+) -> gdal.Dataset | str:
     """
     Removes raster polygons smaller than a provided threshold size (in pixels) and
     replaces them with the pixel value of the largest neighbour polygon.
     It is useful if you have a large amount of small areas on your raster map.
 
-    Parameters:
-    -----------
+    Returns
+    -------
+    * If 'output' is None : gdal.Dataset
+    * If 'output' is a string : The path to the output is returned (for easy opening)
+
+    Parameters
+    ----------
     source : Anything acceptable by loadRaster()
 
     threshold (int): minimum polygon size (number of pixels) to retain.
@@ -2457,14 +2466,7 @@ def sieve(
     **kwargs:
         * All kwargs are passed on to SieveFilter()
         * See gdal.SieveFilter for more details
-
-    Returns
-    -------
-    * If 'output' is None: gdal.Dataset
-    * If 'output' is a string: The path to the output is returned (for easy opening)
-
     """
-
     gdal.AllRegister()
 
     try:
@@ -2570,7 +2572,8 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         cellHeight (int, float, optional): The cell height in EPSG:4326 units. Defaults to None.
     NOTE: If source is given, all of the others must be None, else they must be given.
 
-    Returns:
+    Returns
+    -------
         tuple or iterable: tuple with (X, Y) cell No or an iterable thereof if multiple points were given.
     """
     # check and preprocess points inputs
@@ -2578,36 +2581,30 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         points = [points]
     elif isinstance(points, tuple) and len(points) == 2:
         points = [points]
-    assert hasattr(
-        points, "__iter__"
-    ), f"points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
+    assert hasattr(points, "__iter__"), (
+        "points must be an osgeo.ogr.Geometry POINT object, a tuple of (lon, lat) or an iterable of any of them."
+    )
+
     if isinstance(points[0], ogr.Geometry):
         if not all([p.GetGeometryName() == "POINT" for p in points]):
-            raise TypeError(f"Only POINT geometries allowed")
+            raise TypeError("Only POINT geometries allowed")
         if not all([p.GetSpatialReference().IsSame(SRS.loadSRS(4326)) for p in points]):
-            raise ValueError(f"SRS of all points must be EPSG:4326")
+            raise ValueError("SRS of all points must be EPSG:4326")
         # convert to lons and lats
         points = [(p.GetX(), p.GetY()) for p in points]
     else:
         assert all(
-            [
-                isinstance(x, tuple)
-                and len(x) == 2
-                and all([isinstance(_x, (int, float)) for _x in x])
-                for x in points
-            ]
-        ), f"All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
+            [isinstance(x, tuple) and len(x) == 2 and all([isinstance(_x, (int, float)) for _x in x]) for x in points]
+        ), (
+            "All entries in points must be (lon, lat) tuples with length of 2 and int or float coordinates if given as tuples or iterable thereof."
+        )
 
     # get bounds, cellWidth and cellHeight from the inputs
     if source is not None:
         if not (bounds is None and cellWidth is None and cellHeight is None):
-            raise ValueError(
-                f"bounds, cellWidth and cellHeight must be None when source raster is given."
-            )
+            raise ValueError("bounds, cellWidth and cellHeight must be None when source raster is given.")
         if isinstance(source, str) and not os.path.isfile(source):
-            raise FileNotFoundError(
-                f"source must be an existing raster file if given as string."
-            )
+            raise FileNotFoundError("source must be an existing raster file if given as string.")
         try:
             sourceRasterInfo = rasterInfo(source)
             bounds = sourceRasterInfo.bounds
@@ -2616,38 +2613,31 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
             rasterWidth = sourceRasterInfo.xWinSize
             rasterHeight = sourceRasterInfo.yWinSize
         except:
-            raise TypeError(
-                f"source must be path to a gdal.Dataset raster or a gdal.Dataset raster itself if not None."
-            )
+            raise TypeError("source must be path to a gdal.Dataset raster or a gdal.Dataset raster itself if not None.")
         if not sourceRasterInfo.srs.IsSame(SRS.loadSRS(4326)):
-            raise ValueError(f"raster source must be in epsg:4326")
+            raise ValueError("raster source must be in epsg:4326")
     else:
         if bounds is None or cellWidth is None or cellHeight is None:
-            raise ValueError(
-                f"If source is None, bounds, cellWidth and cellHeight must be given."
-            )
+            raise ValueError("If source is None, bounds, cellWidth and cellHeight must be given.")
         assert (
             isinstance(bounds, tuple)
             and len(bounds) == 4
             and all([isinstance(x, (int, float)) for x in bounds])
             and bounds[0] < bounds[2]
             and bounds[1] < bounds[3]
-        ), f"bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
-        assert isinstance(
-            cellHeight, (int, float)
-        ), f"cellHeight must be an int or float."
-        assert isinstance(
-            cellWidth, (int, float)
-        ), f"cellWidth must be an int or float."
+        ), "bounds must be a tuple of length = 4 with int or float entries like such: (minX, minY, maxX, maxY)"
+        assert isinstance(cellHeight, (int, float)), "cellHeight must be an int or float."
+        assert isinstance(cellWidth, (int, float)), "cellWidth must be an int or float."
+
         # calculate the raster width and height in Nos of cells
         rasterWidth = (bounds[2] - bounds[0]) / cellWidth
         rasterHeight = (bounds[3] - bounds[1]) / cellHeight
-        assert np.isclose(rasterWidth % cellWidth, 0) or np.isclose(
-            rasterWidth % cellWidth, cellWidth
-        ), f"rasterWidth {rasterWidth} is not a multiple of cellWidth {cellWidth}"
-        assert np.isclose(rasterHeight % cellHeight, 0) or np.isclose(
-            rasterHeight % cellHeight, cellHeight
-        ), f"rasterHeight {rasterHeight} is not a multiple of cellHeight {cellHeight}"
+        assert np.isclose(rasterWidth % cellWidth, 0) or np.isclose(rasterWidth % cellWidth, cellWidth), (
+            f"rasterWidth {rasterWidth} is not a multiple of cellWidth {cellWidth}"
+        )
+        assert np.isclose(rasterHeight % cellHeight, 0) or np.isclose(rasterHeight % cellHeight, cellHeight), (
+            f"rasterHeight {rasterHeight} is not a multiple of cellHeight {cellHeight}"
+        )
 
     # calculate the cell Nos
     cellNos = list()
@@ -2664,7 +2654,7 @@ def rasterCellNo(points, source=None, bounds=None, cellWidth=None, cellHeight=No
         cellNos.append((X, Y))
 
     if outOfBounds:
-        warnings.warn(f"points contain out-of-bounds locations!")
+        warnings.warn("points contain out-of-bounds locations!")
 
     # return cellNos as tuple for single point, else as list of tuples
     if len(cellNos) == 1:

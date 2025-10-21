@@ -9,6 +9,15 @@ analysis/regions/*
 # file types to ignore
 #*.ipynb
 *.aux.xml
+.ruff_cache
+docs/html
+docs/jupyter_execute
+docs/_build
+docs/autoapi
+docs/geokit
+docs/combineSimilarRasters
+_build
+conf.py
 
 # Remove things in testing results dir
 testing/results/*.tif
@@ -29,6 +38,8 @@ Examples/*.prj
 Examples/*.cpg
 Examples/*.csv
 Examples/*.gpkg
+_readthedocs/
+
 
 # Extras
 .vscode/settings.json
@@ -39,3 +50,5 @@ Examples/*.gpkg
 .pytest_cache/*
 
 
+asd.py
+registry_file.txt

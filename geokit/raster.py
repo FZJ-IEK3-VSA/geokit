@@ -20,4 +20,5 @@ from geokit.core.raster import (
     saveRasterAsTif,
     sieve,
     warp,
+    warpLike,
 )

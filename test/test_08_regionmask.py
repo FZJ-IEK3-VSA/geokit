@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
+from geokit import srs as SRS
 from test.helpers import *
 
 
@@ -75,7 +76,7 @@ def test_RegionMask_fromMask():
 
 def test_RegionMask_fromGeom():
     # fromGeom with wkt
-    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), pixelRes=1000)
+    rm1 = RegionMask.fromGeom(geom.convertWKT(POLY, srs="latlon"), srs=3035, pixelRes=1000)
     assert rm1.extent.xXyY == (4330000.0, 4728000.0, 835000.0, 1682000.0)
     assert rm1.extent.srs.IsSame(EPSG3035)
     assert rm1.mask.sum() == 79274
@@ -103,16 +104,25 @@ def test_RegionMask_fromGeom():
     g.TransformTo(EPSG4326)
     assert np.isclose(rm3.mask.sum() * dxy * dxy, g.Area(), rtol=1e-3)
 
+    # fromGeom with geometry and LAEA
+    dxy = 0.05
+    rm4 = RegionMask.fromGeom(GEOM, pixelRes=dxy, srs="LAEA", padExtent=0.2)
+    print(rm4.extent)
+    _laea = SRS.centeredLAEA(
+        geom=GEOM,
+    )
+    assert rm4.extent == Extent(-190575.40000, -489480.70000, 217899.95000, 354950.15000, srs=_laea)
+
+    assert rm4.extent.srs.IsSame(_laea)
+
 
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
-    rm0 = RegionMask.fromVector(
-        AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1
-    )
+    rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)
     assert rm0.mask.sum() == 90296
 
     # fromVector - ID select
-    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1)
+    rm1 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, where=1, srs=3035)
 
     assert rm1.extent == Extent(4069100, 2867000, 4109400, 2954000, srs=EPSG3035)
     assert rm1.attributes["name"] == "dog"
@@ -126,9 +136,7 @@ def test_RegionMask_fromVector():
     assert np.isclose(rm1.mask.sum() * 100 * 100, g.Area(), rtol=1e-3)
 
     # fromVector - 'where' select
-    rm2 = RegionMask.fromVector(
-        MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkey'"
-    )
+    rm2 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkey'")
 
     assert rm2.extent == Extent(6.83, 49.52, 7.53, 49.94)
     assert rm2.attributes["id"] == 3
@@ -140,9 +148,7 @@ def test_RegionMask_fromVector():
 
     # fromVector - 'where' select fail no features
     try:
-        rm3 = RegionMask.fromVector(
-            MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'"
-        )
+        rm3 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where="name='monkeyy'")
         assert False
     except error.GeoKitRegionMaskError as e:
         assert str(e) == "Zero features found"
@@ -151,34 +157,32 @@ def test_RegionMask_fromVector():
 
     # fromVector - 'where' finds many features
     try:
-        rm4 = RegionMask.fromVector(
-            MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'"
-        )
+        rm4 = RegionMask.fromVector(MULTI_FTR_SHAPE_PATH, srs=EPSG4326, pixelRes=0.01, where=r"name like 'mo%'")
         assert False
     except error.GeoKitRegionMaskError as e:
-        assert "Multiple fetures found" in str(e)
+        assert "Multiple features found" in str(e)
     else:
         assert False
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_load():
-    print("RegionMask_load not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_load():
+#     print("RegionMask_load not tested...")
 
 
 def test_RegionMask_pixelRes():
     # test succeed
-    rm1 = RegionMask.fromMask(Extent(0, 0, 100, 100, srs=EPSG3035), MASK_DATA)
+    rm1 = RegionMask.fromMask(extent=Extent(0, 0, 100, 100, srs=EPSG3035), mask=MASK_DATA)
     ps = rm1.pixelRes
     assert ps == 1
 
     # test fail
-    rm2 = RegionMask.fromMask(Extent(0, 0, 100, 200, srs=EPSG3035), MASK_DATA)
+    rm2 = RegionMask.fromMask(extent=Extent(0, 0, 100, 200, srs=EPSG3035), mask=MASK_DATA)
     try:
         ps = rm2.pixelRes
         assert False
     except error.GeoKitRegionMaskError as e:
-        assert str(e) == "pixelRes only accessable when pixelWidth equals pixelHeight"
+        assert str(e) == "pixelRes only accessible when pixelWidth equals pixelHeight"
     else:
         assert False
 
@@ -190,14 +194,14 @@ def test_RegionMask_buildMask():
     assert np.isclose(rm.mask.std(), 0.498273451386)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_area():
-    print("RegionMask_area not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_area():
+#     print("RegionMask_area not tested...")
 
 
 def test_RegionMask_buildGeometry():
     # setup
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     rm2.buildMask()  # Be sure the mask is in place
 
     # Get the "real" geometry
@@ -216,7 +220,7 @@ def test_RegionMask_buildGeometry():
 
 
 def test_RegionMask_vectorPath():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vectorPath
 
     # Temp vector is created
@@ -228,7 +232,7 @@ def test_RegionMask_vectorPath():
 
 
 def test_RegionMask_vector():
-    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm2 = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
     vec = rm2.vector
     vec.GetLayer()
 
@@ -240,31 +244,27 @@ def test_RegionMask_vector():
     assert util.isVector(rm2._vector)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask__repr_svg_():
-    print("RegionMask__repr_svg_ not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask__repr_svg_():
+#     print("RegionMask__repr_svg_ not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_drawMask():
-    print("RegionMask_drawMask not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_drawMask():
+#     print("RegionMask_drawMask not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_drawGeometry():
-    print("RegionMask_drawGeometry not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_drawGeometry():
+#     print("RegionMask_drawGeometry not tested...")
 
 
 def test_RegionMask_applyMask():
     # setup
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001
-    )
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
 
     data1 = np.arange(rm.mask.size).reshape(rm.mask.shape)
-    data2 = np.arange(rm.mask.shape[0] * 3 * rm.mask.shape[1] * 3).reshape(
-        (rm.mask.shape[0] * 3, rm.mask.shape[1] * 3)
-    )
+    data2 = np.arange(rm.mask.shape[0] * 3 * rm.mask.shape[1] * 3).reshape((rm.mask.shape[0] * 3, rm.mask.shape[1] * 3))
 
     # test applying
     data1 = rm.applyMask(data1, noData=np.nan)
@@ -279,13 +279,12 @@ def test_RegionMask_applyMask():
     # rm.createRaster(3, output=result("regionMask_applyMask_2.tif"), data=data2, overwrite=True)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask__returnBlank():
-    print("RegionMask__returnBlank not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask__returnBlank():
+#     print("RegionMask__returnBlank not tested...")
 
 
 def test_RegionMask_indicateValues():
-
     if platform == "linux" or platform == "linux2":
         multiProcess = True
     elif platform == "darwin":
@@ -297,9 +296,7 @@ def test_RegionMask_indicateValues():
         multiProcess = False
     # Setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
-    res1 = rm.indicateValues(
-        CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
-    )
+    res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess)
     # Testing valueMin (with srs change), with multiProcess by default
     with warnings.catch_warnings():
         # make sure no failed multiprocessing warning was raised
@@ -307,24 +304,18 @@ def test_RegionMask_indicateValues():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res1 = rm.indicateValues(
-            CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess
-        )
+        res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess)
 
     assert np.isclose(res1.sum(), 30969.6796875, 1e-6)
     assert np.isclose(res1.std(), 0.3489773, 1e-6)
 
     # Testing valueMax (with srs change)
-    res2 = rm.indicateValues(
-        CLC_RASTER_PATH, value=(None, 24), multiProcess=multiProcess
-    )
+    res2 = rm.indicateValues(CLC_RASTER_PATH, value=(None, 24), multiProcess=multiProcess)
     assert np.isclose(res2.sum(), 82857.5078125, 1e-6)
     assert np.isclose(res2.std(), 0.4867994, 1e-6)
 
     # Testing valueEquals (with srs change)
-    res3 = rm.indicateValues(
-        CLC_RASTER_PATH, value=7, resampleAlg="cubic", multiProcess=multiProcess
-    )
+    res3 = rm.indicateValues(CLC_RASTER_PATH, value=7, resampleAlg="cubic", multiProcess=multiProcess)
     assert np.isclose(res3.sum(), 580.9105835, 1e-4)
     assert np.isclose(res3.std(), 0.0500924, 1e-6)
 
@@ -379,7 +370,6 @@ def test_RegionMask_indicateValues():
 
 
 def test_RegionMask_indicateFeatures():
-
     if platform == "linux" or platform == "linux2":
         multiProcess = True
     elif platform == "darwin":
@@ -390,7 +380,7 @@ def test_RegionMask_indicateFeatures():
     else:
         multiProcess = False
     # setup
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     # Simple case (with multiProcess by default)
     with warnings.catch_warnings():
@@ -399,9 +389,7 @@ def test_RegionMask_indicateFeatures():
             action="error",
             message="Memory efficient multiProcess failed, returning to safe linear processing.",
         )
-        res = rm.indicateFeatures(
-            NATURA_PATH, where="SITECODE='DE5404303'", multiProcess=multiProcess
-        )
+        res = rm.indicateFeatures(NATURA_PATH, where="SITECODE='DE5404303'", multiProcess=multiProcess)
 
     assert np.isclose(res.sum(), 649, 1e-6)
     assert np.isclose(res.std(), 0.0646270, 1e-6)
@@ -460,18 +448,18 @@ def test_RegionMask_indicateFeatures():
     assert (res4 == res4b).all()
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_indicateGeoms():
-    print("RegionMask_indicateGeoms not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_indicateGeoms():
+#     print("RegionMask_indicateGeoms not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_subRegions():
-    print("RegionMask_subRegions not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_subRegions():
+#     print("RegionMask_subRegions not tested...")
 
 
 def test_RegionMask_subTiles():
-    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH)
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 
     tiles = list(rm.subTiles(9, checkIntersect=False))
     assert len(tiles) == 4
@@ -499,9 +487,7 @@ def test_RegionMask_subTiles():
 
 
 def test_RegionMask_createRaster():
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001
-    )
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.001)
 
     # Create a raster like the mask
     ds = rm.createRaster()
@@ -540,10 +526,8 @@ def test_RegionMask_createRaster():
 
 def test_RegionMask_warp():
     # setup
-    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05))
-    rm = RegionMask.fromGeom(
-        geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005
-    )
+    rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=3035)
+    rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
 
     # basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
@@ -615,9 +599,7 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
 
     # where statement and resolution div
-    rasterize_3 = rm.rasterize(
-        AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float
-    )
+    rasterize_3 = rm.rasterize(AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float)
 
     assert rasterize_3.dtype == np.float64
     assert rasterize_3.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
@@ -626,40 +608,40 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_extractFeatures():
-    print("RegionMask_extractFeatures not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_extractFeatures():
+#     print("RegionMask_extractFeatures not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_mutateVector():
-    print("RegionMask_mutateVector not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_mutateVector():
+#     print("RegionMask_mutateVector not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_RegionMask_mutateRaster():
-    print("RegionMask_mutateRaster not tested...")
+# @pytest.mark.skip("No test implemented")
+# def test_RegionMask_mutateRaster():
+#     print("RegionMask_mutateRaster not tested...")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromRaster():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromRaster():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMatrix():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMatrix():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMask():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMask():
+#     print("Nothing to do :(")
 
 
-@pytest.mark.skip("No test implemented")
-def test_contoursFromMask():
-    print("Nothing to do :(")
+# @pytest.mark.skip("No test implemented")
+# def test_contoursFromMask():
+#     print("Nothing to do :(")
 
 
 if __name__ == "__main__":
-    test_RegionMask_indicateValues()
+    test_RegionMask_fromGeom()

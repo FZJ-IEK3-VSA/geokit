@@ -18,6 +18,14 @@ from geokit.core import util as UTIL
 
 
 class GeoKitVectorError(UTIL.GeoKitError):
+    """Marks an error that is specific to geokit behavior.
+
+    Parameters
+    ----------
+    UTIL : _type_
+        _description_
+    """
+
     pass
 
 
@@ -29,19 +37,18 @@ class GeoKitVectorError(UTIL.GeoKitError):
 
 def loadVector(x):
     """
-    Load a vector dataset from a path to a file on disc
+    Load a vector dataset from a path to a file on disc.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or gdal.Dataset
         * If a string is given, it is assumed as a path to a vector file on disc
         * If a gdal.Dataset is given, it is assumed to already be an open vector
           and is returned immediately
 
-    Returns:
-    --------
+    Returns
+    -------
     gdal.Dataset
-
     """
     if isinstance(x, str):
         ds = gdal.OpenEx(x)
@@ -57,16 +64,15 @@ def loadVector(x):
 
 
 def loopFeatures(source):
-    """Geokit internal
+    """Geokit internal.
 
     *Loops over an input layer's features
     * Will reset the reading counter before looping is initiated
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
-
     """
     if isinstance(source, str):  # assume input source is a path to a datasource
         ds = ogr.Open(source)
@@ -85,9 +91,7 @@ def loopFeatures(source):
 
 
 # OGR type map
-_ogrIntToType = dict(
-    (v, k) for k, v in filter(lambda x: "OFT" in x[0], gdal.__dict__.items())
-)
+_ogrIntToType = dict((v, k) for k, v in filter(lambda x: "OFT" in x[0], gdal.__dict__.items()))
 _ogrStrToType = {
     "bool": "OFTInteger",
     "int8": "OFTInteger",
@@ -105,8 +109,7 @@ _ogrStrToType = {
 
 
 def ogrType(s):
-    """Tries to determine the corresponding OGR type according to the input"""
-
+    """Tries to determine the corresponding OGR type according to the input."""
     if isinstance(s, str):
         if hasattr(ogr, s):
             return s
@@ -137,9 +140,9 @@ def ogrType(s):
 
 
 def filterLayer(layer, geom=None, where=None):
-    """GeoKit internal
+    """GeoKit internal.
 
-    Filters an ogr Layer object accordint to a geometry and where statement
+    Filters an ogr Layer object according to a geometry and where statement
     """
     if not geom is None:
         if isinstance(geom, ogr.Geometry):
@@ -171,10 +174,10 @@ def filterLayer(layer, geom=None, where=None):
 
 def countFeatures(source, geom=None, where=None):
     """Returns the number of features found in the given source and within a
-    given geometry and/or where-statement
+    given geometry and/or where-statement.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -191,10 +194,9 @@ def countFeatures(source, geom=None, where=None):
 
             where = "ISO='DEU' AND POP>1000"
 
-    Returns:
-    --------
+    Returns
+    -------
     int
-
     """
     ds = loadVector(source)
     layer = ds.GetLayer()
@@ -204,23 +206,21 @@ def countFeatures(source, geom=None, where=None):
 
 ####################################################################
 # Vector feature count
-vecInfo = namedtuple(
-    "vecInfo", "srs bounds xMin yMin xMax yMax count attributes source"
-)
+vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
 
 
 def vectorInfo(source):
-    """Extract general information about a vector source
+    """Extract general information about a vector source.
 
     Determines:
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
-    Returns:
-    --------
+    Returns
+    -------
     namedtuple -> (srs : The source's SRS system,
                    bounds : The source's boundaries (in the srs's units),
                    xMin : The source's xMin boundaries (in the srs's units),
@@ -229,7 +229,6 @@ def vectorInfo(source):
                    yMax : The source's yMax boundaries (in the srs's units),
                    count : The number of features in the source,
                    attributes : The attribute titles for the source's features,)
-
     """
     info = {}
 
@@ -265,7 +264,7 @@ def listLayers(
 
     Parameters
     ----------
-    source :  Anything acceptable by loadVector()
+    source : Anything acceptable by loadVector()
         The vector datasource to read from
 
     Returns
@@ -300,14 +299,14 @@ def _extractFeatures(
 ):
     # Check spatialPredicate
     avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
-    assert (
-        spatialPredicate in avail_predicates
-    ), f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
+    assert spatialPredicate in avail_predicates, (
+        f"'spatialPredicate' needs to be one of the available spatial predicates filters: '{','.join(avail_predicates)}'. Here: {spatialPredicate}"
+    )
     if spatialPredicate != "Touches":
         # spatialPredicate is not default, will take effect only when filter geom is given
-        assert isinstance(
-            geom, ogr.Geometry
-        ), f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
+        assert isinstance(geom, ogr.Geometry), (
+            f"spatialPredicate '{spatialPredicate}' requires geom argument to be an osgeo.ogr.Geometry object"
+        )
 
     # Do filtering
     source = loadVector(source)
@@ -332,9 +331,7 @@ def _extractFeatures(
             _geom = GEOM.box(geom, srs=layer.GetSpatialRef())
         else:
             try:  # maybe geom is an extent object
-                _geom = GEOM.box(
-                    geom.castTo(layer.GetSpatialRef()).xyXY, srs=layer.GetSpatialRef()
-                )
+                _geom = GEOM.box(geom.castTo(layer.GetSpatialRef()).xyXY, srs=layer.GetSpatialRef())
             except:
                 raise GeoKitVectorError("Geom input not understood")
     elif isinstance(geom, ogr.Geometry):
@@ -358,9 +355,9 @@ def _extractFeatures(
             continue
 
         if layer.GetSpatialRef() is not None:
-            assert oGeom.GetSpatialReference().IsSame(
-                layer.GetSpatialRef()
-            ), f"SRS of extracted geometry deviates from overall layer SRS!"
+            assert oGeom.GetSpatialReference().IsSame(layer.GetSpatialRef()), (
+                f"SRS of extracted geometry deviates from overall layer SRS!"
+            )
 
         # base extraction is "Touches", now apply apply more sophisticated spatialPredicate if required
         if _geom is not None:
@@ -369,18 +366,12 @@ def _extractFeatures(
             if spatialPredicate == "Overlaps":
                 if "POLYGON" in oGeom.GetGeometryName():
                     # this means extracted (multi)polygons must have an area overlap (partial or full)
-                    if not (
-                        _geom.Overlaps(oGeom)
-                        or oGeom.Within(_geom)
-                        or _geom.Within(oGeom)
-                    ):
+                    if not (_geom.Overlaps(oGeom) or oGeom.Within(_geom) or _geom.Within(oGeom)):
                         # skip those _geoms which do not overlap the filter geom (line touch only)
                         continue
                 elif "LINESTRING" in oGeom.GetGeometryName():
                     # "overlap' for lines means that extracted lines actually intersect the filter geom beyond its boundary
-                    if oGeom.Intersects(_geom) and oGeom.Intersection(_geom).Equals(
-                        oGeom
-                    ):
+                    if oGeom.Intersects(_geom) and oGeom.Intersection(_geom).Equals(oGeom):
                         # the line touches the filter geom boundary along its whole length, no "true overlap"
                         # will also not be extracted by neighboring filter geoms
                         if not _warned:
@@ -390,9 +381,7 @@ def _extractFeatures(
                             _warned = True
                     if not (
                         oGeom.Intersects(_geom)
-                        and oGeom.Intersection(_geom).Equals(
-                            oGeom.Intersection(_geom.GetBoundary())
-                        )
+                        and oGeom.Intersection(_geom).Equals(oGeom.Intersection(_geom.GetBoundary()))
                     ):
                         # the intersecting part of the filter geom and its boundary are alike, i.e. the line touches only, skip
                         continue
@@ -403,9 +392,7 @@ def _extractFeatures(
                     elif oGeom.GetGeometryName() == "MULTIPOINT":
                         _oGeomMulti = copy.copy(oGeom)
                     else:
-                        raise TypeError(
-                            f"Unknown extracted point geometry of type '{oGeom.GetGeometryName()}'."
-                        )
+                        raise TypeError(f"Unknown extracted point geometry of type '{oGeom.GetGeometryName()}'.")
                     if all([p.Intersects(_geom.GetBoundary()) for p in _oGeomMulti]):
                         # all points are on the filter geom boundary, these points will not be extracted here nor by neighboring filter geoms
                         if not _warned:
@@ -417,9 +404,7 @@ def _extractFeatures(
                         # no point falls within the filter geom, skip
                         continue
                 else:
-                    raise TypeError(
-                        f"Unknown extracted geometry of type '{oGeom.GetGeometryName()}'."
-                    )
+                    raise TypeError(f"Unknown extracted geometry of type '{oGeom.GetGeometryName()}'.")
 
             elif spatialPredicate == "CentroidWithin":
                 # applies to all extracted geom types alike: the centroid must fall "within" the filter _geom (works also for point and line filter geoms)
@@ -469,7 +454,7 @@ def extractFeatures(
     spatialPredicate="Touches",
     **kwargs,
 ):
-    """Creates a generator which extract the features contained within the source
+    """Creates a generator which extract the features contained within the source.
 
     * Iteratively returns (feature-geometry, feature-fields)
 
@@ -482,8 +467,8 @@ def extractFeatures(
     * To be sure an extracted geometry fits the selection criteria, you may
       still need to do further processing or use extractAndClipFeatures()
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector data source to read from
 
@@ -537,11 +522,10 @@ def extractFeatures(
         NOTE: When filter geom is a polygon, centroids exactly on the
         filter geom boundary will NOT be extracted.
 
-    Returns:
-    --------
+    Returns
+    -------
     * If asPandas is True: pandas.DataFrame or pandas.Series
     * If asPandas is False: generator
-
     """
     # arrange output
     if not asPandas:
@@ -588,16 +572,14 @@ def extractFeatures(
             return df
 
 
-def extractFeature(
-    source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, **kwargs
-):
+def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, **kwargs):
     """Convenience function calling extractFeatures which assumes there is only
-    one feature to extract
+    one feature to extract.
 
     * Will raise an error if multiple features are found
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -627,12 +609,11 @@ def extractFeature(
     onlyAttr : bool; optional
         If True, only feature attributes will be returned
 
-    Returns:
-    --------
+    Returns
+    -------
     * If onlyGeom and onlyAttr are False: namedtuple -> (geom, attr)
     * If onlyGeom is True: ogr.Geometry
     * If onlyAttr is True: dict
-
     """
     if isinstance(where, int):
         ds = loadVector(source)
@@ -685,17 +666,15 @@ def extractFeature(
         return UTIL.Feature(fGeom, fItems)
 
 
-def extractAsDataFrame(
-    source, indexCol=None, geom=None, where=None, srs=None, **kwargs
-):
+def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
     """Convenience function calling extractFeatures and structuring the output as
-    a pandas DataFrame
+    a pandas DataFrame.
 
     * Geometries are written to a column called 'geom'
     * Attributes are written to a column of the same name
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -721,18 +700,15 @@ def extractAsDataFrame(
           * If srs does not match the inherent srs, all geometries will be
             transformed
 
-    Returns:
-    --------
+    Returns
+    -------
     pandas.DataFrame
-
     """
     warnings.warn(
         "This function will be removed in favor of geokit.vector.extractFeatures",
         DeprecationWarning,
     )
-    return extractFeatures(
-        source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs
-    )
+    return extractFeatures(source=source, indexCol=indexCol, geom=geom, where=where, srs=srs, **kwargs)
 
 
 def extractAndClipFeatures(
@@ -752,8 +728,8 @@ def extractAndClipFeatures(
     Extracts features from a source and clips them to the boundaries of a given geom.
     Optionally scales numeric attribute values linearly to the overlapping area share.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector data source to read from
 
@@ -803,20 +779,16 @@ def extractAndClipFeatures(
         minShare=0.001 overlaps by only 0.06% of its area, it will be
         disregarded. By default 0.001.
 
-    Returns:
-    --------
+    Returns
+    -------
     * pandas.DataFrame or pandas.Series
     """
-    assert (
-        0 <= minShare <= 1
-    ), f"minShare must be greater or equal to 0 and less or equal to 1.0"
+    assert 0 <= minShare <= 1, f"minShare must be greater or equal to 0 and less or equal to 1.0"
     # assert and preprocess input source
     if isinstance(source, pd.DataFrame):
         # check validity of input dataframe
         if not "geom" in source.columns:
-            raise AttributeError(
-                f"source is given as a pd.DataFrame but has not 'geom' column."
-            )
+            raise AttributeError(f"source is given as a pd.DataFrame but has not 'geom' column.")
         if not isinstance(source.geom.iloc[0], ogr.Geometry):
             raise TypeError(
                 f"source is given as a pd.DataFrame but value in 'geom' column is not of type osgeo.ogr.Geometry."
@@ -829,9 +801,7 @@ def extractAndClipFeatures(
         source = createVector(source)
     elif isinstance(source, str):
         if not os.path.isfile(source):
-            raise FileNotFoundError(
-                f"source is given as a string but is not an existing filepath: {source}"
-            )
+            raise FileNotFoundError(f"source is given as a string but is not an existing filepath: {source}")
         # load as vector file
         source = loadVector(source)
     elif not isinstance(source, gdal.Dataset):
@@ -860,9 +830,7 @@ def extractAndClipFeatures(
     elif isinstance(scaleAttrs, str):
         scaleAttrs = [scaleAttrs]
     else:
-        assert isinstance(
-            scaleAttrs, list
-        ), f"scaleAttrs must be a str or a list thereof if not None."
+        assert isinstance(scaleAttrs, list), f"scaleAttrs must be a str or a list thereof if not None."
     if len(df) > 0:
         for _attr in scaleAttrs:
             if not _attr in list(df.columns):
@@ -870,9 +838,7 @@ def extractAndClipFeatures(
                     f"'{_attr}' was given as scaleAttrs but is not an attribute of the source dataframe."
                 )
             if not all([isinstance(_val, numbers.Number) for _val in df[_attr]]):
-                raise TypeError(
-                    f"All values in column '{_attr}' in scaleAttrs must be numeric."
-                )
+                raise TypeError(f"All values in column '{_attr}' in scaleAttrs must be numeric.")
 
     # check if we have any features to clip at all
     if len(df) == 0:
@@ -880,9 +846,7 @@ def extractAndClipFeatures(
         df["areaShare"] = None
         return df
     # else add the expected areaShare column
-    assert not "areaShare" in list(
-        df.columns
-    ), f"source data must not contain a 'areaShare' attribute."
+    assert not "areaShare" in list(df.columns), f"source data must not contain a 'areaShare' attribute."
     df["areaShare"] = 1.0
     # check if we need to clip the geometries at all
     if df.geom.iloc[0].GetGeometryName()[:5] == "POINT":
@@ -890,9 +854,7 @@ def extractAndClipFeatures(
         return df
 
     # else we need to add an ID column and generate a new vector
-    assert not "clippingID" in list(
-        df.columns
-    ), f"source data must not contain a 'clippingID' attribute."
+    assert not "clippingID" in list(df.columns), f"source data must not contain a 'clippingID' attribute."
     df["clippingID"] = range(len(df))
     _vec = createVector(df)
     # extract only these features intersected by the outer geom boundary
@@ -961,14 +923,14 @@ def createVector(
     overwrite=True,
 ):
     """
-    Create a vector on disk from geometries or a DataFrame with 'geom' column
+    Create a vector on disk from geometries or a DataFrame with 'geom' column.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     geoms : ogr.Geometry or [ogr.Geometry, ] or pandas.DataFrane
         The geometries to write into the vector file
         * If a DataFrame is given, it must have a column called 'geom'
-        * All geometries must share the same type (point, line, polygon, ect...)
+        * All geometries must share the same type (point, line, polygon, etc...)
         * All geometries must share the same SRS
         * If geometry SRS differs from the 'srs' input, then all geometries will
           be projected to the input srs
@@ -1019,18 +981,17 @@ def createVector(
 
     checkAllGeoms : bool, optional
         If True, all geoms will be asserted in object type and exact srs. Else, only
-        the first geom in the geom column/iterable will be checked fpr performance reasons.
+        the first geom in the geom column/iterable will be checked for performance reasons.
         By default False.
 
     overwrite : bool; optional
-        Determines whether the prexisting files should be overwritten
+        Determines whether the preexisting files should be overwritten
         * Only used when output is not None
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is given: None
-
     """
     if srs:
         srs = SRS.loadSRS(srs)
@@ -1038,9 +999,7 @@ def createVector(
     # make geom or wkt list into a list of ogr.Geometry objects
     finalGeoms = []
     geomIndex = None
-    if isinstance(geoms, str) or isinstance(
-        geoms, ogr.Geometry
-    ):  # geoms is a single geometry
+    if isinstance(geoms, str) or isinstance(geoms, ogr.Geometry):  # geoms is a single geometry
         geoms = [
             geoms,
         ]
@@ -1049,9 +1008,7 @@ def createVector(
         geoms = geoms.values
     elif isinstance(geoms, pd.DataFrame):
         if not fieldVals is None:
-            raise GeoKitVectorError(
-                "fieldVals must be None when geoms input is a DataFrame"
-            )
+            raise GeoKitVectorError("fieldVals must be None when geoms input is a DataFrame")
 
         fieldVals = geoms.copy()
         geoms = geoms.geom.values
@@ -1066,16 +1023,14 @@ def createVector(
         geomSRS = geoms[0].GetSpatialReference()
         if checkAllGeoms:
             # check if all other geoms have the same SRS
-            assert all(
-                [geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]
-            ), f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
+            assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), (
+                f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
+            )
         # Set up some variables for the upcoming loop
         doTransform = False
         setSRS = False
 
-        if (
-            srs and geomSRS and not srs.IsSame(geomSRS)
-        ):  # Test if a transformation is needed
+        if srs and geomSRS and not srs.IsSame(geomSRS):  # Test if a transformation is needed
             trx = osr.CoordinateTransformation(geomSRS, srs)
             doTransform = True
         # Test if an srs was NOT given, but the incoming geometries have an SRS already
@@ -1088,7 +1043,7 @@ def createVector(
 
         # Create geoms
         for i in range(len(geoms)):
-            # clone just incase the geometry is tethered outside of function
+            # clone just in case the geometry is tethered outside of function
             finalGeoms.append(geoms[i].Clone())
             if doTransform:
                 finalGeoms[i].Transform(trx)  # Do transform if necessary
@@ -1111,7 +1066,7 @@ def createVector(
     # Determine geometry types
     types = set()
     for g in geoms:
-        # Get a set of all geometry type-names (POINT, POLYGON, ect...)
+        # Get a set of all geometry type-names (POINT, POLYGON, etc...)
         types.add(g.GetGeometryName())
 
     if types.issubset({"POINT", "MULTIPOINT"}):
@@ -1128,40 +1083,12 @@ def createVector(
     # driver = gdal.GetDriverByName("ESRI Shapefile")
     # dataSource = driver.Create(output, 0, 0)
 
-    if output is not None and overwrite:
-        # Search for directory
-        if (
-            os.path.dirname(output) == ""
-        ):  # If no directory is given, assume current directory
-            output = os.path.join(os.getcwd(), output)
-
-        elif not os.path.isdir(
-            os.path.dirname(output)
-        ):  # If directory does not exist, raise error
-            raise FileNotFoundError(
-                f"Directory {os.path.dirname(output)} does not exist"
-            )
-
-        # Remove file if it exists
-        if os.path.isfile(output):
-            os.remove(output)
-
-        driver = ogr.GetDriverByName(driverName)
-        dataSource = driver.CreateDataSource(output)
-
-    elif output is not None and overwrite is False:
-        warnings.warn("Overwriting existing file")
-        dataSource = ogr.Open(output, 1)
-        assert dataSource is not None, f"Could not open {output}"
-
-    else:
-        # driver = ogr.GetDriverByName("Memory")
-        # dataSource = driver.CreateDataSource("")
-
+    if output is None:
+        # Create datasource if no output path is provided
         driver = gdal.GetDriverByName("Memory")
 
         # Using 'Create' from a Memory driver leads to an error. But creating
-        #  a temporary shapefile driver (it doesnt actually produce a file, I think)
+        #  a temporary shapefile driver (it does not actually produce a file, I think)
         #  and then using 'CreateCopy' seems to work
         tmp_driver = gdal.GetDriverByName("ESRI Shapefile")
         t = TemporaryDirectory()
@@ -1170,15 +1097,34 @@ def createVector(
         dataSource = driver.CreateCopy("MEMORY", tmp_dataSource)
         t.cleanup()
         del tmp_dataSource, tmp_driver, t
+    elif output is not None:
+        # Create datasource if output path is provided
+        if overwrite is True:
+            # Search for directory
+            if os.path.dirname(output) == "":  # If no directory is given, assume current directory
+                output = os.path.join(os.getcwd(), output)
 
+            elif not os.path.isdir(os.path.dirname(output)):  # If directory does not exist, raise error
+                raise FileNotFoundError(f"Directory {os.path.dirname(output)} does not exist")
+
+            # Remove file if it exists
+            if os.path.isfile(output):
+                os.remove(output)
+
+            driver = ogr.GetDriverByName(driverName)
+            dataSource = driver.CreateDataSource(output)
+
+        elif overwrite is False:
+            dataSource = ogr.Open(output, 1)
+            assert dataSource is not None, f"Could not open {output}"
     # Wrap the whole writing function in a 'try' statement in case it fails
     try:
         # Create the layer
-        if output is not None and overwrite == False:
+        if output is not None and overwrite is False:
             layerName = layerName
-            assert layerName not in listLayers(
-                output
-            ), f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."
+            assert layerName not in listLayers(output), (
+                f"Layer name '{layerName}' already exists in {output}. Please Specify a new layer name or set overwrite=True."
+            )
 
         else:
             layerName = layerName
@@ -1197,9 +1143,7 @@ def createVector(
 
             # check if length is good
             if fieldVals.shape[0] != len(geoms):
-                raise GeoKitVectorError(
-                    "Values table length does not equal geometry count"
-                )
+                raise GeoKitVectorError("Values table length does not equal geometry count")
 
             # Ensure fieldDefs exists and is a dict
             if fieldDef is None:  # Try to determine data types
@@ -1207,9 +1151,7 @@ def createVector(
                 for k, v in fieldVals.items():
                     fieldDef[k] = ogrType(v.dtype)
 
-            elif isinstance(
-                fieldDef, dict
-            ):  # Assume fieldDef is a dict mapping fields to inappropriate
+            elif isinstance(fieldDef, dict):  # Assume fieldDef is a dict mapping fields to inappropriate
                 #   datatypes. Fix these to ogr indicators!
                 for k in fieldVals.columns:
                     try:
@@ -1274,7 +1216,7 @@ def createVector(
 
 
 def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
-    """Convert a set of geometries to a geoJSON object"""
+    """Convert a set of geometries to a geoJSON object."""
     if srs:
         srs = SRS.loadSRS(srs)
 
@@ -1329,9 +1271,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
     fo.write(bytes('{"type":"FeatureCollection","features":[', encoding="utf-8"))
 
     for j, i, g in zip(range(len(index)), index, finalGeoms):
-        fo.write(
-            bytes('%s{"type":"Feature",' % ("" if j == 0 else ","), encoding="utf-8")
-        )
+        fo.write(bytes('%s{"type":"Feature",' % ("" if j == 0 else ","), encoding="utf-8"))
         if data is None:
             fo.write(bytes('"properties":{"_index":%s},' % str(i), encoding="utf-8"))
         else:
@@ -1354,9 +1294,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
         from topojson import conversion
 
         fo.seek(0)
-        topo = conversion.convert(
-            TextIOWrapper(fo), object_name="primary"
-        )  # automatically closes fo
+        topo = conversion.convert(TextIOWrapper(fo), object_name="primary")  # automatically closes fo
         topo = str(topo).replace("'", '"')
 
     # Done!
@@ -1390,7 +1328,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
 
 
 def createGeoDataFrame(dfGeokit: pd.DataFrame):
-    """Creates a gdf from an Reskit shape pd.DataFrame
+    """Creates a gdf from an Reskit shape pd.DataFrame.
 
     Parameters
     ----------
@@ -1400,7 +1338,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
     Returns
     -------
     gpd.GeoDataFrame
-        Same as the previos, just as an GeodataFrame
+        Same as the previous, just as an GeodataFrame
     """
     assert isinstance(dfGeokit, pd.DataFrame)
     assert "geom" in dfGeokit.columns
@@ -1425,14 +1363,12 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
     for col in dfGeokit.columns:
         # geoms need to be converted to shapely
         if col == "geom":
-            values["geometry"] = [
-                shapely.wkt.loads(g.ExportToWkt()) for g in dfGeokit.geom
-            ]  # this takes some time :/
+            values["geometry"] = [shapely.wkt.loads(g.ExportToWkt()) for g in dfGeokit.geom]  # this takes some time :/
         # other values are just stored as they are
         else:
             values[col] = list(dfGeokit[col])
 
-    # get srs as Well knwon text
+    # get srs as Well known text
     crs = dfGeokit.geom.iloc[0].GetSpatialReference().ExportToWkt()
 
     # create gdf and set index
@@ -1444,7 +1380,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
 
 
 def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
-    """Creates a geokit-style dataframe from a geopandas geodataframe
+    """Creates a geokit-style dataframe from a geopandas geodataframe.
 
     Parameters
     ----------
@@ -1454,7 +1390,7 @@ def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
     Returns
     -------
     pd.DataFrame
-        Same as the previos, just as an geokit-style dataframe with 'geom'
+        Same as the previous, just as an geokit-style dataframe with 'geom'
         column with osgeo.ogr.Geometry objects.
     """
     assert isinstance(gdf, pd.DataFrame)
@@ -1491,7 +1427,7 @@ def mutateVector(
     _slim=False,
     **kwargs,
 ):
-    """Process a vector dataset according to an arbitrary function
+    """Process a vector dataset according to an arbitrary function.
 
     Note:
     -----
@@ -1499,8 +1435,8 @@ def mutateVector(
     the selection criteria given by 'geom' and 'where' as well as translates
     all geometries to 'srs'
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : Anything acceptable by loadVector()
         The vector datasource to read from
 
@@ -1554,8 +1490,8 @@ def mutateVector(
             * Unless they are over written by the processor
         If False, only the newly specified attributes are kept
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is given: None
 
@@ -1578,7 +1514,6 @@ def mutateVector(
     >>> result = processVector( <source-path>, where="value>0 AND value<10",
     >>>                         processor=growPoints )
     >>>
-
     """
     # Extract filtered features
     geoms = extractFeatures(source, geom=geom, where=where, srs=srs)
@@ -1601,9 +1536,7 @@ def mutateVector(
             geoms = result
 
         if not "geom" in geoms:
-            raise GeoKitVectorError(
-                "There is no 'geom' field in the resulting vector table"
-            )
+            raise GeoKitVectorError("There is no 'geom' field in the resulting vector table")
 
         # make sure the geometries have an srs
         if not geoms.geom[0].GetSpatialReference():
@@ -1633,7 +1566,7 @@ def rasterize(
     fill=None,
     **kwargs,
 ):
-    """Rasterize a vector datasource onto a raster context
+    """Rasterize a vector datasource onto a raster context.
 
     Note:
     -----
@@ -1642,8 +1575,8 @@ def rasterize(
     aware of this if you intend to compare value-matricies directly from rasters
     generated with this function.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     source : str or ogr.Geometry
         If str, the path to the vector file to load
         If ogr.Geometry, an Polygon geometry
@@ -1677,7 +1610,7 @@ def rasterize(
     output : str; optional
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
-          handel will be returned
+          handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
@@ -1696,23 +1629,22 @@ def rasterize(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
         - numeric
-        * Must be the same datatye as the 'dtype' input (or that which is derived)
+        * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
         * If set to False and an 'output' is specified which already exists,
           an error will be raised
 
-    Returns:
-    --------
+    Returns
+    -------
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
-
     """
     # Normalize some inputs
     if isinstance(source, ogr.Geometry):
@@ -1790,9 +1722,7 @@ def rasterize(
             return outputDS
         else:
             ri = RASTER.rasterInfo(outputDS)
-            RASTER.createRasterLike(
-                ri, output=output, data=RASTER.extractMatrix(outputDS)
-            )
+            RASTER.createRasterLike(ri, output=output, data=RASTER.extractMatrix(outputDS))
             return output
 
     # Do a rasterization to a file on disk
@@ -1804,9 +1734,7 @@ def rasterize(
                 if os.path.isfile(output + ".aux.xml"):  # Because QGIS....
                     os.remove(output + ".aux.xml")
             else:
-                raise RASTER.GeoKitRasterError(
-                    "Output file already exists: %s" % output
-                )
+                raise RASTER.GeoKitRasterError("Output file already exists: %s" % output)
 
         # Arrange some inputs
         aligned = kwargs.pop("targetAlignedPixels", True)
@@ -1850,6 +1778,8 @@ def rasterize(
 
 def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
     """
+    Applies an arbitrary function to the data frames provided.
+
     Convenience function to apply geopandas methods to a geokit-style
     dataframe with 'geom' column with osgeo.ogr.Geometry objects.
     NOTE: All arguments besides **kwargs must be passed as positional
@@ -1876,22 +1806,18 @@ def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
     if callable(geopandasMethod):
         # we have a callable function already, just make sure its gpd
         if not geopandasMethod.__module__.split(".")[0] == "geopandas":
-            raise AttributeError(
-                f"'{geopandasMethod}' is not a callable method from geopandas!"
-            )
+            raise AttributeError(f"'{geopandasMethod}' is not a callable method from geopandas!")
     else:
         # not an executable yet, get the executable function via its name
         if not isinstance(geopandasMethod, str):
             # must be a str formatted name
-            raise TypeError(
-                f"'geopandasMethod' must be str-formatted geopandas method name if not callable."
-            )
+            raise TypeError(f"'geopandasMethod' must be str-formatted geopandas method name if not callable.")
         geopandasMethod = getattr(gpd, geopandasMethod, None)
 
     # create geodataframes from input geokit dfs
-    assert all(
-        [isinstance(_df, pd.DataFrame) and "geom" in _df.columns for _df in dfs]
-    ), f"positional *dfs arguments must be geokit-style pd.DataFrames with 'geom' column."
+    assert all([isinstance(_df, pd.DataFrame) and "geom" in _df.columns for _df in dfs]), (
+        f"positional *dfs arguments must be geokit-style pd.DataFrames with 'geom' column."
+    )
     gdfs = [createGeoDataFrame(dfGeokit=_df) for _df in dfs]
 
     # now apply geopandas method onto gdfs

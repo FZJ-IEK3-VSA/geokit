@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geokit"
-version = "1.5.0"
+version = "1.6.0"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
   { name = "David Severin Ryberg" },
@@ -37,3 +37,14 @@ geokit"""
 typeguard-debug-instrumentation = true
 typeguard-forward-ref-policy = "ERROR"
 typeguard-collection-check-strategy = "ALL_ITEMS"
+
+[tool.docformatter]
+recursive = true
+wrap-summaries = 120
+blank = true
+
+[tool.codespell]
+ignore-words-list = ["subTiles", "fo", "uite"]
+
+[tool.pydocstyle]
+convention = "numpy"
