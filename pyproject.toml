@@ -37,3 +37,14 @@ geokit"""
 typeguard-debug-instrumentation = true
 typeguard-forward-ref-policy = "ERROR"
 typeguard-collection-check-strategy = "ALL_ITEMS"
+
+[tool.docformatter]
+recursive = true
+wrap-summaries = 120
+blank = true
+
+[tool.codespell]
+ignore-words-list = ["subTiles", "fo", "uite"]
+
+[tool.pydocstyle]
+convention = "numpy"

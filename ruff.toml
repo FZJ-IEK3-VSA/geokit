@@ -1,11 +1,18 @@
 # Sets the maximum acceptable line length
-line-length = 120
 
-[lint]
+
+# [lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 
+line-length = 120
+[lint.pycodestyle]
+max-doc-length = 120
+max-line-length = 120
+
+[lint]
+select = ["D"]
 ignore = [
     "F401", # imported but unused
     "F405", # Variable is undefined or from star import
@@ -21,12 +28,17 @@ ignore = [
     "E741", # Ambiguous variable name: `l`
     "E721", # E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
     "E722", # Do not use bare `except`
-    "E501",
+    "D100", # Missing docstring in public module
+    "D401", # First line of docstring should be in imperative mood: "Convenience function to apply geopandas methods to a geokit-style"
+    "D101",
+    "D103",
+    "D205", # blank line required between summary line and description
+    "D404", # First word of the docstring should not be "This"
+    "D105", # Missing docstring in magic method
+    "D102", # Missing docstring in public method
+    "D104", #First line should end with a period
 ]
 unfixable = ["F401"]
 
-
-[lint.pycodestyle]
-max-doc-length = 120
-# E501 reports lines that exceed the length of 100.
-max-line-length = 120
+[lint.pydocstyle]
+convention = "numpy"

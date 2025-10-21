@@ -25,9 +25,10 @@ dependencies:
   - pytest <=8.4.1
   - pytest-xdist <=3.8.0
   - pytest-cov <=6.2.1
-  - ruff
+  - ruff =0.14.1
   - typeguard <=4.4.4
   - nbconvert <=7.16.6
   - jupyter-book
   - sphinx-autoapi
   - astroid <=3.3.11 # This fixes a broken constraint limit of sphinx-autoapi
+  - codespell

@@ -32,8 +32,8 @@ def checkSimilarRasters(
         The relative tolerance that is allowed for numeric deviations. By
         default 0, i.e. an exact match (within data type accuracy) is required.
 
-    Returns:
-    ----------
+    Returns
+    -------
     output datasets: list
         List of osgeo.gdal.Datasets with similar contexts.
     """
@@ -52,7 +52,7 @@ def checkSimilarRasters(
     for dataset in datasets:
         if isinstance(dataset, str):
             if not os.path.isfile(dataset):
-                raise FileNotFoundError(f"datsets string entry is not an existing file: '{dataset}'")
+                raise FileNotFoundError(f"datasets string entry is not an existing file: '{dataset}'")
             _datasets.append(loadRaster(dataset))
         elif isinstance(dataset, gdal.Dataset):
             _datasets.append(dataset)
@@ -124,7 +124,7 @@ def combineSimilarRasters(
         gdal.Datasets or iterable object with paths.
     output : string, optional
         Filepath to output raster file. If it is an existing file, datasets will
-        be added to output. Recommended to create a new file everytime though.
+        be added to output. Recommended to create a new file every time though.
         If None, no output dataset will be loaded or created on disk and output
         dataset kept in memory only, by default None
     combiningFunc : [type], optional
@@ -142,8 +142,9 @@ def combineSimilarRasters(
         By default False, i.e. only exactly similar rasters will be combined.
     **kwargs
         Will be passed on to geokit.raster.createRaster().
-    Returns:
-    ----------
+
+    Returns
+    -------
     output dataset: osgeo.gdal.Dataset
         Raster file containing the combined matrices of all input datasets.
     """
@@ -181,7 +182,7 @@ def combineSimilarRasters(
 
     # get the unique actual dtypes in input rasters
     dtypes = sorted(set([_i.dtype for _i in infoSet]))
-    # now get the most lightweight commonly useable dtype
+    # now get the most lightweight commonly usable dtype
     dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
 
     # get the reference resolution in x and y dir as the most commonly used value
@@ -314,7 +315,7 @@ def combineSimilarRasters(
         if not infoSet[i].yAtTop:
             dMatrix = dMatrix[::-1, :]
 
-        # Calculate starting indicies
+        # Calculate starting indices
         idx = mExtent.findWithin(dExtent, (mInfo.dx, mInfo.dy), yAtTop=mInfo.yAtTop)
 
         # Get output data

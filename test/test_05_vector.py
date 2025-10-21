@@ -301,7 +301,7 @@ def test_mutateVector():
     box_aachen = geom.box(AACHEN_SHAPE_EXTENT, srs=EPSG4326)
     box_aachen.TransformTo(EPSG3035)
 
-    sentance = [
+    sentence = [
         "Never",
         "have",
         "I",
@@ -326,7 +326,7 @@ def test_mutateVector():
     for i in range(13):
         assert res1.geom[i].GetSpatialReference().IsSame(EPSG4326)  # geom srs
         assert res1.geom[i].GetGeometryName() == "POINT"  # geom type
-        assert res1["word"][i] == sentance[i]  # attribute writing
+        assert res1["word"][i] == sentence[i]  # attribute writing
 
     # spatial filtering
     ps2 = vector.mutateVector(AACHEN_POINTS, processor=None, geom=ext_small)
@@ -371,11 +371,11 @@ def test_mutateVector():
     for i in range(13):
         assert res5.geom[i].GetSpatialReference().IsSame(EPSG3035)  # geom srs
         assert res5.geom[i].GetGeometryName() == "POLYGON"  # geom type
-        assert res5["word"][i] == sentance[i]  # attribute writing
-        assert res5["size"][i] == len(sentance[i]) * 10  # attribute writing
+        assert res5["word"][i] == sentence[i]  # attribute writing
+        assert res5["size"][i] == len(sentence[i]) * 10  # attribute writing
 
-        # test if the new areas are close to what they shoud be
-        area = np.power(10 * len(sentance[i]), 2) * np.pi
+        # test if the new areas are close to what they should be
+        area = np.power(10 * len(sentence[i]), 2) * np.pi
         assert np.isclose(area, res5.geom[i].Area(), rtol=1.0e-3)  # geom area
 
     # Test inline processor, with filtering, and writing to file
@@ -519,7 +519,7 @@ def test_applyGeopandasMethod():
     boxes1 = vector.extractFeatures(BOXES)
     # create a copy with new data
     boxes2 = pd.DataFrame(columns=["female"], data=[False, False, True])
-    # and add identical polgons but the first
+    # and add identical polygons but the first
     boxes2["geom"] = [
         geom.polygon([(-3, -3), (-2, -2), (-3, -2), (-3, -3)]),
         boxes1.geom[1],

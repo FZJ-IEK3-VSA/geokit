@@ -103,7 +103,7 @@ def test_ContourGenerateEx_single_isoband():
     assert np.isclose(countour_data_frame.ID[59], 1)
 
 
-# Multi-level isobands using interger step sizes
+# Multi-level isobands using integer step sizes
 def test_ContourGenerateEx_multilevel_isobands():
     ###
     contourEdges = [
@@ -185,7 +185,7 @@ def test_ContourGenerateEx_multilevel_isobands():
         )
 
 
-# Multi-level isobands using interger step sizes on a small raster (3x3)
+# Multi-level isobands using integer step sizes on a small raster (3x3)
 def test_ContourGenerateEx_3x3_raster():
     # Configuration option for the output
     # https://gdal.org/en/stable/programs/gdal_contour.html
