@@ -1,7 +1,7 @@
 on:
   workflow_dispatch:
-  push:
-    branches: ["check_dependencies"]
+  # push:
+  #   branches: ["check_dependencies"]
   pull_request:
     branches: ["master"]
 
