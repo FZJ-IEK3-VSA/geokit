@@ -1,0 +1,34 @@
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: ["check_dependencies"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  TestPushCondaForgeDev:
+    name: Test conda-forge development version on ${{ matrix.runner_tag }} for geopandas=${{ matrix.geopandas_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
+        geopandas_version:
+          [
+            "0.11.0",
+            "0.11.1",
+            "0.12.0",
+            "0.14.4",
+            "1.0.0",
+            "1.0.1",
+            "1.1.0",
+            "1.1.1",
+          ]
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: requirements-dev.yml
+      ipynb_example_folder: "Examples"
+      library_name: "geopandas"
+      library_version: ${{ matrix.geopandas_version }}
+      dependency_position_env_file: "11"

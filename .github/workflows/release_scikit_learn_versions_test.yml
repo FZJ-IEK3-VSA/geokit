@@ -1,4 +1,7 @@
 on:
+  workflow_dispatch:
+  # push:
+  #   branches: ["check_dependencies"]
   pull_request:
     branches: ["master"]
 
@@ -8,16 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag:
-          [
-            "ubuntu-24.04",
-            "ubuntu-22.04",
-            "macos-13",
-            "macos-14",
-            "macos-15",
-            "windows-2025",
-            "windows-2022",
-          ]
+        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python_version:
           [
             "1.7.1",
@@ -39,6 +33,6 @@ jobs:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
       ipynb_example_folder: "Examples"
-      library_name: "python"
+      library_name: "scikit-learn"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: "8"
