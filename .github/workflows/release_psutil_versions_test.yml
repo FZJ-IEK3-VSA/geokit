@@ -1,0 +1,41 @@
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: ["check_dependencies"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  TestPushCondaForgeDev:
+    name: Test conda-forge development version on ${{ matrix.runner_tag }} for psutil=${{ matrix.psutil_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        psutil_version:
+          [
+            "5.8.0",
+            "5.9.0",
+            "5.9.1",
+            "5.9.2",
+            "5.9.3",
+            "5.9.4",
+            "5.9.5",
+            "5.9.6",
+            "5.9.7",
+            "5.9.8",
+            "6.0.0",
+            "6.1.0",
+            "6.1.1",
+            "7.0.0",
+            "7.1.0",
+            "7.1.1",
+          ]
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    with:
+      runner_tag: ${{ matrix.runner_tag }}
+      requirements_file_name: requirements-dev.yml
+      ipynb_example_folder: "Examples"
+      library_name: "psutil"
+      library_version: ${{ matrix.psutil_version }}
+      dependency_position_env_file: "12"
