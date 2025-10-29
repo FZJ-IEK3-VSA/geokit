@@ -8,6 +8,8 @@ from collections.abc import Iterable
 from tempfile import TemporaryDirectory
 from typing import Literal
 
+import matplotlib.axes._axes
+import matplotlib.colorbar
 import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr
@@ -18,6 +20,7 @@ from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.location import Location
+from geokit.data_types import load_raster_input, srs_input
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -34,7 +37,7 @@ else:
 # Basic Loader
 
 
-def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
+def loadRaster(source: load_raster_input, mode=0) -> gdal.Dataset:
     """
     Load a raster dataset from a path to a file on disc.
 
@@ -422,9 +425,9 @@ def saveRasterAsTif(source, output, **kwargs):
 ####################################################################
 # extract the raster as a matrix
 def extractMatrix(
-    source,
+    source: load_raster_input,
     bounds=None,
-    boundsSRS="latlon",
+    boundsSRS: srs_input = "latlon",
     maskBand: bool = False,
     autocorrect: bool = False,
     returnBounds: bool = False,
@@ -1589,9 +1592,9 @@ def drawSmopyMap(
 
 
 def drawRaster(
-    source,
-    srs=None,
-    ax=None,
+    source: load_raster_input | pd.DataFrame,
+    srs: srs_input | None = None,
+    ax: matplotlib.axes._axes.Axes | None = None,
     resolution=None,
     cutline=None,
     figsize: tuple[int, int] = (12, 12),
@@ -1599,7 +1602,7 @@ def drawRaster(
     ylim: tuple[int, int] | None = None,
     fontsize: int = 16,
     hideAxis: bool = False,
-    cbar=True,
+    cbar: bool | matplotlib.colorbar.Colorbar = True,
     cbarPadding=0.01,
     cbarTitle=None,
     vmin=None,
@@ -1615,7 +1618,7 @@ def drawRaster(
     zorder=0,
     resampleAlg="med",
     **kwargs,
-):
+) -> UTIL.AxHands:
     """Draw a raster as an image on a matplotlib canvas.
 
     Parameters

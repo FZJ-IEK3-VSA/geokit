@@ -9,7 +9,7 @@ from warnings import warn
 
 import numpy as np
 import psutil
-from osgeo import ogr
+from osgeo import ogr, gdal
 
 from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
@@ -1684,14 +1684,14 @@ class RegionMask(object):
     def warp(
         self,
         source,
-        output=None,
+        output: str | None = None,
         resolutionDiv=1,
         returnMatrix=True,
         applyMask=True,
         noData=None,
         resampleAlg="bilinear",
         **kwargs,
-    ):
+    ) -> gdal.Dataset | np.ndarray | None:
         """Convenience wrapper for geokit.raster.warp() which automatically sets
         'srs', 'bounds', 'pixelWidth', and 'pixelHeight' inputs.
 
