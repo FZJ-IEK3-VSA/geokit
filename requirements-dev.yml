@@ -19,7 +19,7 @@ dependencies:
   - structlog <=25.4.0
   - rich <=14.1.0
   - pandas-stubs
-  - numpy-stubs
+  - scipy-stubs
   # Examples
   - pooch <=1.8.2
   - tqdm
