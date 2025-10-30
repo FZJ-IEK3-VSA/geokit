@@ -8,6 +8,8 @@ from geokit import geom, raster, util, vector
 from geokit.core.get_test_data import get_test_data
 from geokit.core.vector import GeoKitVectorError
 from test.helpers import *
+from typeguard import suppress_type_checks
+
 
 # ogrType
 
@@ -411,13 +413,14 @@ def test_loadVector():
     with pytest.raises(FileNotFoundError):
         vector.loadVector("missing_path/missing.shp")
 
-    # 4) None → GeoKitVectorError
-    with pytest.raises(GeoKitVectorError):
-        vector.loadVector(None)
+    with suppress_type_checks():
+        # 4) None → GeoKitVectorError
+        with pytest.raises(GeoKitVectorError):
+            vector.loadVector(None)
 
-    # 5) Wrong type → TypeError
-    with pytest.raises(TypeError):
-        vector.loadVector(123)  # not str or gdal.Dataset
+        # 5) Wrong type → TypeError
+        with pytest.raises(TypeError):
+            vector.loadVector(123)  # not str or gdal.Dataset
 
 
 def test_vectorInfo():
