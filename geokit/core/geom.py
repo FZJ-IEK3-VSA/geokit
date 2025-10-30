@@ -640,9 +640,9 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
 
     if ftrN == 0:
         # raise GlaesError("No features in created in temporary layer")
-        msg = "No features in created in temporary layer"
+        msg = "No features created in temporary layer"
         warnings.warn(msg, UserWarning)
-        return
+        return pd.DataFrame(dict(geom=[], value=[]))
 
     # Extract geometries and values
     geoms = []

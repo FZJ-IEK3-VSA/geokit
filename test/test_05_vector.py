@@ -6,7 +6,11 @@ import pandas as pd
 import pytest
 
 from geokit import geom, raster, util, vector
+from geokit.core.get_test_data import get_test_data
+from geokit.core.vector import GeoKitVectorError
 from test.helpers import *
+from typeguard import suppress_type_checks
+
 
 # ogrType
 
@@ -161,10 +165,8 @@ def test_extractAndClipFeatures():
     assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
 
 
-# Create shape file
-
-
 def test_createVector(tmpdir):
+    # Create shape file
     # Setup
     out1 = result("util_shape1.shp")
     out2 = result("util_shape2.shp")
@@ -271,7 +273,8 @@ def test_createVector(tmpdir):
     vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
 
     # create new geopackage on disk
-    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326, driverName="GPKG")
+    assert os.path.isfile(output_gpkg)
 
     # append new layer to existing geopackage
     vector.createVector(
@@ -392,7 +395,33 @@ def test_mutateVector():
 
 
 def test_loadVector():
-    assert util.isVector(vector.loadVector(BOXES))
+    # 1) Valid vector file → returns gdal.Dataset
+    test_shp_path = get_test_data(file_name="boxes.shp")
+
+    ds = vector.loadVector(test_shp_path)
+    assert isinstance(ds, gdal.Dataset)
+    ds = None
+
+    # 2) Passing an already-open gdal.Dataset → returns it unchanged
+    ds_open = gdal.OpenEx(test_shp_path)
+    ds_again = vector.loadVector(ds_open)
+    # same object (GDAL returns the same handle)
+    assert ds_again is ds_open
+    ds_open = None
+    ds_again = None
+
+    # 3) Non-existent path → FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        vector.loadVector("missing_path/missing.shp")
+
+    with suppress_type_checks():
+        # 4) None → GeoKitVectorError
+        with pytest.raises(GeoKitVectorError):
+            vector.loadVector(None)
+
+        # 5) Wrong type → TypeError
+        with pytest.raises(TypeError):
+            vector.loadVector(123)  # not str or gdal.Dataset
 
 
 def test_vectorInfo():
