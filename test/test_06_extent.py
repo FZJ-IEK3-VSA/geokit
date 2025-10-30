@@ -604,15 +604,6 @@ def test_Extent_contoursFromRaster():
         )  # index of geom changed from 61 to 63 with GDAL >= 3.0.0
         assert geoms.iloc[63].ID == 1
 
-    elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
-        ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
-
-        assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
-        assert len(geoms) == 95
-        assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
-        assert geoms.iloc[61].ID == 1
-
 
 def test_Extent_subTiles():
     ext = Extent.fromVector(get_test_data(file_name="aachenShapefile.shp"))

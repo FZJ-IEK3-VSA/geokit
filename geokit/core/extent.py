@@ -1369,7 +1369,10 @@ class Extent(object):
             fname = output
         ds = gdal.Translate(fname, source, options=opts)
 
-        return ds if output is None else output
+        if output is None:
+            return ds
+        else:
+            return output
 
     def contoursFromRaster(
         self, raster, contourEdges: list[float], transformGeoms: bool = True, **kwargs
