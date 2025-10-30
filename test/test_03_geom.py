@@ -296,6 +296,13 @@ def test_polygonizeMask():
     assert np.isclose(g4.Area(), 250.0)  # polygonizeMask: contexted area
     assert g4.GetSpatialReference().IsSame(EPSG3035)  # error("polygonizeMask: contexted srs
 
+def test_poylgonizeMatrix_all_false():
+    
+    all_false_matrix = np.full(shape=(2, 2), fill_value=False)
+    empty_data_frame = geom.polygonizeMatrix(all_false_matrix)
+    
+    assert isinstance(empty_data_frame, pd.DataFrame)
+    assert empty_data_frame.empty
 
 def test_flatten():
     # Overlapping polygons
