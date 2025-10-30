@@ -14,6 +14,7 @@ from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core import vector as VECTOR
 from geokit.core.location import Location, LocationSet
+from geokit.data_types import srs_input, TransformedPointsXY, TransformedPointsXYZ
 
 
 class GeoKitExtentError(UTIL.GeoKitError):
@@ -49,7 +50,7 @@ class Extent(object):
 
     _whatami = "Extent"
 
-    def __init__(self, *args, srs="latlon"):
+    def __init__(self, *args, srs: srs_input = "latlon"):
         """Create extent from explicitly defined boundaries.
 
         Usage:
@@ -125,7 +126,7 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=geom.GetSpatialReference())
 
     @staticmethod
-    def fromTile(xi, yi, zoom) -> "Extent":
+    def fromTile(xi: int, yi: int, zoom: int) -> "Extent":
         """Generates an Extent corresponding to tiles used for "slippery maps".
 
         Parameters
@@ -150,7 +151,7 @@ class Extent(object):
         br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
         o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat="xy")
-
+        assert isinstance(o, TransformedPointsXY)
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
     @staticmethod
@@ -215,7 +216,7 @@ class Extent(object):
 
             return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
         else:
-            geom = VECTOR.extractFeature(source, where=where, geom=geom, onlyGeom=True)
+            geom = VECTOR.extractFeature(source=source, where=where, geom=geom, onlyGeom=True)
             return Extent.fromGeom(geom)
 
     @staticmethod
@@ -1490,7 +1491,7 @@ class Extent(object):
         """
         yield from GEOM.subTiles(self.box, zoom, checkIntersect=False, asGeom=asGeom)
 
-    def tileBox(self, zoom, return_index_box=False):
+    def tileBox(self, zoom: int, return_index_box: bool = False):
         """Determine the tile Extent at a given zoom level which surround the invoked Extent.
 
         Parameters

@@ -503,6 +503,7 @@ def test_Extent_extractFeatures():
 
     # Test loading as a dataframe
     vi = ex.extractFeatures(AACHEN_ZONES, asPandas=True)
+    assert isinstance(vi, pd.DataFrame)
     assert vi.shape[0] == 101
 
 
