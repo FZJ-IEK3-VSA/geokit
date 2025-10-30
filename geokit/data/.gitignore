@@ -6,4 +6,4 @@ turbine_locations shapefile.zip
 # Folder
 gebco_tiles/
 iho/
-turbine_locations shapefile/
+turbine_locations_shapefile/

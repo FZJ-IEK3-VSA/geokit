@@ -1,12 +1,15 @@
 import copy
 import numbers
 import os
+import pathlib
 import warnings
 from binascii import hexlify
 from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
-
+from typing import Generator
+from geokit.data_types import numeric, load_raster_input, srs_input, load_vector_input
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
@@ -15,6 +18,7 @@ from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
+from geokit.core.extent import Extent
 
 
 class GeoKitVectorError(UTIL.GeoKitError):
@@ -35,7 +39,7 @@ class GeoKitVectorError(UTIL.GeoKitError):
 # Loaders Functions
 
 
-def loadVector(x):
+def loadVector(x: load_vector_input) -> gdal.Dataset:
     """
     Load a vector dataset from a path to a file on disc.
 
@@ -50,7 +54,7 @@ def loadVector(x):
     -------
     gdal.Dataset
     """
-    if isinstance(x, str):
+    if isinstance(x, str) or isinstance(x, pathlib.Path):
         ds = gdal.OpenEx(x)
     else:
         ds = x
@@ -63,7 +67,7 @@ def loadVector(x):
 # Feature looper
 
 
-def loopFeatures(source):
+def loopFeatures(source: load_vector_input):
     """Geokit internal.
 
     *Loops over an input layer's features
@@ -74,7 +78,7 @@ def loopFeatures(source):
     source : Anything acceptable by loadVector()
         The vector datasource to read from
     """
-    if isinstance(source, str):  # assume input source is a path to a datasource
+    if isinstance(source, str) or isinstance(source, pathlib.Path):  # assume input source is a path to a datasource
         ds = ogr.Open(source)
         layer = ds.GetLayer()
     else:  # otherwise, assume input source is an ogr layer object
@@ -296,7 +300,7 @@ def _extractFeatures(
     skipMissingGeoms,
     layerName=None,
     spatialPredicate="Touches",
-):
+) -> Generator:
     # Check spatialPredicate
     avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
     assert spatialPredicate in avail_predicates, (
@@ -453,7 +457,7 @@ def extractFeatures(
     layerName=None,
     spatialPredicate="Touches",
     **kwargs,
-):
+) -> pd.DataFrame | pd.Series | Generator:
     """Creates a generator which extract the features contained within the source.
 
     * Iteratively returns (feature-geometry, feature-fields)
@@ -572,7 +576,15 @@ def extractFeatures(
             return df
 
 
-def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, onlyAttr=False, **kwargs):
+def extractFeature(
+    source: load_vector_input,
+    where: None | str | int = None,
+    geom=None,
+    srs=None,
+    onlyGeom=False,
+    onlyAttr=False,
+    **kwargs,
+) -> UTIL.Feature | ogr.Geometry | dict:
     """Convenience function calling extractFeatures which assumes there is only
     one feature to extract.
 
@@ -666,7 +678,14 @@ def extractFeature(source, where=None, geom=None, srs=None, onlyGeom=False, only
         return UTIL.Feature(fGeom, fItems)
 
 
-def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, **kwargs):
+def extractAsDataFrame(
+    source: load_vector_input,
+    indexCol: str | None = None,
+    geom: None | ogr.Geometry = None,
+    where=None,
+    srs: srs_input | None = None,
+    **kwargs,
+):
     """Convenience function calling extractFeatures and structuring the output as
     a pandas DataFrame.
 
@@ -694,7 +713,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
 
             where = "ISO='DEU' AND POP>1000"
 
-    outputSRS : Anything acceptable to geokit.srs.loadSRS(); optional
+    srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the geometries to extract
           * If not given, the source's inherent srs is used
           * If srs does not match the inherent srs, all geometries will be
@@ -712,7 +731,7 @@ def extractAsDataFrame(source, indexCol=None, geom=None, where=None, srs=None, *
 
 
 def extractAndClipFeatures(
-    source,
+    source: load_vector_input | pd.DataFrame,
     geom,
     where=None,
     srs=None,
@@ -723,7 +742,7 @@ def extractAndClipFeatures(
     scaleAttrs=None,
     minShare=0.001,
     **kwargs,
-):
+) -> pd.DataFrame | pd.Series | Generator:
     """
     Extracts features from a source and clips them to the boundaries of a given geom.
     Optionally scales numeric attribute values linearly to the overlapping area share.
@@ -799,7 +818,7 @@ def extractAndClipFeatures(
             return source
         # generate a vector from source dataframe
         source = createVector(source)
-    elif isinstance(source, str):
+    elif isinstance(source, str) or isinstance(source, pathlib.Path):
         if not os.path.isfile(source):
             raise FileNotFoundError(f"source is given as a string but is not an existing filepath: {source}")
         # load as vector file
@@ -912,15 +931,16 @@ def extractAndClipFeatures(
 ####################################################################
 # Create a vector
 def createVector(
+    # geoms: ogr.Geometry | list[ogr.Geometry | gdal.Dataset | str] | pd.DataFrame | np.ndarray | str | gdal.Dataset,
     geoms,
-    output=None,
+    output: str | None = None,
     srs=None,
-    driverName="ESRI Shapefile",
-    layerName="default",
+    driverName: str = "ESRI Shapefile",
+    layerName: str = "default",
     fieldVals=None,
     fieldDef=None,
     checkAllGeoms=False,
-    overwrite=True,
+    overwrite: bool = True,
 ):
     """
     Create a vector on disk from geometries or a DataFrame with 'geom' column.
@@ -1327,7 +1347,7 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
 # mutuate a vector
 
 
-def createGeoDataFrame(dfGeokit: pd.DataFrame):
+def createGeoDataFrame(dfGeokit: pd.DataFrame) -> gpd.GeoDataFrame:
     """Creates a gdf from an Reskit shape pd.DataFrame.
 
     Parameters
@@ -1379,7 +1399,7 @@ def createGeoDataFrame(dfGeokit: pd.DataFrame):
     return gdf
 
 
-def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
+def createDataFrameFromGeoDataFrame(gdf: gpd.GeoDataFrame) -> pd.DataFrame:
     """Creates a geokit-style dataframe from a geopandas geodataframe.
 
     Parameters
@@ -1396,13 +1416,13 @@ def createDataFrameFromGeoDataFrame(gdf: pd.DataFrame):
     assert isinstance(gdf, pd.DataFrame)
     assert "geometry" in gdf.columns
 
-    # import the required external packages - these are not part of the requirements.yml and are possibly not installed
-    try:
-        import geopandas as gpd
-    except:
-        raise ImportError(
-            "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
-        )
+    # # import the required external packages - these are not part of the requirements.yml and are possibly not installed
+    # try:
+    #     import geopandas as gpd
+    # except:
+    #     raise ImportError(
+    #         "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+    #     )
 
     # get the CRS/SRS of the gdf
     crs_wkt = gdf.crs.to_wkt()
@@ -1426,7 +1446,7 @@ def mutateVector(
     keepAttributes=True,
     _slim=False,
     **kwargs,
-):
+) -> None | gdal.Dataset | str:
     """Process a vector dataset according to an arbitrary function.
 
     Note:
@@ -1551,21 +1571,21 @@ def mutateVector(
 
 
 def rasterize(
-    source,
-    pixelWidth,
-    pixelHeight,
-    srs=None,
-    bounds=None,
-    where=None,
-    value=1,
-    output=None,
+    source: str | pathlib.Path | ogr.Geometry | gdal.Dataset,
+    pixelWidth: numeric,
+    pixelHeight: numeric,
+    srs: srs_input | None = None,
+    bounds: tuple[numeric, numeric, numeric, numeric] | Extent | None = None,
+    where: str | None = None,
+    value: numeric | str = 1,
+    output: str | None = None,
     dtype=None,
     compress=True,
     noData=None,
-    overwrite=True,
+    overwrite: bool = True,
     fill=None,
     **kwargs,
-):
+) -> gdal.Dataset | str:
     """Rasterize a vector datasource onto a raster context.
 
     Note:
@@ -1796,12 +1816,12 @@ def applyGeopandasMethod(geopandasMethod, *dfs, **kwargs):
         Will be passed on to the geopandas function.
     """
     # load geopandas
-    try:
-        import geopandas as gpd
-    except:
-        raise ImportError(
-            "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
-        )
+    # try:
+    #     import geopandas as gpd
+    # except:
+    #     raise ImportError(
+    #         "'geopandas' is required for geokit.vector.createGeoDataFrame() but is not installed in the current environment."
+    #     )
     # get the method as callable
     if callable(geopandasMethod):
         # we have a callable function already, just make sure its gpd

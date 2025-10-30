@@ -2,7 +2,7 @@ import numbers
 import os
 import warnings
 from collections import namedtuple
-from typing import Iterable
+from typing import Iterable, Literal
 
 import numpy as np
 import smopy
@@ -10,6 +10,7 @@ from osgeo import gdal, ogr, osr
 
 from geokit.core import geom as GEOM
 from geokit.core import util as UTIL
+from geokit.data_types import srs_input, TransformedPointsXY, TransformedPointsXYZ
 
 
 class GeoKitSRSError(UTIL.GeoKitError):
@@ -19,7 +20,7 @@ class GeoKitSRSError(UTIL.GeoKitError):
 # Basic loader
 
 
-def loadSRS(source, geom=None, **kwargs) -> osr.SpatialReference:
+def loadSRS(source: srs_input, geom: ogr.Geometry | None = None, **kwargs) -> osr.SpatialReference:
     """
     Load a spatial reference system (SRS) from various sources.
 
@@ -157,7 +158,9 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
 # point transformer
 
 
-def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
+def xyTransform(
+    *args, toSRS: srs_input, fromSRS: srs_input, outputFormat: Literal["raw", "xy", "xyz"] = "raw"
+) -> list[tuple] | TransformedPointsXY | TransformedPointsXYZ:
     """Transform xy points between coordinate systems.
 
     Parameters
@@ -216,16 +219,14 @@ def xyTransform(*args, toSRS, fromSRS, outputFormat="raw"):
         x = np.array([o[0] for o in out])
         y = np.array([o[1] for o in out])
 
-        TransformedPoints = namedtuple("TransformedPoints", "x y")
-        return TransformedPoints(x, y)
+        return TransformedPointsXY(x, y)
 
     elif outputFormat == "xyz":
         x = out[:, 0]
         y = out[:, 1]
         z = out[:, 2]
 
-        TransformedPoints = namedtuple("TransformedPoints", "x y z")
-        return TransformedPoints(x, y, z)
+        return TransformedPointsXYZ(x, y, z)
 
 
 Tile = namedtuple("Tile", "xi yi zoom")
