@@ -1987,6 +1987,7 @@ def contours(
     contourEdges: list[float] | None,
     polygonize: bool = True,
     unpack: bool = True,
+    raster_band_index: int = 1,
     **kwargs,
 ) -> pd.DataFrame:
     """Create contour geometries at specified edges for the given raster data.
@@ -2018,6 +2019,9 @@ def contours(
     unpack : bool
         If True, Multipolygon/MultiLinestring objects are decomposed
 
+    raster_band_index : int
+        The index of the raster which should be loaded from the raster band.
+
     **kwargs:
         * All keyword arguments are passed on to a call to gdal.ContourGenerateEx
         * They are used to construct the 'options' parameter
@@ -2031,15 +2035,18 @@ def contours(
     * The column 'geom' corresponds to generated geometry objects
     * The columns 'ID' corresponds to the associated contour edge for each object
     """
+    warnings.warn(
+        message="The current behavior of geokits's contours function is deprecated. GDAL has changed"
+        " how contours are drawn close to minimum and maximum values, and will discontinue"
+        " the current behavior in GDAL 3.11 or 3.12. Geokit will also drop the current"
+        " behavior with the next GDAL update. For more information, please see the"
+        " following discussion: https://github.com/OSGeo/gdal/issues/12938.",
+        category=DeprecationWarning,
+    )
     # Open raster
     raster = loadRaster(source)
-    band = raster.GetRasterBand(1)
-    # TODO: Should a warning be printed in case there are multiple
-    # bands?
-    # if raster.RasterCount>1:
+    band = raster.GetRasterBand(raster_band_index)
 
-    #    Warning.warn("There are multiple bands in the dataset.
-    # The contour is obtained for the first one"")
     rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 
     # Make temporary vector
