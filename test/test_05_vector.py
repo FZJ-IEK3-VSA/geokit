@@ -163,7 +163,6 @@ def test_extractAndClipFeatures():
 
 
 def test_createVector(tmpdir):
-
     # Create shape file
     # Setup
     out1 = result("util_shape1.shp")
@@ -393,10 +392,9 @@ def test_mutateVector():
 
 
 def test_loadVector():
-      
     # 1) Valid vector file → returns gdal.Dataset
     test_shp_path = get_test_data(file_name="boxes.shp")
-    
+
     ds = vector.loadVector(test_shp_path)
     assert isinstance(ds, gdal.Dataset)
     ds = None
