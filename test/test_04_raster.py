@@ -755,3 +755,21 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+def test_warp_meta_argument():
+    mx = raster.extractMatrix(SINGLE_HILL_PATH)
+
+    rInfo = raster.rasterInfo(SINGLE_HILL_PATH)
+    raster.warp(
+        source=ELEVATION_PATH,
+        meta={"AREA_OR_POINT": "Area"},
+        bounds=rInfo.bounds,
+        pixelWidth=rInfo.pixelWidth,
+        pixelHeight=rInfo.pixelHeight,
+        srs=rInfo.srs,
+    )
+
+
+if __name__ == "__main__":
+    test_warp_meta_argument()
