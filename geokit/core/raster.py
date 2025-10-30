@@ -2035,12 +2035,13 @@ def contours(
     * The column 'geom' corresponds to generated geometry objects
     * The columns 'ID' corresponds to the associated contour edge for each object
     """
-    warnings.deprecated(
-        "The current behavior of geokits's contours function is deprecated. GDAL has changed"
+    warnings.warn(
+        message="The current behavior of geokits's contours function is deprecated. GDAL has changed"
         " how contours are drawn close to minimum and maximum values, and will discontinue"
         " the current behavior in GDAL 3.11 or 3.12. Geokit will also drop the current"
         " behavior with the next GDAL update. For more information, please see the"
-        " following discussion: https://github.com/OSGeo/gdal/issues/12938."
+        " following discussion: https://github.com/OSGeo/gdal/issues/12938.",
+        category=DeprecationWarning,
     )
     # Open raster
     raster = loadRaster(source)
