@@ -1,6 +1,7 @@
 from functools import reduce
 from os.path import dirname, join
 
+import geopandas as gpd
 import pandas as pd
 import pytest
 
@@ -510,8 +511,6 @@ def test_rasterize():
 
 
 def test_createGeoDataFrame():
-    import geopandas as gpd
-
     dfIn = pd.DataFrame()
     dfIn["geom"] = [geom.point(7, 51, srs=3857), geom.point(7.5, 52, srs=3857)]
     dfIn["data_column"] = ["abc", 123]
@@ -525,8 +524,6 @@ def test_createGeoDataFrame():
 
 
 def test_createDataFrameFromGeoDataFrame():
-    import geopandas as gpd
-
     # load input df geopandas style
     gdf = gpd.read_file(AACHEN_ZONES)
     # convert to gk style df
@@ -562,3 +559,7 @@ def test_applyGeopandasMethod():
     # ron is neither one
     assert joint.set_index("name").loc["ron", "female"] == False
     assert joint.set_index("name").loc["ron", "smart"] == 0
+
+
+if __name__ == "__main__":
+    test_extractAndClipFeatures()

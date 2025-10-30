@@ -8,7 +8,7 @@ from osgeo import osr
 import geokit as gk
 
 
-def create_test_raster_3x4():
+def create_test_raster_3x3():
     raster_matrix = np.array(
         [
             [1, 1, 1],

@@ -382,7 +382,7 @@ def test_extractVerticies():
 
 def test_drawGeoms():
     # Draw single polygon
-    r = geom.drawGeoms(SUB_GEOM)
+    r = geom.drawGeoms(geoms=SUB_GEOM)
     plt.savefig(result("drawGeoms-1.png"), dpi=100)
     assert SUB_GEOM.GetSpatialReference().IsSame(EPSG4326)
 
@@ -599,4 +599,4 @@ def test_applyBuffer():
 
 
 if __name__ == "__main__":
-    test_applyBuffer()
+    test_drawGeoms()

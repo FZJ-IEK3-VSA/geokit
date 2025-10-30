@@ -2,6 +2,9 @@ import warnings
 from collections import namedtuple
 from copy import copy
 
+import matplotlib.axes._axes
+import matplotlib.colorbar
+import matplotlib.patches
 import numpy as np
 import pandas as pd
 import smopy
@@ -9,6 +12,7 @@ from osgeo import gdal, ogr, osr
 
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
+from geokit.data_types import numeric, srs_input
 
 
 class GeoKitGeomError(UTIL.GeoKitError):
@@ -26,7 +30,7 @@ MULTIPOLYGON = ogr.wkbMultiPolygon
 # Geometry convenience functions
 
 
-def point(*args, srs="latlon"):
+def point(*args, srs: srs_input = "latlon"):
     """Make a simple point geometry.
 
     Parameters
@@ -71,7 +75,7 @@ def makePoint(*args, **kwargs):
     return point(*args, **kwargs)
 
 
-def box(*args, srs=4326):
+def box(*args, srs: srs_input = 4326) -> ogr.Geometry:
     """Make an ogr polygon object from extents.
 
     Parameters
@@ -741,7 +745,7 @@ def polygonizeMask(mask, bounds=None, srs=None, flat=True, shrink=True):
 # geometry transformer
 
 
-def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None):
+def transform(geoms, toSRS, fromSRS=None, revert360degProj=False, segment=None) -> ogr.Geometry | list[ogr.Geometry]:
     """Transform a geometry, or a list of geometries, from one SRS to another.
 
     Parameters
@@ -944,7 +948,7 @@ def flatten(geoms):
 
 ##########################################################################
 # Drawing functions
-def drawPoint(g, plotargs, ax, colorVal=None):
+def drawPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
     kwargs = dict(marker="o", color="#C32148", linestyle="None")
     if not colorVal is None:
         kwargs["color"] = colorVal
@@ -953,7 +957,7 @@ def drawPoint(g, plotargs, ax, colorVal=None):
     return ax.plot(g.GetX(), g.GetY(), **kwargs)
 
 
-def drawMultiPoint(g, plotargs, ax, colorVal=None, skip=False):
+def drawMultiPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False):
     kwargs = dict(marker=".", color="#C32148", linestyle="None")
     if not colorVal is None:
         kwargs["color"] = colorVal
@@ -963,7 +967,7 @@ def drawMultiPoint(g, plotargs, ax, colorVal=None, skip=False):
     return ax.plot(points[:, 0], points[:, 1], **kwargs)
 
 
-def drawLine(g, plotargs, ax, colorVal=None, skip=False):
+def drawLine(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False):
     if skip:
         kwargs = plotargs.copy()
     else:
@@ -976,7 +980,7 @@ def drawLine(g, plotargs, ax, colorVal=None, skip=False):
     return ax.plot(points[:, 0], points[:, 1], **kwargs)
 
 
-def drawMultiLine(g, plotargs, ax, colorVal=None):
+def drawMultiLine(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
     kwargs = dict(marker="None", color="#007959", linestyle="-")
     if not colorVal is None:
         kwargs["color"] = colorVal
@@ -988,14 +992,14 @@ def drawMultiLine(g, plotargs, ax, colorVal=None):
     return h
 
 
-def drawLinearRing(g, plotargs, ax, colorVal=None):
+def drawLinearRing(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
     g.CloseRings()
     return drawLine(g, plotargs, ax)
 
 
-def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
-    from json import loads
-
+def drawPolygon(
+    g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False
+) -> matplotlib.patches.PathPatch:
     from descartes import PolygonPatch
 
     if g.GetGeometryCount() == 0:  # Geometry doesn't actually exist. skip it
@@ -1036,7 +1040,7 @@ def drawPolygon(g, plotargs, ax, colorVal=None, skip=False):
     return ax.add_patch(mainPatch)
 
 
-def drawMultiPolygon(g, plotargs, ax, colorVal=None):
+def drawMultiPolygon(g, plotargs, ax: matplotlib.axes._axes.Axes, colorVal=None):
     kwargs = dict(fc="#D9E9FF", ec="k", linestyle="-")
     if not colorVal is None:
         kwargs["fc"] = colorVal
@@ -1044,15 +1048,15 @@ def drawMultiPolygon(g, plotargs, ax, colorVal=None):
 
     h = []
     for gi in range(g.GetGeometryCount()):
-        h.append(drawPolygon(g.GetGeometryRef(gi), kwargs, ax, colorVal, True))
+        h.append(drawPolygon(g=g.GetGeometryRef(gi), plotargs=kwargs, ax=ax, colorVal=colorVal, skip=False))
     return h
 
 
 def drawGeoms(
-    geoms,
-    srs=4326,
-    ax=None,
-    simplificationFactor=5000,
+    geoms: ogr.Geometry | list[ogr.Geometry] | pd.DataFrame | np.ndarray,
+    srs: srs_input = 4326,
+    ax: None | matplotlib.axes._axes.Axes = None,
+    simplificationFactor: numeric | None = 5000,
     colorBy=None,
     figsize=(12, 12),
     xlim=None,
@@ -1072,7 +1076,7 @@ def drawGeoms(
     topMargin=0.01,
     bottomMargin=0.01,
     **mplArgs,
-):
+) -> UTIL.AxHands:
     """Draw geometries onto a matplotlib figure.
 
     * Each geometry type is displayed as an appropriate plotting type
@@ -1205,11 +1209,10 @@ def drawGeoms(
     """
     if isinstance(ax, UTIL.AxHands):
         ax = ax.ax
+    import matplotlib.pyplot as plt
 
     if ax is None:
         newAxis = True
-
-        import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
@@ -1371,7 +1374,7 @@ def drawGeoms(
 
         # Determine type
         if g.GetGeometryName() == "POINT":
-            h.append(drawPoint(g, plotargs, ax, colorVal))
+            h.append(drawPoint(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
         elif g.GetGeometryName() == "MULTIPOINT":
             h.append(drawMultiPoint(g, plotargs, ax, colorVal))
         elif g.GetGeometryName() == "LINESTRING":
@@ -1381,9 +1384,9 @@ def drawGeoms(
         elif g.GetGeometryName() == "LINEARRING":
             h.append(drawLinearRing(g, plotargs, ax, colorVal))
         elif g.GetGeometryName() == "POLYGON":
-            h.append(drawPolygon(g, plotargs, ax, colorVal))
+            h.append(drawPolygon(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
         elif g.GetGeometryName() == "MULTIPOLYGON":
-            h.append(drawMultiPolygon(g, plotargs, ax, colorVal))
+            h.append(drawMultiPolygon(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
         else:
             msg = (
                 "Could not draw geometry of type:",

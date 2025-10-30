@@ -9,10 +9,18 @@ from collections.abc import Iterable
 from glob import glob
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from types import GeneratorType
+from typing import NamedTuple
 
 import matplotlib.axis
+import matplotlib.colorbar
+import matplotlib.image
+import matplotlib.lines
+import matplotlib.patches
 import numpy as np
 import pandas as pd
+import pandas.core.series
+from matplotlib.axes._axes import Axes
+from matplotlib.axis import Axis
 from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
@@ -476,7 +484,17 @@ Feature = namedtuple("Feature", "geom attr")
 
 # Image plotter
 
-AxHands = namedtuple("AxHands", "ax handles cbar")
+
+# AxHands: namedtuple = namedtuple("AxHands", "ax handles cbar")
+class AxHands(NamedTuple):
+    ax: Axes
+    handles: (
+        pandas.core.series.Series
+        | matplotlib.image.AxesImage
+        | list[matplotlib.patches.PathPatch | matplotlib.lines.Line2D]
+        | list[list[matplotlib.lines.Line2D | matplotlib.patches.PathPatch]]
+    )
+    cbar: matplotlib.colorbar.Colorbar | None
 
 
 def drawImage(
@@ -488,7 +506,7 @@ def drawImage(
     scaling: float = 1,
     fontsize: int = 16,
     hideAxis=False,
-    figsize: tuple[float | float] = (12, 12),
+    figsize: tuple[float, float] = (12, 12),
     cbar: bool = True,
     cbarPadding=0.01,
     cbarTitle=None,
@@ -502,7 +520,7 @@ def drawImage(
     topMargin=0,
     bottomMargin=0,
     **kwargs,
-):
+) -> AxHands:
     """Draw a matrix as an image on a matplotlib canvas.
 
     Parameters
