@@ -209,14 +209,14 @@ def test_polygonizeMatrix():
         dtype=int,
     )
 
-    g1 = geom.polygonizeMatrix(boxmatrix, shrink=None)
+    g1 = geom.polygonizeMatrix(boxmatrix, shrink=False)
     assert np.isclose(g1.geom[0].Area(), 8.0)  # polygonizeMatrix: simple area
     # polygonizeMatrix: empty srs
     assert g1.geom[0].GetSpatialReference() is None
     assert g1.value[0] == 1  # polygonizeMatrix: Value retention
 
     # test shrink
-    g1b = geom.polygonizeMatrix(boxmatrix, shrink=0.0001)
+    g1b = geom.polygonizeMatrix(boxmatrix, shrink=True)
     # polygonizeMatrix: shrunk area
     assert np.isclose(g1b.geom[0].Area(), 7.99984000)
 
@@ -232,19 +232,19 @@ def test_polygonizeMatrix():
         dtype=int,
     )
 
-    g2 = geom.polygonizeMatrix(complexmatrix, shrink=None)
+    g2 = geom.polygonizeMatrix(complexmatrix, shrink=False)
     assert np.isclose(g2.shape[0], 4)  # polygonizeMatrix: geometry count
     assert np.isclose(sum([g.Area() for g in g2.geom]), 11.0)  # polygonizeMatrix: area"
     assert np.isclose(g2.value[0], 2)  # polygonizeMatrix: Value retention
 
     # flatten the complex area
-    g3 = geom.polygonizeMatrix(complexmatrix, flat=True, shrink=None)
+    g3 = geom.polygonizeMatrix(complexmatrix, flat=True, shrink=False)
     assert np.isclose(g3.shape[0], 3)  # polygonizeMatrix: geometry count
     # polygonizeMatrix: flattened area
     assert np.isclose(g3.geom[0].Area(), 7.0)
 
     # set a boundary and srs context
-    g4 = geom.polygonizeMatrix(complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
+    g4 = geom.polygonizeMatrix(complexmatrix, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=False)
     # polygonizeMatrix: contexted area
     assert np.isclose(g4.geom[0].Area(), 175.0)
     assert g4.geom[0].GetSpatialReference().IsSame(EPSG3035)  # polygonizeMatrix: contexted srs
@@ -263,12 +263,13 @@ def test_polygonizeMask():
         dtype=bool,
     )
 
-    g1 = geom.polygonizeMask(boxmask, shrink=None)
+    g1 = geom.polygonizeMask(boxmask, shrink=False)
     assert np.isclose(g1.Area(), 8.0)  # polygonizeMask: simple area
     assert g1.GetSpatialReference() is None  # polygonizeMask: empty srs
 
     # test shrink
-    g1b = geom.polygonizeMask(boxmask, shrink=0.0001)
+    # g1b = geom.polygonizeMask(boxmask, shrink=0.0001)
+    g1b = geom.polygonizeMask(boxmask, shrink=True)
     assert np.isclose(g1b.Area(), 7.99984000)  # polygonizeMask: shrunk area
 
     # test a more complex area
@@ -283,23 +284,24 @@ def test_polygonizeMask():
         dtype=bool,
     )
 
-    g2 = geom.polygonizeMask(complexmask, shrink=None, flat=False)
+    g2 = geom.polygonizeMask(complexmask, shrink=False, flat=False)
     assert np.isclose(len(g2), 3)  # polygonizeMask: geometry count
     assert np.isclose(sum([g.Area() for g in g2]), 10.0)  # polygonizeMask: area
 
     # flatten the complex area
-    g3 = geom.polygonizeMask(complexmask, flat=True, shrink=None)
+    g3 = geom.polygonizeMask(complexmask, flat=True, shrink=False)
     assert np.isclose(g3.Area(), 10.0)  # polygonizeMask: flattened area
 
     # set a boundary and srs context
-    g4 = geom.polygonizeMask(complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=None)
+    g4 = geom.polygonizeMask(complexmask, bounds=(-3, 10, 22, 35), srs=EPSG3035, flat=True, shrink=False)
     assert np.isclose(g4.Area(), 250.0)  # polygonizeMask: contexted area
     assert g4.GetSpatialReference().IsSame(EPSG3035)  # error("polygonizeMask: contexted srs
 
 
-def test_poylgonizeMatrix_all_false():
+def test_polygonizeMatrix_all_false():
     all_false_matrix = np.full(shape=(2, 2), fill_value=False)
-    empty_data_frame = geom.polygonizeMatrix(all_false_matrix)
+    with pytest.warns(UserWarning):
+        empty_data_frame = geom.polygonizeMatrix(matrix=all_false_matrix)
 
     assert isinstance(empty_data_frame, pd.DataFrame)
     assert empty_data_frame.empty
@@ -343,7 +345,7 @@ def test_transform():
         dtype=bool,
     )
 
-    polygons = geom.polygonizeMask(complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=None)
+    polygons = geom.polygonizeMask(complexmask, bounds=(6, 45, 11, 50), flat=False, srs=EPSG4326, shrink=False)
 
     t2 = geom.transform(polygons, toSRS="europe_laea", segment=0.1)
     assert len(t2) == 3  # "Transform Count
@@ -604,7 +606,3 @@ def test_applyBuffer():
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
     with pytest.raises(geom.GeoKitGeomError):
         buf_north_clip_LAEA = geom.applyBuffer(geom=testpoint_north, buffer=20000, srs="laea", split="clip")
-
-
-if __name__ == "__main__":
-    test_drawGeoms()

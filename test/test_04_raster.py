@@ -472,6 +472,7 @@ def test_polygonizeRaster():
     assert geoms.geom.map(lambda g: g.IsValid()).all()
 
 
+@pytest.mark.filterwarnings("ignore: The current behavior of geokits's contours function is deprecated.")
 def test_contours():
     geoms = raster.contours(AACHEN_ELIGIBILITY_RASTER, contourEdges=[0.5])
 

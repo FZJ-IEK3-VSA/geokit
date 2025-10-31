@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
 from geokit.core.get_test_data import get_all_shape_files, get_test_data
@@ -592,6 +593,7 @@ def test_Extent_clipRaster():
     assert ri.yMax == 3101000.0
 
 
+@pytest.mark.filterwarnings("ignore: The current behavior of geokits's contours function is deprecated.")
 def test_Extent_contoursFromRaster():
     if gdal.__version__ >= "3.0.0":
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
