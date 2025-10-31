@@ -298,7 +298,7 @@ def test_polygonizeMask():
     assert g4.GetSpatialReference().IsSame(EPSG3035)  # error("polygonizeMask: contexted srs
 
 
-def test_polygonizeMatrix_all_false():
+def test_polygonize_matrix_all_false():
     all_false_matrix = np.full(shape=(2, 2), fill_value=False)
     with pytest.warns(UserWarning):
         empty_data_frame = geom.polygonizeMatrix(matrix=all_false_matrix)
