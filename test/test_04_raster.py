@@ -45,7 +45,7 @@ def test_rasterInfo():
 # createRaster
 
 
-def test_createRaster():
+def test_create_raster_from_fill_values():
     ######################
     # run and check funcs
 
@@ -65,7 +65,7 @@ def test_createRaster():
         srs=inputSRS,
         dtype=inputDataType,
         noData=inputNoData,
-        fillValue=inputFillValue,
+        fill=inputFillValue,
     )
 
     assert memRas is not None  # creating raster in memory
@@ -76,7 +76,14 @@ def test_createRaster():
     assert mri.dy == inputPixelHeight  # pixel height
     assert mri.noData == inputNoData  # no data
     assert mri.srs.IsSame(EPSG4326)  # srs
+    assert mri.data_type_name_str == inputDataType
 
+    numpy_array_raster = raster.extractMatrix(source=memRas)
+    assert np.isclose(numpy_array_raster, inputFillValue).all()
+    assert numpy_array_raster.shape == (500, 500)
+
+
+def test_create_raster_from_numpy_array():
     # Disk creation
     data = (np.ones((1000, 500)) * np.arange(500)).astype("float32")
     outputFileName = result("util_raster1.tif")
@@ -88,7 +95,7 @@ def test_createRaster():
         pixelWidth=0.01,
         compress=True,
         srs=EPSG4326,
-        noDataValue=100,
+        noData=100,
         data=data,
         overwrite=True,
         meta=dict(bob="bob", TIM="TIMMY"),
@@ -99,8 +106,7 @@ def test_createRaster():
     srs = osr.SpatialReference()
     srs.ImportFromWkt(ds.GetProjection())
 
-    if gdal.__version__ >= "3.0.0":
-        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     assert srs.IsSame(EPSG4326)  # disk raster, srs mismatch
 
@@ -755,3 +761,7 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+if __name__ == "__main__":
+    test_create_raster_from_fill_values()
