@@ -136,7 +136,6 @@ def createRaster(
     offset: numeric = 0,
     creationOptions: dict = dict(),
     raster_band_index: int = 1,
-    # **kwargs,
 ) -> gdal.Dataset | str:
     """Create a raster file.
 
