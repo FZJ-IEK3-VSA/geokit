@@ -516,7 +516,20 @@ def convertGeoJson(geojson, srs=3857):
 # Make a geometry from a matrix mask
 
 
-def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _raw=False):
+def polygonizeMatrix(
+    matrix: np.ndarray,
+    bounds: tuple[
+        numeric,
+        numeric,
+        numeric,
+        numeric,
+    ]
+    | None = None,
+    srs: srs_input | None = None,
+    flat: bool = False,
+    shrink: bool = True,
+    _raw: bool = False,
+) -> pd.DataFrame | tuple[list, list]:
     """Create a geometry set from a matrix of integer values.
 
     Each unique-valued group of pixels will be converted to a geometry
@@ -549,12 +562,19 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
           * The total amount shrunk should be very very small
           * Generally this should be left as True unless it is ABSOLUTELY
             necessary to maintain the same area
+    _raw: bool
+        return a tuple with with two lists instead of a data frame. The first
+        list contains the The contiguous-valued geometries and the second list the value
+        the value for each geometry
 
     Returns
     -------
     pandas.DataFrame -> With columns:
                             'geom' -> The contiguous-valued geometries
                             'value' -> The value for each geometry
+    | tuple[ list | list ]
+    The first list contains the contiguous-valued geometries. The seconds
+    list contains the value for each geometry.
     """
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
@@ -625,30 +645,36 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
     maskBand = rasBand.GetMaskBand()
 
     vecDS = gdal.GetDriverByName("Memory").Create("", 0, 0, 0, gdal.GDT_Unknown)
-    vecLyr = vecDS.CreateLayer("mem", srs=srs)
+    vector_layer = vecDS.CreateLayer("mem", srs=srs)
 
     field = ogr.FieldDefn("DN", ogr.OFTInteger)
-    vecLyr.CreateField(field)
+    vector_layer.CreateField(field)
 
     # Polygonize geometry
-    result = gdal.Polygonize(rasBand, maskBand, vecLyr, 0)
+    result = gdal.Polygonize(rasBand, maskBand, vector_layer, 0)
     if result != 0:
         raise GeoKitGeomError("Failed to polygonize geometry")
 
     # Check how many features were created
-    ftrN = vecLyr.GetFeatureCount()
+    feature_count = vector_layer.GetFeatureCount()
 
-    if ftrN == 0:
+    if feature_count == 0:
         # raise GlaesError("No features in created in temporary layer")
-        msg = "No features created in temporary layer"
-        warnings.warn(msg, UserWarning)
-        return pd.DataFrame(dict(geom=[], value=[]))
+        message = "No features created in temporary layer"
+        warnings.warn(message, UserWarning)
+        if _raw is True:
+            return ([], [])
+        elif _raw is False:
+            return pd.DataFrame(dict(geom=[], value=[]))
+
+        else:
+            raise Exception("_raw is suped to be True or False but is: " + str(type(_raw)))
 
     # Extract geometries and values
     geoms = []
     rid = []
-    for i in range(ftrN):
-        ftr = vecLyr.GetFeature(i)
+    for i in range(feature_count):
+        ftr = vector_layer.GetFeature(i)
         geoms.append(ftr.GetGeometryRef().Clone())
         rid.append(ftr.items()["DN"])
 
@@ -674,7 +700,7 @@ def polygonizeMatrix(matrix, bounds=None, srs=None, flat=False, shrink=True, _ra
         finalRID = rid
 
     # Cleanup
-    vecLyr = None
+    vector_layer = None
     vecDS = None
     maskBand = None
     rasBand = None

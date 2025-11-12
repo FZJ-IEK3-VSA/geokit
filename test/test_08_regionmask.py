@@ -608,40 +608,5 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
 
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_extractFeatures():
-#     print("RegionMask_extractFeatures not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_mutateVector():
-#     print("RegionMask_mutateVector not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_mutateRaster():
-#     print("RegionMask_mutateRaster not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromRaster():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMatrix():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMask():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMask():
-#     print("Nothing to do :(")
-
-
 if __name__ == "__main__":
     test_RegionMask_fromGeom()
