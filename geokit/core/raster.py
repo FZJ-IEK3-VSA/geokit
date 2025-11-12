@@ -52,6 +52,8 @@ def loadRaster(source: load_raster_input, mode=0) -> gdal.Dataset:
     -------
     gdal.Dataset
     """
+    if isinstance(source, pathlib.Path):
+        source = str(source)
     if isinstance(source, str):
         ds = gdal.Open(source, mode)
     else:
@@ -776,7 +778,6 @@ def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
     """
     output = {}
     sourceDS = loadRaster(sourceDS)
-
     # get srs
     if sourceDS.GetProjectionRef() == "":
         # return None directly if raster has no srs
@@ -2100,7 +2101,7 @@ def contours(
 
 
 def warp(
-    source,
+    source: load_raster_input,
     resampleAlg: Literal[
         "near",
         "bilinear",
@@ -2117,17 +2118,17 @@ def warp(
         "Q3",
         "sum",
     ] = "bilinear",
-    cutline=None,
-    output: str | None = None,
-    pixelHeight=None,
-    pixelWidth=None,
-    srs=None,
-    bounds: tuple | None = None,
+    cutline: str | ogr.Geometry | None = None,
+    output: str | pathlib.Path | None = None,
+    pixelHeight: numeric | None = None,
+    pixelWidth: numeric | None = None,
+    srs: srs_input | None = None,
+    bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
     dtype=None,
     noData=None,
-    fill=None,
-    overwrite=True,
-    meta=None,
+    fill: numeric | None = None,
+    overwrite: bool = True,
+    meta: None | dict[str, str] = None,
     **kwargs,
 ) -> gdal.Dataset | str:
     """Warps a given raster source to another context.
@@ -2161,7 +2162,7 @@ def warp(
         * Values outside of the cutline are given the value 'cutlineFillValue'
         * Requires a warp
 
-    output : str; optional
+    output : str; pathlib.Path optional
         The path on disk where the new raster should be created
 
     pixelHeight : numeric; optional
@@ -2186,6 +2187,9 @@ def warp(
 
     noData : numeric; optional
         The no-data value to apply to the output raster
+
+    meta: dict; optional: contains a key value pair that is passed to the
+          output gdal.dataset using the SetMetadataItem method.
 
     fill : numeric; optional
         The fill data to place into the new raster before warping occurs
@@ -2272,7 +2276,9 @@ def warp(
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
     # Workflow depends on whether or not we have an output
-    if output is not None:  # Simply do a translate
+    if isinstance(output, pathlib.Path):
+        output = str(output)
+    if isinstance(output, str):  # Simply do a translate
         if os.path.isfile(output):
             if overwrite is True:
                 os.remove(output)
@@ -2300,7 +2306,7 @@ def warp(
         )
 
         # Let gdalwarp do everything...
-        opts = gdal.WarpOptions(
+        gdal_warp_options = gdal.WarpOptions(
             outputType=getattr(gdal, dtype),
             xRes=pixelWidth,
             yRes=pixelHeight,
@@ -2315,18 +2321,19 @@ def warp(
             **kwargs,
         )
 
-        result = gdal.Warp(output, source, options=opts)
-        if not UTIL.isRaster(result):
+        result_dataset = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
+        if not UTIL.isRaster(result_dataset):
             raise GeoKitRasterError("Failed to translate raster")
 
-        destRas = output
+        destination_raster = output
+
     else:
         if "cropToCutline" in kwargs:
             msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
             warnings.warn(msg, UserWarning)
 
         # Warp to a raster in memory
-        destRas = UTIL.quickRaster(
+        destination_raster = UTIL.quickRaster(
             bounds=bounds,
             srs=srs,
             dx=pixelWidth,
@@ -2337,40 +2344,25 @@ def warp(
         )
 
         # Do a warp
-        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
-        destRas.FlushCache()
+        result_dataset = gdal.Warp(destination_raster, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
 
+        destination_raster.FlushCache()
     # Do we have meta data?
     if meta is not None:
-        if isinstance(result, str):
-            ds = loadRaster(result, 1)
+        if isinstance(destination_raster, str):
+            loaded_output_raster = loadRaster(destination_raster, 1)
         else:
-            ds = result
+            loaded_output_raster = destination_raster
 
         for k, v in meta.items():
-            ds.SetMetadataItem(k, v)
+            loaded_output_raster.SetMetadataItem(k, v)
 
-        del ds
+        # FlushCache writes all changes to disk
+        loaded_output_raster.FlushCache()
 
-    # Do we need to readjust?
-    #    if isAdjusted:
-    #        if isinstance(result, str):
-    #            ds = loadRaster(result, 1)
-    #        else:
-    #            ds = result
-    #        band = ds.GetRasterBand(1)
-    #        band.SetScale(dsInfo.scale)
-    #        band.SetOffset(dsInfo.offset)
-    #        band.FlushCache()
-    #        ds.FlushCache()
-    #        del band, ds
-
-    # TODO: Should 'result' be deleted at this point?
-
-    # Done!
     if cutline is not None:
         del tempdir
-    return destRas
+    return destination_raster
 
 
 def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
