@@ -2318,8 +2318,8 @@ def warp(
             **kwargs,
         )
 
-        result_code = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
-        if not UTIL.isRaster(result_code):
+        result_dataset = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
+        if not UTIL.isRaster(result_dataset):
             raise GeoKitRasterError("Failed to translate raster")
 
         destination_raster = output
@@ -2341,7 +2341,7 @@ def warp(
         )
 
         # Do a warp
-        result_code = gdal.Warp(destination_raster, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
+        result_dataset = gdal.Warp(destination_raster, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
 
         destination_raster.FlushCache()
     # Do we have meta data?
