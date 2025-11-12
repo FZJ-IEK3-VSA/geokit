@@ -225,7 +225,7 @@ def createRaster(
         * Must be the same datatype as the 'dtype' input (or that which is derived)
 
     raster_band_index: int, defaults to 1
-        Determines which raster is used from the raster band.
+        Determines which band is written to in the output raster dataset.
 
     Returns
     -------
