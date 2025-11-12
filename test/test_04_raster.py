@@ -755,3 +755,37 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+def test_warp_meta_argument_in_memory():
+    rInfo = raster.rasterInfo(SINGLE_HILL_PATH)
+
+    output_raster = raster.warp(
+        source=ELEVATION_PATH,
+        meta={"AREA_OR_POINT": "Area"},
+        bounds=rInfo.bounds,
+        pixelWidth=rInfo.pixelWidth,
+        pixelHeight=rInfo.pixelHeight,
+        srs=rInfo.srs,
+    )
+    assert raster.rasterInfo(output_raster).meta["AREA_OR_POINT"] == "Area"
+
+
+def test_warp_meta_argument_hard_drive():
+    output_path = pathlib.Path(__file__).parent.joinpath("results", "warped_raster_with_meta_data.tif")
+    raster_info_input = raster.rasterInfo(SINGLE_HILL_PATH)
+
+    raster.warp(
+        source=ELEVATION_PATH,
+        meta={"AREA_OR_POINT": "Area"},
+        output=output_path,
+        bounds=raster_info_input.bounds,
+        pixelWidth=raster_info_input.pixelWidth,
+        pixelHeight=raster_info_input.pixelHeight,
+        srs=raster_info_input.srs,
+        overwrite=True,
+    )
+    raster_info_output = raster.rasterInfo(output_path)
+
+    assert raster_info_output.meta["AREA_OR_POINT"] == "Area"
+    pathlib.Path.unlink(output_path)
