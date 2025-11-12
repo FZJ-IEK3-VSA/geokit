@@ -6,7 +6,7 @@ import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
-from typing import Literal
+from typing import Literal, NamedTuple
 
 import matplotlib.axes._axes
 import matplotlib.colorbar
@@ -20,7 +20,7 @@ from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.location import Location
-from geokit.data_types import load_raster_input, srs_input, numeric
+from geokit.data_types import load_raster_input, srs_input, numeric, gdal_raster_data_types, RasterInfo
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -122,22 +122,22 @@ def gdalType(s):
 
 
 def createRaster(
-    bounds,
+    bounds: tuple[numeric, numeric, numeric, numeric],
     output: None | str = None,
-    pixelWidth=100,
-    pixelHeight=100,
-    dtype=None,
-    srs=None,
-    compress=True,
-    noData=None,
+    pixelWidth: numeric = 100,
+    pixelHeight: numeric = 100,
+    dtype: None | gdal_raster_data_types = None,
+    srs: srs_input | None = None,
+    compress: bool = True,
+    noData: numeric | None = None,
     overwrite: bool = True,
-    fill=None,
+    fill: numeric | None = None,
     data=None,
-    meta=None,
-    scale=1,
-    offset=0,
-    creationOptions=dict(),
-    **kwargs,
+    meta: dict | None = None,
+    scale: numeric | None = 1,
+    offset: numeric = 0,
+    creationOptions: dict = dict(),
+    raster_band_index: int = 1,
 ) -> gdal.Dataset | str:
     """Create a raster file.
 
@@ -173,7 +173,7 @@ def createRaster(
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : str; optional
+    dtype : gdal_raster_data_types, int, none
         The datatype of the represented by the created raster's band
         * Options are: Byte, Int16, Int32, Int64, Float32, Float64
         * If dtype is None and data is None, the assumed datatype is a 'Byte'
@@ -211,6 +211,10 @@ def createRaster(
         A 2D matrix to write into the resulting raster
         * array dimensions must fit raster dimensions as calculated by the bounds
           and the pixel resolution
+    meta : dictionary, None
+        of key values pairs that is stored in the raster as meta data. Is written
+        to the raster using the
+
 
     scale : numeric; optional
         The scaling value given to apply to all values
@@ -221,6 +225,9 @@ def createRaster(
         The offset value given to apply to all values
         - numeric
         * Must be the same datatype as the 'dtype' input (or that which is derived)
+
+    raster_band_index: int, defaults to 1
+        Determines which band is written to in the output raster dataset.
 
     Returns
     -------
@@ -275,10 +282,10 @@ def createRaster(
 
     if output is None:
         driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-        raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
     else:
         driver: gdal.Driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
-        raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
 
     if raster is None:
         raise GeoKitRasterError("Failed to create raster")
@@ -293,7 +300,7 @@ def createRaster(
             raster.SetProjection(rasterSRS.ExportToWkt())
 
         # Fill the raster will zeros, null values, or initial values (if given)
-        band: gdal.Band = raster.GetRasterBand(1)
+        band: gdal.Band = raster.GetRasterBand(raster_band_index)
         if scale is not None:
             band.SetScale(scale)
         if offset is not None:
@@ -325,13 +332,13 @@ def createRaster(
             band.ComputeRasterMinMax(0)
             band.ComputeBandStats(0)
 
-        raster.FlushCache()
-
         # Write MetaData, maybe
         if meta is not None:
             for k, v in meta.items():
                 raster.SetMetadataItem(k, v)
 
+        # writes the raster to the hard drive
+        raster.FlushCache()
         # Return raster if in memory
         if output is None:
             return raster
@@ -744,12 +751,6 @@ def isFlipped(source):
         return False
 
 
-RasterInfo = namedtuple(
-    "RasterInfo",
-    "srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta, source, scale, offset",
-)
-
-
 def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster.
 
@@ -826,12 +827,14 @@ def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
     output["bounds"] = (xMin, yMin, xMax, yMax)
     output["meta"] = sourceDS.GetMetadata_Dict()
     output["source"] = sourceDS.GetDescription()
+    output["data_type_name_str"] = gdal.GetDataTypeName(output["dtype"])
 
     # clean up
     del sourceBand, sourceDS
 
-    # return
-    return RasterInfo(**output)
+    raster_info = RasterInfo(**output)
+
+    return raster_info
 
 
 ####################################################################
