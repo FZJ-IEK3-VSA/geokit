@@ -7,20 +7,21 @@ from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
 from typing import Literal, NamedTuple
+import warnings
 
 import matplotlib.axes._axes
 import matplotlib.colorbar
 import numpy as np
 import pandas as pd
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
-from geokit.core.location import Location
-from geokit.data_types import load_raster_input, srs_input, numeric, gdal_raster_data_types, RasterInfo
+from geokit.core.location import Location, LocationSet
+from geokit.data_types import load_raster_input, srs_input, numeric, gdal_raster_data_types, RasterInfo, ptValue
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -123,7 +124,7 @@ def gdalType(s):
 
 def createRaster(
     bounds: tuple[numeric, numeric, numeric, numeric],
-    output: None | str = None,
+    output: None | str | pathlib.Path = None,
     pixelWidth: numeric = 100,
     pixelHeight: numeric = 100,
     dtype: None | gdal_raster_data_types = None,
@@ -153,7 +154,7 @@ def createRaster(
 
     Parameters
     ----------
-    bounds : (xMin, yMix, xMax, yMax) or Extent
+    bounds : (xMin, yMin, xMax, yMax) or Extent
         The geographic extents spanned by the raster
 
     pixelWidth : numeric
@@ -166,7 +167,7 @@ def createRaster(
         * The keyword 'dy' can be used as well and will override anything given
           assigned to 'pixelHeight'
 
-    output : str; optional
+    output : str, pathlib.Path, None
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
           handle will be returned
@@ -236,17 +237,22 @@ def createRaster(
                                 It has to be saved as geotiff with .tif suffix.
     """
     # Check for existing file
+
     if output is not None:
-        if os.path.isfile(output):
+        output = str(output)
+        output_path = pathlib.Path(output)
+        if output_path.exists():
             if overwrite is True:
-                os.remove(output)
-                if os.path.isfile(output + ".aux.xml"):
-                    os.remove(output + ".aux.xml")
+                output_path.unlink()
+                output_path_with_aux_extension = output_path.with_suffix(".aux.xml")
+                if output_path_with_aux_extension.exists():
+                    output_path_with_aux_extension.unlink()
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
         # check if the directory exists
-        elif not os.path.isdir(os.path.dirname(output)):
+
+        elif not output_path.parent.is_dir():
             raise FileNotFoundError(f"Output directory does not exist: {os.path.dirname(output)}")
 
         # check if writeable:
@@ -258,11 +264,13 @@ def createRaster(
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     # Make a raster dataset and pull the band/maskBand objects
-    originX = bounds[0]
-    originY = bounds[3]  # Always use the "Y-at-Top" orientation
+    x_min = bounds[0]
+    y_min = bounds[1]
+    x_max = bounds[2]
+    y_max = bounds[3]  # Always use the "Y-at-Top" orientation
 
-    cols = int(round((bounds[2] - originX) / pixelWidth))
-    rows = int(round((originY - bounds[1]) / abs(pixelHeight)))
+    cols = int(round((x_max - x_min) / pixelWidth))
+    rows = int(round((y_max - y_min) / abs(pixelHeight)))
 
     # Get DataType
     if dtype is not None:  # a dtype was given, use it!
@@ -292,7 +300,7 @@ def createRaster(
 
     # Do the rest in a "try" statement so that a failure won't bind the source
     try:
-        raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
+        raster.SetGeoTransform((x_min, abs(pixelWidth), 0, y_max, 0, -1 * abs(pixelHeight)))
 
         # Set the SRS
         if srs is not None:
@@ -319,7 +327,16 @@ def createRaster(
         else:
             # make sure dimension size is good
             if not (data.shape[0] == rows and data.shape[1] == cols):
-                raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
+                raise GeoKitRasterError(
+                    "Raster dimensions and input data dimensions do not match.The data has rows="
+                    + str(data.shape[0])
+                    + " and collumns="
+                    + str(data.shape[1])
+                    + ". The raster specification expects rows="
+                    + str(rows)
+                    + " and columns="
+                    + str(cols)
+                )
 
             # See if data needs flipping
             if pixelHeight < 0:
@@ -394,7 +411,7 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
     )
 
 
-def saveRasterAsTif(source, output, **kwargs):
+def saveRasterAsTif(source: gdal.Dataset, output: str, **kwargs):
     """Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
 
     Parameters
@@ -839,10 +856,175 @@ def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
 
 ####################################################################
 # extract specific points in a raster
-ptValue = namedtuple("value", "data xOffset yOffset inBounds")
+# ptValue = namedtuple("value", "data xOffset yOffset inBounds")
+def _convertTupleToOGRPoint(
+    point_as_tuple: tuple[float, float],
+    point_srs_loaded: osr.SpatialReference,
+    point_srs_is_set: bool,
+    output_srs: osr.SpatialReference,
+) -> ogr.Geometry:
+    if point_srs_is_set is False:
+        _raise_srs_required_exception(object_name="tuple")
+    ogr_geometry_point = ogr.Geometry(ogr.wkbPoint)
+    ogr_geometry_point.AddPoint(*point_as_tuple)
+    ogr_geometry_point.AssignSpatialReference(point_srs_loaded)
+    assert isinstance(point_srs_loaded, osr.SpatialReference)
+    if not point_srs_loaded.IsSame(output_srs):
+        ogr_geometry_point_transformed = GEOM.transform(ogr_geometry_point, fromSRS=point_srs_loaded, toSRS=output_srs)
+    else:
+        ogr_geometry_point_transformed = ogr_geometry_point
+
+    return ogr_geometry_point_transformed
 
 
-def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True, _onlyValues=False):
+def _check_if_geometry_is_point(point_to_check: ogr.Geometry):
+    if point_to_check.GetGeometryName() != "POINT":
+        raise GEOM.GeoKitGeomError(
+            "A " + str(point_to_check.GetGeometryName()) + " geometry has been passed as a point."
+            "However only 'POINT' Geometries are an appropiate input as points"
+        )
+
+
+def _check_if_srs_is_epsg_4326(srs: osr.SpatialReference):
+    if not srs.IsSame(SRS.loadSRS(4326)):
+        srs_string = srs.ExportToWkt
+        warnings.warn(
+            "The Location Object assumes the Spatial Reference Syste EPSG 4326 internally. "
+            "Howerver the provided point system in WKT is: " + str(srs_string)
+        )
+
+
+def _raise_srs_required_exception(object_name: str):
+    raise GEOM.GeoKitGeomError(
+        "A spatial reference systems is required when passing" + str(object_name) + " but None has been provided."
+    )
+
+
+def _transform_ogr_point_spatial_reference_system(
+    ogr_point: ogr.Geometry, point_input_SRS_external: osr.SpatialReference | None, output_srs: osr.SpatialReference
+) -> ogr.Geometry:
+    _check_if_geometry_is_point(point_to_check=ogr_point)
+    point_srs_loaded_geometry: osr.SpatialReference = ogr_point.GetSpatialReference()
+    if isinstance(point_input_SRS_external, osr.SpatialReference):
+        if not point_srs_loaded_geometry.IsSame(point_input_SRS_external):
+            raise GEOM.GeoKitGeomError("")
+    if not point_srs_loaded_geometry.IsSame(output_srs):
+        ogr_point = GEOM.transform(ogr_point, fromSRS=point_srs_loaded_geometry, toSRS=output_srs)
+    return ogr_point
+
+
+def _convertPointsToListOfOGRPoints(
+    points: tuple[float, float]
+    | list[tuple[float, float]]
+    | ogr.Geometry
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    point_input_SRS: srs_input | None,
+    output_srs: osr.SpatialReference,
+) -> list[ogr.Geometry]:
+    """This function takes tuple[float, float] | ogr.Geometry | list[tuple[float, float]] | Location | LocationSet
+    as input and converts them to a list ogr.Geometry objects of the type point.
+
+    Parameters
+    ----------
+    points : tuple[float, float] | list[tuple[float, float]] | ogr.Geometry | list[ogr.Geometry] | Location | LocationSet
+        _description_
+    point_input_SRS : srs_input | None
+        _description_
+    output_srs : osr.SpatialReference
+        _description_
+
+    Returns
+    -------
+    list[ogr.Geometry]
+        _description_
+
+    Raises
+    ------
+    GEOM.GeoKitGeomError
+        _description_
+    GEOM.GeoKitGeomError
+        _description_
+    """
+    if point_input_SRS is None:
+        point_srs_is_set = False
+        point_srs_loaded = None
+    else:
+        point_srs_is_set = True
+        point_srs_loaded = SRS.loadSRS(point_input_SRS)
+
+    # Ensure we have a list of point geometries
+    if isinstance(points, Location):
+        if point_srs_is_set is True:
+            assert isinstance(point_srs_loaded, osr.SpatialReference)
+            _check_if_srs_is_epsg_4326(srs=point_srs_loaded)
+        points_as_list_of_geom = [points.asGeom(srs=output_srs)]
+    elif isinstance(points, LocationSet):
+        if point_srs_is_set is True:
+            assert isinstance(point_srs_loaded, osr.SpatialReference)
+            _check_if_srs_is_epsg_4326(srs=point_srs_loaded)
+        points_as_list_of_geom = points.asGeom(
+            srs=output_srs,
+        )
+    elif isinstance(points, tuple):
+        points_as_list_of_geom = [
+            _convertTupleToOGRPoint(
+                point_as_tuple=points,
+                point_srs_loaded=point_srs_loaded,
+                point_srs_is_set=point_srs_is_set,
+                output_srs=output_srs,
+            )
+        ]
+    elif isinstance(points, ogr.Geometry):
+        points_as_list_of_geom = [
+            _transform_ogr_point_spatial_reference_system(
+                ogr_point=points, point_input_SRS_external=point_srs_loaded, output_srs=output_srs
+            )
+        ]
+    elif isinstance(points, list):
+        points_as_list_of_geom = []
+        for current_point in points:
+            if isinstance(current_point, tuple):
+                current_point = _convertTupleToOGRPoint(
+                    point_as_tuple=current_point,
+                    point_srs_loaded=point_srs_loaded,
+                    point_srs_is_set=point_srs_is_set,
+                    output_srs=output_srs,
+                )
+
+            elif isinstance(current_point, ogr.Geometry):
+                current_point = _transform_ogr_point_spatial_reference_system(
+                    ogr_point=current_point, point_input_SRS_external=point_srs_loaded, output_srs=output_srs
+                )
+
+            else:
+                raise GEOM.GeoKitGeomError(
+                    "The list of points only accepts tuples or ogr.Geometry objects."
+                    " However, an object of the following type has been passed: " + str(type(current_point))
+                )
+
+            points_as_list_of_geom.append(current_point)
+    else:
+        raise GEOM.GeoKitGeomError("The point argument")
+
+    return points_as_list_of_geom
+
+
+def extractValues(
+    source: load_raster_input | list[load_raster_input],
+    points: tuple[float, float]
+    | ogr.Geometry
+    | list[tuple[float, float]]
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    # points,
+    point_input_SRS: srs_input | None = None,
+    winRange: int = 0,
+    noDataOkay: bool = True,
+    _onlyValues: bool = False,
+) -> ptValue | pd.DataFrame | numeric | np.ndarray:
     """Extracts the value of a raster at a given point or collection of points.
        Can also extract a window of values if desired.
 
@@ -882,6 +1064,9 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         If True, an error is raised if a 'noData' value is extracted
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
+    _onlyValues: bool
+        Return only the extracted data and ommit xOffeset, yOffset, inBounds
+
     Returns
     -------
     * If only a single location is given:
@@ -898,7 +1083,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             * Columns are (data, xOffset, yOffset, inBounds)
                 - See above for column descriptions
             * Index is 0...N if 'points' input is not a LocationSet
-            * Index is the LocationSet is if 'points' input is a LocationSet
+        or returns numpy array if _onlyValues=True
     """
     # Be sure we have a raster and srs
     if not isinstance(source, list):
@@ -908,62 +1093,24 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         source = [loadRaster(s) for s in source]
     except:
         raise TypeError("At least one source cannot be loaded by geokit.raster.loadRaster().")
-    srs = None
+    raster_srs = None
     for s in source:
         # load file to make sure it can be interpreted by loadRaster
-        if srs is None:
-            srs = rasterInfo(s).srs
+        if raster_srs is None:
+            raster_srs = rasterInfo(s).srs
         else:
-            assert srs.IsSame(rasterInfo(s).srs), "All source entries must have the same SRS."
-
-    # generate srs for points
-    pointSRS = SRS.loadSRS(pointSRS)
+            assert raster_srs.IsSame(rasterInfo(s).srs), "All source entries must have the same SRS."
 
     # Ensure we have a list of point geometries
-    try:
-        if points._TYPE_KEY_ == "Location":
-            asSingle = True
-            pointsKey = None
-            points = [
-                points.asGeom(srs),
-            ]
-        elif points._TYPE_KEY_ == "LocationSet":
-            asSingle = False
-            pointsKey = points
-            points = points.asGeom(srs)
-    except AttributeError:
-        pointsKey = None
-
-        def loadPoint(pt, s):
-            if isinstance(pt, ogr.Geometry):
-                if pt.GetGeometryName() != "POINT":
-                    raise GEOM.GeoKitGeomError("Invalid geometry given")
-                return pt
-
-            if isinstance(pt, Location):
-                return pt.geom
-
-            tmpPt = ogr.Geometry(ogr.wkbPoint)
-            tmpPt.AddPoint(*pt)
-            tmpPt.AssignSpatialReference(s)
-
-            return tmpPt
-
-        # check for an individual point input
-        if isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry):
-            asSingle = True
-            points = [
-                loadPoint(points, pointSRS),
-            ]
-        else:  # assume points is iterable
-            asSingle = False
-            points = [loadPoint(pt, pointSRS) for pt in points]
-
-        # Cast to source srs
-        # make sure we're using the pointSRS for the points in the list
-        pointSRS = points[0].GetSpatialReference()
-        if not pointSRS.IsSame(srs):
-            points = GEOM.transform(points, fromSRS=pointSRS, toSRS=srs)
+    points_as_list_of_geom = _convertPointsToListOfOGRPoints(
+        points=points, point_input_SRS=point_input_SRS, output_srs=raster_srs
+    )
+    if len(points_as_list_of_geom) > 1:
+        asSingle = False
+    elif len(points_as_list_of_geom) == 1:
+        asSingle = True
+    else:
+        raise GEOM.GeoKitGeomError("No points have been passed to the function extractValues()")
 
     # get the srcs that are actually overlapping with our points
     src_mapper = {}
@@ -973,22 +1120,22 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             _bounds = rasterInfo(s).bounds
             _indices = [
                 i
-                for i, p in enumerate(points)
+                for i, p in enumerate(points_as_list_of_geom)
                 if (_bounds[0] <= p.GetX() <= _bounds[2]) and (_bounds[1] <= p.GetY() <= _bounds[3])
             ]
             # add source as key plus list of overlapped point indices
             src_mapper[s] = _indices
     else:
         # we have only one source which must be applied to all points
-        src_mapper[source[0]] = list(range(len(points)))
+        src_mapper[source[0]] = list(range(len(points_as_list_of_geom)))
         # srcs = source * len(points)
 
     # iterate over all unique srcs and extract the raster values for the affected points _src by _src
 
-    values = [np.nan] * len(points)  # initialize values with nan for every point
-    inBounds = [False] * len(points)  # initialize inbounds with False for every point
-    xOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
-    yOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
+    values = [np.nan] * len(points_as_list_of_geom)  # initialize values with nan for every point
+    inBounds = [False] * len(points_as_list_of_geom)  # initialize inbounds with False for every point
+    xOffset = [np.nan] * len(points_as_list_of_geom)  # initialize offsets with nan for every point
+    yOffset = [np.nan] * len(points_as_list_of_geom)  # initialize offsets with nan for every point
 
     for _src, _inds in src_mapper.items():
         # get the indices of the points for which data has been extracted already
@@ -1001,7 +1148,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             continue
 
         # get the points with this _src via list indices
-        _points = [points[i] for i in _inds]
+        _points = [points_as_list_of_geom[i] for i in _inds]
 
         # get the raster info for this _src
         _info = rasterInfo(_src)
@@ -1102,7 +1249,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         else:
             return pd.DataFrame(
                 dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds),
-                index=pointsKey,
+                index=None,
             )
 
 
@@ -1205,7 +1352,11 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        result = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
+        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win, _onlyValues=True)
+        if asSingle is True:
+            result = [values]
+        else:
+            result = values
 
     elif mode == "linear-spline":  # use a spline interpolation scheme
         # setup inputs
@@ -1214,11 +1365,20 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
-
+        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         # Calculate interpolated values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             rbs = RectBivariateSpline(y, x, v.data, kx=1, ky=1)
 
             result.append(rbs(v.yOffset, v.xOffset)[0][0])
@@ -1230,29 +1390,59 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
 
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         # Calculate interpolated values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             rbs = RectBivariateSpline(y, x, v.data)
 
             result.append(rbs(v.yOffset, v.xOffset)[0][0])
 
     elif mode == "average":  # Get the average in a window
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             result.append(v.data.mean())
 
     elif mode == "func":  # Use a general function processor
         if func is None:
             raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             result.append(func(v.data, v.xOffset, v.yOffset))
 
     else:
@@ -1987,7 +2177,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
 
 
 def contours(
-    source,
+    source: load_raster_input,
     contourEdges: list[float] | None,
     polygonize: bool = True,
     unpack: bool = True,
