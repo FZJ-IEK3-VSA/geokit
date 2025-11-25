@@ -1599,18 +1599,18 @@ def drawRaster(
     source: load_raster_input | pd.DataFrame,
     srs: srs_input | None = None,
     ax: matplotlib.axes._axes.Axes | None = None,
-    resolution=None,
+    resolution: numeric | None = None,
     cutline=None,
-    figsize: tuple[int, int] = (12, 12),
-    xlim: tuple[int, int] | None = None,
-    ylim: tuple[int, int] | None = None,
+    figsize: tuple[numeric, numeric] = (12, 12),
+    xlim: tuple[numeric, numeric] | None = None,
+    ylim: tuple[numeric, numeric] | None = None,
     fontsize: int = 16,
     hideAxis: bool = False,
     cbar: bool | matplotlib.colorbar.Colorbar = True,
     cbarPadding=0.01,
-    cbarTitle=None,
-    vmin=None,
-    vmax=None,
+    cbarTitle: str | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     cmap="viridis",
     cbax=None,
     cbargs=None,
@@ -1620,7 +1620,22 @@ def drawRaster(
     topMargin=0,
     bottomMargin=0,
     zorder=0,
-    resampleAlg="med",
+    resampleAlg: Literal[
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "Q1",
+        "Q3",
+        "sum",
+    ] = "med",
     **kwargs,
 ) -> UTIL.AxHands:
     """Draw a raster as an image on a matplotlib canvas.
@@ -1746,7 +1761,6 @@ def drawRaster(
         if not cbar:  # We don't need a colorbar
             if not hideAxis:
                 leftMargin += 0.07
-
             ax = plt.axes(
                 [
                     leftMargin,
@@ -1821,7 +1835,7 @@ def drawRaster(
             srs=srs,
             bounds=bounds,
             fill=cutlineFillValue,
-            noData=cutlineFillValue,
+            noData=None,
             resampleAlg=resampleAlg,
             **kwargs,
         )
