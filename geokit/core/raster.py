@@ -10,8 +10,10 @@ from typing import Literal, NamedTuple
 
 import matplotlib.axes._axes
 import matplotlib.colorbar
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from osgeo import gdal, ogr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
@@ -20,7 +22,7 @@ from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.location import Location
-from geokit.data_types import load_raster_input, srs_input, numeric, gdal_raster_data_types, RasterInfo
+from geokit.data_types import AxHands, RasterInfo, gdal_raster_data_types, load_raster_input, numeric, srs_input
 
 
 class GeoKitRasterError(UTIL.GeoKitError):
@@ -1598,7 +1600,7 @@ def drawSmopyMap(
 def drawRaster(
     source: load_raster_input | pd.DataFrame,
     srs: srs_input | None = None,
-    ax: matplotlib.axes._axes.Axes | None = None,
+    ax: matplotlib.axes._axes.Axes | None | AxHands = None,
     resolution: numeric | None = None,
     cutline=None,
     figsize: tuple[numeric, numeric] = (12, 12),
@@ -1606,19 +1608,13 @@ def drawRaster(
     ylim: tuple[numeric, numeric] | None = None,
     fontsize: int = 16,
     hideAxis: bool = False,
-    cbar: bool | matplotlib.colorbar.Colorbar = True,
-    cbarPadding=0.01,
+    cbar: bool = True,
     cbarTitle: str | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
     cmap="viridis",
-    cbax=None,
     cbargs=None,
     cutlineFillValue=-9999,
-    leftMargin=0,
-    rightMargin=0,
-    topMargin=0,
-    bottomMargin=0,
     zorder=0,
     resampleAlg: Literal[
         "near",
@@ -1636,8 +1632,8 @@ def drawRaster(
         "Q3",
         "sum",
     ] = "med",
-    **kwargs,
-) -> UTIL.AxHands:
+    **warp_kwargs,
+) -> AxHands:
     """Draw a raster as an image on a matplotlib canvas.
 
     Parameters
@@ -1687,12 +1683,6 @@ def drawRaster(
         A base font size to apply to tick marks which appear
           * Titles and labels are given a size of 'fontsize' + 2
 
-    cbarPadding : float; optional
-        The spacing padding to add between the generated axis and the generated
-        colorbar axis
-          * Only useful when generating a new axis
-          * Only useful when 'colorBy' is given
-
     cbarTitle : str; optional
         The title to give to the generated colorbar
           * If not given, but 'colorBy' is given, the same string for 'colorBy'
@@ -1711,28 +1701,7 @@ def drawRaster(
         The colormap to use when coloring
           * Only useful when 'colorBy' is given
 
-    cbax : matplotlib axis; optional
-        An explicitly given axis to use for drawing the colorbar
-          * If not given, but 'colorBy' is given, an axis for the colorbar is
-            automatically generated
-
     cbargs : dict; optional
-
-    leftMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    rightMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    topMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    bottomMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
 
     resampleAlg : str, optional
         The resampleAlg passed on to a call of warp() if needed, by default "med"
@@ -1749,60 +1718,29 @@ def drawRaster(
                     drawn
        'cbar' -> The colorbar handle if it was drawn
     """
-    # Create an axis, if needed
-    if isinstance(ax, UTIL.AxHands):
+    if isinstance(ax, AxHands):
         ax = ax.ax
-    import matplotlib.pyplot as plt
-
     if ax is None:
-        newAxis = True
-        plt.figure(figsize=figsize)
-
-        if not cbar:  # We don't need a colorbar
-            if not hideAxis:
-                leftMargin += 0.07
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-            cbax = None
-
-        else:  # We need a colorbar
-            rightMargin += 0.08  # Add area on the right for colorbar text
-            if not hideAxis:
-                leftMargin += 0.07
-
-            cbarExtraPad = 0.05
-            cbarWidth = 0.04
-
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin + cbarWidth + cbarPadding),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-
-            cbax = plt.axes(
-                [
-                    1 - (rightMargin + cbarWidth),
-                    bottomMargin + cbarExtraPad,
-                    cbarWidth,
-                    1 - (topMargin + bottomMargin + 2 * cbarExtraPad),
-                ]
-            )
-
-        if hideAxis:
-            ax.axis("off")
-        else:
-            ax.tick_params(labelsize=fontsize)
+        new_main_axis = True
+        fig, ax = plt.subplots(figsize=figsize)
+    elif isinstance(ax, matplotlib.axes._axes.Axes):
+        new_main_axis = False
     else:
-        newAxis = False
+        raise Exception(
+            "Expected None or matplotlib.axes._axes.Axes object forr the 'ax' argument. However, an object of type: "
+            + str(type(ax))
+            + " has been provided."
+        )
+    if hideAxis:
+        ax.axis("off")
+
+    if cbar is False:
+        cbax = None
+    else:
+        divider = make_axes_locatable(ax)
+        cbax = divider.append_axes("right", size="2.5%", pad=0.05)
+
+    ax.tick_params(labelsize=fontsize)
 
     # Load the raster datasource and check for transformation
     source = loadRaster(source)
@@ -1837,7 +1775,7 @@ def drawRaster(
             fill=cutlineFillValue,
             noData=None,
             resampleAlg=resampleAlg,
-            **kwargs,
+            **warp_kwargs,
         )
 
     info = rasterInfo(source)
@@ -1845,7 +1783,9 @@ def drawRaster(
     # Read the Data
     data = extractMatrix(source).astype(float)
     if cutlineFillValue is not None:
-        data[data == info.noData] = np.nan
+        data[data == cutlineFillValue] = np.nan
+
+    data[data == info.noData] = np.nan
 
     # Draw image
     ext = (
@@ -1865,22 +1805,20 @@ def drawRaster(
     )
 
     # Draw Colorbar
-    if cbar:
+    if cbar is True:
         tmp = dict(cmap=cmap, orientation="vertical")
         if cbargs is not None:
             tmp.update(cbargs)
 
-        if cbax is None:
-            cbar = plt.colorbar(h, ax=ax, **tmp)
-        else:
-            cbar = plt.colorbar(h, cax=cbax, **tmp)
-
-        cbar.ax.tick_params(labelsize=fontsize)
+        cbar_output = plt.colorbar(h, cax=cbax, **tmp)
+        cbar_output.ax.tick_params(labelsize=fontsize)
         if cbarTitle is not None:
-            cbar.set_label(cbarTitle, fontsize=fontsize + 2)
+            cbar_output.set_label(cbarTitle, fontsize=fontsize + 2)
+    else:
+        cbar_output = None
 
     # Do some formatting
-    if newAxis:
+    if new_main_axis is True:
         ax.set_aspect("equal")
         ax.autoscale(enable=True)
 
@@ -1890,7 +1828,7 @@ def drawRaster(
         ax.set_ylim(*ylim)
 
     # Done!
-    return UTIL.AxHands(ax, h, cbar)
+    return UTIL.AxHands(ax, h, cbar_output)
 
 
 # 3

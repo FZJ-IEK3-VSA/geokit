@@ -5,14 +5,19 @@ from copy import copy
 import matplotlib.axes._axes
 import matplotlib.colorbar
 import matplotlib.patches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import smopy
+from descartes import PolygonPatch
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Normalize
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from osgeo import gdal, ogr, osr
 
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
-from geokit.data_types import numeric, srs_input
+from geokit.data_types import AxHands, numeric, srs_input
 
 
 class GeoKitGeomError(UTIL.GeoKitError):
@@ -254,7 +259,7 @@ def makeBox(*args, **kwargs):
     return box(*args, **kwargs)
 
 
-def polygon(outerRing, *args, srs="default"):
+def polygon(outerRing, *args, srs: srs_input | None = "default"):
     """Creates an OGR Polygon object from a given set of points.
 
     Parameters
@@ -298,7 +303,9 @@ def polygon(outerRing, *args, srs="default"):
         else:
             # set srs to EPSG:4326 as standard
             srs = SRS.loadSRS(4326)
-    elif srs is not None:
+    elif srs is None:
+        pass
+    else:
         srs = SRS.loadSRS(srs)
 
     # Make the complete geometry
@@ -1026,8 +1033,6 @@ def drawLinearRing(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=N
 def drawPolygon(
     g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False
 ) -> matplotlib.patches.PathPatch:
-    from descartes import PolygonPatch
-
     if g.GetGeometryCount() == 0:  # Geometry doesn't actually exist. skip it
         return None
 
@@ -1081,28 +1086,22 @@ def drawMultiPolygon(g, plotargs, ax: matplotlib.axes._axes.Axes, colorVal=None)
 def drawGeoms(
     geoms: ogr.Geometry | list[ogr.Geometry] | pd.DataFrame | np.ndarray,
     srs: srs_input = 4326,
-    ax: None | matplotlib.axes._axes.Axes = None,
+    ax: None | matplotlib.axes._axes.Axes | AxHands = None,
     simplificationFactor: numeric | None = 5000,
-    colorBy=None,
-    figsize=(12, 12),
-    xlim=None,
-    ylim=None,
-    fontsize=16,
-    hideAxis=False,
-    cbarPadding=0.01,
+    colorBy: str | None = None,
+    figsize: tuple[numeric, numeric] = (12, 12),
+    xlim: tuple[numeric, numeric] | None = None,
+    ylim: tuple[numeric, numeric] | None = None,
+    fontsize: int = 16,
+    hideAxis: bool = False,
     cbarTitle=None,
     vmin=None,
     vmax=None,
     cmap="viridis",
-    cbar=True,
-    cbax=None,
-    cbargs=None,
-    leftMargin=0.01,
-    rightMargin=0.01,
-    topMargin=0.01,
-    bottomMargin=0.01,
+    draw_cbar=False,
+    cbargs: dict | None = None,
     **mplArgs,
-) -> UTIL.AxHands:
+) -> AxHands:
     """Draw geometries onto a matplotlib figure.
 
     * Each geometry type is displayed as an appropriate plotting type
@@ -1171,12 +1170,6 @@ def drawGeoms(
         Instructs the created axis to hide its boundary
           * Only useful when generating a new axis
 
-    cbarPadding : float; optional
-        The spacing padding to add between the generated axis and the generated
-        colorbar axis
-          * Only useful when generating a new axis
-          * Only useful when 'colorBy' is given
-
     cbarTitle : str; optional
         The title to give to the generated colorbar
           * If not given, but 'colorBy' is given, the same string for 'colorBy'
@@ -1203,21 +1196,6 @@ def drawGeoms(
     cbargs : dict; optional
         keyword arguments to pass on when creating the colorbar
 
-    leftMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    rightMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    topMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    bottomMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
 
     **mplArgs
         All other keyword arguments are passed on to the plotting functions called
@@ -1233,70 +1211,37 @@ def drawGeoms(
                     drawn
        'cbar' -> The colorbar handle if it was drawn
     """
-    if isinstance(ax, UTIL.AxHands):
+    if isinstance(ax, AxHands):
         ax = ax.ax
-    import matplotlib.pyplot as plt
-
     if ax is None:
-        newAxis = True
-
-        plt.figure(figsize=figsize)
-
-        if colorBy is None:  # We don't need a colorbar
-            if not hideAxis:
-                leftMargin += 0.07
-
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-            cbax = None
-
-        else:  # We need a colorbar
-            rightMargin += 0.08  # Add area on the right for colorbar text
-            if not hideAxis:
-                leftMargin += 0.07
-
-            cbarExtraPad = 0.05
-            cbarWidth = 0.04
-
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin + cbarWidth + cbarPadding),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-
-            cbax = plt.axes(
-                [
-                    1 - (rightMargin + cbarWidth),
-                    bottomMargin + cbarExtraPad,
-                    cbarWidth,
-                    1 - (topMargin + bottomMargin + 2 * cbarExtraPad),
-                ]
-            )
-
-        if hideAxis:
-            ax.axis("off")
-        else:
-            ax.tick_params(labelsize=fontsize)
+        pass
+        fig, ax = plt.subplots(figsize=figsize)
+    elif isinstance(ax, matplotlib.axes._axes.Axes):
+        pass
     else:
-        newAxis = False
+        raise Exception(
+            "Expected None or matplotlib.axes._axes.Axes object forr the 'ax' argument. However, an object of type: "
+            + str(type(ax))
+            + " has been provided."
+        )
+    if hideAxis:
+        ax.axis("off")
 
-    # Be sure we have a list
+    if draw_cbar is False:
+        cbax = None
+    else:
+        divider = make_axes_locatable(ax)
+        cbax = divider.append_axes("right", size="2.5%", pad=0.05)
+
+    ax.tick_params(labelsize=fontsize)
+
+    # # Be sure we have a list
     pargs = None
     isFrame = False
     if isinstance(geoms, ogr.Geometry):
         geoms = [
             geoms,
         ]
-
     elif isinstance(geoms, pd.DataFrame):  # We have a DataFrame with plotting arguments
         isFrame = True
         data = geoms.drop("geom", axis=1)
@@ -1310,7 +1255,6 @@ def drawGeoms(
 
         if pargs.size == 0:
             pargs = None
-
     else:  # Assume its an iterable
         geoms = list(geoms)
 
@@ -1318,8 +1262,8 @@ def drawGeoms(
     if not srs is None:
         srs = SRS.loadSRS(srs)
         transformed_geoms = []
-        for gi, g in enumerate(geoms):
-            gsrs = g.GetSpatialReference()
+        for gi, geometry in enumerate(geoms):
+            gsrs = geometry.GetSpatialReference()
             if gsrs is None:
                 continue  # Skip it if we don't know it...
             if not gsrs.IsSame(srs):
@@ -1332,8 +1276,8 @@ def drawGeoms(
     if not simplificationFactor is None:
         if xlim is None or ylim is None:
             xMin, yMin, xMax, yMax = 1e100, 1e100, -1e100, -1e100
-            for g in geoms:
-                _xMin, _xMax, _yMin, _yMax = g.GetEnvelope()
+            for geometry in geoms:
+                _xMin, _xMax, _yMin, _yMax = geometry.GetEnvelope()
 
                 xMin = min(_xMin, xMin)
                 xMax = max(_xMax, xMax)
@@ -1354,18 +1298,18 @@ def drawGeoms(
             ng = g.Simplify(simplificationValue)
             return ng
 
-        for g in oGeoms:
+        for geometry in oGeoms:
             # carefulSimplification=False
             # if carefulSimplification and "MULTI" in g.GetGeometryName():
-            if False and "MULTI" in g.GetGeometryName():  # This doesn't seem to help...
+            if "MULTI" in geometry.GetGeometryName():
                 subgeoms = []
-                for gi in range(g.GetGeometryCount()):
-                    ng = doSimplify(g.GetGeometryRef(gi))
+                for gi in range(geometry.GetGeometryCount()):
+                    ng = doSimplify(geometry.GetGeometryRef(gi))
                     subgeoms.append(ng)
 
                 geoms.append(flatten(subgeoms))
             else:
-                geoms.append(doSimplify(g))
+                geoms.append(doSimplify(geometry))
 
     # Handle color value
     if not colorBy is None:
@@ -1383,9 +1327,9 @@ def drawGeoms(
 
     # Do Plotting
     # make patches
-    h = []
+    handles = []
 
-    for gi, g in enumerate(geoms):
+    for gi, geometry in enumerate(geoms):
         if not pargs is None:
             s = [not v is None for v in pargs.iloc[gi]]
             plotargs = pargs.iloc[gi, s].to_dict()
@@ -1397,50 +1341,46 @@ def drawGeoms(
             colorVal = _colorVals[gi]
         else:
             colorVal = None
-
         # Determine type
-        if g.GetGeometryName() == "POINT":
-            h.append(drawPoint(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
-        elif g.GetGeometryName() == "MULTIPOINT":
-            h.append(drawMultiPoint(g, plotargs, ax, colorVal))
-        elif g.GetGeometryName() == "LINESTRING":
-            h.append(drawLine(g, plotargs, ax, colorVal))
-        elif g.GetGeometryName() == "MULTILINESTRING":
-            h.append(drawMultiLine(g, plotargs, ax, colorVal))
-        elif g.GetGeometryName() == "LINEARRING":
-            h.append(drawLinearRing(g, plotargs, ax, colorVal))
-        elif g.GetGeometryName() == "POLYGON":
-            h.append(drawPolygon(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
-        elif g.GetGeometryName() == "MULTIPOLYGON":
-            h.append(drawMultiPolygon(g=g, plotargs=plotargs, ax=ax, colorVal=colorVal))
+        if geometry.GetGeometryName() == "POINT":
+            handles.append(drawPoint(g=geometry, plotargs=plotargs, ax=ax, colorVal=colorVal))
+        elif geometry.GetGeometryName() == "MULTIPOINT":
+            handles.append(drawMultiPoint(geometry, plotargs, ax, colorVal))
+        elif geometry.GetGeometryName() == "LINESTRING":
+            handles.append(drawLine(geometry, plotargs, ax, colorVal))
+        elif geometry.GetGeometryName() == "MULTILINESTRING":
+            handles.append(drawMultiLine(geometry, plotargs, ax, colorVal))
+        elif geometry.GetGeometryName() == "LINEARRING":
+            handles.append(drawLinearRing(geometry, plotargs, ax, colorVal))
+        elif geometry.GetGeometryName() == "POLYGON":
+            handles.append(drawPolygon(g=geometry, plotargs=plotargs, ax=ax, colorVal=colorVal))
+        elif geometry.GetGeometryName() == "MULTIPOLYGON":
+            handles.append(drawMultiPolygon(g=geometry, plotargs=plotargs, ax=ax, colorVal=colorVal))
         else:
             msg = (
                 "Could not draw geometry of type:",
                 pargs.index[gi],
                 "->",
-                g.GetGeometryName(),
+                geometry.GetGeometryName(),
             )
             warnings.warn(msg, UserWarning)
 
     # Add the colorbar, maybe
-    if not colorBy is None and cbar:
-        from matplotlib.colorbar import ColorbarBase
-        from matplotlib.colors import Normalize
-
+    if not colorBy is None and draw_cbar is True:
         norm = Normalize(vmin=cValMin, vmax=cValMax)
         tmp = dict(cmap=cmap, norm=norm, orientation="vertical")
         if not cbargs is None:
             tmp.update(cbargs)
-        cbar = ColorbarBase(cbax, **tmp)
-        cbar.ax.tick_params(labelsize=fontsize)
-        cbar.set_label(colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
+        draw_cbar = ColorbarBase(cbax, **tmp)
+        draw_cbar.ax.tick_params(labelsize=fontsize)
+        draw_cbar.set_label(colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
     else:
-        cbar = None
+        draw_cbar = None
 
     # Do some formatting
-    if newAxis:
-        ax.set_aspect("equal")
-        ax.autoscale(enable=True)
+
+    ax.set_aspect("equal")
+    ax.autoscale(enable=True)
 
     if not xlim is None:
         ax.set_xlim(*xlim)
@@ -1449,9 +1389,9 @@ def drawGeoms(
 
     # Organize return
     if isFrame:
-        return UTIL.AxHands(ax, pd.Series(h, index=data.index), cbar)
+        return AxHands(ax, pd.Series(handles, index=data.index), draw_cbar)
     else:
-        return UTIL.AxHands(ax, h, cbar)
+        return AxHands(ax, handles, draw_cbar)
 
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):

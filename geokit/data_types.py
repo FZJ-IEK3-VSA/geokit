@@ -1,9 +1,27 @@
 import pathlib
 from typing import Literal, NamedTuple, Union
 
+import matplotlib.colorbar
+import matplotlib.image
+import matplotlib.lines
+import matplotlib.patches
 import numpy as np
 import osgeo.ogr
+import pandas.core.series
+from matplotlib.axes._axes import Axes
 from osgeo import gdal, osr
+
+
+class AxHands(NamedTuple):
+    ax: Axes
+    handles: (
+        pandas.core.series.Series
+        | matplotlib.image.AxesImage
+        | list[matplotlib.patches.PathPatch | matplotlib.lines.Line2D]
+        | list[list[matplotlib.lines.Line2D | matplotlib.patches.PathPatch]]
+    )
+    cbar: matplotlib.colorbar.Colorbar | None
+
 
 numeric = Union[int, float, np.number]
 
