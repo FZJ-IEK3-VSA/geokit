@@ -369,6 +369,7 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
+@pytest.mark.filterwarnings("ignore: extractFeature")
 def test_RegionMask_indicateFeatures():
     if platform == "linux" or platform == "linux2":
         multiProcess = True

@@ -259,6 +259,8 @@ def test_interpolateValues():
         point,
         pointSRS="europe_laea",
         mode="func",
+        # func=lambda d, xo, yo: d.max() + xo * 0 + yo * 0,
+        # func=lambda d, xo, yo: d.max(),
         func=lambda d, xo, yo: d.max(),
     )
     assert np.isclose(v, 12)  # func

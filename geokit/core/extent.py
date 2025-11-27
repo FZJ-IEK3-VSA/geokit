@@ -772,16 +772,16 @@ class Extent(object):
 
         return filter(self.inSourceExtent, directoryList)
 
-    def containsLoc(self, locs, srs=None):
+    def containsLoc(
+        self,
+        locs,
+    ):
         """Test if the extent contains a location or an iterable of locations.
 
         Parameters
         ----------
         locs : Anything acceptable to LocationSet()
             The locations to be checked
-
-        srs : Anything acceptable to geokit.srs.loadSRS()
-            The srs to cast the Extent object to
 
         Returns
         -------
