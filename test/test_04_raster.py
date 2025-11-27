@@ -7,6 +7,7 @@ import structlog
 from osgeo import gdal
 
 from geokit import geom, raster, util
+from geokit.core.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
@@ -131,7 +132,7 @@ def test_extractValues():
     ]
 
     # test simple case
-    v1 = raster.extractValues(CLC_RASTER_PATH, points)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points, pointSRS=4326)
     for v, real in zip(v1.itertuples(), realValue):
         assert v.data == real
 
@@ -139,8 +140,10 @@ def test_extractValues():
         assert np.isclose(v.xOffset, real[0], rtol=1e-4)
         assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
+    pass
+
     # test flipped
-    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
+    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points, pointSRS=4326)
 
     for v, real in zip(v2.itertuples(), realValue):
         assert v.data == real
@@ -155,7 +158,7 @@ def test_extractValues():
     pt.AssignSpatialReference(EPSG3035)
 
     pass
-    v3 = raster.extractValues(CLC_RASTER_PATH, pt)
+    v3 = raster.extractValues(source=CLC_RASTER_PATH, points=pt)
 
     assert v3.data == 3
     assert np.isclose(v3.xOffset, 0.44700000000187856, rtol=1e-4)
@@ -172,7 +175,7 @@ def test_extractValues():
         ]
     )
 
-    v4 = raster.extractValues(CLC_RASTER_PATH, pt, winRange=2)
+    v4 = raster.extractValues(source=CLC_RASTER_PATH, points=pt, pointSRS=EPSG3035, winRange=2)
     assert np.isclose(np.abs(v4.data - real).sum(), 0.0)
 
     # now test multiple sources
@@ -189,9 +192,48 @@ def test_extractValues():
     # bounds, so a warning should be raised, but this should
     # not be displayed to the testing user.
     with pytest.warns(UserWarning):
-        v4 = raster.extractValues(sources, pts)
+        v4 = raster.extractValues(
+            source=sources,
+            points=pts,
+        )
 
     assert np.allclose(v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True)
+
+
+def test_extractValues_location():
+    points = Location(lon=6.06590, lat=50.51939)
+    realValue = 24
+    realDiffs = (-0.18841865745838504, -0.1953854267578663)
+
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points)
+
+    assert v1.data == realValue
+
+    assert np.isclose(v1.xOffset, realDiffs[0], rtol=1e-4)
+    assert np.isclose(v1.yOffset, realDiffs[1], rtol=1e-4)
+
+
+def test_extractValues_locationSet():
+    locations_list = [
+        Location(lon=6.06590, lat=50.51939),
+        Location(lon=6.02141, lat=50.61491),
+        Location(lon=6.371634, lat=50.846025),
+    ]
+    realValue = [24, 3, 23]
+    realDiffs = [
+        (-0.18841865745838504, -0.1953854267578663),
+        (0.03190063584128211, -0.019478775579500507),
+        (0.18415527009869948, 0.022563403500242885),
+    ]
+    location_set = LocationSet(locations=locations_list)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=location_set, pointSRS=4326)
+
+    for v, real in zip(v1.itertuples(), realValue):
+        assert v.data == real
+
+    for v, real in zip(v1.itertuples(), realDiffs):
+        assert np.isclose(v.xOffset, real[0], rtol=1e-4)
+        assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
 
 # A nicer way to get a single value

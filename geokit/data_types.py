@@ -87,3 +87,10 @@ class RasterInfo(NamedTuple):
     # pixels of the raster. It is derived from the integer
     # data type representation stored as dtype
     data_type_name_str: str
+
+
+class ptValue(NamedTuple):
+    data: numeric | np.ndarray
+    xOffset: numeric
+    yOffset: numeric
+    inBounds: bool | np.bool
