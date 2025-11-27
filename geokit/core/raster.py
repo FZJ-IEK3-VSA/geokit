@@ -1818,9 +1818,8 @@ def drawRaster(
         cbar_output = None
 
     # Do some formatting
-    if new_main_axis is True:
-        ax.set_aspect("equal")
-        ax.autoscale(enable=True)
+    ax.set_aspect("equal")
+    ax.autoscale(enable=True)
 
     if xlim is not None:
         ax.set_xlim(*xlim)
