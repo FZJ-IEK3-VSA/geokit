@@ -1088,7 +1088,6 @@ def extractValues(
     | list[ogr.Geometry]
     | Location
     | LocationSet,
-    # points,
     point_input_SRS: srs_input | None = None,
     winRange: int = 0,
     noDataOkay: bool = True,
