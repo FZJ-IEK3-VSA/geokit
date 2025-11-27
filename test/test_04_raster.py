@@ -843,11 +843,3 @@ def test_warp_meta_argument_hard_drive():
 
     assert raster_info_output.meta["AREA_OR_POINT"] == "Area"
     pathlib.Path.unlink(output_path)
-
-
-if __name__ == "__main__":
-    # test_extractValues()
-    # test_extractValues_location()
-    # test_extractValues_locationSet()
-    # test_extractValues()
-    test_interpolateValues()
