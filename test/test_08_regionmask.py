@@ -116,6 +116,7 @@ def test_RegionMask_fromGeom():
     assert rm4.extent.srs.IsSame(_laea)
 
 
+@pytest.mark.filterwarnings("ignore:extractFeature is deprecated use extractFeatures instead.")
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
     rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)
@@ -369,7 +370,6 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
-@pytest.mark.filterwarnings("ignore: extractFeature")
 def test_RegionMask_indicateFeatures():
     if platform == "linux" or platform == "linux2":
         multiProcess = True
