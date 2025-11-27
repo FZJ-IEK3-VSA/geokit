@@ -228,7 +228,7 @@ def countFeatures(source, geom=None, where=None):
 vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
 
 
-def vectorInfo(source):
+def vectorInfo(source) -> vecInfo:
     """Extract general information about a vector source.
 
     Determines:

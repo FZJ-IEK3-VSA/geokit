@@ -12,10 +12,7 @@ from types import GeneratorType
 from typing import NamedTuple
 
 import matplotlib.axis
-import matplotlib.colorbar
-import matplotlib.image
-import matplotlib.lines
-import matplotlib.patches
+
 import numpy as np
 import pandas as pd
 import pandas.core.series
@@ -24,6 +21,8 @@ from matplotlib.axis import Axis
 from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
+
+from geokit.data_types import AxHands
 
 ######################################################################################
 # test modules
@@ -483,18 +482,6 @@ def quickRaster(
 Feature = namedtuple("Feature", "geom attr")
 
 # Image plotter
-
-
-# AxHands: namedtuple = namedtuple("AxHands", "ax handles cbar")
-class AxHands(NamedTuple):
-    ax: Axes
-    handles: (
-        pandas.core.series.Series
-        | matplotlib.image.AxesImage
-        | list[matplotlib.patches.PathPatch | matplotlib.lines.Line2D]
-        | list[list[matplotlib.lines.Line2D | matplotlib.patches.PathPatch]]
-    )
-    cbar: matplotlib.colorbar.Colorbar | None
 
 
 def drawImage(
