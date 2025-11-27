@@ -1088,7 +1088,7 @@ def extractValues(
     | list[ogr.Geometry]
     | Location
     | LocationSet,
-    point_input_SRS: srs_input | None = None,
+    pointSRS: srs_input | None = None,
     winRange: int = 0,
     noDataOkay: bool = True,
     _onlyValues: bool = False,
@@ -1171,7 +1171,7 @@ def extractValues(
 
     # Ensure we have a list of point geometries
     points_as_list_of_geom = _convertPointsToListOfOGRPoints(
-        points=points, point_input_SRS=point_input_SRS, output_srs=raster_srs
+        points=points, point_input_SRS=pointSRS, output_srs=raster_srs
     )
     if len(points_as_list_of_geom) > 1:
         asSingle = False
@@ -1420,7 +1420,7 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win, _onlyValues=True)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
         if asSingle is True:
             result = [values]
         else:
@@ -1433,7 +1433,7 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
-        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1458,7 +1458,7 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
-        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
 
         if asSingle is True:
             assert isinstance(values, ptValue)
@@ -1479,7 +1479,7 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
 
     elif mode == "average":  # Get the average in a window
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1498,7 +1498,7 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         if func is None:
             raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, point_input_SRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(

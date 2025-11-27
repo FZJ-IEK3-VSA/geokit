@@ -132,7 +132,7 @@ def test_extractValues():
     ]
 
     # test simple case
-    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points, point_input_SRS=4326)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points, pointSRS=4326)
     for v, real in zip(v1.itertuples(), realValue):
         assert v.data == real
 
@@ -143,7 +143,7 @@ def test_extractValues():
     pass
 
     # test flipped
-    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points, point_input_SRS=4326)
+    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points, pointSRS=4326)
 
     for v, real in zip(v2.itertuples(), realValue):
         assert v.data == real
@@ -175,7 +175,7 @@ def test_extractValues():
         ]
     )
 
-    v4 = raster.extractValues(source=CLC_RASTER_PATH, points=pt, point_input_SRS=EPSG3035, winRange=2)
+    v4 = raster.extractValues(source=CLC_RASTER_PATH, points=pt, pointSRS=EPSG3035, winRange=2)
     assert np.isclose(np.abs(v4.data - real).sum(), 0.0)
 
     # now test multiple sources
@@ -226,7 +226,7 @@ def test_extractValues_locationSet():
         (0.18415527009869948, 0.022563403500242885),
     ]
     location_set = LocationSet(locations=locations_list)
-    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=location_set, point_input_SRS=4326)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=location_set, pointSRS=4326)
 
     for v, real in zip(v1.itertuples(), realValue):
         assert v.data == real
@@ -493,11 +493,6 @@ def test_drawRaster():
     plt.savefig(result("drawRaster-4.png"), dpi=100)
 
     assert True
-
-
-def test_drawRaster_withsrs():
-    r = raster.drawRaster(AACHEN_URBAN_LC)
-    plt.savefig(result("drawRaster-1.png"), dpi=100)
 
 
 def test_polygonizeRaster():
