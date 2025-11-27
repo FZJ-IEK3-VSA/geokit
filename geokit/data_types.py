@@ -111,4 +111,4 @@ class ptValue(NamedTuple):
     data: numeric | np.ndarray
     xOffset: numeric
     yOffset: numeric
-    inBounds: bool | np.bool
+    inBounds: bool
