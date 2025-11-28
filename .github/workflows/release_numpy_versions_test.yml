@@ -5,7 +5,6 @@ on:
 
 jobs:
   TestPushCondaForgeDev:
-    name: Test conda-forge development version on ${{ matrix.runner_tag }} for numpy=${{ matrix.numpy_version }}
     strategy:
       fail-fast: false
       matrix:

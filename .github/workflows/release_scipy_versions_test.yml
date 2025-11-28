@@ -7,21 +7,19 @@ on:
 
 jobs:
   TestPushCondaForgeDev:
-    name: Test conda-forge development version on ${{ matrix.runner_tag }} for scipy=${{ matrix.scipy_version }}
     strategy:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-        scipy_version:
-          [
-            "1.7.2",
-            "1.7.3",
-            "1.8.0",
-            "1.8.1",
-            "1.9.0",
-            "1.9.1",
-            "1.9.2",
-            "1.9.3",
+        scipy_version: [
+            # "1.7.2",
+            # "1.7.3",
+            # "1.8.0",
+            # "1.8.1",
+            # "1.9.0",
+            # "1.9.1",
+            # "1.9.2",
+            # "1.9.3", due to incompatability with asteroid
             "1.10.0",
             "1.10.1",
             "1.11.0",
