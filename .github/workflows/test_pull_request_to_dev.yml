@@ -4,7 +4,6 @@ on:
 
 jobs:
     TestPullCondaForgeDev:
-        name: Test development version on ${{ matrix.runner_tag }}
         strategy:
             fail-fast: false
             matrix:
@@ -22,12 +21,10 @@ jobs:
             library_version: ${{ matrix.python_version }}
             dependency_position_env_file: "0"
     TestMinDependencies:
-        name: Test development version on ${{ matrix.runner_tag }}
         strategy:
             fail-fast: false
             matrix:
                 runner_tag: ["self-hosted"]
-                python_version: ["3.13"]
                 dependencies:
                     [
                         {
@@ -35,8 +32,12 @@ jobs:
                             version: 1.3.4,
                             yaml_position: 5,
                         },
-                        { library_name: numpy, version: 1.21.6 },
-                        yaml_position: 6,
+                        {
+                            library_name: numpy,
+                            version: 1.21.6,
+                            yaml_position: 6,
+                        },
+
                         {
                             library_name: scipy,
                             version: 1.7.2,
@@ -63,7 +64,6 @@ jobs:
                             yaml_position: 12,
                         },
                     ]
-
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         with:
             runner_tag: ${{ matrix.runner_tag }}

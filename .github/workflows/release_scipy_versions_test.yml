@@ -1,5 +1,7 @@
 on:
   workflow_dispatch:
+  push:
+    branches: [270_numpybool]
   pull_request:
     branches: ["master"]
 
