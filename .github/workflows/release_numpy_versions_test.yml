@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
         numpy_version:
           [
             "1.21.6",

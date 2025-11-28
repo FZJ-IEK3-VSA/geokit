@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
         gdal_version:
           ["3.10.0", "3.10.1", "3.10.2", "3.10.3", "3.9.3", "3.4.2", "3.4.3"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main

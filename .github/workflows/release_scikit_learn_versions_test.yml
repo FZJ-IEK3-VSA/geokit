@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
         python_version:
           [
             "1.7.1",
