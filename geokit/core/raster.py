@@ -6,7 +6,7 @@ import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
-from typing import Literal, NamedTuple
+from typing import Literal, NamedTuple, Callable
 import warnings
 
 import matplotlib.axes._axes
@@ -1336,7 +1336,20 @@ def extractValues(
 # Shortcut for getting just the raster value
 
 
-def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None, winRange=None, **kwargs):
+def interpolateValues(
+    source: load_raster_input,
+    points: tuple[float, float]
+    | ogr.Geometry
+    | list[tuple[float, float]]
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    pointSRS: srs_input = "latlon",
+    mode: Literal["near", "linear-spline", "cubic-spline", "average"] = "near",
+    func: Callable | None = None,
+    winRange: int = 0,
+    **kwargs,
+):
     """Interpolates the value of a raster at a given point or collection of points.
 
     Supports various interpolation schemes:
