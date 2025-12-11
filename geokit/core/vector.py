@@ -8,7 +8,7 @@ from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
 from typing import Generator
-from geokit.data_types import numeric, load_raster_input, srs_input, load_vector_input
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -19,19 +19,9 @@ from geokit.core import raster as RASTER
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.extent import Extent
-
-
-class GeoKitVectorError(UTIL.GeoKitError):
-    """Marks an error that is specific to geokit behavior.
-
-    Parameters
-    ----------
-    UTIL : _type_
-        _description_
-    """
-
-    pass
-
+from geokit.data_types import load_raster_input, load_vector_input, numeric, srs_input, vecInfo
+from geokit.c_data_type_handler import geokit_c_data_types_literal, MinimumCDataTypeHandler
+from geokit.error import GeoKitRasterError, GeoKitVectorError
 
 ####################################################################
 # INTERNAL FUNCTIONS
@@ -225,7 +215,7 @@ def countFeatures(source, geom=None, where=None):
 
 ####################################################################
 # Vector feature count
-vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
+# vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
 
 
 def vectorInfo(source) -> vecInfo:
@@ -252,7 +242,7 @@ def vectorInfo(source) -> vecInfo:
     info = {}
 
     vecDS = loadVector(source)
-    vecLyr = vecDS.GetLayer()
+    vecLyr: ogr.Layer = vecDS.GetLayer()
     info["srs"] = vecLyr.GetSpatialRef()
 
     xMin, xMax, yMin, yMax = vecLyr.GetExtent()
@@ -267,9 +257,17 @@ def vectorInfo(source) -> vecInfo:
     info["source"] = vecDS.GetDescription()
 
     info["attributes"] = []
-    layerDef = vecLyr.GetLayerDefn()
-    for i in range(layerDef.GetFieldCount()):
-        info["attributes"].append(layerDef.GetFieldDefn(i).GetName())
+    info["attribute_data_types_constant"] = {}
+    info["attribute_data_types_str"] = {}
+    layerDef: ogr.FeatureDefn = vecLyr.GetLayerDefn()
+    for layer_number in range(layerDef.GetFieldCount()):
+        field_definition: ogr.FieldDefn = layerDef.GetFieldDefn(layer_number)
+        field_name = field_definition.GetName()
+        field_type_constant = field_definition.GetType()
+        field_type_constant_str = gdal.GetDataTypeName(field_type_constant)
+        info["attributes"].append(field_name)
+        info["attribute_data_types_constant"][field_name] = field_type_constant
+        info["attribute_data_types_str"][field_name] = field_type_constant_str
 
     return vecInfo(**info)
 
@@ -1594,7 +1592,7 @@ def rasterize(
     where: str | None = None,
     value: numeric | str = 1,
     output: str | None = None,
-    dtype=None,
+    dtype: geokit_c_data_types_literal | None = None,
     compress=True,
     noData=None,
     overwrite: bool = True,
@@ -1713,36 +1711,48 @@ def rasterize(
 
     bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
-    # Determine DataType is not given
-    if dtype is None:
-        if value == 1:  # Assume we want a bool matrix
-            dtype = "GDT_Byte"
-        else:  # assume float
-            dtype = "GDT_Float32"
-    else:
-        dtype = RASTER.gdalType(dtype)
-
     # Collect rasterization options
     if output is None and not "bands" in kwargs:
         kwargs["bands"] = [1]
 
+    list_of_data_types = []
+
+    if isinstance(dtype, str):
+        list_of_data_types.append(dtype)
+
+    list_of_numbers = []
+
     if isinstance(value, str):
         kwargs["attribute"] = value
+        data_type_of_field_as_string = vecinfo.attribute_data_types_str
+        list_of_data_types.append(data_type_of_field_as_string[value])
+
     else:
         kwargs["burnValues"] = [
             value,
         ]
+        list_of_numbers.append(value)
 
+    if isinstance(fill, (numeric, bool)):
+        list_of_numbers.append(fill)
+    if isinstance(noData, (numeric, bool)):
+        list_of_numbers.append(noData)
+
+    # minimum_data_type = dtype
+    # just to raise error early if invalid
     # Do 'in memory' rasterization
     # We need to follow this path in both cases since the below fails when simultaneously rasterizing and writing to disk (I couldn't figure out why...)
     if output is None or not srsOkay:
+        minimum_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_data_types
+        )
         # Create temporary output file
         outputDS = UTIL.quickRaster(
             bounds=bounds,
             srs=srs,
             dx=pixelWidth,
             dy=pixelHeight,
-            dtype=dtype,
+            dtype=minimum_data_type_string,
             noData=noData,
             fill=fill,
         )
@@ -1750,7 +1760,7 @@ def rasterize(
         # Do rasterize
         tmp = gdal.Rasterize(outputDS, source, where=where, **kwargs)
         if tmp == 0:
-            raise RASTER.GeoKitRasterError("Rasterization failed!")
+            raise GeoKitRasterError("Rasterization failed!")
         outputDS.FlushCache()
 
         if output is None:
@@ -1769,18 +1779,18 @@ def rasterize(
                 if os.path.isfile(output + ".aux.xml"):  # Because QGIS....
                     os.remove(output + ".aux.xml")
             else:
-                raise RASTER.GeoKitRasterError("Output file already exists: %s" % output)
+                raise GeoKitRasterError("Output file already exists: %s" % output)
 
         # Arrange some inputs
         aligned = kwargs.pop("targetAlignedPixels", True)
 
         if not "creationOptions" in kwargs:
             if compress:
-                co = RASTER.COMPRESSION_OPTION
+                creation_options = RASTER.COMPRESSION_OPTION
             else:
-                co = []
+                creation_options = []
         else:
-            co = kwargs.pop("creationOptions")
+            creation_options = kwargs.pop("creationOptions")
 
         # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
         bounds = (
@@ -1790,6 +1800,9 @@ def rasterize(
             bounds[3] - 0.001 * pixelHeight,
         )
 
+        minimum_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_data_types
+        )
         # Do rasterize
         tmp = gdal.Rasterize(
             output,
@@ -1800,13 +1813,14 @@ def rasterize(
             outputSRS=srs,
             noData=noData,
             where=where,
-            creationOptions=co,
+            creationOptions=creation_options,
             targetAlignedPixels=aligned,
+            outputType=minimum_data_type_constant,
             **kwargs,
         )
 
         if not UTIL.isRaster(tmp):
-            raise RASTER.GeoKitRasterError("Rasterization failed!")
+            raise GeoKitRasterError("Rasterization failed!")
 
         return output
 

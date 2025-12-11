@@ -1,8 +1,42 @@
-from geokit.core.extent import GeoKitExtentError
-from geokit.core.geom import GeoKitGeomError
-from geokit.core.location import GeoKitLocationError
-from geokit.core.raster import GeoKitRasterError
-from geokit.core.regionmask import GeoKitRegionMaskError
-from geokit.core.srs import GeoKitSRSError
-from geokit.core.util import GeoKitError
-from geokit.core.vector import GeoKitVectorError
+class GeoKitError(Exception):
+    pass
+
+
+class GeoKitGeomError(GeoKitError):
+    pass
+
+
+class GeoKitRegionMaskError(GeoKitError):
+    pass
+
+
+class GeoKitRasterError(GeoKitError):
+    pass
+
+
+class GeoKitExtentError(GeoKitError):
+    pass
+
+
+class GeoKitLocationError(GeoKitError):
+    pass
+
+
+class GeoKitSRSError(GeoKitError):
+    pass
+
+
+class GeoKitVectorError(GeoKitError):
+    """Marks an error that is specific to geokit behavior.
+
+    Parameters
+    ----------
+    UTIL : _type_
+        _description_
+    """
+
+    pass
+
+
+class GeoKitCDataError(GeoKitError):
+    pass

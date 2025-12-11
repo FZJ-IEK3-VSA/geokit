@@ -4,6 +4,7 @@ import pytest
 from osgeo import ogr
 
 from geokit import geom, srs, vector
+from geokit.error import GeoKitGeomError
 from test.helpers import (
     EPSG3035,
     EPSG4326,
@@ -604,5 +605,5 @@ def test_applyBuffer():
     )
 
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
-    with pytest.raises(geom.GeoKitGeomError):
+    with pytest.raises(GeoKitGeomError):
         buf_north_clip_LAEA = geom.applyBuffer(geom=testpoint_north, buffer=20000, srs="laea", split="clip")
