@@ -208,18 +208,42 @@ class MinimumCDataTypeHandler:
     @classmethod
     def _get_valid_data_types_from_integer_list(
         cls,
-        int_list_to_check: list[int | np.integer | bool],
+        int_and_bool_list: list[int | np.integer | bool],
         minimum_integer_type_list: list[integer_data_types_literal] | None,
         user_defined_minimum_gdal_type: integer_data_types_literal | None,
     ) -> str:
+        """Determines the minimum data type to represent the numbers in int_and_bool_list without overflow error.
+        Additionally minimum data types can be define the smallest data type that should be used. In case signed
+        and unsigned integer can be used a signed integer is preferred. user_defined_minimum_gdal_type can be used
+        to return a signed integer instead of an unsigned.
+
+        Parameters
+        ----------
+        int_and_bool_list : list[int  |  np.integer  |  bool]
+            List of integer and bool that should be check for common data type.
+        minimum_integer_type_list : list[integer_data_types_literal] | None
+            A list of strings representing GDAL integer data types which are used as lower
+            limit for the smallest data type returned.
+        user_defined_minimum_gdal_type : integer_data_types_literal | None
+            The data type that was intended by the user. If set to None, there is no specific
+            expectation.
+
+        Returns
+        -------
+        str
+            Minimum data type to represent all integers and bools in int_and_bool_list in the same data type.
+
+        """
         valid_data_types_list: list[str] = []
         for relevant_data_type in cls.gdal_implemented_integer_data_types_list:
             if cls._all_between(
-                nums=int_list_to_check, lower=relevant_data_type.min_value, upper=relevant_data_type.max_value
+                list_of_integer=int_and_bool_list,
+                lower=relevant_data_type.min_value,
+                upper=relevant_data_type.max_value,
             ):
                 valid_data_types_list.append(relevant_data_type.gdal_data_type_string)
         if not valid_data_types_list:
-            raise GeoKitCDataError(f"Could find a common data type to display {int_list_to_check} in the same raster")
+            raise GeoKitCDataError(f"Could find a common data type to display {int_and_bool_list} in the same raster")
 
         # if isinstance(user_defined_minimum_gdal_type,str):
         if isinstance(minimum_integer_type_list, list):
@@ -237,6 +261,7 @@ class MinimumCDataTypeHandler:
         else:
             output_data_type_string = valid_data_types_list[0]
 
+        # Return unsigned integer if it has been request by the user and passed the validity check
         if user_defined_minimum_gdal_type in valid_data_types_list:
             user_requested_bits = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
             required_bit_size = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
@@ -246,8 +271,24 @@ class MinimumCDataTypeHandler:
         return output_data_type_string
 
     @staticmethod
-    def _all_between(nums: list[int | np.integer], lower: int | np.integer, upper: int | np.integer):
-        return all(lower <= n <= upper for n in nums)
+    def _all_between(list_of_integer: list[int | np.integer], lower: int | np.integer, upper: int | np.integer) -> bool:
+        """Checks if all integers in the list are greater than lower and smaller than upper.
+
+        Parameters
+        ----------
+        list_of_integer : list[int  |  np.integer]
+            List of integer that should be checked.
+        lower : int | np.integer
+            Upper limit that should be checked.
+        upper : int | np.integer
+            Lower limit that should be checked.
+
+        Returns
+        -------
+        True if all numbers in list_of_integer are smaller than lower.
+        False if any of the number is smaller than lower or bigger than upper.
+        """
+        return all(lower <= n <= upper for n in list_of_integer)
 
     @classmethod
     def _get_minimum_float_type(
@@ -256,6 +297,25 @@ class MinimumCDataTypeHandler:
         list_of_integer: list[int | np.integer],
         minimum_required_datatype_list: None | list[gdal_c_raster_data_types_literal],
     ) -> str:
+        """This function takes a list of float data types and a list of integers and determines the minimal required
+        float datatype to represent all numbers in the same data type.
+
+        Parameters
+        ----------
+        list_of_float_data_types : list[np.dtypes.Float16DType  |  np.dtypes.Float32DType  |  np.dtypes.Float64DType]
+            List of float datatypes of numbers that should be considered that are derived from individual numbers using
+            numpy functions.
+        list_of_integer : list[int  |  np.integer]
+            List of integer to consider
+        minimum_required_datatype_list : None | list[gdal_c_raster_data_types_literal]
+            List of GDAL float data types represented as a list of strings.
+
+        Returns
+        -------
+        str
+            The smallest common float data type to represent all of the numbers and data types provided as arguments
+            to this function.
+        """
         list_of_bits: list[int] = []
         for current_integer in list_of_integer:
             current_converted_float = float(current_integer)
@@ -532,7 +592,7 @@ class MinimumCDataTypeHandler:
                 user_defined_minimum_gdal_type_int = None
 
             minimum_integer_type = cls._get_valid_data_types_from_integer_list(
-                int_list_to_check=list_of_output_integers,
+                int_and_bool_list=list_of_output_integers,
                 minimum_integer_type_list=minimum_gdal_type_list_converted,
                 user_defined_minimum_gdal_type=user_defined_minimum_gdal_type_int,
             )
