@@ -227,15 +227,23 @@ class MinimumCDataTypeHandler:
             data_types_to_consider: list[str] = [valid_data_types_list[0], *minimum_integer_type_list]
             highest_common_integer_type = cls.get_highest_common_integer_type(
                 list_of_integer_strings=data_types_to_consider
-            )            
-
+            )
 
             if highest_common_integer_type.bits > minimum_data_type_info.bits:
-                return highest_common_integer_type.get_unsigned_gdal_integer_string()
+                output_data_type_string = highest_common_integer_type.get_unsigned_gdal_integer_string()
+
             else:
-                return minimum_data_type_info.gdal_data_type_string
+                output_data_type_string = minimum_data_type_info.gdal_data_type_string
         else:
-            return valid_data_types_list[0]
+            output_data_type_string = valid_data_types_list[0]
+
+        if user_defined_minimum_gdal_type in valid_data_types_list:
+            user_requested_bits = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
+            required_bit_size = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
+            if user_requested_bits == required_bit_size:
+                output_data_type_string = user_defined_minimum_gdal_type
+
+        return output_data_type_string
 
     @staticmethod
     def _all_between(nums: list[int | np.integer], lower: int | np.integer, upper: int | np.integer):
@@ -379,13 +387,13 @@ class MinimumCDataTypeHandler:
                 input_string_list=[user_defined_minimum_gdal_type]
             )
             converted_user_defined_minimum_gdal_type = converted_user_defined_minimum_gdal_type_list[0]
-            if automatically_determined_minimum_gdal_type != converted_user_defined_minimum_gdal_type[0]:
+            if automatically_determined_minimum_gdal_type != converted_user_defined_minimum_gdal_type:
                 warning_message = (
                     f"The user-defined minimum GDAL data type: {user_defined_minimum_gdal_type},"
-                    f"which is understood as the rigorous GDAL datatype: {converted_user_defined_minimum_gdal_type},"
-                    f"differs from automatically determined data type: {automatically_determined_minimum_gdal_type}."
-                    "To silence this warning check the configuration of your function call for configurations that might cause an unintentional overflow error."
-                    "Otherwise you can just set the data type to the automatically determined data type or to the Python object None."
+                    f" which is understood as the rigorous GDAL datatype: {converted_user_defined_minimum_gdal_type},"
+                    f" differs from automatically determined data type: {automatically_determined_minimum_gdal_type}."
+                    " To silence this warning check the configuration of your function call for configurations that might cause an unintentional overflow error."
+                    " Otherwise you can just set the data type to the automatically determined data type or to the Python object None."
                 )
                 warnings.warn(
                     message=warning_message,
@@ -425,9 +433,18 @@ class MinimumCDataTypeHandler:
         minimum_gdal_type_list_converted = cls._convert_abbreviation_to_gdal_data_type(
             input_string_list=minimum_gdal_type_list
         )
-        user_defined_minimum_gdal_type_converted = cls._convert_abbreviation_to_gdal_data_type(
-            input_string_list=[user_defined_minimum_gdal_type]
-        )
+        if user_defined_minimum_gdal_type is None:
+            user_defined_minimum_gdal_type_converted = cls._convert_abbreviation_to_gdal_data_type(
+                input_string_list=user_defined_minimum_gdal_type
+            )
+        elif isinstance(user_defined_minimum_gdal_type, str):
+            user_defined_minimum_gdal_type_converted = cls._convert_abbreviation_to_gdal_data_type(
+                input_string_list=[user_defined_minimum_gdal_type]
+            )
+        else:
+            raise GeoKitCDataError(
+                "For argument: user_defined_minimum_gdal_type either a string with a valid Gdal datatype or None is allowed. However the following type has been provided: {user_defined_minimum_gdal_type}"
+            )
 
         list_of_integer: list[int | np.integer] = []
         list_of_float_data_types: list[np.dtype] = []
@@ -497,38 +514,51 @@ class MinimumCDataTypeHandler:
                 list_of_integer=list_of_integer,
                 minimum_required_datatype_list=minimum_gdal_type_list_converted,
             )
-            # cls.check_if_user_requested_data_type_deviates(
-            #     user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
-            #     automatically_determined_minimum_gdal_type=minimum_float_type,
-            # )
+            cls.check_if_user_requested_data_type_deviates(
+                user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
+                automatically_determined_minimum_gdal_type=minimum_float_type,
+            )
             return minimum_float_type
         if list_of_output_integers or c_number_category == "GDT_Int":
             if isinstance(user_defined_minimum_gdal_type_converted, list):
                 user_defined_c_number_category = cls._determine_if_gdal_data_type_is_int_float_or_complex(
                     user_defined_minimum_gdal_type_converted
                 )
-                if user_defined_c_number_category == "GDT_Int:
-                    user_defined_minimum_gdal_type_int=user_defined_minimum_gdal_type
+                if user_defined_c_number_category == "GDT_Int":
+                    user_defined_minimum_gdal_type_int = user_defined_minimum_gdal_type
+                else:
+                    user_defined_minimum_gdal_type_int = None
             else:
-                user_defined_minimum_gdal_type_int=None
-                
-            
+                user_defined_minimum_gdal_type_int = None
+
             minimum_integer_type = cls._get_valid_data_types_from_integer_list(
                 int_list_to_check=list_of_output_integers,
                 minimum_integer_type_list=minimum_gdal_type_list_converted,
                 user_defined_minimum_gdal_type=user_defined_minimum_gdal_type_int,
             )
-            # cls.check_if_user_requested_data_type_deviates(
-            #     user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
-            #     automatically_determined_minimum_gdal_type=minimum_integer_type,
-            # )
+            cls.check_if_user_requested_data_type_deviates(
+                user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
+                automatically_determined_minimum_gdal_type=minimum_integer_type,
+            )
             return minimum_integer_type
         else:
             raise GeoKitCDataError("No datatypes could be determined.")
 
     @staticmethod
     def get_gdal_constant_from_string(input_string: str) -> int:
-        """This function converts a gdal data type string to the corresponding gdal constant that repsresents the data type."""
+        """This function converts a gdal data type string to the corresponding gdal constant that repsresents the data type.
+
+        Parameters
+        ----------
+        input_string : str
+            String that should be converted to gdal constant.
+
+        Returns
+        -------
+        int
+            Integer representing the gdal data type. This can be passed to gdal functions that require a data type constant.
+
+        """
         if input_string[0:4] == "GDT_":
             constant_string = input_string
         else:
