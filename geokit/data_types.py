@@ -1,6 +1,6 @@
 import pathlib
 
-from typing import Literal, NamedTuple, Union
+from typing import Literal, NamedTuple, Union, get_args
 
 import matplotlib.colorbar
 import matplotlib.image
@@ -126,7 +126,14 @@ class vecInfo(NamedTuple):
     attribute_data_types_str: dict[str, str]
 
 
-_integer_data_type_list = [
+class ptValue(NamedTuple):
+    data: numeric | np.ndarray
+    xOffset: numeric
+    yOffset: numeric
+    inBounds: bool | np.bool
+
+
+integer_data_types_literal = Literal[
     "GDT_Int8",
     "GDT_Byte",  # Unsigned 8 bit integer
     "GDT_UInt16",
@@ -136,60 +143,96 @@ _integer_data_type_list = [
     "GDT_UInt64",
     "GDT_Int64",
 ]
-integer_data_types_literal = Literal[*_integer_data_type_list]
+_integer_data_types_no_prefix_literal = Literal[
+    "Int8",
+    "Byte",  # Unsigned 8 bit integer
+    "UInt16",
+    "Int16",
+    "UInt32",
+    "Int32",
+    "UInt64",
+    "Int64",
+]
+_integer_data_types_no_prefix_lower_literal = Literal[
+    "int8",
+    "byte",  # Unsigned 8 bit integer
+    "uint16",
+    "int16",
+    "uint32",
+    "int32",
+    "uint64",
+    "int64",
+]
+integer_data_types_with_abbreviations_literal = Union[
+    integer_data_types_literal, _integer_data_types_no_prefix_literal, _integer_data_types_no_prefix_lower_literal
+]
 
-_float_data_types_list = [
+
+float_data_types_literal = Literal[
     "GDT_Float32",
     "GDT_Float64",
 ]
-float_data_types_literal = Literal[*_float_data_types_list]
+_float_data_types_no_prefix_literal = Literal[
+    "Float32",
+    "Float64",
+]
 
+_float_data_types_no_prefix_lower_literal = Literal[
+    "float32",
+    "float64",
+]
+float_data_types_with_abbreviations_literal = Union[
+    float_data_types_literal, _float_data_types_no_prefix_literal, _float_data_types_no_prefix_lower_literal
+]
 
 # # Drop use support for complex data types due to rare usage
-# complex_integer_data_types_list = [
-#     "GDT_CInt16",
-#     "GDT_CInt32",
-# ]
-# complex_integer_data_types = Literal[*complex_integer_data_types_list]
 
-# complex_float_data_types_list = [
-#     "GDT_CFloat32",
-#     "GDT_CFloat64",
-# ]
-# complex_float_data_types = Literal[*complex_float_data_types_list]
-
-
-_gdal_c_raster_data_types_list = [
-    *_integer_data_type_list,
-    *_float_data_types_list,
-    # *complex_integer_data_types,
-    # *complex_float_data_types,
+gdal_c_raster_data_types_literal = Union[
+    integer_data_types_literal,
+    float_data_types_literal,
 ]
-gdal_c_raster_data_types_literal = Literal[*_gdal_c_raster_data_types_list]
 
 numpy_data_types_list_literal = Literal[
     "bool", "uint8", "int8", "uint16", "int16", "uint32", "int32", "uint64", "int64", "float16", "float32", "float64"
 ]
 
-_gdal_c_raster_data_types_abbreviations_list = []
-gdal_abbreviation_mapper_dict = {}
-for current_type in _gdal_c_raster_data_types_list:
-    abbreviation = current_type.replace("GDT_", "")
-    abbreviation_lower = abbreviation.lower()
-    _gdal_c_raster_data_types_abbreviations_list.append(abbreviation)
-    _gdal_c_raster_data_types_abbreviations_list.append(abbreviation_lower)
-    gdal_abbreviation_mapper_dict[abbreviation] = current_type
-    gdal_abbreviation_mapper_dict[abbreviation_lower] = current_type
 
-gdal_c_raster_data_types_with_abbreviations_literal = Literal[
-    *_gdal_c_raster_data_types_list, *_gdal_c_raster_data_types_abbreviations_list
+gdal_c_raster_data_types_with_abbreviations_literal = Union[
+    gdal_c_raster_data_types_literal,
+    integer_data_types_with_abbreviations_literal,
+    float_data_types_with_abbreviations_literal,
 ]
 
 geokit_c_data_types_literal = Union[gdal_c_raster_data_types_with_abbreviations_literal, numpy_data_types_list_literal]
 
 
-class ptValue(NamedTuple):
-    data: numeric | np.ndarray
-    xOffset: numeric
-    yOffset: numeric
-    inBounds: bool | np.bool
+_integer_data_type_list = list(get_args(integer_data_types_literal))
+_integer_data_types_no_prefix_list = list(get_args(_integer_data_types_no_prefix_literal))
+_integer_data_types_no_prefix_lower_list = list(get_args(_integer_data_types_no_prefix_lower_literal))
+
+_float_data_types_list = list(get_args(float_data_types_literal))
+_float_data_types_no_prefix_list = list(get_args(_float_data_types_no_prefix_literal))
+_float_data_types_no_prefix_lower_list = list(get_args(_float_data_types_no_prefix_lower_literal))
+
+
+_gdal_c_raster_data_types_list = [*_integer_data_type_list, *_float_data_types_list]
+_gdal_c_raster_data_types_with_abbreviations_list = [
+    *_integer_data_type_list,
+    *_integer_data_types_no_prefix_list,
+    *_integer_data_types_no_prefix_lower_list,
+    *_float_data_types_list,
+    *_float_data_types_no_prefix_list,
+    *_float_data_types_no_prefix_lower_list,
+]
+gdal_abbreviation_mapper_dict = {}
+for rigorous_gdal_type, no_prefix_type, no_prefix_lower_type in zip(
+    _integer_data_type_list, _integer_data_types_no_prefix_list, _integer_data_types_no_prefix_lower_list
+):
+    gdal_abbreviation_mapper_dict[no_prefix_type] = rigorous_gdal_type
+    gdal_abbreviation_mapper_dict[no_prefix_lower_type] = rigorous_gdal_type
+
+for rigorous_gdal_type, no_prefix_type, no_prefix_lower_type in zip(
+    _float_data_types_list, _float_data_types_no_prefix_list, _float_data_types_no_prefix_lower_list
+):
+    gdal_abbreviation_mapper_dict[no_prefix_type] = rigorous_gdal_type
+    gdal_abbreviation_mapper_dict[no_prefix_lower_type] = rigorous_gdal_type

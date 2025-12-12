@@ -3,9 +3,7 @@ from geokit import util
 from geokit.core.srs import loadSRS
 from geokit.core.raster import rasterInfo, extractMatrix
 from test.helpers import AACHEN_SHAPE_PATH, CLC_RASTER_PATH, MASK_DATA, np
-from geokit.data_types import (
-    _gdal_c_raster_data_types_list,
-)
+
 
 from geokit.error import GeoKitError
 

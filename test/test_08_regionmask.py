@@ -381,7 +381,6 @@ def test_RegionMask_indicateFeatures():
         multiProcess = False
     else:
         multiProcess = False
-    multiProcess = True
     # setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, srs=3035)
 

@@ -13,6 +13,7 @@ from geokit.data_types import (
     integer_data_types_literal,
     _gdal_c_raster_data_types_list,
     numpy_data_types_list_literal,
+    _gdal_c_raster_data_types_with_abbreviations_list,
 )
 
 
