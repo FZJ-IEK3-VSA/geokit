@@ -2256,10 +2256,6 @@ def warp(
             pixelWidth = (bounds[2] - bounds[0]) / (dsInfo.xWinSize * 1.1)
     bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
-    # if dtype is None:
-    #     dtype = dsInfo.dtype
-    # dtype = gdalType(dtype)
-
     if noData is None:
         noDataRead = dsInfo.noData
     else:
@@ -2313,7 +2309,9 @@ def warp(
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
         gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_datatypes
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
         )
 
         # # Check some for bad input configurations
@@ -2361,7 +2359,9 @@ def warp(
             msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
             warnings.warn(msg, UserWarning)
         gdal_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_datatypes
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
         )
 
         # Warp to a raster in memory

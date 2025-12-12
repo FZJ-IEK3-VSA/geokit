@@ -122,85 +122,17 @@ def test_fitBoundsTo():
     )  # outBounds now fully include inBounds and each entry is a multiple of dx/dy
 
 
-# @pytest.mark.skip("No test implemented for: util.quickVector")
-# def test_quickVector():
-#     assert False
-
-
 def test_quickRaster():
     load_srs = loadSRS(source=4326)
     new_raster = geokit.core.util.quickRaster(bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, noData=-9999, fill=-9999)
-    # new_raster = geokit.core.util.quickRaster(
-    #     bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, noData=255, fill=None, dtype="Unknown"
-    # )
-    # print("Hello")
-    # new_raster = geokit.core.util.quickRaster(
-    #     bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, noData=None, fill=None, dtype="Unknown"
-    # )
-    # print("Hello2")
-    # new_band = new_raster.GetRasterBand(1)
-    # new_band.ComputeStatistics(0)
-    # get_maximum = new_band.GetMaximum()
-    # get_minimum = new_band.GetMinimum()
-    # print(get_maximum)
-    # print(get_minimum)
-    # raster_info = rasterInfo(sourceDS=new_raster)
-    # raster_info.data_type_name_str
     extracted_raster = extractMatrix(source=new_raster)
-    print(extracted_raster)
-    # np.array()
-    pass
-
-
-def test_raster_datatypes():
-    load_srs = loadSRS(source=4326)
-    for current_datatype in _gdal_c_raster_data_types_list:
-        new_raster = geokit.core.util.quickRaster(bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, dtype=current_datatype)
-        raster_info = rasterInfo(sourceDS=new_raster)
-        output_datatype = raster_info.data_type_name_str
-        print("Input datatype: ", current_datatype)
-        print("Output datatype: ", output_datatype, "\n")
-        # assert output_datatype == current_datatype
-    # extracted_raster = extractMatrix(source=new_raster)
-    # print(extracted_raster)
-    # np.array()
-    pass
-
-
-# @pytest.mark.skip("No test implemented for: util.drawImage")
-# def test_drawImage():
-#     assert False
-
-
-# @pytest.mark.skip("No test implemented for: util.KernelProcessor")
-# def test_KernelProcessor():
-#     assert False
-
-
-# def test_get_common_dtype():
-#     dtypes = [7, 2, 3, 5, 3]  # must yield 7 as the most versatile
-
-#     out = GdalDataTypeHandler.get_common_dtype(dtypes=dtypes, fallback=11)
-#     assert out == 7
-
-#     dtypes = [7, 2, 3, 5, 3, 10]  # 7 cannot be represented by 10, so use 11
-#     out = GdalDataTypeHandler.get_common_dtype(dtypes=dtypes, fallback=11)
-#     assert out == 11
-
-#     dtypes = [7, 2, 3, 5, 3, 10, 15]  # 15 is not a known datatype!
-#     # one option is to use fallback
-#     fallback = 11
-#     out = GdalDataTypeHandler.get_common_dtype(dtypes=dtypes, fallback=fallback)
-#     assert out == fallback
-#     # another to raise an error
-#     with pytest.raises(TypeError):
-#         out = GdalDataTypeHandler.get_common_dtype(dtypes=dtypes, fallback=None)
-
-
-if __name__ == "__main__":
-    test_quickRaster()
-    # test_raster_datatypes()
-    # promote_dtype()
-    # test_numpy_min_scalar()
-    # test_min_max_values_np_data_types()
-    # pass
+    raster_for_comparison = np.array(
+        [
+            [-9999, -9999, -9999, -9999],
+            [-9999, -9999, -9999, -9999],
+            [-9999, -9999, -9999, -9999],
+            [-9999, -9999, -9999, -9999],
+        ],
+        dtype="int16",
+    )
+    np.testing.assert_allclose(actual=extracted_raster, desired=raster_for_comparison)

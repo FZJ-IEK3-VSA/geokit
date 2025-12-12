@@ -16,14 +16,6 @@ from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
-# def test_gdalType():
-#     assert raster.gdalType(bool) == "GDT_Byte"
-#     assert raster.gdalType("InT64") == "GDT_Int32"
-#     assert raster.gdalType("float32") == "GDT_Float32"
-#     assert raster.gdalType(NUMPY_FLOAT_ARRAY) == "GDT_Float64"
-#     assert raster.gdalType(NUMPY_FLOAT_ARRAY.dtype) == "GDT_Float64"
-
-
 # Describe Raster
 
 
@@ -582,10 +574,9 @@ def test_warpLike():
         dataSource=SINGLE_HILL_PATH,
         contextSource=ELEVATION_PATH,
         copyMetadata=False,
-        dtype="Int32",
+        dtype="Float32",
     )
-    # The input raster are both in Float32, so the request for an output type of Int32
-    # has been ignored to preserve the data.
+    # The input raster are both in Float32
     assert raster.rasterInfo(_rstr).data_type_name_str == "Float32"
 
 

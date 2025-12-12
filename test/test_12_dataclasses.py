@@ -152,3 +152,6 @@ def test_minimum_c_data_handler_different_external_minimum_data_type():
             np.dtype(numpy_data_type_string)
             min_value_numpy = np.dtype(numpy_data_type_string).type(list_of_numbers[0])
             max_value_numpy = np.dtype(numpy_data_type_string).type(list_of_numbers[1])
+
+
+test_minimum_c_data_handler_external_minimum_data_type_exact_match()

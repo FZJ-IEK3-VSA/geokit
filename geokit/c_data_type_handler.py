@@ -263,7 +263,7 @@ class MinimumCDataTypeHandler:
 
         # Return unsigned integer if it has been request by the user and passed the validity check
         if user_defined_minimum_gdal_type in valid_data_types_list:
-            user_requested_bits = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
+            user_requested_bits = cls.gdal_implemented_integer_data_types_dict[user_defined_minimum_gdal_type].bits
             required_bit_size = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
             if user_requested_bits == required_bit_size:
                 output_data_type_string = user_defined_minimum_gdal_type
@@ -494,17 +494,16 @@ class MinimumCDataTypeHandler:
             input_string_list=minimum_gdal_type_list
         )
         if user_defined_minimum_gdal_type is None:
-            user_defined_minimum_gdal_type_converted = cls._convert_abbreviation_to_gdal_data_type(
-                input_string_list=user_defined_minimum_gdal_type
-            )
+            user_defined_minimum_gdal_type_converted_list = [None]
         elif isinstance(user_defined_minimum_gdal_type, str):
-            user_defined_minimum_gdal_type_converted = cls._convert_abbreviation_to_gdal_data_type(
+            user_defined_minimum_gdal_type_converted_list = cls._convert_abbreviation_to_gdal_data_type(
                 input_string_list=[user_defined_minimum_gdal_type]
             )
         else:
             raise GeoKitCDataError(
                 "For argument: user_defined_minimum_gdal_type either a string with a valid Gdal datatype or None is allowed. However the following type has been provided: {user_defined_minimum_gdal_type}"
             )
+        user_defined_minimum_gdal_type_converted = user_defined_minimum_gdal_type_converted_list[0]
 
         list_of_integer: list[int | np.integer] = []
         list_of_float_data_types: list[np.dtype] = []
@@ -580,12 +579,12 @@ class MinimumCDataTypeHandler:
             )
             return minimum_float_type
         if list_of_output_integers or c_number_category == "GDT_Int":
-            if isinstance(user_defined_minimum_gdal_type_converted, list):
+            if isinstance(user_defined_minimum_gdal_type_converted, str):
                 user_defined_c_number_category = cls._determine_if_gdal_data_type_is_int_float_or_complex(
-                    user_defined_minimum_gdal_type_converted
+                    user_defined_minimum_gdal_type_converted_list
                 )
                 if user_defined_c_number_category == "GDT_Int":
-                    user_defined_minimum_gdal_type_int = user_defined_minimum_gdal_type
+                    user_defined_minimum_gdal_type_int = user_defined_minimum_gdal_type_converted
                 else:
                     user_defined_minimum_gdal_type_int = None
             else:

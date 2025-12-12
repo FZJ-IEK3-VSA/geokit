@@ -463,6 +463,7 @@ def quickRaster(
     dtype_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
         list_of_numbers=list_of_scalars,
         minimum_gdal_type_list=list_of_gdal_data_type_strings,
+        # user_defined_minimum_gdal_type=dtype,
     )
     list_of_datatype_strings.append(dtype)
     raster: gdal.Dataset = driver.Create("", cols, rows, 1, dtype_constant)
