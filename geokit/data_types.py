@@ -1,7 +1,7 @@
 import pathlib
-
 from typing import Literal, NamedTuple, Union, get_args
 
+import gdal
 import matplotlib.colorbar
 import matplotlib.image
 import matplotlib.lines
@@ -33,41 +33,6 @@ srs_input = Union[gdal.osr.SpatialReference, int, str]
 
 # supported gdal raster data types can be found here:
 # https://gdal.org/en/stable/user/raster_data_model.html
-# The gdt data types are not listed in the documentation
-# but still work.
-# gdal_raster_data_types = Union[
-#     Literal[
-#         "GDT_Byte",
-#         "GDT_Int32",
-#         "GDT_Int64",
-#         "GDT_Float32",
-#         "GDT_Float64",
-#         "Byte",
-#         "Int8",
-#         "UInt16",
-#         "Int16",
-#         "UInt32",
-#         "Int32",
-#         "UInt64",
-#         "Int64",
-#         "Float16",
-#         "Float32",
-#         "Float64",
-#         "CInt16",
-#         "CInt32",
-#         "CFloat16",
-#         "CFloat32",
-#         "CFloat64",
-#         "NoneType",
-#         # Additional ambiguous types that gets translated to the above types
-#         "float",
-#         "int",
-#     ],
-#     # The above data types can also be represented as strings
-#     # The string representation can be obtained from the integer
-#     # representation using the gdal.GetDataTypeName() method.
-#     int,
-# ]
 
 
 class TransformedPointsXY(NamedTuple):
@@ -133,70 +98,135 @@ class ptValue(NamedTuple):
     inBounds: bool | np.bool_
 
 
-integer_data_types_literal = Literal[
-    "GDT_Int8",
-    "GDT_Byte",  # Unsigned 8 bit integer
-    "GDT_UInt16",
-    "GDT_Int16",
-    "GDT_UInt32",
-    "GDT_Int32",
-    "GDT_UInt64",
-    "GDT_Int64",
-]
-_integer_data_types_no_prefix_literal = Literal[
-    "Int8",
-    "Byte",  # Unsigned 8 bit integer
-    "UInt16",
-    "Int16",
-    "UInt32",
-    "Int32",
-    "UInt64",
-    "Int64",
-]
-_integer_data_types_no_prefix_lower_literal = Literal[
-    "int8",
-    "byte",  # Unsigned 8 bit integer
-    "uint16",
-    "int16",
-    "uint32",
-    "int32",
-    "uint64",
-    "int64",
-]
-integer_data_types_with_abbreviations_literal = Union[
-    integer_data_types_literal, _integer_data_types_no_prefix_literal, _integer_data_types_no_prefix_lower_literal
-]
+if gdal.__version__ >= 3.5:
+    integer_data_types_literal = Literal[
+        "GDT_Int8",
+        "GDT_Byte",  # Unsigned 8 bit integer
+        "GDT_UInt16",
+        "GDT_Int16",
+        "GDT_UInt32",
+        "GDT_Int32",
+        "GDT_UInt64",
+        "GDT_Int64",
+    ]
+    _integer_data_types_no_prefix_literal = Literal[
+        "Int8",
+        "Byte",  # Unsigned 8 bit integer
+        "UInt16",
+        "Int16",
+        "UInt32",
+        "Int32",
+        "UInt64",
+        "Int64",
+    ]
+    _integer_data_types_no_prefix_lower_literal = Literal[
+        "int8",
+        "byte",  # Unsigned 8 bit integer
+        "uint16",
+        "int16",
+        "uint32",
+        "int32",
+        "uint64",
+        "int64",
+    ]
 
+    float_data_types_literal = Literal[
+        "GDT_Float32",
+        "GDT_Float64",
+    ]
+    _float_data_types_no_prefix_literal = Literal[
+        "Float32",
+        "Float64",
+    ]
 
-float_data_types_literal = Literal[
-    "GDT_Float32",
-    "GDT_Float64",
-]
-_float_data_types_no_prefix_literal = Literal[
-    "Float32",
-    "Float64",
-]
+    _float_data_types_no_prefix_lower_literal = Literal[
+        "float32",
+        "float64",
+    ]
 
-_float_data_types_no_prefix_lower_literal = Literal[
-    "float32",
-    "float64",
-]
-float_data_types_with_abbreviations_literal = Union[
-    float_data_types_literal, _float_data_types_no_prefix_literal, _float_data_types_no_prefix_lower_literal
-]
+    # # Drop use support for complex data types due to rare usage
 
-# # Drop use support for complex data types due to rare usage
+    numpy_data_types_list_literal = Literal[
+        "bool",
+        "uint8",
+        "int8",
+        "uint16",
+        "int16",
+        "uint32",
+        "int32",
+        "uint64",
+        "int64",
+        "float16",
+        "float32",
+        "float64",
+    ]
+
+else:
+    integer_data_types_literal = Literal[
+        "GDT_Byte",  # Unsigned 8 bit integer
+        "GDT_UInt16",
+        "GDT_Int16",
+        "GDT_UInt32",
+        "GDT_Int32",
+    ]
+    _integer_data_types_no_prefix_literal = Literal[
+        "Byte",  # Unsigned 8 bit integer
+        "UInt16",
+        "Int16",
+        "UInt32",
+        "Int32",
+    ]
+    _integer_data_types_no_prefix_lower_literal = Literal[
+        "byte",  # Unsigned 8 bit integer
+        "uint16",
+        "int16",
+        "uint32",
+        "int32",
+    ]
+
+    float_data_types_literal = Literal[
+        "GDT_Float32",
+        "GDT_Float64",
+    ]
+    _float_data_types_no_prefix_literal = Literal[
+        "Float32",
+        "Float64",
+    ]
+
+    _float_data_types_no_prefix_lower_literal = Literal[
+        "float32",
+        "float64",
+    ]
+
+    # # Drop use support for complex data types due to rare usage
+
+    numpy_data_types_list_literal = Literal[
+        "bool",
+        "uint8",
+        "int8",
+        "uint16",
+        "int16",
+        "uint32",
+        "int32",
+        "uint64",
+        "int64",
+        "float16",
+        "float32",
+        "float64",
+    ]
 
 gdal_c_raster_data_types_literal = Union[
     integer_data_types_literal,
     float_data_types_literal,
 ]
 
-numpy_data_types_list_literal = Literal[
-    "bool", "uint8", "int8", "uint16", "int16", "uint32", "int32", "uint64", "int64", "float16", "float32", "float64"
+float_data_types_with_abbreviations_literal = Union[
+    float_data_types_literal, _float_data_types_no_prefix_literal, _float_data_types_no_prefix_lower_literal
 ]
 
-
+integer_data_types_with_abbreviations_literal = Union[
+    integer_data_types_literal, _integer_data_types_no_prefix_literal, _integer_data_types_no_prefix_lower_literal
+]
 gdal_c_raster_data_types_with_abbreviations_literal = Union[
     gdal_c_raster_data_types_literal,
     integer_data_types_with_abbreviations_literal,
