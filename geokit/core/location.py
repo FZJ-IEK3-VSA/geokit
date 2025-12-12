@@ -8,6 +8,7 @@ from osgeo import ogr
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
+from geokit.data_types import srs_input, numeric
 from geokit.error import GeoKitLocationError
 
 LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
@@ -39,7 +40,11 @@ class Location(object):
     _TYPE_KEY_ = "Location"
     _e = 1e-5
 
-    def __init__(self, lon, lat):
+    def __init__(
+        self,
+        lon: numeric,
+        lat: numeric,
+    ):
         """Initialize a Location Object by explicitly providing lat/lon coordinates.
 
         Parameters
@@ -83,7 +88,7 @@ class Location(object):
         return self.__str__()
 
     @staticmethod
-    def fromString(self, srs=None):
+    def fromString(self, srs=None) -> "Location":
         """Initialize a Location Object by providing a string.
 
         * Must be formatted like such: "(5.12243,52,11342)"
@@ -107,12 +112,15 @@ class Location(object):
             raise GeoKitLocationError("string does not match Location specification")
         lon, lat = m.groups()
         if srs is None:
-            return Location(lon=float(lon), lat=float(lat))
+            return Location(
+                lon=float(lon),
+                lat=float(lat),
+            )
         else:
             return Location.fromXY(x=float(lon), y=float(lat), srs=srs)
 
     @staticmethod
-    def fromPointGeom(g):
+    def fromPointGeom(g) -> "Location":
         """Initialize a Location Object by providing an OGR Point Object.
 
         * Must have an SRS within the object
@@ -132,10 +140,13 @@ class Location(object):
             g = g.Clone()
             g.TransformTo(SRS.EPSG4326)
 
-        return Location(lon=g.GetX(), lat=g.GetY())
+        return Location(
+            lon=g.GetX(),
+            lat=g.GetY(),
+        )
 
     @staticmethod
-    def fromXY(x, y, srs):
+    def fromXY(x, y, srs) -> "Location":
         """Initialize a Location Object by providing a n X and Y coordinate.
 
         Parameters
@@ -160,7 +171,7 @@ class Location(object):
     def latlon(self):
         return self.lat, self.lon
 
-    def asGeom(self, srs="latlon"):
+    def asGeom(self, srs: srs_input = "latlon") -> ogr.Geometry:
         """Extract the Location as an ogr.Geometry object in an arbitrary SRS.
 
         Parameters
@@ -175,7 +186,7 @@ class Location(object):
         g = self.geom
         return GEOM.transform(g, toSRS=srs)
 
-    def asXY(self, srs):
+    def asXY(self, srs) -> tuple:
         """Extract the Location as an (X,Y) tuple in an arbitrary SRS.
 
         Parameters
@@ -203,7 +214,7 @@ class Location(object):
         self._geom = None
 
     @staticmethod
-    def load(loc, srs=4326):
+    def load(loc, srs=4326) -> "Location":
         """Tries to load a Location object in the correct manner by inferring
         from the input type.
 
@@ -390,7 +401,7 @@ class LocationSet(object):
         for l in self._locations:
             l.makePickleable()
 
-    def asGeom(self, srs=4326):
+    def asGeom(self, srs=4326) -> list[ogr.Geometry]:
         """Create a list of ogr.Geometry representations of all locations in the
         set.
 

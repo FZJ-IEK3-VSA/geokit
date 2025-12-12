@@ -186,3 +186,10 @@ gdal_c_raster_data_types_with_abbreviations_literal = Literal[
 ]
 
 geokit_c_data_types_literal = Union[gdal_c_raster_data_types_with_abbreviations_literal, numpy_data_types_list_literal]
+
+
+class ptValue(NamedTuple):
+    data: numeric | np.ndarray
+    xOffset: numeric
+    yOffset: numeric
+    inBounds: bool | np.bool
