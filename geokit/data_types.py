@@ -1,7 +1,6 @@
 import pathlib
 from typing import Literal, NamedTuple, Union, get_args
 
-import gdal
 import matplotlib.colorbar
 import matplotlib.image
 import matplotlib.lines
@@ -11,6 +10,7 @@ import osgeo.ogr
 import pandas.core.series
 from matplotlib.axes._axes import Axes
 from osgeo import gdal, osr
+from packaging.version import Version
 
 
 class AxHands(NamedTuple):
@@ -98,7 +98,7 @@ class ptValue(NamedTuple):
     inBounds: bool | np.bool_
 
 
-if gdal.__version__ >= 3.5:
+if Version(gdal.__version__) >= Version("3.5"):
     integer_data_types_literal = Literal[
         "GDT_Int8",
         "GDT_Byte",  # Unsigned 8 bit integer
