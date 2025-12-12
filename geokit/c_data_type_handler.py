@@ -18,11 +18,7 @@ from geokit.data_types import (
 
 @dataclass
 class CIntegerDataTypeInfo:
-    (
-        """Class to hold information about C integer data types.
-    It contains the data """
-        ""
-    )
+    """Class to hold information about C integer data types."""
 
     gdal_data_type_string: str
     numpy_data_type_string: str
