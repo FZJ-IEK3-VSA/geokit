@@ -6,7 +6,7 @@ import warnings
 from collections import OrderedDict, namedtuple
 from collections.abc import Callable, Iterable
 from tempfile import TemporaryDirectory
-from typing import Literal, NamedTuple
+from typing import Literal, NamedTuple, Callable
 import warnings
 
 import matplotlib.axes._axes
@@ -1126,7 +1126,7 @@ def _convertPointsToListOfOGRPoints(
 
             points_as_list_of_geom.append(current_point)
     else:
-        raise GEOM.GeoKitGeomError("The point argument")
+        raise GEOM.GeoKitGeomError("The point was supplied in an unexpected data type: " + str(points))
 
     return points_as_list_of_geom
 
@@ -1376,7 +1376,20 @@ def extractValues(
 # Shortcut for getting just the raster value
 
 
-def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None, winRange=None, **kwargs):
+def interpolateValues(
+    source: load_raster_input,
+    points: tuple[float, float]
+    | ogr.Geometry
+    | list[tuple[float, float]]
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    pointSRS: srs_input = "latlon",
+    mode: Literal["near", "linear-spline", "cubic-spline", "average", "func"] = "near",
+    func: Callable | None = None,
+    winRange: int | None = None,
+    **kwargs,
+):
     """Interpolates the value of a raster at a given point or collection of points.
 
     Supports various interpolation schemes:
@@ -1458,14 +1471,25 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
     >>>                             func=medianFinder, winRange=2)
     """
     # Determine what the user probably wants as an output
-    if isinstance(points, tuple) or isinstance(points, ogr.Geometry) or isinstance(points, Location):
+    if isinstance(points, (tuple, ogr.Geometry, Location)):
         asSingle = True
         # make points a list of length 1 so that the rest works (will be unpacked later)
-        points = [
-            points,
-        ]
+    elif isinstance(points, list):
+        if len(points) == 1:
+            asSingle = True
+        else:
+            asSingle = False
+    elif isinstance(points, LocationSet):
+        if points.count == 1:
+            asSingle = True
+        else:
+            asSingle = False
+
     else:  # Assume points is already an iterable of some sort
-        asSingle = False
+        raise GeoKitRasterError(
+            "The following datatype has been provided as point but something different was expected: "
+            + str(type(points))
+        )
 
     # Do interpolation
     if mode == "near":
