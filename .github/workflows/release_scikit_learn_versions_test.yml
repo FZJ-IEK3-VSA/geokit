@@ -7,11 +7,10 @@ on:
 
 jobs:
   TestPushCondaForgeDev:
-    name: Test conda-forge development version on ${{ matrix.runner_tag }} for scikit-learn=${{ matrix.python_version }}
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
         python_version:
           [
             "1.7.1",

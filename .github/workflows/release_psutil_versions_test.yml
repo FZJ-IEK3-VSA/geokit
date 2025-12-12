@@ -7,11 +7,10 @@ on:
 
 jobs:
   TestPushCondaForgeDev:
-    name: Test conda-forge development version on ${{ matrix.runner_tag }} for psutil=${{ matrix.psutil_version }}
     strategy:
       fail-fast: false
       matrix:
-        runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        runner_tag: ["self-hosted"]
         psutil_version:
           [
             "5.8.0",

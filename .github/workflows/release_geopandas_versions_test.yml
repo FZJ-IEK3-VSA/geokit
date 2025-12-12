@@ -7,11 +7,9 @@ on:
 
 jobs:
   TestPushCondaForgeDev:
-    name: Test conda-forge development version on ${{ matrix.runner_tag }} for geopandas=${{ matrix.geopandas_version }}
     strategy:
       fail-fast: false
       matrix:
-        # runner_tag: ["ubuntu-latest", "macos-latest", "windows-latest"]
         runner_tag: ["self-hosted"]
         geopandas_version:
           [

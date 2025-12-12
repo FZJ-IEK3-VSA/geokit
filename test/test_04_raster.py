@@ -271,6 +271,36 @@ def test_interpolateValues():
     assert np.isclose(v, np.array([31.83673469, 14.75510204, 7.08163265])).all()
 
 
+def test_interpolateValues_from_list():
+    point = [(4061794.7, 3094718.4)]
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="near")
+    assert np.isclose(v, 3)
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="linear-spline")
+    assert np.isclose(v, 4.572732)  # linear-spline
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="cubic-spline")
+    assert np.isclose(v, 2.4197586642)  # cubic-spline
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
+    assert np.isclose(v, 9.0612244898)  # average
+
+    v = raster.interpolateValues(
+        CLC_RASTER_PATH,
+        point,
+        pointSRS="europe_laea",
+        mode="func",
+        func=lambda d, xo, yo: d.max(),
+    )
+    assert np.isclose(v, 12)  # func
+
+    # check also for multi-dimensional window (multiple cells window + multiple points)
+    points = [(6.06590, 50.51939), (6.02141, 50.61491), (6.371634, 50.846025)]
+    v = raster.interpolateValues(CLC_RASTER_PATH, points, mode="average")
+    assert np.isclose(v, np.array([31.83673469, 14.75510204, 7.08163265])).all()
+
+
 def test_extractMatrix():
     # source, bounds=None, boundsSRS='latlon', maskBand=False, autocorrect=False
     ri = raster.rasterInfo(CLC_RASTER_PATH)
@@ -840,3 +870,8 @@ def test_warp_meta_argument_hard_drive():
 
     assert raster_info_output.meta["AREA_OR_POINT"] == "Area"
     pathlib.Path.unlink(output_path)
+
+
+if __name__ == "__main__":
+    # test_interpolateValues()
+    test_interpolateValues_from_list()
