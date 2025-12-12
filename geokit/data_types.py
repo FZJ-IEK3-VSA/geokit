@@ -130,7 +130,7 @@ class ptValue(NamedTuple):
     data: numeric | np.ndarray
     xOffset: numeric
     yOffset: numeric
-    inBounds: bool | np.bool
+    inBounds: bool | np.bool_
 
 
 integer_data_types_literal = Literal[
