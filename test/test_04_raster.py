@@ -283,12 +283,15 @@ def test_interpolateValues_from_list():
     v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
     assert np.isclose(v, 9.0612244898)  # average
 
+    def max_value_interpolator(data, _xo, _yo):
+        return data.max()
+
     v = raster.interpolateValues(
         CLC_RASTER_PATH,
         point,
         pointSRS="europe_laea",
         mode="func",
-        func=lambda d, xo, yo: d.max(),
+        func=max_value_interpolator,
     )
     assert np.isclose(v, 12)  # func
 
