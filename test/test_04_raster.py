@@ -256,13 +256,9 @@ def test_interpolateValues():
 
     def max_value_interpolator(data, _xo, _yo):
         return data.max()
-    
+
     v = raster.interpolateValues(
-        CLC_RASTER_PATH,
-        point,
-        pointSRS="europe_laea",
-        mode="func",
-        func=max_value_interpolator
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="func", func=max_value_interpolator
     )
     assert np.isclose(v, 12)  # func
 
