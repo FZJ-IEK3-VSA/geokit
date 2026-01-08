@@ -1,15 +1,17 @@
 import multiprocessing
+import multiprocessing.managers
 import os
 import re
 from collections import namedtuple
 from io import BytesIO
 from sys import platform
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Callable, Literal
 from warnings import warn
 
 import numpy as np
 import psutil
-from osgeo import ogr, gdal
+from osgeo import gdal, ogr, osr
 
 from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
@@ -19,15 +21,18 @@ from geokit.core import vector as VECTOR
 
 # from .location import Location, LocationSet
 from geokit.core.extent import Extent
+from geokit.data_types import (
+    geokit_c_data_types_literal,
+    load_raster_input,
+    load_vector_input,
+    numeric,
+)
+from geokit.error import GeoKitGeomError, GeoKitRegionMaskError
 
 
 def usage():
     process = psutil.Process(os.getpid())
     return process.memory_info()[0] / float(2**20)
-
-
-class GeoKitRegionMaskError(UTIL.GeoKitError):
-    pass
 
 
 MaskAndExtent = namedtuple("MaskAndExtent", "mask extent id")
@@ -79,7 +84,7 @@ class RegionMask(object):
     DEFAULT_RES = 100
     DEFAULT_PAD = None
 
-    def __init__(self, extent, pixelRes, mask=None, geom=None, attributes=None, **kwargs):
+    def __init__(self, extent: Extent, pixelRes, mask=None, geom=None, attributes=None, **kwargs):
         """The default constructor for RegionMask objects. Creates a RegionMask
         directly from a matrix mask and a given extent (and optionally a geometry).
         Pixel resolution is calculated in accordance with the shape of the mask
@@ -127,8 +132,8 @@ class RegionMask(object):
                 raise GeoKitRegionMaskError("mask and geom cannot be defined simultaneously")
 
         # Set basic values
-        self.extent = extent
-        self.srs = extent.srs
+        self.extent: Extent = extent
+        self.srs: osr.SpatialReference = extent.srs
 
         if self.srs is None:
             raise GeoKitRegionMaskError("Extent SRS cannot be None")
@@ -246,7 +251,7 @@ class RegionMask(object):
         extent=None,
         padExtent=DEFAULT_PAD,
         attributes=None,
-        **k,
+        **region_mask_key_worded_arugments,
     ) -> "RegionMask":
         """Make a RasterMask from a given geometry.
 
@@ -305,7 +310,9 @@ class RegionMask(object):
             # extent = extent.pad(padExtent)
 
         # make a RegionMask object
-        return RegionMask(extent=extent, pixelRes=pixelRes, geom=geom, attributes=attributes)
+        return RegionMask(
+            extent=extent, pixelRes=pixelRes, geom=geom, attributes=attributes, **region_mask_key_worded_arugments
+        )
 
     @staticmethod
     def fromVector(
@@ -658,7 +665,6 @@ class RegionMask(object):
         forceMaskShape=False,
         applyMask=True,
         noData=None,
-        **kwargs,
     ):
         # make output
         if not forceMaskShape and resolutionDiv > 1:
@@ -724,20 +730,20 @@ class RegionMask(object):
 
     def indicateValues(
         self,
-        source,
-        value,
-        buffer=None,
-        resolutionDiv=1,
-        forceMaskShape=False,
-        applyMask=True,
-        noData=None,
-        resampleAlg="bilinear",
-        bufferMethod="area",
+        source: load_raster_input,
+        value: numeric | tuple | list | str,
+        buffer: numeric | None = None,
+        resolutionDiv: int = 1,
+        forceMaskShape: bool = False,
+        applyMask: bool = True,
+        noData: numeric | None = None,
+        resampleAlg: Literal["near", "bilinear", "cubic", "average", "mode", "max", "min"] = "bilinear",
+        bufferMethod: Literal["area", "contour"] = "area",
         preBufferSimplification=None,
-        warpDType=None,
-        prunePatchSize=0,
-        threshold=0.5,
-        multiProcess=True,
+        warpDType: geokit_c_data_types_literal | None = None,
+        prunePatchSize: numeric = 0,
+        threshold: numeric = 0.5,
+        multiProcess: bool = True,
         **kwargs,
     ):
         """
@@ -919,14 +925,14 @@ class RegionMask(object):
             warn(multi_processing_warning_message)
 
         def _indicateValues(
-            source,
+            source: load_raster_input,
             value,
             buffer=None,
             resolutionDiv=1,
             forceMaskShape=False,
             applyMask=True,
             noData=None,
-            resampleAlg="bilinear",
+            resampleAlg: Literal["near", "bilinear", "cubic", "average", "mode", "max", "min"] = "bilinear",
             bufferMethod="area",
             preBufferSimplification=None,
             warpDType=None,
@@ -1147,54 +1153,47 @@ class RegionMask(object):
         ####################
 
         # try multiprocessing or fall back to linear processing
-        try:
-            if multiProcess:
-                # multiprocessing is requested, try to execute
-                with multiprocessing.Manager() as manager:
-                    # initialize a dict to combine the results from parallel processes
-                    resultsCollector = manager.dict()
-                    p = multiprocessing.Process(
-                        target=_indicateValues,
-                        args=(source,),
-                        kwargs={
-                            **{
-                                "value": value,
-                                "buffer": buffer,
-                                "resolutionDiv": resolutionDiv,
-                                "forceMaskShape": forceMaskShape,
-                                "applyMask": applyMask,
-                                "noData": noData,
-                                "resampleAlg": resampleAlg,
-                                "bufferMethod": bufferMethod,
-                                "preBufferSimplification": preBufferSimplification,
-                                "warpDType": warpDType,
-                                "prunePatchSize": prunePatchSize,
-                                "threshold": threshold,
-                                "resultsCollector": resultsCollector,
-                            },
-                            **kwargs,
+
+        if multiProcess:
+            # multiprocessing is requested, try to execute
+            with multiprocessing.Manager() as manager:
+                # initialize a dict to combine the results from parallel processes
+                resultsCollector = manager.dict()
+                p = multiprocessing.Process(
+                    target=_indicateValues,
+                    args=(source,),
+                    kwargs={
+                        **{
+                            "value": value,
+                            "buffer": buffer,
+                            "resolutionDiv": resolutionDiv,
+                            "forceMaskShape": forceMaskShape,
+                            "applyMask": applyMask,
+                            "noData": noData,
+                            "resampleAlg": resampleAlg,
+                            "bufferMethod": bufferMethod,
+                            "preBufferSimplification": preBufferSimplification,
+                            "warpDType": warpDType,
+                            "prunePatchSize": prunePatchSize,
+                            "threshold": threshold,
+                            "resultsCollector": resultsCollector,
                         },
-                    )
-                    p.start()
-                    p.join()
+                        **kwargs,
+                    },
+                )
+                p.start()
+                p.join()
 
-                    if not "indications" in resultsCollector.keys():
-                        error_msg = f"'indications' key not in resultsCollector dict after value indication."
-                        # print error statement before raising Error to show it even in try/except loop
-                        print(error_msg, flush=True)
-                        raise KeyError(error_msg)
+                if not "indications" in resultsCollector.keys():
+                    error_msg = f"'indications' key not in resultsCollector dict after value indication."
+                    # print error statement before raising Error to show it even in try/except loop
+                    print(error_msg, flush=True)
+                    raise KeyError(error_msg)
 
-                    # extract results from multiprocessing manager
-                    result = resultsCollector["indications"]
+                # extract results from multiprocessing manager
+                result = resultsCollector["indications"]
 
-            else:
-                # if not multiprocessing, trigger an artificial error to fall back into except statement
-                raise ValueError("NOTE: multiProcess is set to False, will fall back to linear processing.")
-        # else fall back to linear processing if multiprocessing failed
-        except:
-            # warn and clean in case of a failed multiprocess
-            if multiProcess:
-                warn("Memory efficient multiProcess failed, returning to safe linear processing.")
+        else:
             # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
             resultsCollector = dict()  # manager.dict()
             # run _indicateValues in a single process
@@ -1225,16 +1224,16 @@ class RegionMask(object):
     # Vector feature indicator
     def indicateFeatures(
         self,
-        source,
-        where=None,
-        buffer=None,
-        bufferMethod="geom",
-        resolutionDiv=1,
-        forceMaskShape=False,
-        applyMask=True,
-        noData=0,
-        preBufferSimplification=None,
-        multiProcess=True,
+        source: load_vector_input,
+        where: str | None = None,
+        buffer: numeric | None = None,
+        bufferMethod: Literal["geom", "area", "contour"] = "geom",
+        resolutionDiv: int = 1,
+        forceMaskShape: bool = False,
+        applyMask: bool = True,
+        noData: numeric = 0,
+        preBufferSimplification: numeric | None = None,
+        multiProcess: bool = True,
         **kwargs,
     ):
         """
@@ -1263,7 +1262,7 @@ class RegionMask(object):
             * Units are in the RegionMask's srs
 
         bufferMethod : str; optional
-            An indicator determining the method to use when buffereing
+            An indicator determining the method to use when buffering
             * Options are: 'geom', 'area', and 'contour'
             * If 'geom', the function will attempt to grow each of the geometries
             directly using the ogr library
@@ -1318,16 +1317,16 @@ class RegionMask(object):
         """
 
         def _indicateFeatures(
-            source,
-            where=None,
-            buffer=None,
-            bufferMethod="geom",
-            resolutionDiv=1,
-            forceMaskShape=False,
-            applyMask=True,
-            noData=0,
-            preBufferSimplification=None,
-            resultsCollector=None,
+            source: load_vector_input,
+            where: str | None = None,
+            buffer: numeric | None = None,
+            bufferMethod: Literal["geom", "area", "contour"] = "geom",
+            resolutionDiv: numeric = 1,
+            forceMaskShape: bool = False,
+            applyMask: bool = True,
+            noData: numeric = 0,
+            preBufferSimplification: numeric | None = None,
+            resultsCollector: dict | multiprocessing.managers.DictProxy | None = None,
             **kwargs,
         ):
             """The core method for _indicateFeatures, can be called either directly or via multiprocessing."""
@@ -1433,57 +1432,47 @@ class RegionMask(object):
 
             # Write results into the resultsCollector dict and exit
             resultsCollector["indications"] = final
-            return
 
         ####################
         # EXECUTE FUNCTION #
         ####################
 
-        # try multiprocessing or fall back to linear processing
-        try:
-            if multiProcess:
-                # multiprocessing is requested, try to execute
-                with multiprocessing.Manager() as manager:
-                    # initialize a dict to combine the results from parallel processes
-                    resultsCollector = manager.dict()
-                    p = multiprocessing.Process(
-                        target=_indicateFeatures,
-                        args=(source,),
-                        kwargs={
-                            **{
-                                "where": where,
-                                "buffer": buffer,
-                                "bufferMethod": bufferMethod,
-                                "resolutionDiv": resolutionDiv,
-                                "forceMaskShape": forceMaskShape,
-                                "applyMask": applyMask,
-                                "noData": noData,
-                                "preBufferSimplification": preBufferSimplification,
-                                "resultsCollector": resultsCollector,
-                            },
-                            **kwargs,
+        if multiProcess:
+            # multiprocessing is requested, try to execute
+            with multiprocessing.Manager() as manager:
+                # initialize a dict to combine the results from parallel processes
+                resultsCollector = manager.dict()
+                p = multiprocessing.Process(
+                    target=_indicateFeatures,
+                    args=(source,),
+                    kwargs={
+                        **{
+                            "where": where,
+                            "buffer": buffer,
+                            "bufferMethod": bufferMethod,
+                            "resolutionDiv": resolutionDiv,
+                            "forceMaskShape": forceMaskShape,
+                            "applyMask": applyMask,
+                            "noData": noData,
+                            "preBufferSimplification": preBufferSimplification,
+                            "resultsCollector": resultsCollector,
                         },
-                    )
-                    p.start()
-                    p.join()
+                        **kwargs,
+                    },
+                )
+                p.start()
+                p.join()
 
-                    if "indications" not in resultsCollector.keys():
-                        error_msg = f"'indications' key not in resultsCollector dict after feature indication."
-                        # print error statement before raising Error to show it even in try/except loop
-                        print(error_msg, flush=True)
-                        raise KeyError(error_msg)
+                if "indications" not in resultsCollector.keys():
+                    error_msg = f"'indications' key not in resultsCollector dict after feature indication."
+                    # print error statement before raising Error to show it even in try/except loop
+                    print(error_msg, flush=True)
+                    raise KeyError(error_msg)
 
-                    # extract results from multiprocessing manager
-                    result = resultsCollector["indications"]
+                # extract results from multiprocessing manager
+                result = resultsCollector["indications"]
 
-            else:
-                # if not multiprocessing, trigger an artificial error to fall back into except statement
-                raise ValueError("NOTE: multiProcess is set to False, will fall back to linear processing.")
-        # else fall back to linear processing if multiprocessing failed
-        except:
-            # warn and clean in case of a failed multiprocess
-            if multiProcess:
-                warn("Memory efficient multiProcess failed, returning to safe linear processing.")
+        else:
             # set up a clean resultsCollector in case of multiprocess False or partial results from a multiprocessing failed half-way
             resultsCollector = dict()  # manager.dict()
             # run _indicateFeatures in a single process
@@ -1639,7 +1628,7 @@ class RegionMask(object):
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
         return GEOM.drawGeoms(self.geometry, ax=ax, srs=self.srs, xlim=xlim, ylim=ylim, **kwargs)
 
-    def drawRaster(self, source, ax=None, drawSelf=True, **kwargs):
+    def drawRaster(self, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.raster.drawRaster which plots a raster
         dataset within the context of the RegionMask.
 
@@ -1972,12 +1961,12 @@ class RegionMask(object):
 
     def mutateRaster(
         self,
-        source,
-        matchContext=True,
-        warpArgs=None,
-        applyMask=True,
-        processor=None,
-        resampleAlg="bilinear",
+        source: load_raster_input,
+        matchContext: bool = True,
+        warpArgs: dict | None = None,
+        applyMask: bool = True,
+        processor: Callable | None = None,
+        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "bilinear",
         **mutateArgs,
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
@@ -2104,7 +2093,7 @@ class RegionMask(object):
             _raw=_raw,
         )
 
-    def polygonizeMask(self, mask, bounds=None, srs=None, flat=True, shrink=True):
+    def polygonizeMask(self, mask, flat=True, shrink=True):
         """Convenience wrapper for geokit.geom.polygonizeMask which automatically
         sets the 'bounds' and 'srs' inputs. The mask data is assumed to span the
         RegionMask exactly.

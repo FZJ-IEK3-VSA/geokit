@@ -1,17 +1,21 @@
 """The Util sub-module contains a number of generally helpful utility functions, classes, and constants."""
 
+import math
 import os
 import re
 import sys
 import warnings
 from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
+from decimal import Decimal
+from fractions import Fraction
 from glob import glob
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from types import GeneratorType
 from typing import NamedTuple
 
 import matplotlib.axis
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
@@ -22,7 +26,9 @@ from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
 
-from geokit.data_types import AxHands
+from geokit.c_data_type_handler import MinimumCDataTypeHandler
+from geokit.data_types import AxHands, numeric, srs_input, geokit_c_data_types_literal
+from geokit.error import GeoKitError
 
 ######################################################################################
 # test modules
@@ -37,10 +43,6 @@ if not res == 0:
 
 ######################################################################################
 # An few errors just for me!
-
-
-class GeoKitError(Exception):
-    pass
 
 
 #####################################################################
@@ -414,17 +416,22 @@ def fitBoundsTo(
     return xMin, yMin, xMax, yMax
 
 
+def _check_fill_return_code(fill_return_code):
+    # if =CE_None
+    pass
+
+
 def quickRaster(
-    bounds,
-    srs,
-    dx,
-    dy,
-    dtype="GDT_Byte",
-    noData=None,
-    fill=None,
-    data=None,
-    scale=None,
-    offset=None,
+    bounds: tuple[numeric, numeric, numeric, numeric],
+    srs: osr.SpatialReference,
+    dx: numeric,
+    dy: numeric,
+    dtype: geokit_c_data_types_literal | None = None,
+    noData: None | numeric | bool = None,
+    fill: None | numeric | bool = None,
+    data: np.ndarray | None = None,
+    scale: numeric | None = None,
+    offset: numeric | None = None,
 ):
     """GeoKit internal for quickly creating a raster datasource."""
     # bounds = fitBoundsTo(bounds, dx, dy)
@@ -437,9 +444,31 @@ def quickRaster(
     rows = int(round((originY - bounds[1]) / abs(dy)))
 
     # Open the driver
-    driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-    dtype = getattr(gdal, dtype) if isinstance(dtype, str) else dtype
-    raster = driver.Create("", cols, rows, 1, dtype)
+    driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
+    # dtype = getattr(gdal, dtype) if isinstance(dtype, str) else dtype
+    list_of_scalars = []
+    if noData is None:
+        pass
+    else:
+        list_of_scalars.append(noData)
+
+    if fill is None:
+        pass
+    else:
+        list_of_scalars.append(fill)
+
+    list_of_datatype_strings = []
+    if dtype is None:
+        list_of_gdal_data_type_strings = []
+    else:
+        list_of_gdal_data_type_strings = [dtype]
+    dtype_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+        list_of_numbers=list_of_scalars,
+        minimum_gdal_type_list=list_of_gdal_data_type_strings,
+        # user_defined_minimum_gdal_type=dtype,
+    )
+    list_of_datatype_strings.append(dtype)
+    raster: gdal.Dataset = driver.Create("", cols, rows, 1, dtype_constant)
 
     if raster is None:
         raise GeoKitError("Failed to create temporary raster")
@@ -450,16 +479,17 @@ def quickRaster(
     raster.SetProjection(srs.ExportToWkt())
 
     # get the band
-    band = raster.GetRasterBand(1)
+    band: gdal.Band = raster.GetRasterBand(1)
 
     # set optionals
     if not noData is None:
         band.SetNoDataValue(noData)
         if fill is None and data is None:
-            band.Fill(noData)
-
+            no_data_fill_return_code = band.Fill(noData)
+            _check_fill_return_code(fill_return_code=no_data_fill_return_code)
     if not fill is None:
-        band.Fill(fill)
+        fill_return_code = band.Fill(fill)
+        _check_fill_return_code(fill_return_code=fill_return_code)
 
     if not scale is None:
         band.SetScale(scale)
@@ -599,8 +629,6 @@ def drawImage(
     if ax is None:
         newAxis = True
 
-        import matplotlib.pyplot as plt
-
         plt.figure(figsize=figsize)
 
         if not cbar:  # We don't need a colorbar
@@ -709,60 +737,6 @@ def compare_geoms(geoms_1, geoms_2):
     equal = map(lambda g1, g2: g1.Equals(g2), geoms_1, geoms_2)
 
     return list(equal)
-
-
-def get_common_dtype(dtypes, fallback=11):
-    """
-    This auxiliary function returns the most lightweight GDAL datatype that is
-    commonly usable (without precision loss) for a given list of GDAL dtypes.
-
-    dtypes : list
-        List of integers (GDAL Enum Codes).
-    fallback : int, optional
-        An optional fallback GDAL dtype if no common dtype can be identified.
-        Set to None to raise an Error in such cases, else must be a known GDAL
-        Enum Code. By default 11 (CFloat64), can represent basically all other
-        dtypes (except extremely large float64 edge cases).
-    """
-    # make sure all dtypes are GDAL type numbers
-    if not all([isinstance(d, int) for d in dtypes]):
-        raise TypeError(f"All dtypes must be integers (GDAL Enum Codes)")
-    # create a mapper which dtype can be converted into which others without precision losses
-    # use OrderedDict to sort from most lightweight (preferred) to most versatile (required)
-    dtype_compatibilities = OrderedDict(
-        [
-            (1, [1, 2, 3, 4, 5, 13, 14, 6, 7, 8, 9, 10, 11]),  # Byte (GDT_Byte)
-            (12, [12, 3, 5, 14, 6, 7, 8, 9, 10, 11]),  # Int8 (GDT_Int8)
-            (2, [2, 3, 4, 5, 13, 14, 6, 7, 8, 9, 10, 11]),  # UInt16 (GDT_UInt16)
-            (3, [3, 5, 14, 6, 7, 8, 9, 10, 11]),  # Int16 (GDT_Int16)
-            (4, [4, 13, 6, 7, 9, 10, 11]),  # UInt32 (GDT_UInt32)
-            (5, [5, 14, 6, 7, 9, 10, 11]),  # Int32 (GDT_Int32)
-            (13, [13, 7, 11]),  # UInt64 (GDT_UInt64)
-            (14, [14, 7, 11]),  # Int64 (GDT_Int64)
-            (6, [6, 7, 10, 11]),  # Float32 (GDT_Float32)
-            (7, [7, 11]),  # Float64 (GDT_Float64)
-            (8, [8, 9, 10, 11]),  # CInt16 (GDT_CInt16)
-            (9, [9, 11]),  # CInt32 (GDT_CInt32)
-            (10, [10, 11]),  # CFloat32 (GDT_CFloat32)
-            (11, [11]),  # CFloat64 (GDT_CFloat64)
-        ]
-    )
-    if not (fallback is None or fallback in dtype_compatibilities.keys()):
-        raise ValueError(
-            f"fallback must be a known GDAL Enum Code if not None. Select from: {', '.join(sorted(dtype_compatibilities.keys()))}"
-        )
-    # if all dtypes are known, check if they can be converted into each other
-    if all([d in dtype_compatibilities for d in dtypes]):
-        # get the "lowest common denominator" dtype
-        for _type in dtype_compatibilities.keys():
-            # check if _type can store all input types
-            if all(_type in dtype_compatibilities[d] for d in dtypes):
-                return _type
-    # we have not found a suitable dtype, return fallback or raise error
-    if fallback:
-        return fallback
-    else:
-        raise TypeError(f"No commonly usable GDAL dtype found for dtypes: {dtypes}")
 
 
 def nodata_equal(a, b):

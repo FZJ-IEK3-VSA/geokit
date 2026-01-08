@@ -6,21 +6,15 @@ import pytest
 import structlog
 from osgeo import gdal
 
+import geokit.core.raster
 from geokit import geom, raster, util
+from geokit.error import GeoKitRasterError
 from geokit.core.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
-
-
-def test_gdalType():
-    assert raster.gdalType(bool) == "GDT_Byte"
-    assert raster.gdalType("InT64") == "GDT_Int32"
-    assert raster.gdalType("float32") == "GDT_Float32"
-    assert raster.gdalType(NUMPY_FLOAT_ARRAY) == "GDT_Float64"
-    assert raster.gdalType(NUMPY_FLOAT_ARRAY.dtype) == "GDT_Float64"
 
 
 # Describe Raster
@@ -254,12 +248,11 @@ def test_interpolateValues():
     v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
     assert np.isclose(v, 9.0612244898)  # average
 
+    def max_value_interpolator(data, _xo, _yo):
+        return data.max()
+
     v = raster.interpolateValues(
-        CLC_RASTER_PATH,
-        point,
-        pointSRS="europe_laea",
-        mode="func",
-        func=lambda d, xo, yo: d.max(),
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="func", func=max_value_interpolator
     )
     assert np.isclose(v, 12)  # func
 
@@ -284,12 +277,15 @@ def test_interpolateValues_from_list():
     v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
     assert np.isclose(v, 9.0612244898)  # average
 
+    def max_value_interpolator(data, _xo, _yo):
+        return data.max()
+
     v = raster.interpolateValues(
         CLC_RASTER_PATH,
         point,
         pointSRS="europe_laea",
         mode="func",
-        func=lambda d, xo, yo: d.max(),
+        func=max_value_interpolator,
     )
     assert np.isclose(v, 12)  # func
 
@@ -437,24 +433,25 @@ def test_loadRaster():
 
 def test_createRasterLike():
     source = gdal.Open(CLC_RASTER_PATH)
-    sourceInfo = raster.rasterInfo(source)
+    sourceInfo = raster.rasterInfo(sourceDS=source)
 
-    data = raster.extractMatrix(source)
+    data = raster.extractMatrix(source=source)
 
     # From raster, no output
-    newRaster = raster.createRasterLike(source, data=data * 2)
+    newRaster = raster.createRasterLike(source=source, data=data * 2)
     newdata = raster.extractMatrix(newRaster)
     assert np.isclose(data, newdata / 2).all()
 
     # From raster, with output
-    raster.createRasterLike(source, data=data * 3, output=result("createRasterLike_A.tif"))
+    raster.createRasterLike(source=source, data=data * 3, output=result("createRasterLike_A.tif"))
     newdata = raster.extractMatrix(result("createRasterLike_A.tif"))
     assert np.isclose(data, newdata / 3).all()
 
     # From rasterInfo, no output
-    newRaster = raster.createRasterLike(sourceInfo, data=data * 4)
+    newRaster = raster.createRasterLike(source=sourceInfo, data=data * 4)
     newdata = raster.extractMatrix(newRaster)
-    assert np.isclose(data, newdata / 4).all()
+
+    assert np.isclose(data, newdata / 4).all(), f"data:\n{data}!=newdata\n:{newdata / 4}"
 
 
 def test_saveRasterAsTif():
@@ -638,7 +635,7 @@ def test_warpLike():
     assert raster.rasterInfo(_rstr).srs.IsSame(raster.rasterInfo(ELEVATION_PATH).srs)
 
     # must fail with meta and copyMetaData = True
-    with pytest.raises(raster.GeoKitRasterError):
+    with pytest.raises(GeoKitRasterError):
         _rstr = raster.warpLike(
             dataSource=SINGLE_HILL_PATH,
             contextSource=ELEVATION_PATH,
@@ -651,13 +648,14 @@ def test_warpLike():
         dataSource=SINGLE_HILL_PATH,
         contextSource=ELEVATION_PATH,
         copyMetadata=False,
-        dtype=5,
+        dtype="Float32",
     )
-    assert raster.rasterInfo(_rstr).dtype == 5
+    # The input raster are both in Float32
+    assert raster.rasterInfo(_rstr).data_type_name_str == "Float32"
 
 
 @pytest.fixture()
-def sieve_ds():
+def sieve_ds() -> np.ndarray:
     data_arr = np.array(
         [
             [0, 0, 1, 1, 1, 0, 0],
@@ -753,24 +751,23 @@ def sieve_mask():
     ],
 )
 def test_sieve(source, threshold, connectedness, mask, expected_output, request):
+    raster_fixture = request.getfixturevalue(source)
     if mask == "none":
-        arr_out = raster.extractMatrix(
-            raster.sieve(
-                source=request.getfixturevalue(source),
-                threshold=threshold,
-                connectedness=connectedness,
-                mask=mask,
-            )
+        sieved_raster = raster.sieve(
+            source=raster_fixture,
+            threshold=threshold,
+            connectedness=connectedness,
+            mask=mask,
         )
+        arr_out = raster.extractMatrix(source=sieved_raster)
     else:
-        arr_out = raster.extractMatrix(
-            raster.sieve(
-                source=request.getfixturevalue(source),
-                threshold=threshold,
-                connectedness=connectedness,
-                mask=request.getfixturevalue(mask),
-            )
+        sieved_raster = raster.sieve(
+            source=raster_fixture,
+            threshold=threshold,
+            connectedness=connectedness,
+            mask=request.getfixturevalue(mask),
         )
+        arr_out = raster.extractMatrix(source=sieved_raster)
 
     assert (arr_out == expected_output).all()
 
@@ -870,6 +867,33 @@ def test_warp_meta_argument_hard_drive():
     pathlib.Path.unlink(output_path)
 
 
+# def test_warp():
+# import numpy as np
+# import geokit as gk
+
+# raster_matrix_2x3 = np.array(
+#     [
+#         [5, 255, 0],
+#         [2, 3, 7],
+#     ],
+#     dtype=np.uint8,
+# )
+
+# raster = gk.raster.createRaster(
+#     bounds=[0, 0, 3, 2],
+#     pixelWidth=1,
+#     pixelHeight=1,
+#     data=raster_matrix_2x3,
+#     srs=4326,
+#     noData=255,
+#     # output=intermediate_raster_tif_str,
+# )
+
+# raster_warped = geokit.core.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
+# raster_warped_matrix = geokit.core.raster.extractMatrix(source=raster_warped)
+# print(raster_warped_matrix)
+# pass
+
+
 if __name__ == "__main__":
-    # test_interpolateValues()
-    test_interpolateValues_from_list()
+    test_createRasterLike()

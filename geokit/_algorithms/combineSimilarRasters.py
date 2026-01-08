@@ -9,13 +9,15 @@ from osgeo import gdal
 
 from geokit.core.raster import RasterInfo
 from geokit.core.regionmask import *
-from geokit.core.util import GeoKitError, get_common_dtype, nodata_equal
+from geokit.core.util import nodata_equal
 from geokit.raster import (
     createRaster,
     extractMatrix,
     loadRaster,
     rasterInfo,
 )
+from geokit.error import GeoKitError
+from geokit.c_data_type_handler import MinimumCDataTypeHandler
 
 
 def checkSimilarRasters(
@@ -94,13 +96,18 @@ def checkSimilarRasters(
             raise GeoKitError("noData mismatch between datasets.")
 
     # make sure the datatypes are the same or can be combined
-    dtypes = [rInfo.dtype for rInfo in infoDataset]
-    if rtol == 0 and not len(set(dtypes)):
+    list_of_datatypes_in_raster = [rInfo.data_type_name_str for rInfo in infoDataset]
+    list_of_minimum_values_in_raster = [rInfo.minimum_value for rInfo in infoDataset]
+    list_of_maximum_values_in_raster = [rInfo.maximum_value for rInfo in infoDataset]
+    if rtol == 0 and not len(set(list_of_datatypes_in_raster)):
         # no tolerance allowed - assume dtypes must also match exactly
         raise TypeError(f"dtypes or rasters differ but rtol is zero.")
     elif rtol > 0:
         # accept different dtypes as long as they can be combined into one
-        get_common_dtype(dtypes=dtypes, fallback=None)  # fail if no common dtype
+        list_of_numbers_to_consider = [*list_of_minimum_values_in_raster, *list_of_maximum_values_in_raster]
+        MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+            list_of_numbers=list_of_numbers_to_consider, minimum_gdal_type_list=list_of_datatypes_in_raster
+        )  # fail if no common dtype
     # return list of preloaded, similar datasets
     return datasets
 
@@ -175,19 +182,30 @@ def combineSimilarRasters(
     # GET REFERENCE CONTEXT FOR THE OUTPUT RASTER
 
     # determine info for all datasets
-    infoSet = [rasterInfo(d) for d in datasets]
+    raster_info_list = [rasterInfo(d) for d in datasets]
 
     # get reference srs - are all the same thanks to checkSimilarRasters
-    srs_ref = infoSet[0].srs
+    srs_ref = raster_info_list[0].srs
 
     # get the unique actual dtypes in input rasters
-    dtypes = sorted(set([_i.dtype for _i in infoSet]))
+    data_type_list = []
+    minimum_and_maximum_values = []
+    for current_raster_info in raster_info_list:
+        if current_raster_info.dtype is None:
+            raise GeoKitError("Input raster has no dtype.")
+        data_type_list.append(current_raster_info.data_type_name_str)
+        minimum_and_maximum_values.append(current_raster_info.minimum_value)
+        minimum_and_maximum_values.append(current_raster_info.maximum_value)
+
     # now get the most lightweight commonly usable dtype
-    dtype_ref = get_common_dtype(dtypes=dtypes, fallback=None)
+    gdal_data_type_as_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+        list_of_numbers=minimum_and_maximum_values, minimum_gdal_type_list=data_type_list
+    )
+    # get_common_dtype(dtypes=dtypes, fallback=None)
 
     # get the reference resolution in x and y dir as the most commonly used value
-    dx_ref = statistics.mode([_i.pixelWidth for _i in infoSet])
-    dy_ref = statistics.mode([_i.pixelHeight for _i in infoSet])
+    dx_ref = statistics.mode([_i.pixelWidth for _i in raster_info_list])
+    dy_ref = statistics.mode([_i.pixelHeight for _i in raster_info_list])
 
     # try to align all bounds to the first matching raster which has correct x_ref and y_ref resolution
     i_match = next(
@@ -195,8 +213,8 @@ def combineSimilarRasters(
             i
             for i, (x, y) in enumerate(
                 zip(
-                    [_i.pixelWidth for _i in infoSet],
-                    [_i.pixelHeight for _i in infoSet],
+                    [_i.pixelWidth for _i in raster_info_list],
+                    [_i.pixelHeight for _i in raster_info_list],
                 )
             )
             if x == dx_ref and y == dy_ref
@@ -205,12 +223,12 @@ def combineSimilarRasters(
     )
     if i_match is not None:
         # we have a "perfect" raster, use the min. bounds of that one as reference for all other rasters
-        boundsXmin_ref = infoSet[i_match].bounds[0]
-        boundsYmin_ref = infoSet[i_match].bounds[2]
+        boundsXmin_ref = raster_info_list[i_match].bounds[0]
+        boundsYmin_ref = raster_info_list[i_match].bounds[2]
     else:
         # we do not have any raster which matches both r_ref any y_ref in its resolution. Simply use the first raster.
-        boundsXmin_ref = infoSet[0].bounds[0]
-        boundsYmin_ref = infoSet[0].bounds[2]
+        boundsXmin_ref = raster_info_list[0].bounds[0]
+        boundsYmin_ref = raster_info_list[0].bounds[2]
         if verbose:
             print(
                 datetime.datetime.now(),
@@ -220,7 +238,7 @@ def combineSimilarRasters(
 
     # calculate the possibly adapted bounds for all datasets
     boundsSet = []
-    for _info in infoSet:
+    for _info in raster_info_list:
         # calculate the new bounds by aligning bottom left corner with boundsXmin_ref/boundsYmin_ref + multiple of cell size
         _bounds_Xmin = boundsXmin_ref + round((_info.bounds[0] - boundsXmin_ref) / dx_ref) * dx_ref
         _bounds_Ymin = boundsYmin_ref + round((_info.bounds[1] - boundsYmin_ref) / dy_ref) * dy_ref
@@ -248,7 +266,7 @@ def combineSimilarRasters(
     # get noData value from kwargs, else take from dataset infos
     noData_ref = kwargs.pop("noData", None)
     if noData_ref is None:
-        noDataSet = set([i.noData for i in infoSet])
+        noDataSet = set([i.noData for i in raster_info_list])
         assert len(noDataSet) == 1  # make sure, is enforced by checkSimilarRasters
         noData_ref = noDataSet.pop()
 
@@ -259,7 +277,7 @@ def combineSimilarRasters(
             createRaster(
                 bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
                 output=output,
-                dtype=dtype_ref,
+                dtype=gdal_data_type_as_string,
                 pixelWidth=dx_ref,
                 pixelHeight=dy_ref,
                 noData=noData_ref,
@@ -275,7 +293,7 @@ def combineSimilarRasters(
         # create raster in memory
         outputDS = createRaster(
             bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
-            dtype=dtype_ref,
+            dtype=gdal_data_type_as_string,
             pixelWidth=dx_ref,
             pixelHeight=dy_ref,
             noData=noData_ref,
@@ -312,7 +330,7 @@ def combineSimilarRasters(
 
         # extract the dataset's matrix
         dMatrix = extractMatrix(datasets[i])
-        if not infoSet[i].yAtTop:
+        if not raster_info_list[i].yAtTop:
             dMatrix = dMatrix[::-1, :]
 
         # Calculate starting indices
@@ -326,7 +344,7 @@ def combineSimilarRasters(
         # create selector
         if not combiningFunc is None:
             # update rasterInfo since we might have slightly changed cell/bounds info
-            rInfo_dict = infoSet[i]._asdict()
+            rInfo_dict = raster_info_list[i]._asdict()
             rInfo_dict["bounds"] = boundsSet[i]
             rInfo_dict["pixelWidth"] = dx_ref
             rInfo_dict["pixelHeight"] = dy_ref
@@ -338,8 +356,8 @@ def combineSimilarRasters(
             rInfo_dict["yMax"] = boundsSet[i][3]
             rInfo_upd = RasterInfo(**rInfo_dict)
             writeMatrix = combiningFunc(mMatrix=mMatrix, mInfo=mInfo, dMatrix=dMatrix, dInfo=rInfo_upd)
-        elif not infoSet[i].noData is None:
-            sel = dMatrix != infoSet[i].noData
+        elif not raster_info_list[i].noData is None:
+            sel = dMatrix != raster_info_list[i].noData
             mMatrix[sel] = dMatrix[sel]
             writeMatrix = mMatrix
         else:
@@ -351,7 +369,7 @@ def combineSimilarRasters(
 
         # update metaData, maybe
         if updateMeta:
-            meta.update(infoSet[i].meta)
+            meta.update(raster_info_list[i].meta)
 
     if updateMeta:
         outputDS.SetMetadata(meta)

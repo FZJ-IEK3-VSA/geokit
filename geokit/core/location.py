@@ -9,11 +9,7 @@ from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.data_types import srs_input, numeric
-
-
-class GeoKitLocationError(UTIL.GeoKitError):
-    pass
-
+from geokit.error import GeoKitLocationError
 
 LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 
@@ -477,7 +473,7 @@ class LocationSet(object):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
 
-    def bisect(self, lon=True, lat=True, delta=0.005):
+    def bisect(self, lon=True, lat=True):
         """Cluster the locations by finding a bisecting line in lat/lon
         coordinates in either (or both) directions.
 
@@ -492,9 +488,6 @@ class LocationSet(object):
         lat : bool
             Split locations in the latitude direction
 
-        delta : float
-            The search speed
-            * Smaller values will take longer to converge on the true bisector
 
         Yields
         ------

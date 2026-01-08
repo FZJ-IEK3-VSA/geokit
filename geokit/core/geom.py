@@ -18,11 +18,7 @@ from osgeo import gdal, ogr, osr
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.data_types import AxHands, numeric, srs_input
-
-
-class GeoKitGeomError(UTIL.GeoKitError):
-    pass
-
+from geokit.error import GeoKitGeomError
 
 POINT = ogr.wkbPoint
 MULTIPOINT = ogr.wkbMultiPoint
@@ -991,12 +987,15 @@ def drawPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
 
 
 def drawMultiPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False):
-    kwargs = dict(marker=".", color="#C32148", linestyle="None")
-    if not colorVal is None:
-        kwargs["color"] = colorVal
-    kwargs.update(plotargs)
+    if skip:
+        kwargs = plotargs.copy()
+    else:
+        kwargs = dict(marker=".", color="#C32148", linestyle="None")
+        if not colorVal is None:
+            kwargs["color"] = colorVal
+        kwargs.update(plotargs)
 
-    points = extractVerticies(g)
+        points = extractVerticies(g)
     return ax.plot(points[:, 0], points[:, 1], **kwargs)
 
 
@@ -1027,7 +1026,7 @@ def drawMultiLine(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=No
 
 def drawLinearRing(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
     g.CloseRings()
-    return drawLine(g, plotargs, ax)
+    return drawLine(g, plotargs, ax, colorVal=colorVal)
 
 
 def drawPolygon(
@@ -1220,7 +1219,7 @@ def drawGeoms(
         pass
     else:
         raise Exception(
-            "Expected None or matplotlib.axes._axes.Axes object forr the 'ax' argument. However, an object of type: "
+            "Expected None or matplotlib.axes._axes.Axes object for the 'ax' argument. However, an object of type: "
             + str(type(ax))
             + " has been provided."
         )

@@ -1,5 +1,4 @@
 from geokit.core.raster import (
-    GeoKitRasterError,
     contours,
     createRaster,
     createRasterLike,
@@ -7,7 +6,6 @@ from geokit.core.raster import (
     drawSmopyMap,
     extractMatrix,
     extractValues,
-    gdalType,
     gradient,
     indexToCoord,
     interpolateValues,
@@ -22,3 +20,5 @@ from geokit.core.raster import (
     warp,
     warpLike,
 )
+
+from geokit.error import GeoKitGeomError

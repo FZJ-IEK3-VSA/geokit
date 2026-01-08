@@ -22,6 +22,7 @@ parts:
       - file: Examples/example_05_Extent.ipynb
       - file: Examples/example_06_RegionMask.ipynb
       - file: Examples/example_07_determine_offshore_turbine_depths.ipynb
+      - file: Examples/example_08_c_datatypes.ipynb
 
   - caption: API
     chapters:

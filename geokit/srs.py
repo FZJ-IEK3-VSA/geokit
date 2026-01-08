@@ -3,9 +3,9 @@ from geokit.core.srs import (
     EPSG3857,
     EPSG4326,
     SRSCOMMON,
-    GeoKitSRSError,
     centeredLAEA,
     loadSRS,
     tileIndexAt,
     xyTransform,
 )
+from geokit.error import GeoKitSRSError

@@ -4,13 +4,12 @@ import pathlib
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from tempfile import TemporaryDirectory
 from typing import Literal, NamedTuple, Callable
 import warnings
 
 import matplotlib.axes._axes
-import matplotlib.colorbar
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
@@ -19,6 +18,7 @@ from osgeo import gdal, ogr, osr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
+from geokit.c_data_type_handler import MinimumCDataTypeHandler, geokit_c_data_types_literal
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
@@ -28,16 +28,11 @@ from geokit.data_types import (
     load_raster_input,
     srs_input,
     numeric,
-    gdal_raster_data_types,
     RasterInfo,
     ptValue,
     AxHands,
 )
-
-
-class GeoKitRasterError(UTIL.GeoKitError):
-    pass
-
+from geokit.error import GeoKitGeomError, GeoKitRasterError
 
 if "win" in sys.platform:
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -76,57 +71,58 @@ def loadRaster(source: load_raster_input, mode=0) -> gdal.Dataset:
     return ds
 
 
-# GDAL type mapper
-_gdalIntToType = dict((v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items()))
-_gdalType = {
-    bool: "GDT_Byte",
-    int: "GDT_Int32",
-    float: "GDT_Float64",
-    "bool": "GDT_Byte",
-    "int8": "GDT_Byte",
-    "int16": "GDT_Int16",
-    "int32": "GDT_Int32",
-    "int64": "GDT_Int32",
-    "uint8": "GDT_Byte",
-    "uint16": "GDT_UInt16",
-    "uint32": "GDT_UInt32",
-    "float32": "GDT_Float32",
-    "float64": "GDT_Float64",
-}
+# # GDAL type mapper
+# _gdalIntToType = dict((v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items()))
+# _gdalType = {
+#     bool: "GDT_Byte",
+#     int: "GDT_Int32",
+#     float: "GDT_Float64",
+#     "bool": "GDT_Byte",
+#     "int8": "GDT_Byte",
+#     "int16": "GDT_Int16",
+#     "int32": "GDT_Int32",
+#     "int64": "GDT_Int32",
+#     "uint8": "GDT_Byte",
+#     "uint16": "GDT_UInt16",
+#     "uint32": "GDT_UInt32",
+#     "float32": "GDT_Float32",
+#     "float64": "GDT_Float64",
+# }
 
 
-def gdalType(s):
-    """Tries to determine gdal datatype from the given input type."""
-    if s is None:
-        return "GDT_Unknown"
-    elif isinstance(s, str):
-        if hasattr(gdal, s):
-            return s
-        elif s.lower() in _gdalType:
-            return _gdalType[s.lower()]
-        elif hasattr(gdal, "GDT_%s" % s):
-            return "GDT_%s" % s
-        elif s == "float" or s == "int" or s == "bool":
-            return gdalType(np.dtype(s))
+# # TODO check this function
+# def gdalType(s):
+#     """Tries to determine gdal datatype from the given input type."""
+#     if s is None:
+#         return "GDT_Unknown"
+#     elif isinstance(s, str):
+#         if hasattr(gdal, s):
+#             return s
+#         elif s.lower() in _gdalType:
+#             return _gdalType[s.lower()]
+#         elif hasattr(gdal, "GDT_%s" % s):
+#             return "GDT_%s" % s
+#         elif s == "float" or s == "int" or s == "bool":
+#             return gdalType(np.dtype(s))
 
-    elif isinstance(s, int):
-        return _gdalIntToType[s]  # If an int is given, it's probably
-        #  the GDAL type indicator (and not a sample data value)
-    elif isinstance(s, np.dtype):
-        return gdalType(str(s))
-    elif isinstance(s, np.generic):
-        return gdalType(s.dtype)
-    elif s is bool:
-        return _gdalType[bool]
-    elif s is int:
-        return _gdalType[int]
-    elif s is float:
-        return _gdalType[float]
-    elif isinstance(s, type):  # Default to Numpy for all other 'types'
-        return gdalType(np.dtype(s))
-    elif isinstance(s, Iterable):
-        return gdalType(s[0])
-    raise GeoKitRasterError("GDAL type could not be determined")
+#     elif isinstance(s, int):
+#         return _gdalIntToType[s]  # If an int is given, it's probably
+#         #  the GDAL type indicator (and not a sample data value)
+#     elif isinstance(s, np.dtype):
+#         return gdalType(str(s))
+#     elif isinstance(s, np.generic):
+#         return gdalType(s.dtype)
+#     elif s is bool:
+#         return _gdalType[bool]
+#     elif s is int:
+#         return _gdalType[int]
+#     elif s is float:
+#         return _gdalType[float]
+#     elif isinstance(s, type):  # Default to Numpy for all other 'types'
+#         return gdalType(np.dtype(s))
+#     elif isinstance(s, Iterable):
+#         return gdalType(s[0])
+#     raise GeoKitRasterError("GDAL type could not be determined")
 
 
 ####################################################################
@@ -138,13 +134,13 @@ def createRaster(
     output: None | str | pathlib.Path = None,
     pixelWidth: numeric = 100,
     pixelHeight: numeric = 100,
-    dtype: None | gdal_raster_data_types = None,
+    dtype: None | geokit_c_data_types_literal = None,
     srs: srs_input | None = None,
     compress: bool = True,
     noData: numeric | None = None,
     overwrite: bool = True,
     fill: numeric | None = None,
-    data=None,
+    data: np.ndarray | None = None,
     meta: dict | None = None,
     scale: numeric | None = 1,
     offset: numeric = 0,
@@ -185,7 +181,7 @@ def createRaster(
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : gdal_raster_data_types, int, none
+    dtype : geokit_c_data_types_literal, none
         The datatype of the represented by the created raster's band
         * Options are: Byte, Int16, Int32, Int64, Float32, Float64
         * If dtype is None and data is None, the assumed datatype is a 'Byte'
@@ -283,13 +279,35 @@ def createRaster(
     cols = int(round((x_max - x_min) / pixelWidth))
     rows = int(round((y_max - y_min) / abs(pixelHeight)))
 
-    # Get DataType
-    if dtype is not None:  # a dtype was given, use it!
-        dtype = gdalType(dtype)
-    elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
-        dtype = gdalType(data.dtype)
-    else:  # Otherwise, just assume we want a Byte
-        dtype = "GDT_Byte"
+    list_of_numbers = []
+    minimum_gdal_type_list = []
+    if isinstance(dtype, str):
+        minimum_gdal_type_list.append(dtype)
+    if isinstance(noData, numeric):
+        list_of_numbers.append(noData)
+
+    if isinstance(fill, numeric):
+        list_of_numbers.append(fill)
+    if isinstance(data, np.ndarray):
+        numpy_data_type = str(data.dtype)
+        minimum_gdal_type_list.append(numpy_data_type)
+        list_of_numbers.append(data.min())
+        list_of_numbers.append(data.max())
+    elif data is None:
+        pass
+    else:
+        raise GeoKitRasterError("Data must be given as a numpy ndarray or None")
+
+    data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
+    )
+    # # Get DataType
+    # if dtype is not None:  # a dtype was given, use it!
+    #     dtype = gdalType(dtype)
+    # elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
+    #     dtype = gdalType(data.dtype)
+    # else:  # Otherwise, just assume we want a Byte
+    #     dtype = "GDT_Byte"
 
     # Open the driver
     opts = OrderedDict()
@@ -301,10 +319,10 @@ def createRaster(
 
     if output is None:
         driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-        raster: gdal.Dataset = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create("", cols, rows, 1, data_type_constant, opts)
     else:
         driver: gdal.Driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
-        raster: gdal.Dataset = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create(output, cols, rows, 1, data_type_constant, opts)
 
     if raster is None:
         raise GeoKitRasterError("Failed to create raster")
@@ -380,7 +398,14 @@ def createRaster(
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
+def createRasterLike(
+    source: load_raster_input | RasterInfo,
+    copyMetadata: bool = True,
+    metadata: dict | None = None,
+    data: None | np.ndarray = None,
+    dtype: None | geokit_c_data_types_literal = None,
+    **kwargs,
+):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -390,23 +415,23 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
       source
     """
     if UTIL.isRaster(source):
-        source = rasterInfo(source)
-
-    if not isinstance(source, RasterInfo):
+        raster_info = rasterInfo(source)
+    elif isinstance(source, RasterInfo):
+        raster_info = source
+    else:
         raise GeoKitRasterError("Could not understand source")
 
     if copyMetadata and metadata is not None:
         raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
-    bounds = kwargs.pop("bounds", source.bounds)
-    pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
-    pixelHeight = kwargs.pop("pixelHeight", source.pixelHeight)
-    dtype = kwargs.pop("dtype", source.dtype)
-    srs = kwargs.pop("srs", source.srs)
-    noData = kwargs.pop("noData", source.noData)
-
+    bounds = kwargs.pop("bounds", raster_info.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", raster_info.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", raster_info.pixelHeight)
+    srs = kwargs.pop("srs", raster_info.srs)
+    noData = kwargs.pop("noData", raster_info.noData)
+    data_type_as_string = kwargs.pop("data_type_as_string", dtype)
     if copyMetadata:
-        meta = kwargs.pop("meta", source.meta)
+        meta = kwargs.pop("meta", raster_info.meta)
     else:
         meta = metadata
 
@@ -414,10 +439,11 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
-        dtype=dtype,
         srs=srs,
         noData=noData,
         meta=meta,
+        dtype=data_type_as_string,
+        data=data,
         **kwargs,
     )
 
@@ -451,7 +477,7 @@ def saveRasterAsTif(source: gdal.Dataset, output: str, **kwargs):
         pixelWidth=sourceInfo.dx,
         pixelHeight=sourceInfo.dy,
         noData=sourceInfo.noData,
-        dtype=sourceInfo.dtype,
+        dtype=sourceInfo.data_type_name_str,
         srs=sourceInfo.srs,
         data=data,
         output=output,
@@ -817,10 +843,24 @@ def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
 
     # get extent and resolution
     sourceBand = sourceDS.GetRasterBand(1)
+    # Is required to get the maximum and minimum value of the raster data
+
     output["dtype"] = sourceBand.DataType
     output["noData"] = sourceBand.GetNoDataValue()
     output["scale"] = sourceBand.GetScale()
     output["offset"] = sourceBand.GetOffset()
+
+    try:
+        sourceBand.ComputeStatistics(0)
+
+        maximum_value = sourceBand.GetMaximum()
+        minimum_value = sourceBand.GetMinimum()
+
+        output["maximum_value"] = maximum_value
+        output["minimum_value"] = minimum_value
+    except:
+        output["maximum_value"] = output["noData"]
+        output["minimum_value"] = output["noData"]
 
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
@@ -1455,7 +1495,7 @@ def interpolateValues(
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True, **kwargs)
         if asSingle is True:
             result = [values]
         else:
@@ -1468,7 +1508,7 @@ def interpolateValues(
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1493,7 +1533,7 @@ def interpolateValues(
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
 
         if asSingle is True:
             assert isinstance(values, ptValue)
@@ -1514,7 +1554,7 @@ def interpolateValues(
 
     elif mode == "average":  # Get the average in a window
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1533,7 +1573,7 @@ def interpolateValues(
         if func is None:
             raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1563,14 +1603,14 @@ def interpolateValues(
 
 
 def mutateRaster(
-    source,
-    processor=None,
-    bounds=None,
-    boundsSRS="latlon",
-    autocorrect=False,
-    output=None,
-    dtype=None,
-    **kwargs,
+    source: load_raster_input,
+    processor: Callable | None = None,
+    bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
+    boundsSRS: srs_input = "latlon",
+    autocorrect: bool = False,
+    output: str | None = None,
+    dtype: geokit_c_data_types_literal | None = None,
+    **create_raster_kwargs,
 ):
     """Process all pixels in a raster according to a given function. The boundaries
     of the resulting raster can be changed as long as the new boundaries are within
@@ -1663,11 +1703,11 @@ def mutateRaster(
     workingExtent = dsInfo.bounds if (bounds is None) else bounds
 
     # Perform processing
-    processedData = processor(sourceData) if processor else sourceData
-    if dtype and processedData.dtype != dtype:
-        processedData = processedData.astype(dtype)
+    if processor:
+        processedData = processor(sourceData)
 
-    dtype = gdalType(processedData.dtype)
+    else:
+        processedData = sourceData
 
     # Ensure returned matrix is okay
     if processedData.shape != sourceData.shape:
@@ -1676,18 +1716,24 @@ def mutateRaster(
             format(processedData.shape, sourceData.shape),
         )
     del sourceData
+    list_of_numbers = [processedData.min(), processedData.max()]
+    minimum_gdal_type_list = [str(processedData.dtype)]
+    if isinstance(dtype, str):
+        minimum_gdal_type_list.append(dtype)
 
+    gdal_data_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
+    )
     # Create an output raster
     if output is None:
-        dtype = gdalType(processedData.dtype) if dtype is None else gdalType(dtype)
         return UTIL.quickRaster(
             dy=dsInfo.dy,
             dx=dsInfo.dx,
             bounds=workingExtent,
-            dtype=dtype,
+            dtype=gdal_data_string,
             srs=dsInfo.srs,
             data=processedData,
-            **kwargs,
+            **create_raster_kwargs,
         )
 
     else:
@@ -1698,7 +1744,8 @@ def mutateRaster(
             srs=dsInfo.srs,
             data=processedData,
             output=output,
-            **kwargs,
+            dtype=gdal_data_string,
+            **create_raster_kwargs,
         )
 
         return output
@@ -2018,7 +2065,7 @@ def drawRaster(
         new_main_axis = False
     else:
         raise Exception(
-            "Expected None or matplotlib.axes._axes.Axes object forr the 'ax' argument. However, an object of type: "
+            "Expected None or matplotlib.axes._axes.Axes object for the 'ax' argument. However, an object of type: "
             + str(type(ax))
             + " has been provided."
         )
@@ -2180,7 +2227,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # Polygonize geometry
     result = gdal.Polygonize(band, maskBand, vecLyr, 0)
     if result != 0:
-        raise GEOM.GeoKitGeomError("Failed to polygonize geometry")
+        raise GeoKitGeomError("Failed to polygonize geometry")
 
     # Check the geoms
     ftrN = vecLyr.GetFeatureCount()
@@ -2366,7 +2413,7 @@ def warp(
     pixelWidth: numeric | None = None,
     srs: srs_input | None = None,
     bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
-    dtype=None,
+    dtype: None | geokit_c_data_types_literal = None,
     noData=None,
     fill: numeric | None = None,
     overwrite: bool = True,
@@ -2499,12 +2546,34 @@ def warp(
             pixelWidth = (bounds[2] - bounds[0]) / (dsInfo.xWinSize * 1.1)
     bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
-    if dtype is None:
-        dtype = dsInfo.dtype
-    dtype = gdalType(dtype)
-
     if noData is None:
-        noData = dsInfo.noData
+        noDataRead = dsInfo.noData
+    else:
+        noDataRead = noData
+    list_of_numbers = []
+    if isinstance(noDataRead, (numeric, bool)):
+        list_of_numbers.append(noDataRead)
+    elif noDataRead is None:
+        pass
+    else:
+        raise GeoKitRasterError("noData must be a numeric or boolean value but got: %s" % str(type(noDataRead)))
+    if isinstance(fill, (numeric, bool)):
+        list_of_numbers.append(fill)
+    elif fill is None:
+        pass
+    else:
+        raise GeoKitRasterError("fill must be a numeric boolean or None value but got: %s" % str(type(fill)))
+
+    list_of_datatypes = []
+    if isinstance(dtype, str):
+        list_of_datatypes.append(dtype)
+    elif dtype is None:
+        pass
+    else:
+        raise GeoKitRasterError("dtype must be a gdal data type, string or None value but got: %s" % str(type(dtype)))
+    list_of_datatypes.append(dsInfo.data_type_name_str)
+    list_of_numbers.append(dsInfo.minimum_value)
+    list_of_numbers.append(dsInfo.maximum_value)
 
     # If a cutline is given, create the output
     if cutline is not None:
@@ -2529,6 +2598,12 @@ def warp(
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
+        gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
+        )
+
         # # Check some for bad input configurations
         # if not srs is None:
         #     if (pixelHeight is None or pixelWidth is None):
@@ -2549,13 +2624,13 @@ def warp(
 
         # Let gdalwarp do everything...
         gdal_warp_options = gdal.WarpOptions(
-            outputType=getattr(gdal, dtype),
+            outputType=gdal_data_type_constant,
             xRes=pixelWidth,
             yRes=pixelHeight,
             creationOptions=co,
             outputBounds=bounds,
             dstSRS=srs,
-            dstNodata=noData,
+            dstNodata=noDataRead,
             resampleAlg=resampleAlg,
             copyMetadata=copyMeta,
             targetAlignedPixels=aligned,
@@ -2573,6 +2648,11 @@ def warp(
         if "cropToCutline" in kwargs:
             msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
             warnings.warn(msg, UserWarning)
+        gdal_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
+        )
 
         # Warp to a raster in memory
         destination_raster = UTIL.quickRaster(
@@ -2580,8 +2660,8 @@ def warp(
             srs=srs,
             dx=pixelWidth,
             dy=pixelHeight,
-            dtype=dtype,
-            noData=noData,
+            dtype=gdal_data_type_string,
+            noData=noDataRead,
             fill=fill,
         )
 
@@ -2607,7 +2687,7 @@ def warp(
     return destination_raster
 
 
-def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
+def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, copyMetadata: bool = False, **kwargs):
     """
     Convenience function to warp a raster to the context of another raster
     as returned from a call to rasterInfo(contextSource).
@@ -2640,7 +2720,7 @@ def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
     else:
         meta = kwargs.pop("meta", None)
     print(meta)
-    dtype = kwargs.pop("dtype", dataInfo.dtype)
+    dtype = kwargs.pop("dtype", dataInfo.data_type_name_str)
     noData = kwargs.pop("noData", dataInfo.noData)
     if "cutline" in kwargs:
         # make sure that the cells outside are filled with noData if not specified
