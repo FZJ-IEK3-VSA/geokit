@@ -1,16 +1,15 @@
 from functools import reduce
 from os.path import dirname, join
-
+import pathlib
 import geopandas as gpd
 import pandas as pd
 import pytest
+from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
 from geokit.core.get_test_data import get_test_data
-from geokit.core.vector import GeoKitVectorError
+from geokit.error import GeoKitError, GeoKitVectorError
 from test.helpers import *
-from typeguard import suppress_type_checks
-
 
 # ogrType
 
@@ -148,7 +147,7 @@ def test_extractFeature():
     try:
         geom, attr = vector.extractFeature(BOXES, where="smart=0")
         assert False
-    except util.GeoKitError:
+    except GeoKitError:
         assert True
     else:
         assert False
@@ -458,6 +457,8 @@ def test_vectorInfo():
 
 def test_rasterize():
     # Simple vectorization to file
+
+    pathlib.Path(result("rasterized1.tif")).unlink(missing_ok=True)
     r = vector.rasterize(
         source=AACHEN_ZONES,
         pixelWidth=250,
@@ -465,7 +466,7 @@ def test_rasterize():
         output=result("rasterized1.tif"),
     )
     mat1 = raster.extractMatrix(r)
-    assert np.isclose(mat1.mean(), 0.13910192)
+    assert np.isclose(mat1.mean(), 0.13910192), f"mat1.mean()={mat1.mean()}!=0.13910192"
 
     # Simple vectorization to mem
     r = vector.rasterize(
@@ -476,6 +477,7 @@ def test_rasterize():
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2, mat1).all()
 
+    pathlib.Path(result("rasterized2.tif")).unlink(missing_ok=True)
     # Change srs to disc
     r = vector.rasterize(
         source=AACHEN_ZONES,
@@ -487,6 +489,7 @@ def test_rasterize():
     mat = raster.extractMatrix(r)
     assert np.isclose(mat.mean(), 0.12660478)
 
+    pathlib.Path(result("rasterized3.tif")).unlink(missing_ok=True)
     # Write attribute values to disc
     r = vector.rasterize(
         source=AACHEN_ZONES,
@@ -508,6 +511,7 @@ def test_rasterize():
         pixelHeight=250,
         noData=-1,
         where="YEAR>2000",
+        dtype="Float32",
     )
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
@@ -566,4 +570,4 @@ def test_applyGeopandasMethod():
 
 
 if __name__ == "__main__":
-    test_extractAndClipFeatures()
+    test_rasterize()

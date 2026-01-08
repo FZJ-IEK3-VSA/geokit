@@ -9,11 +9,7 @@ from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.data_types import srs_input, numeric
-
-
-class GeoKitLocationError(UTIL.GeoKitError):
-    pass
-
+from geokit.error import GeoKitLocationError
 
 LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 

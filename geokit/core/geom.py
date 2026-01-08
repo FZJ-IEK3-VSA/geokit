@@ -18,11 +18,7 @@ from osgeo import gdal, ogr, osr
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.data_types import AxHands, numeric, srs_input
-
-
-class GeoKitGeomError(UTIL.GeoKitError):
-    pass
-
+from geokit.error import GeoKitGeomError
 
 POINT = ogr.wkbPoint
 MULTIPOINT = ogr.wkbMultiPoint
@@ -1223,7 +1219,7 @@ def drawGeoms(
         pass
     else:
         raise Exception(
-            "Expected None or matplotlib.axes._axes.Axes object forr the 'ax' argument. However, an object of type: "
+            "Expected None or matplotlib.axes._axes.Axes object for the 'ax' argument. However, an object of type: "
             + str(type(ax))
             + " has been provided."
         )

@@ -10,12 +10,8 @@ from osgeo import gdal, ogr, osr
 
 from geokit.core import geom as GEOM
 from geokit.core import util as UTIL
-from geokit.data_types import srs_input, TransformedPointsXY, TransformedPointsXYZ
-
-
-class GeoKitSRSError(UTIL.GeoKitError):
-    pass
-
+from geokit.data_types import TransformedPointsXY, TransformedPointsXYZ, srs_input
+from geokit.error import GeoKitSRSError
 
 # Basic loader
 

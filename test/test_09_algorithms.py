@@ -11,6 +11,7 @@ from test.helpers import (
     DIVIDED_RASTER_2_PATH,
     DIVIDED_RASTER_3_PATH,
 )
+from geokit.error import GeoKitError
 
 
 def test_checkSimilarRasters():
@@ -64,13 +65,13 @@ def test_checkSimilarRasters():
     )
 
     # must fail for the shifted bounds...
-    with pytest.raises(util.GeoKitError):
+    with pytest.raises(GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_boundschanged] + test_rasters[1:],
             rtol=0,  # no tolerance = exact match
         )
     # ... and the shifted x res
-    with pytest.raises(util.GeoKitError):
+    with pytest.raises(GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_dxchanged] + test_rasters[1:],
             rtol=0,  # no tolerance = exact match
@@ -84,7 +85,7 @@ def test_checkSimilarRasters():
         rtol=0.00001,  # normal tolerance
     )
     # but not when rtol is too tight
-    with pytest.raises(util.GeoKitError):
+    with pytest.raises(GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_boundschanged] + test_rasters[1:],
             rtol=0.00000000001,  # super narrow tolerance
@@ -95,7 +96,7 @@ def test_checkSimilarRasters():
         rtol=0.00001,  # normal tolerance
     )
     # and again fail for an excessively tight tolerance
-    with pytest.raises(util.GeoKitError):
+    with pytest.raises(GeoKitError):
         checkSimilarRasters(
             datasets=[rstr_dxchanged] + test_rasters[1:],
             rtol=0.00000000001,  # super narrow tolerance
@@ -176,7 +177,7 @@ def test_combineSimilarRasters():
     ).all()
 
     # now try the same again but WITHOUT prewarp - must fail
-    with pytest.raises(util.GeoKitError):
+    with pytest.raises(GeoKitError):
         combineSimilarRasters(
             datasets=[
                 DIVIDED_RASTER_1_SHRUNK,
@@ -189,3 +190,7 @@ def test_combineSimilarRasters():
             updateMeta=False,
             allowNumericMismatch=False,  # not allowed to prewarp rasters to same context
         )
+
+
+if __name__ == "__main__":
+    test_combineSimilarRasters()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geokit"
-version = "1.6.0"
+version = "1.7.0"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
   { name = "David Severin Ryberg" },
@@ -23,7 +23,7 @@ where = ["."]
 [tool.setuptools.package-data]
 "*" = ["*.*"]
 
-#Configureation options
+#Configuration options
 # https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options
 
 [tool.pytest.ini_options]

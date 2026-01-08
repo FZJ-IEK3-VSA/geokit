@@ -3,13 +3,14 @@
 # 							   isVector, isRaster, scaleMatrix, KernelProcessor, drawImage)
 
 from geokit.core.util import (
-    GeoKitError,
     KernelProcessor,
     compare_geoms,
     drawImage,
     fitBoundsTo,
-    get_common_dtype,
     isRaster,
     isVector,
     scaleMatrix,
 )
+
+
+from geokit.error import GeoKitError

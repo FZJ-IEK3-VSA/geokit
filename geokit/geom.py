@@ -1,5 +1,4 @@
 from geokit.core.geom import (
-    GeoKitGeomError,
     applyBuffer,
     box,
     convertGeoJson,
@@ -28,3 +27,4 @@ from geokit.core.geom import (
     tileize,
     transform,
 )
+from geokit.error import GeoKitGeomError

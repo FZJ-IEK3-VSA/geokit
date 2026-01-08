@@ -274,3 +274,7 @@ def test_ContourGenerateEx_3x3_raster():
                 " The area was " + str(countour_data_frame.iloc[1].geom.Area()) + " even though 3 was expected"
             )
         )
+
+
+def test_gdal_data_types():
+    pass
