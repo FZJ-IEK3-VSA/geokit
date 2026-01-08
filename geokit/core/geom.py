@@ -987,12 +987,15 @@ def drawPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
 
 
 def drawMultiPoint(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None, skip=False):
-    kwargs = dict(marker=".", color="#C32148", linestyle="None")
-    if not colorVal is None:
-        kwargs["color"] = colorVal
-    kwargs.update(plotargs)
+    if skip:
+        kwargs = plotargs.copy()
+    else:
+        kwargs = dict(marker=".", color="#C32148", linestyle="None")
+        if not colorVal is None:
+            kwargs["color"] = colorVal
+        kwargs.update(plotargs)
 
-    points = extractVerticies(g)
+        points = extractVerticies(g)
     return ax.plot(points[:, 0], points[:, 1], **kwargs)
 
 
@@ -1023,7 +1026,7 @@ def drawMultiLine(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=No
 
 def drawLinearRing(g, plotargs: dict, ax: matplotlib.axes._axes.Axes, colorVal=None):
     g.CloseRings()
-    return drawLine(g, plotargs, ax)
+    return drawLine(g, plotargs, ax, colorVal=colorVal)
 
 
 def drawPolygon(

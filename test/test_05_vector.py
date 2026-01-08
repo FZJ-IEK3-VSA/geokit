@@ -132,6 +132,7 @@ def test_extractFeatures():
     assert vi["name"][0] == "ron"  # attribute mismatch
 
 
+@pytest.mark.filterwarnings("ignore:extractFeature is deprecated use extractFeatures instead.")
 def test_extractFeature():
     # test succeed
     geom, attr = vector.extractFeature(BOXES, where=1)

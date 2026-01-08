@@ -117,6 +117,7 @@ def test_RegionMask_fromGeom():
     assert rm4.extent.srs.IsSame(_laea)
 
 
+@pytest.mark.filterwarnings("ignore:extractFeature is deprecated use extractFeatures instead.")
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
     rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)

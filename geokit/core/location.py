@@ -473,7 +473,7 @@ class LocationSet(object):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
 
-    def bisect(self, lon=True, lat=True, delta=0.005):
+    def bisect(self, lon=True, lat=True):
         """Cluster the locations by finding a bisecting line in lat/lon
         coordinates in either (or both) directions.
 
@@ -488,9 +488,6 @@ class LocationSet(object):
         lat : bool
             Split locations in the latitude direction
 
-        delta : float
-            The search speed
-            * Smaller values will take longer to converge on the true bisector
 
         Yields
         ------
