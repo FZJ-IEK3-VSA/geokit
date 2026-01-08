@@ -15,6 +15,8 @@ from types import GeneratorType
 from typing import NamedTuple
 
 import matplotlib.axis
+import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import pandas.core.series
@@ -626,8 +628,6 @@ def drawImage(
         ax = ax.ax
     if ax is None:
         newAxis = True
-
-        import matplotlib.pyplot as plt
 
         plt.figure(figsize=figsize)
 
