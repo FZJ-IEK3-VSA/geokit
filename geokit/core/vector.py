@@ -8,7 +8,7 @@ from collections import OrderedDict, defaultdict, namedtuple
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
 from typing import Generator
-from geokit.data_types import numeric, load_raster_input, srs_input, load_vector_input
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ from geokit.core import raster as RASTER
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.extent import Extent
+from geokit.data_types import load_raster_input, load_vector_input, numeric, srs_input
 
 
 class GeoKitVectorError(UTIL.GeoKitError):
@@ -471,7 +472,6 @@ def extractFeatures(
     skipMissingGeoms=True,
     layerName=None,
     spatialPredicate="Touches",
-    **kwargs,
 ) -> pd.DataFrame | pd.Series | Generator:
     """Creates a generator which extract the features contained within the source.
 
@@ -598,7 +598,6 @@ def extractFeature(
     srs=None,
     onlyGeom=False,
     onlyAttr=False,
-    **kwargs,
 ) -> UTIL.Feature | ogr.Geometry | dict:
     """Convenience function calling extractFeatures which assumes there is only
     one feature to extract.
@@ -642,6 +641,7 @@ def extractFeature(
     * If onlyGeom is True: ogr.Geometry
     * If onlyAttr is True: dict
     """
+    warnings.warn(message="extractFeature is deprecated use extractFeatures instead.", category=DeprecationWarning)
     if isinstance(where, int):
         ds = loadVector(source)
         lyr = ds.GetLayer()
@@ -1459,8 +1459,8 @@ def mutateVector(
     fieldDef=None,
     output=None,
     keepAttributes=True,
-    _slim=False,
-    **kwargs,
+    _slim: bool = False,
+    **create_vector_kwargs,
 ) -> None | gdal.Dataset | str:
     """Process a vector dataset according to an arbitrary function.
 
@@ -1525,6 +1525,8 @@ def mutateVector(
             * Unless they are over written by the processor
         If False, only the newly specified attributes are kept
 
+    _slim: bool
+
     Returns
     -------
     * If 'output' is None: gdal.Dataset
@@ -1579,10 +1581,11 @@ def mutateVector(
             geoms.geom.apply(lambda x: x.AssignSpatialReference(srs))
 
     # Create a new shapefile from the results
-    if _slim:
+
+    if _slim is True:
         return createVector(geoms.geom)
     else:
-        return createVector(geoms, srs=srs, output=output, **kwargs)
+        return createVector(geoms, srs=srs, output=output, fieldDef=fieldDef, **create_vector_kwargs)
 
 
 def rasterize(

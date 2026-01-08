@@ -1455,7 +1455,7 @@ def interpolateValues(
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True, **kwargs)
         if asSingle is True:
             result = [values]
         else:
@@ -1468,7 +1468,7 @@ def interpolateValues(
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1493,7 +1493,7 @@ def interpolateValues(
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
 
         if asSingle is True:
             assert isinstance(values, ptValue)
@@ -1514,7 +1514,7 @@ def interpolateValues(
 
     elif mode == "average":  # Get the average in a window
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(
@@ -1533,7 +1533,7 @@ def interpolateValues(
         if func is None:
             raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
         if asSingle is True:
             assert isinstance(values, ptValue)
             data_frame_values = pd.DataFrame(

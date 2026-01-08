@@ -246,7 +246,7 @@ class RegionMask(object):
         extent=None,
         padExtent=DEFAULT_PAD,
         attributes=None,
-        **k,
+        **region_mask_key_worded_arugments,
     ) -> "RegionMask":
         """Make a RasterMask from a given geometry.
 
@@ -305,7 +305,9 @@ class RegionMask(object):
             # extent = extent.pad(padExtent)
 
         # make a RegionMask object
-        return RegionMask(extent=extent, pixelRes=pixelRes, geom=geom, attributes=attributes)
+        return RegionMask(
+            extent=extent, pixelRes=pixelRes, geom=geom, attributes=attributes, **region_mask_key_worded_arugments
+        )
 
     @staticmethod
     def fromVector(
@@ -658,7 +660,6 @@ class RegionMask(object):
         forceMaskShape=False,
         applyMask=True,
         noData=None,
-        **kwargs,
     ):
         # make output
         if not forceMaskShape and resolutionDiv > 1:
@@ -1639,7 +1640,7 @@ class RegionMask(object):
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
         return GEOM.drawGeoms(self.geometry, ax=ax, srs=self.srs, xlim=xlim, ylim=ylim, **kwargs)
 
-    def drawRaster(self, source, ax=None, drawSelf=True, **kwargs):
+    def drawRaster(self, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.raster.drawRaster which plots a raster
         dataset within the context of the RegionMask.
 
@@ -2104,7 +2105,7 @@ class RegionMask(object):
             _raw=_raw,
         )
 
-    def polygonizeMask(self, mask, bounds=None, srs=None, flat=True, shrink=True):
+    def polygonizeMask(self, mask, flat=True, shrink=True):
         """Convenience wrapper for geokit.geom.polygonizeMask which automatically
         sets the 'bounds' and 'srs' inputs. The mask data is assumed to span the
         RegionMask exactly.
