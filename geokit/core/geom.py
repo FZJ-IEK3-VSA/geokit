@@ -1340,8 +1340,9 @@ def drawGeoms(
         else:
             # categorical data
 
-            n_values = color_values.size
-            color_map = {val: cmap(i / n_values) for i, val in enumerate(color_values)}
+            unique_values = pd.unique(color_values)
+            n_values = unique_values.size
+            color_map = {val: cmap(i / n_values) for i, val in enumerate(unique_values)}
             _colorVals = [color_map[v] if v in color_map else (0, 0, 0, 0) for v in color_values]
 
     # Do Plotting
