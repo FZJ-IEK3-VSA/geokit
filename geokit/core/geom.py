@@ -19,6 +19,7 @@ from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.data_types import AxHands, numeric, srs_input
 from geokit.error import GeoKitGeomError
+from pandas.api.types import is_numeric_dtype
 
 POINT = ogr.wkbPoint
 MULTIPOINT = ogr.wkbMultiPoint
@@ -1312,17 +1313,24 @@ def drawGeoms(
 
     # Handle color value
     if not colorBy is None:
-        colorVals = data[colorBy].values
+        color_values = data[colorBy].values
 
         if isinstance(cmap, str):
             from matplotlib import cm
 
             cmap = getattr(cm, cmap)
 
-        cValMax = colorVals.max() if vmax is None else vmax
-        cValMin = colorVals.min() if vmin is None else vmin
+        if is_numeric_dtype(arr_or_dtype=color_values.dtype):
+            color_values_without_nan = color_values[~np.isnan(color_values)]
+            cValMax = color_values_without_nan.max() if vmax is None else vmax
+            cValMin = color_values_without_nan.min() if vmin is None else vmin
+            _colorVals = [cmap(v) for v in (color_values - cValMin) / (cValMax - cValMin)]
+        else:
+            # categorical data
 
-        _colorVals = [cmap(v) for v in (colorVals - cValMin) / (cValMax - cValMin)]
+            n_values = color_values.size
+            color_map = {val: cmap(i / n_values) for i, val in enumerate(color_values)}
+            _colorVals = [color_map[v] if v in color_map else (0, 0, 0, 0) for v in color_values]
 
     # Do Plotting
     # make patches
