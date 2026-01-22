@@ -297,18 +297,18 @@ class ZenodoDataDownloader:
         extract_folder_path.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(path_to_archive, "r") as zf:
-            members = zf.infolist()
-            # quick check: every member already present with expected size
-            all_present = all(
-                (extract_folder_path / m.filename).is_file()
-                and (extract_folder_path / m.filename).stat().st_size == m.file_size
-                for m in members
-            )
-            if all_present:
+            members_to_extract = []
+            for m in zf.infolist():
+                target_path = extract_folder_path / m.filename
+                if not target_path.is_file() or target_path.stat().st_size != m.file_size:
+                    members_to_extract.append(m)
+
+            if not members_to_extract:
                 print(f"Already extracted to {extract_folder_path}")
                 return extract_folder_path
 
-            zf.extractall(extract_folder_path)
+            for m in members_to_extract:
+                zf.extract(m, extract_folder_path)
             print(f"Extracted to {extract_folder_path}")
 
         return extract_folder_path
