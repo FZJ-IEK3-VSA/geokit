@@ -314,15 +314,29 @@ class ZenodoDataDownloader:
 
     def download_and_extract_parallel(
         self,
-        download_list: list[tuple[str, str | None, str | pathlib.Path | None, dict | None]],
+        download_list: list[tuple[str, str | None, str | None, dict | None]],
         max_workers: int = 4,
     ) -> list[pathlib.Path]:
         """Parallelize multiple downloads with optional extraction per job.
 
-
         Each download_list entry: (url, filename_or_none, extract_dir_or_none, header).
         If extract_dir is provided, the downloaded file is extracted there (zip only).
-        Returns paths to the downloaded files or extraction folders in input order.
+
+        Args:
+            download_list: List of jobs, each defined by a tuple of
+                (url, filename_or_none, extract_dir_or_none, header).
+            max_workers: Maximum number of threads to use for concurrent downloads.
+
+        Returns
+        -------
+            list[pathlib.Path]: Paths to the downloaded files or extraction folders
+            in the same order as the input download_list.
+
+        Raises
+        ------
+            Exception: If any download or extraction job fails. The original
+                exception from the worker is attached as the cause of the
+                raised Exception.
         """
 
         def _worker(idx: int, job: tuple[str, str | None, str | None, dict | None]) -> tuple[int, pathlib.Path]:
