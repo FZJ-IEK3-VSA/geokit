@@ -1322,9 +1322,21 @@ def drawGeoms(
 
         if is_numeric_dtype(arr_or_dtype=color_values.dtype):
             color_values_without_nan = color_values[~np.isnan(color_values)]
-            cValMax = color_values_without_nan.max() if vmax is None else vmax
-            cValMin = color_values_without_nan.min() if vmin is None else vmin
-            _colorVals = [cmap(v) for v in (color_values - cValMin) / (cValMax - cValMin)]
+            if color_values_without_nan.size == 0:
+                # All values are NaN: avoid max/min on empty array and division by zero.
+                # Use a default normalized value (e.g. 0.0) for all entries.
+                norm_vals = np.zeros_like(color_values, dtype=float)
+            else:
+                cValMax = color_values_without_nan.max() if vmax is None else vmax
+                cValMin = color_values_without_nan.min() if vmin is None else vmin
+                denom = cValMax - cValMin
+                if denom == 0:
+                    # All (non-NaN) values are identical: avoid division by zero.
+                    # Map everything to the middle of the colormap.
+                    norm_vals = np.full_like(color_values, 0.5, dtype=float)
+                else:
+                    norm_vals = (color_values - cValMin) / denom
+            _colorVals = [cmap(v) for v in norm_vals]
         else:
             # categorical data
 
