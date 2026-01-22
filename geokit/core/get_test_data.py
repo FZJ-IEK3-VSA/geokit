@@ -279,8 +279,7 @@ class ZenodoDataDownloader:
             response.raise_for_status()
             with open(target_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
+                    f.write(chunk)
 
         print(f"Downloaded to {target_path}")
         return target_path
