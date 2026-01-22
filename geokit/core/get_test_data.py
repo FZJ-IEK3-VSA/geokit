@@ -8,7 +8,7 @@ from typing import Literal
 import zipfile
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 all_file_name_dict = {
     "aachenShapefile.dbf": "sha256:0f1262b987e88fe3eef267b828d4b6712a7ba71fe22a995c2a67d4a8a3200292",
