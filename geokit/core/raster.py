@@ -805,8 +805,17 @@ def isFlipped(source):
         return False
 
 
-def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
+def rasterInfo(sourceDS: load_raster_input, compute_statistics: bool = False) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster.
+
+    Parameters
+    ----------
+    sourceDS : Anything acceptable by loadRaster()
+        The raster datasource
+    compute_statistics : bool; optional
+        If True, the maximum and minimum value of the raster data are computed.
+        This is computationally expensive for large rasters and repeated calls of
+        this function on the same raster should be avoided.
 
     Returns
     -------
@@ -850,17 +859,21 @@ def rasterInfo(sourceDS: load_raster_input) -> RasterInfo:
     output["scale"] = sourceBand.GetScale()
     output["offset"] = sourceBand.GetOffset()
 
-    try:
-        sourceBand.ComputeStatistics(0)
+    if compute_statistics is True:
+        try:
+            sourceBand.ComputeStatistics(0)
 
-        maximum_value = sourceBand.GetMaximum()
-        minimum_value = sourceBand.GetMinimum()
+            maximum_value = sourceBand.GetMaximum()
+            minimum_value = sourceBand.GetMinimum()
 
-        output["maximum_value"] = maximum_value
-        output["minimum_value"] = minimum_value
-    except:
-        output["maximum_value"] = output["noData"]
-        output["minimum_value"] = output["noData"]
+            output["maximum_value"] = maximum_value
+            output["minimum_value"] = minimum_value
+        except:
+            output["maximum_value"] = output["noData"]
+            output["minimum_value"] = output["noData"]
+    else:
+        output["maximum_value"] = None
+        output["minimum_value"] = None
 
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
@@ -2509,7 +2522,7 @@ def warp(
     """
     # open source and get info
     source = loadRaster(source)
-    dsInfo = rasterInfo(source)
+    dsInfo = rasterInfo(sourceDS=source, compute_statistics=True)
     if dsInfo.scale != 1.0 or dsInfo.offset != 0.0:
         isAdjusted = True
     else:
