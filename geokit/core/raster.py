@@ -2735,11 +2735,9 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
-        dtype=dtype,
         srs=srs,
         noData=noData,
         meta=meta,
-        fill=fill,
         **kwargs,
     )
 
