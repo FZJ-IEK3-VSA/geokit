@@ -2721,13 +2721,13 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         meta = kwargs.pop("meta", None)
 
     dtype = kwargs.pop("dtype", dataInfo.data_type_name_str)
-    noData = kwargs.pop("noData", dataInfo.noData)
 
     # then get context related parameters from CONTEXT source
     bounds = kwargs.pop("bounds", contextInfo.bounds)
     pixelWidth = kwargs.pop("pixelWidth", contextInfo.pixelWidth)
     pixelHeight = kwargs.pop("pixelHeight", contextInfo.pixelHeight)
     srs = kwargs.pop("srs", contextInfo.srs)
+    noData = kwargs.pop("noData", contextInfo.noData)
 
     return warp(
         source=dataSource,
