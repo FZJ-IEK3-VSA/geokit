@@ -2701,7 +2701,10 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         If True, the metadata of the dataSource raster will be copied, else
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
-        All kwargs will be passed on to raster.warp().
+        All kwargs will be passed on to raster.warp()
+        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined 
+        automatically based on the value range, this can be time-consuming 
+        depending on data size. Avoid by specifying dtype explicitly.
     """
     if UTIL.isRaster(dataSource):
         dataInfo = rasterInfo(dataSource)
@@ -2719,8 +2722,6 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         meta = dataInfo.meta
     else:
         meta = kwargs.pop("meta", None)
-
-    dtype = kwargs.pop("dtype", dataInfo.data_type_name_str)
 
     # then get context related parameters from CONTEXT source
     bounds = kwargs.pop("bounds", contextInfo.bounds)
