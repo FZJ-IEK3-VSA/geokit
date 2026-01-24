@@ -2702,8 +2702,8 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
         All kwargs will be passed on to raster.warp()
-        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined 
-        automatically based on the value range, this can be time-consuming 
+        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined
+        automatically based on the value range, this can be time-consuming
         depending on data size. Avoid by specifying dtype explicitly.
     """
     if UTIL.isRaster(dataSource):
