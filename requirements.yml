@@ -20,6 +20,5 @@ dependencies:
   - rich <=14.1.0
   - pandas-stubs
   - scipy-stubs
-  # Examples
-  - pooch <=1.8.2
-  - tqdm
+  - requests
+
