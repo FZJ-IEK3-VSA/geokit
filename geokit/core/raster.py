@@ -2701,7 +2701,10 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         If True, the metadata of the dataSource raster will be copied, else
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
-        All kwargs will be passed on to raster.warp().
+        All kwargs will be passed on to raster.warp()
+        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined
+        automatically based on the value range, this can be time-consuming
+        depending on data size. Avoid by specifying dtype explicitly.
     """
     if UTIL.isRaster(dataSource):
         dataInfo = rasterInfo(dataSource)
@@ -2719,32 +2722,22 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         meta = dataInfo.meta
     else:
         meta = kwargs.pop("meta", None)
-    print(meta)
-    dtype = kwargs.pop("dtype", dataInfo.data_type_name_str)
-    noData = kwargs.pop("noData", dataInfo.noData)
-    if "cutline" in kwargs:
-        # make sure that the cells outside are filled with noData if not specified
-        fill = kwargs.pop("fill", dataInfo.noData)
-    else:
-        # set to default of warp() function for consistent behavior
-        fill = inspect.signature(warp).parameters["fill"].default
 
     # then get context related parameters from CONTEXT source
     bounds = kwargs.pop("bounds", contextInfo.bounds)
     pixelWidth = kwargs.pop("pixelWidth", contextInfo.pixelWidth)
     pixelHeight = kwargs.pop("pixelHeight", contextInfo.pixelHeight)
     srs = kwargs.pop("srs", contextInfo.srs)
+    noData = kwargs.pop("noData", contextInfo.noData)
 
     return warp(
         source=dataSource,
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
-        dtype=dtype,
         srs=srs,
         noData=noData,
         meta=meta,
-        fill=fill,
         **kwargs,
     )
 
