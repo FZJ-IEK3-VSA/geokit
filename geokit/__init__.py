@@ -13,6 +13,39 @@ from osgeo import gdal, ogr
 ogr.UseExceptions()
 gdal.SetConfigOption("OGR_GEOMETRY_ACCEPT_UNCLOSED_RING", "YES")
 
+import sys
+
+# This allows to change warning filter from the command line
+if not sys.warnoptions:
+    import os, warnings
+
+    # Suppress matplotlib deprecation warnings from pyparsing
+    warnings.filterwarnings(
+        action="ignore",
+        message=".*'oneOf'.*deprecated.*",
+        category=DeprecationWarning,
+        module="matplotlib._fontconfig_pattern",
+    )
+    warnings.filterwarnings(
+        action="ignore",
+        message=".*'parseString'.*deprecated.*",
+        category=DeprecationWarning,
+        module="matplotlib._fontconfig_pattern",
+    )
+    warnings.filterwarnings(
+        action="ignore",
+        message=".*'resetCache'.*deprecated.*",
+        category=DeprecationWarning,
+        module="matplotlib._fontconfig_pattern",
+    )
+    warnings.filterwarnings(
+        action="ignore",
+        message=".*'enablePackrat'.*deprecated.*",
+        category=DeprecationWarning,
+        module="matplotlib._mathtext",
+    )
+
+
 if not "GDAL_DATA" in _environ:
     from os.path import isdir as _isdir
     from sys import executable as _executable
