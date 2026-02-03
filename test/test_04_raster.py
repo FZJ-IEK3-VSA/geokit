@@ -334,7 +334,8 @@ def test_gradient():
     # create a sloping surface dataset
     x, y = np.meshgrid(np.abs(np.arange(-100, 100)), np.abs(np.arange(-150, 150)))
     arr = np.ones((300, 200)) + 0.01 * y + x * 0.03
-    slopingDS = raster.createRaster(bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None)
+    with pytest.warns(UserWarning, match="No srs given when creating raster."):
+        slopingDS = raster.createRaster(bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None)
 
     # do tests
     total = raster.gradient(slopingDS, mode="total", asMatrix=True)
@@ -865,6 +866,44 @@ def test_warp_meta_argument_hard_drive():
 
     assert raster_info_output.meta["AREA_OR_POINT"] == "Area"
     pathlib.Path.unlink(output_path)
+
+
+# def test_():
+#     # generate the same raster twice, once with and once without srs
+#     arr = np.array([[50, 100, 150], [200, 250, 255]])
+#     rstr_withsrs = geokit.core.raster.createRaster(
+#         data=arr,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         srs=4326,
+#     )
+
+#     rstr_nosrs = gk.raster.createRaster(
+#         data=arr,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#     )
+
+#     # then warp to another noData value, once for the raster with and once without srs
+#     rstr_wrpdwithsrs = gk.raster.warp(
+#         source=rstr_withsrs,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         noData=np.nan,
+#     )
+#     print("NoData of new raster:", gk.raster.rasterInfo(rstr_wrpdwithsrs).noData)
+
+#     rstr_wrpdnosrs = gk.raster.warp(  # this one fails!
+#         source=rstr_nosrs,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         noData=np.nan,
+#     )
+#     print("NoData of new raster:", gk.raster.rasterInfo(rstr_wrpdnosrs).noData)
 
 
 # def test_warp():
