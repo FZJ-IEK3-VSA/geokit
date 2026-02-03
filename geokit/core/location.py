@@ -296,6 +296,10 @@ class LocationSet(object):
             elif isinstance(locations, pd.DataFrame):
                 self._locations = LocationSet(locations["geom"])[:]
             else:
+                # Ensure NumPy arrays are treated as a list of coordinate pairs
+                if isinstance(locations, np.ndarray) and locations.ndim > 1:
+                    locations = locations.tolist()
+
                 try:  # Try loading all locations one at a time
                     self._locations = np.array([Location.load(l, srs=srs) for l in locations])
                 except GeoKitLocationError as err:

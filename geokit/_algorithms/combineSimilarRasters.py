@@ -63,7 +63,7 @@ def checkSimilarRasters(
     datasets = _datasets
 
     # get all raster infos
-    infoDataset = [rasterInfo(d) for d in datasets]
+    infoDataset = [rasterInfo(sourceDS=d, compute_statistics=True) for d in datasets]
     # check all relevant variables
     for rInfo in infoDataset[1:]:
         # same srs is required
@@ -182,7 +182,7 @@ def combineSimilarRasters(
     # GET REFERENCE CONTEXT FOR THE OUTPUT RASTER
 
     # determine info for all datasets
-    raster_info_list = [rasterInfo(d) for d in datasets]
+    raster_info_list = [rasterInfo(sourceDS=d, compute_statistics=True) for d in datasets]
 
     # get reference srs - are all the same thanks to checkSimilarRasters
     srs_ref = raster_info_list[0].srs
