@@ -190,8 +190,8 @@ def createRaster(
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
-          * If not given, longitude/latitude is assumed
-          * srs MUST be given as a keyword argument
+          * If not given, no srs will be assigned to the created raster. Please be
+            aware that some operations may not work correctly if no SRS is given.
         * If 'bounds' is an Extent object, the bounds' internal srs will override
           this input
 
@@ -335,6 +335,11 @@ def createRaster(
         if srs is not None:
             rasterSRS = SRS.loadSRS(srs)
             raster.SetProjection(rasterSRS.ExportToWkt())
+        else:
+            warnings.warn(
+                message="No srs given when creating raster. Please be aware that some operations may not work correctly.",
+                category=UserWarning,
+            )
 
         # Fill the raster will zeros, null values, or initial values (if given)
         band: gdal.Band = raster.GetRasterBand(raster_band_index)
@@ -1965,7 +1970,7 @@ def drawRaster(
     vmax: float | None = None,
     cmap="viridis",
     cbargs=None,
-    cutlineFillValue=-9999,
+    noData: numeric | None = None,
     zorder=0,
     resampleAlg: Literal[
         "near",
@@ -2012,12 +2017,8 @@ def drawRaster(
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
         * If a string is given, it must be a path to a vector file
-        * Values outside of the cutline are given the value 'cutlineFillValue'
+        * Values outside of the cutline are given the noData value of the raster
         * Requires a warp
-
-    cutlineFillValue : numeric; optional
-        The value to give to values outside a cutline
-        * Has no effect when cutline is not given
 
     figsize : (int, int); optional
         The figure size to create when generating a new axis
@@ -2053,6 +2054,9 @@ def drawRaster(
           * Only useful when 'colorBy' is given
 
     cbargs : dict; optional
+
+    noData : numeric; optional
+        Replaces all previous noData values with this value in the output raster.
 
     resampleAlg : str, optional
         The resampleAlg passed on to a call of warp() if needed, by default "med"
@@ -2123,8 +2127,7 @@ def drawRaster(
             pixelWidth=xres,
             srs=srs,
             bounds=bounds,
-            fill=cutlineFillValue,
-            noData=None,
+            noData=noData,
             resampleAlg=resampleAlg,
             **warp_kwargs,
         )
@@ -2133,8 +2136,6 @@ def drawRaster(
 
     # Read the Data
     data = extractMatrix(source).astype(float)
-    if cutlineFillValue is not None:
-        data[data == cutlineFillValue] = np.nan
 
     data[data == info.noData] = np.nan
 
@@ -2427,8 +2428,7 @@ def warp(
     srs: srs_input | None = None,
     bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
     dtype: None | geokit_c_data_types_literal = None,
-    noData=None,
-    fill: numeric | None = None,
+    noData: numeric | None = None,
     overwrite: bool = True,
     meta: None | dict[str, str] = None,
     **kwargs,
@@ -2488,14 +2488,10 @@ def warp(
           - a String such as "Byte", "UInt16", or "Double"
 
     noData : numeric; optional
-        The no-data value to apply to the output raster
+        Replaces all previous noData values with this value in the output raster.
 
     meta: dict; optional: contains a key value pair that is passed to the
           output gdal.dataset using the SetMetadataItem method.
-
-    fill : numeric; optional
-        The fill data to place into the new raster before warping occurs
-        * Does not play a role when writing a file to disk
 
     **kwargs:
         * All keyword arguments are passed on to a call to gdal.WarpOptions
@@ -2570,12 +2566,6 @@ def warp(
         pass
     else:
         raise GeoKitRasterError("noData must be a numeric or boolean value but got: %s" % str(type(noDataRead)))
-    if isinstance(fill, (numeric, bool)):
-        list_of_numbers.append(fill)
-    elif fill is None:
-        pass
-    else:
-        raise GeoKitRasterError("fill must be a numeric boolean or None value but got: %s" % str(type(fill)))
 
     list_of_datatypes = []
     if isinstance(dtype, str):
@@ -2675,7 +2665,6 @@ def warp(
             dy=pixelHeight,
             dtype=gdal_data_type_string,
             noData=noDataRead,
-            fill=fill,
         )
 
         # Do a warp

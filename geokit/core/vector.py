@@ -1598,7 +1598,6 @@ def rasterize(
     compress=True,
     noData=None,
     overwrite: bool = True,
-    fill=None,
     **kwargs,
 ) -> gdal.Dataset | str:
     """Rasterize a vector datasource onto a raster context.
@@ -1666,11 +1665,6 @@ def rasterize(
         raster
         * Must be the same datatype as the 'dtype' input (or that which is derived)
 
-    fill : numeric; optional
-        The initial value given to all pixels in the created raster band
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
-
     overwrite : bool
         A flag to overwrite a pre-existing output file
         * If set to False and an 'output' is specified which already exists,
@@ -1735,8 +1729,6 @@ def rasterize(
         ]
         list_of_numbers.append(value)
 
-    if isinstance(fill, (numeric, bool)):
-        list_of_numbers.append(fill)
     if isinstance(noData, (numeric, bool)):
         list_of_numbers.append(noData)
 
@@ -1756,7 +1748,6 @@ def rasterize(
             dy=pixelHeight,
             dtype=minimum_data_type_string,
             noData=noData,
-            fill=fill,
         )
 
         # Do rasterize

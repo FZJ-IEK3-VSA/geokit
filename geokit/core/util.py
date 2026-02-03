@@ -423,17 +423,44 @@ def _check_fill_return_code(fill_return_code):
 
 def quickRaster(
     bounds: tuple[numeric, numeric, numeric, numeric],
-    srs: osr.SpatialReference,
+    srs: osr.SpatialReference | None,
     dx: numeric,
     dy: numeric,
     dtype: geokit_c_data_types_literal | None = None,
     noData: None | numeric | bool = None,
-    fill: None | numeric | bool = None,
     data: np.ndarray | None = None,
     scale: numeric | None = None,
     offset: numeric | None = None,
-):
-    """GeoKit internal for quickly creating a raster datasource."""
+) -> gdal.Dataset:
+    """
+    GeoKit internal for quickly creating a raster datasource.
+
+    Parameters
+    ----------
+    bounds : tuple[numeric, numeric, numeric, numeric]
+        The bounds to create the raster for
+    srs : osr.SpatialReference | None
+        The SRS to assign to the raster. Please be aware that some operations may not work correctly if no SRS is given.
+    dx : numeric
+        The pixel width in x direction.
+    dy : numeric
+        The pixel height in y direction.
+    dtype : geokit_c_data_types_literal | None, optional
+        The GDAL C datatype to use for the raster band. by default None
+    noData : None | numeric | bool, optional
+        The value to use for no data in the raster band, by default None
+    data : np.ndarray | None, optional
+        The data array to write to the raster band, by default None
+    scale : numeric | None, optional
+        The scale factor to apply to the raster band, by default None
+    offset : numeric | None, optional
+        The offset to apply to the raster band, by default None
+
+    Returns
+    -------
+    A raster dataset as gdal.Dataset
+
+    """
     # bounds = fitBoundsTo(bounds, dx, dy)
 
     # Make a raster dataset and pull the band/maskBand objects
@@ -451,11 +478,6 @@ def quickRaster(
         pass
     else:
         list_of_scalars.append(noData)
-
-    if fill is None:
-        pass
-    else:
-        list_of_scalars.append(fill)
 
     list_of_datatype_strings = []
     if dtype is None:
@@ -476,7 +498,13 @@ def quickRaster(
     raster.SetGeoTransform((originX, abs(dx), 0, originY, 0, -1 * abs(dy)))
 
     # Set the SRS
-    raster.SetProjection(srs.ExportToWkt())
+    if srs is not None:
+        raster.SetProjection(srs.ExportToWkt())
+    else:
+        warnings.warn(
+            message="No srs given when creating raster. Please be aware that some operations may not work correctly.",
+            category=UserWarning,
+        )
 
     # get the band
     band: gdal.Band = raster.GetRasterBand(1)
@@ -484,12 +512,10 @@ def quickRaster(
     # set optionals
     if not noData is None:
         band.SetNoDataValue(noData)
-        if fill is None and data is None:
+
+        if data is None:
             no_data_fill_return_code = band.Fill(noData)
             _check_fill_return_code(fill_return_code=no_data_fill_return_code)
-    if not fill is None:
-        fill_return_code = band.Fill(fill)
-        _check_fill_return_code(fill_return_code=fill_return_code)
 
     if not scale is None:
         band.SetScale(scale)
