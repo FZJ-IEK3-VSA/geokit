@@ -6,7 +6,7 @@
 
 
 
-# GeoKit - **Geo**spatial tool**kit** for Python
+# ETHOS.GeoKit - **Geo**spatial tool**kit** for Python
 
 GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses.
 It gives low overhead control of fundamental operations; such as reading, writing, and mutating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more.

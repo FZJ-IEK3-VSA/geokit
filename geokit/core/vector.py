@@ -1,3 +1,4 @@
+from typing import Literal
 import copy
 import numbers
 import os
@@ -312,7 +313,7 @@ def _extractFeatures(
     onlyAttr,
     skipMissingGeoms,
     layerName=None,
-    spatialPredicate="Touches",
+    spatialPredicate: Literal["Touches", "Overlaps", "CentroidWithin"] = "Touches",
 ) -> Generator:
     # Check spatialPredicate
     avail_predicates = ["Touches", "Overlaps", "CentroidWithin"]
@@ -468,7 +469,7 @@ def extractFeatures(
     indexCol=None,
     skipMissingGeoms=True,
     layerName=None,
-    spatialPredicate="Touches",
+    spatialPredicate: Literal["Touches", "Overlaps", "CentroidWithin"] = "Touches",
 ) -> pd.DataFrame | pd.Series | Generator:
     """Creates a generator which extract the features contained within the source.
 

@@ -1348,15 +1348,14 @@ def drawGeoms(
     # Do Plotting
     # make patches
     handles = []
+    if not pargs is None:
+        s = [not v is None for v in pargs.iloc[gi]]
+        plotargs = pargs.iloc[gi, s].to_dict()
+    else:
+        plotargs = dict()
+    plotargs.update(mplArgs)
 
     for gi, geometry in enumerate(geoms):
-        if not pargs is None:
-            s = [not v is None for v in pargs.iloc[gi]]
-            plotargs = pargs.iloc[gi, s].to_dict()
-        else:
-            plotargs = dict()
-        plotargs.update(mplArgs)
-
         if not colorBy is None:
             colorVal = _colorVals[gi]
         else:
