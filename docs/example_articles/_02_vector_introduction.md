@@ -1,4 +1,4 @@
-## Vector datasets and file structure
+## Working with Vector Files
 
 Vector datasets store geometries together with attribute data in a table-like structure.
 Each row represents a geographic feature, while one column contains the geometry and the remaining columns store descriptive attributes.
