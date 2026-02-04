@@ -33,5 +33,5 @@ Extract values from rasters and interpolate data at locations that may fall betw
 ###  [Convert Rasters to Vector Geometries](../../Examples/_01_raster/_4_polygonize_raster.ipynb)
 The `polygonizeRaster()` function converts raster cells into polygon geometries, enabling seamless conversion between raster and vector data formats. This is useful for creating boundary definitions from raster data. GeoKits capabilities to work with geometries such as polygons is introduced in the [next section](_0_2_vector_introduction.md)
 
-### Warp and Transform Rasters [Convert Rasters to Vector Geometries](../../Examples/_01_raster/_5_warp_raster.ipynb)
+###  [Warp and Transform Rasters](../../Examples/_01_raster/_5_warp_raster.ipynb)
 Transform rasters between different spatial reference systems and resample them using various algorithms. This functionality enables you to align rasters from different sources or prepare them for analysis with other geospatial data. 
