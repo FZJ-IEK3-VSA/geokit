@@ -11,7 +11,7 @@ logo: docs/visualizations/logos/fzj_logo.svg
 #   execute_notebooks: cache
 
 execute:
-  execute_notebooks: "force"
+  execute_notebooks: "auto"
   timeout: 1000
 
 # Define the name of the latex output file for PDF builds
@@ -57,7 +57,7 @@ sphinx:
     autoapi_generate_api_docs: true
     suppress_warnings: ["etoc.toctree"]
     # Use Google docstrings
-    napoleon_google_docstring: True
+    napoleon_numpy_docstring: True
     autoapi_python_class_content: "both"
     napoleon_include_init_with_doc: True
     autodoc_typehints: "description"

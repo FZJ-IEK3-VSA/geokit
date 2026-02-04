@@ -16,6 +16,10 @@ build:
       # - "jupyter-book config sphinx . --toc docs/_toc.yml --config docs/_config.yml"
       - echo "Start creation of config.py"
       # - jupyter-book config sphinx --toc docs/_toc.yaml --config docs/_config.yaml .readthedocs.yaml
+      - echo $READTHEDOCS_VERSION
+      - echo "start pip list"
+      - conda run --name $READTHEDOCS_VERSION pip list
+      - echo "end pip list"
       - conda run --name $READTHEDOCS_VERSION pip install -e . --no-deps
       - conda run --name $READTHEDOCS_VERSION jupyter-book config sphinx .
       - echo "Creation of config.py is terminated"
