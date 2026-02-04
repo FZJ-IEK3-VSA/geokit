@@ -364,7 +364,7 @@ def createRaster(
                 raise GeoKitRasterError(
                     "Raster dimensions and input data dimensions do not match.The data has rows="
                     + str(data.shape[0])
-                    + " and collumns="
+                    + " and columns="
                     + str(data.shape[1])
                     + ". The raster specification expects rows="
                     + str(rows)
@@ -944,15 +944,15 @@ def _convertTupleToOGRPoint(
         The spatial reference system that the point coordinates are
         specified in.
     point_srs_is_set : bool
-        A flag that states if the spatial refrence system has been set
+        A flag that states if the spatial reference system has been set
         by th user.
     output_srs : osr.SpatialReference
-        The target spatial reference system of the ogr.Gemoetry point
+        The target spatial reference system of the ogr.Geometry point
 
     Returns
     -------
     ogr.Geometry
-        The point as an ogr.Geometry in the target spatial refrence system.
+        The point as an ogr.Geometry in the target spatial reference system.
     """
     if point_srs_is_set is False:
         _raise_srs_required_exception(object_name="tuple")
@@ -972,7 +972,7 @@ def _check_if_geometry_is_point(point_to_check: ogr.Geometry):
     if point_to_check.GetGeometryName() != "POINT":
         raise GEOM.GeoKitGeomError(
             "A " + str(point_to_check.GetGeometryName()) + " geometry has been passed as a point."
-            "However only 'POINT' Geometries are an appropiate input as points"
+            "However only 'POINT' Geometries are an appropriate input as points"
         )
 
 
@@ -980,8 +980,8 @@ def _check_if_srs_is_epsg_4326(srs: osr.SpatialReference):
     if not srs.IsSame(SRS.loadSRS(4326)):
         srs_string = srs.ExportToWkt
         warnings.warn(
-            "The Location Object assumes the Spatial Reference Syste EPSG 4326 internally. "
-            "Howerver the provided point system in WKT is: " + str(srs_string)
+            "The Location Object assumes the Spatial Reference System EPSG 4326 internally. "
+            "However the provided point system in WKT is: " + str(srs_string)
         )
 
 
@@ -994,7 +994,7 @@ def _raise_srs_required_exception(object_name: str):
 def _transform_ogr_point_spatial_reference_system(
     ogr_point: ogr.Geometry, point_input_SRS_external: osr.SpatialReference | None, output_srs: osr.SpatialReference
 ) -> ogr.Geometry:
-    """This function transforms the ogr.Geometry point transfroms into the output output spatial reference system.
+    """This function transforms the ogr.Geometry point transforms into the output output spatial reference system.
 
     Before transforming the spatial reference system of the ogr.Geometry, it performs some sanity checks.
     ogr.Geometry object. First, it verifies that the geometry is a point. Then, it verifies that the spatial
@@ -1006,11 +1006,11 @@ def _transform_ogr_point_spatial_reference_system(
     ogr_point : ogr.Geometry
         The point that should be transformed into a new spatial reference system.
     point_input_SRS_external : osr.SpatialReference | None
-        The current spatial refrence system of the point. If provided it musst be consistent
+        The current spatial reference system of the point. If provided it musst be consistent
         with the one stored in the ogr.Geometry object or ogr.Geometry does not store a
         srs yet.
     output_srs : osr.SpatialReference
-        The target spatial refrence system that the point is transfered to
+        The target spatial reference system that the point is transferred to
 
     Returns
     -------
@@ -1035,7 +1035,7 @@ def _transform_ogr_point_spatial_reference_system(
     elif isinstance(point_srs_loaded_geometry, osr.SpatialReference) and isinstance(
         point_input_SRS_external, osr.SpatialReference
     ):
-        # The user provided a spatial but refrence system and the
+        # The user provided a spatial but reference system and the
         if not point_srs_loaded_geometry.IsSame(point_input_SRS_external):
             raise GEOM.GeoKitGeomError(
                 "The user has provided another spatial reference system in the 'point_input_SRS' "
@@ -1077,12 +1077,12 @@ def _convertPointsToListOfOGRPoints(
     point_input_SRS : srs_input | None
         The spatial reference system that the points are specified in when passed to the function
     output_srs : osr.SpatialReference
-        The target spatial refrence system that the points should be converted to.
+        The target spatial reference system that the points should be converted to.
 
     Returns
     -------
     list[ogr.Geometry]
-        A list of the points in the target spatial refrence systems as ogr.Geometry objects.
+        A list of the points in the target spatial reference systems as ogr.Geometry objects.
 
     """
     if point_input_SRS is None:
@@ -1202,7 +1202,7 @@ def extractValues(
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
     _onlyValues: bool
-        Return only the extracted data and ommit xOffeset, yOffset, inBounds
+        Return only the extracted data and omit xOffeset, yOffset, inBounds
 
     Returns
     -------

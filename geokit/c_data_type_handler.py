@@ -403,7 +403,7 @@ class MinimumCDataTypeHandler:
         Returns
         -------
         list[gdal_c_raster_data_types_literal] | None
-            Rigorous string repesentation of gdal data types.
+            Rigorous string representation of gdal data types.
 
         """
         if input_string_list is None:
@@ -602,7 +602,7 @@ class MinimumCDataTypeHandler:
 
     @staticmethod
     def get_gdal_constant_from_string(input_string: str) -> int:
-        """This function converts a gdal data type string to the corresponding gdal constant that repsresents the data type.
+        """This function converts a gdal data type string to the corresponding gdal constant that represents the data type.
 
         Parameters
         ----------
