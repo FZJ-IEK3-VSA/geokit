@@ -14,15 +14,36 @@ parts:
   - caption: Examples
     maxdepth: 3
     chapters:
-      - file: docs/Introduction.md
-      - file: Examples/example_01_srs.ipynb
-      - file: Examples/example_02_geometry.ipynb
-      - file: Examples/example_03_vector.ipynb
-      - file: Examples/example_04_raster.ipynb
-      - file: Examples/example_05_Extent.ipynb
-      - file: Examples/example_06_RegionMask.ipynb
-      - file: Examples/example_07_determine_offshore_turbine_depths.ipynb
-      - file: Examples/example_08_c_datatypes.ipynb
+      - file: docs/example_articles/_00_introduction.md
+      # - caption: Download Weather Data
+      - file: docs/example_articles/_01_raster_overview.md
+        sections:
+          - file: Examples/_01_raster/_1_visualize_raster_data.ipynb
+          - file: Examples/_01_raster/_2_create_raster_data.ipynb
+          - file: Examples/_01_raster/_3_extract_data_from_raster.ipynb
+          - file: Examples/_01_raster/_4_polygonize_raster.ipynb
+          - file: Examples/_01_raster/_5_warp_raster.ipynb
+      - file: docs/example_articles/_02_vector_introduction.md
+        sections:
+          - file: Examples/_02_vector/_1_analyze_shape_files.ipynb
+          - file: Examples/_02_vector/_2_analyze_geopackage.ipynb
+          - file: Examples/_02_vector/_3_visualize_vector_data.ipynb
+          - file: Examples/_02_vector/_4_attribute_extraction_and_manipulation.ipynb
+          - file: Examples/_02_vector/_5_filter_vector_data_spatially.ipynb
+          - file: Examples/_02_vector/_6_create_buffer.ipynb
+          - file: Examples/_02_vector/_7_subdivide_geometries.ipynb
+      - file: docs/example_articles/_03_create_geometries.md
+        sections:
+          - file: Examples/_03_create_geometries/_1_create_geometries.ipynb
+      - file: docs/example_articles/_04_extent_based_operations.md
+      - file: docs/example_articles/_05_combine_raster_and_vector.md
+      - file: docs/example_articles/_06_application_examples.md
+        sections:
+          - file: Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
+      - file: docs/example_articles/_07_configuration.md
+        sections:
+          - file: Examples/_07_configuration/01_srs.ipynb
+          - file: Examples/_07_configuration/02_c_datatypes.ipynb
 
   - caption: API
     chapters:
