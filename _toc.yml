@@ -42,8 +42,8 @@ parts:
           - file: Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
       - file: docs/example_articles/_07_configuration.md
         sections:
-          - file: Examples/_07_configuration/01_srs.ipynb
-          - file: Examples/_07_configuration/02_c_datatypes.ipynb
+          - file: Examples/_07_configuration_options/_01_srs.ipynb
+          - file: Examples/_07_configuration_options/_02_c_datatypes.ipynb
 
   - caption: API
     chapters:
