@@ -2,9 +2,7 @@
 
 Vector datasets store geometries together with attribute data in a table-like structure.
 Each row represents a geographic feature, while one column contains the geometry and the remaining columns store descriptive attributes.
-
-Vector data represents geographic features and is commonly stored in formats such as Shapefiles or GeoPackages.
-These formats define how geometries, attributes, and coordinate reference systems are stored.
+Vector data is commonly stored in formats such as Shapefiles or GeoPackages, which define how geometries, attributes, and coordinate reference systems are stored.
 
 ![Vector Files Overview](../visualizations/vector_files_overview.svg)
 
@@ -12,7 +10,7 @@ These formats define how geometries, attributes, and coordinate reference system
 
 The figure above summarizes how vector data is organized on disk. A vector dataset is made up of:
 
-- One or more geometry files that store the actual shapes (points, lines, polygons).
+- Geometry files that stores the actual shapes (points, lines, polygons)
 - Attribute tables that hold descriptive fields for each feature.
 - A coordinate reference system definition, which tells software how to interpret coordinates.
 - Optional index or metadata files that speed up access and record provenance.

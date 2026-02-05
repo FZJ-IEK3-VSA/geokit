@@ -2,6 +2,7 @@
 
 GeoKit provides comprehensive functionality for working with raster data, which is geospatial information stored as grids of pixels (cells). Raster data is typically stored in formats like GeoTIFF (.tif) files and is commonly used to represent continuous phenomena such as elevation, temperature, land cover, and solar radiation.
 
+
 ## Key Raster Functionality
 
 GeoKit enables you to perform the following operations on raster data:
