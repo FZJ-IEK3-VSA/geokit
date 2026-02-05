@@ -18,8 +18,8 @@ parts:
       # - caption: Download Weather Data
       - file: docs/example_articles/_01_raster_overview.md
         sections:
-          - file: Examples/_01_raster/_1_visualize_raster_data.ipynb
-          - file: Examples/_01_raster/_2_create_raster_data.ipynb
+          - file: Examples/_01_raster/_1_create_raster_data.ipynb
+          - file: Examples/_01_raster/_2_visualize_raster_data.ipynb
           - file: Examples/_01_raster/_3_extract_data_from_raster.ipynb
           - file: Examples/_01_raster/_4_polygonize_raster.ipynb
           - file: Examples/_01_raster/_5_warp_raster.ipynb

@@ -6,13 +6,6 @@ GeoKit provides comprehensive functionality for working with raster data, which 
 
 GeoKit enables you to perform the following operations on raster data:
 
-###  [Visualize Raster Data](../../Examples/_01_raster/_1_visualize_raster_data.ipynb)
-
-Visualizing raster data is an effective way to explore and analyze spatial datasets. GeoKit provides the `drawRaster()` function that leverages Matplotlib to create publication-quality visualizations. You can:
-- Plot raster data from various formats including GeoTIFF
-- Change the spatial reference system for display
-- Overlay multiple rasters and vector geometries for comparison and analysis
-- Extract and display spatial reference system information and coordinate bounds
 
 ### [Create Raster Data](../../Examples/_01_raster/_2_create_raster_data.ipynb)
 GeoKit allows you to create raster datasets from scratch by specifying:
@@ -22,6 +15,15 @@ GeoKit allows you to create raster datasets from scratch by specifying:
 - Data matrix with values for each pixel
 
 You can save rasters as GeoTIFF files and work with various data types including floats, integers, booleans, and NaN values.
+
+###  [Visualize Raster Data](../../Examples/_01_raster/_1_visualize_raster_data.ipynb)
+
+Visualizing raster data is an effective way to explore and analyze spatial datasets. GeoKit provides the `drawRaster()` function that leverages Matplotlib to create publication-quality visualizations. You can:
+- Plot raster data from various formats including GeoTIFF
+- Change the spatial reference system for display
+- Overlay multiple rasters and vector geometries for comparison and analysis
+- Extract and display spatial reference system information and coordinate bounds
+
 
 ### [Extract and Interpolate Data](../../Examples/_01_raster/_3_extract_data_from_raster.ipynb)
 Extract values from rasters and interpolate data at locations that may fall between pixel centers. Supported interpolation methods include:
