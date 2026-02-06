@@ -1085,7 +1085,8 @@ def drawMultiPolygon(g, plotargs, ax: matplotlib.axes._axes.Axes, colorVal=None)
 
 def drawGeoms(
     geoms: ogr.Geometry | list[ogr.Geometry] | pd.DataFrame | np.ndarray,
-    srs: srs_input = 4326,
+    # srs: srs_input = 4326,
+    srs: srs_input | None = None,
     ax: None | matplotlib.axes._axes.Axes | AxHands = None,
     simplificationFactor: numeric | None = 5000,
     colorBy: str | None = None,

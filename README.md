@@ -1,4 +1,13 @@
-﻿<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis " width="300px"></a> 
+﻿<table style="border:0; border-collapse:collapse;">
+	<tr>
+		<td style="border:0;">
+			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="GeoKit logo" width="200px">
+		</td>
+		<td style="border:0;">
+			<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis" width="300px"></a>
+		</td>
+	</tr>
+</table>
 
 | Name                                                                                                             | Version                                                                                                             | Test on pull request                                                                                                                                                                                                         | Docstring Style                                                                  | Documentation Coverage                                  |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -8,7 +17,7 @@
 
 # ETHOS.GeoKit - **Geo**spatial tool**kit** for Python
 
-GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses.
+ETHOS.GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses.
 It gives low overhead control of fundamental operations; such as reading, writing, and mutating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more.
 Via the RegionMask object, GeoKit even allows for seamless integration of information expressed across multiple geospatial datasets in many formats and reference systems into the context of a single region.
 
