@@ -34,14 +34,14 @@ parts:
           - file: Examples/_02_vector/_7_subdivide_geometries.ipynb
       - file: docs/example_articles/_03_00_geometries.md
         sections:
-          - file: _03_01_geometry_operations.md
+          - file: docs/example_articles/_03_01_create_geometries.md
             sections:
               - file: Examples/_03_geometries/_01_create_geometries/_01_create_points.ipynb
               - file: Examples/_03_geometries/_01_create_geometries/_02_create_lines.ipynb
-              - file: Examples/_03_geometries/_01_create_geometries/_03_create_multi_lines.ipynb
+              - file: Examples/_03_geometries/_01_create_geometries/_03_create_multi_line.ipynb
               - file: Examples/_03_geometries/_01_create_geometries/_04_create_polygon.ipynb
               - file: Examples/_03_geometries/_01_create_geometries/_05_create_multi_polygon.ipynb
-          - file: _03_01_geometry_operations.md
+          - file: docs/example_articles/_03_02_geometry_operations.md
             sections:
               - file: Examples/_03_geometries/_02_geometry_operations/_01_get_centroid_of_geom.ipynb
               - file: Examples/_03_geometries/_02_geometry_operations/_02_get_boundary.ipynb

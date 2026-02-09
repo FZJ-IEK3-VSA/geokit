@@ -14,7 +14,7 @@ GeoKit provides comprehensive geometry creation and operations capabilities, dem
 - Create linestring geometries from ordered coordinate lists
 - Supports visualization and export to vector files
 
-### 3. MultiLineStrings ([_03_create_multi_lines.ipynb](../../Examples/_03_geometries/_01_create_geometries/_03_create_multi_lines.ipynb))
+### 3. MultiLineStrings ([_03_create_multi_line.ipynb](../../Examples/_03_geometries/_01_create_geometries/_03_create_multi_line.ipynb))
 - Combine multiple linestrings into a single multilinestring geometry using `flatten()`
 - Visualize and export multilinestring collections
 
