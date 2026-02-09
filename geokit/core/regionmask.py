@@ -22,6 +22,7 @@ from geokit.core import vector as VECTOR
 # from .location import Location, LocationSet
 from geokit.core.extent import Extent
 from geokit.data_types import (
+    AxHands,
     geokit_c_data_types_literal,
     load_raster_input,
     load_vector_input,
@@ -1581,7 +1582,7 @@ class RegionMask(object):
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
         return UTIL.drawImage(self.mask, ax=ax, xlim=xlim, ylim=ylim, **kwargs)
 
-    def drawImage(self, matrix, ax=None, drawSelf=True, **kwargs):
+    def drawImage(self, matrix, ax_hands=None, drawSelf=True, **kwargs) -> AxHands:
         """Convenience wrapper around geokit.util.drawImage which plots matrix data
         which is assumed to match the boundaries of the RegionMask.
 
@@ -1592,11 +1593,11 @@ class RegionMask(object):
         xlim = kwargs.pop("xlim", (self.extent.xMin, self.extent.xMax))
         ylim = kwargs.pop("ylim", (self.extent.yMin, self.extent.yMax))
 
-        ax = UTIL.drawImage(matrix, ax=ax, xlim=xlim, ylim=ylim, **kwargs)
+        ax_hands = UTIL.drawImage(matrix, ax=ax_hands, xlim=xlim, ylim=ylim, **kwargs)
 
         if drawSelf:
-            self.drawSelf(ax=ax, fc="None", ec="k", linewidth=2)
-        return ax
+            self.drawSelf(ax=ax_hands, fc="None", ec="k", linewidth=2)
+        return ax_hands
 
     def drawGeoms(self, geoms, ax=None, drawSelf=True, **kwargs):
         """Convenience wrapper around geokit.geom.drawGeoms which plots geometries

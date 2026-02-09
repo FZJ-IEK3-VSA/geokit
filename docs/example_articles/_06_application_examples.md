@@ -1,1 +1,3 @@
 # Application Example
+
+The  [following example](../../Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb) has been created to showcase how GeoKit can be used to answer real-world questions in the field of energy system analysis. It demonstrates how the ocean depth at offshore wind turbine locations in the North Sea can be determined. This kind of information is important for estimating the required capital to build these offshore turbines. These costs are important for assessing future electricity costs and prices.

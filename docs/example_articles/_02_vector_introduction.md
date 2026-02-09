@@ -53,3 +53,13 @@ GeoKit provides powerful tools for spatial analysis and manipulation:
 
 These capabilities make GeoKit a versatile tool for vector data processing workflows, from simple data inspection to complex spatial analysis tasks.
 
+### Create Geodata
+
+At some point you might to create your own geodata from some kind of analysis. In this case it might come in handy to create it from a pandas data frame. 
+E.g. you can create 
+
+- A [shapefile (.shp)](../../Examples/_02_vector/_8_create_shapefile_from_data_frame.ipynb) with one vector layer
+- or a [geopakage (.gpkg)](../../Examples/_02_vector/_9_create_geopackage_from_data_frame.ipynb) with one vector or multiple vector layers.
+
+
+
