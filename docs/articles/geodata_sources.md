@@ -12,13 +12,13 @@ Spatial data for countries and their subdivisions.
 
 ## GEBCO (General Bathymetric Chart of the Oceans)
 
-Provides gloval Bathymetry data (elevation data). See https://en.wikipedia.org/wiki/Bathymetry for further information on Bathymetry.
+Provides global bathymetry data (elevation data). See https://en.wikipedia.org/wiki/Bathymetry for further information on bathymetry.
 
 - https://www.gebco.net/data-products/gridded-bathymetry-data
 
 ## Land Cover 2020 (raster 10 m)
 
-"Provides at global level information on different types (classes) of physical coverage of the Earth's surface, e.g. tree cover, grasslands, croplands, permanent water bodies, wetlands at 10 m spatial resolution for the 2020 base year. "
+"Provides information at the global level on different types (classes) of physical coverage of the Earth's surface, e.g. tree cover, grasslands, croplands, permanent water bodies, wetlands at 10 m spatial resolution for the 2020 base year."
 
 - https://land.copernicus.eu/en/products/global-dynamic-land-cover/land-cover-2020-raster-10-m-global-annual
 
@@ -36,7 +36,7 @@ Provides data on various marine regions.
 
 ## Global Human Settlement Layer 
 
-" The GHSL produces new global spatial information, evidence-based analytics, and knowledge describing the human presence in the planet."
+"The GHSL produces new global spatial information, evidence-based analytics, and knowledge describing the human presence on the planet."
 
 - https://data.jrc.ec.europa.eu/collection/ghsl
 

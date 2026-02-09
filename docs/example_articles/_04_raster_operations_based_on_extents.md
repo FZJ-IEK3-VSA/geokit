@@ -1,6 +1,6 @@
 # Raster Operations Based on Extents
 
-For many workflows, it may be easier to base your analysis on the extent of a region. In more complicated analyses, it may be useful to analyse data from one file based on the extent of another file. In these cases, Geokit's Extent object could be useful.
+For many workflows, it may be easier to base your analysis on the extent of a region. In more complicated analyses, it may be useful to analyze data from one file based on the extent of another file. In these cases, GeoKit's Extent object could be useful.
 
 You can use the Extent object to:
 
@@ -11,10 +11,10 @@ You can use the Extent object to:
 - Warp and clip rasters to specified Extents (via `warp()`)
 - Support multiple resampling algorithms (e.g., bilinear interpolation)
 
-## [Extent Creation and Transfomration](../../Examples/_04_raster_operations_based_on_extents/_3_creating_and_transforming_extents.ipynb)
+## [Extent Creation and Transformation](../../Examples/_04_raster_operations_based_on_extents/_3_creating_and_transforming_extents.ipynb)
 
 - You can create Extent objects from various sources 
-    - From Coordinates
+    - From coordinates
     - Create Extents from raster files (via `fromRaster()`)
     - Create Extents from vector files, like shapefiles (via `fromVector()`)
     - Create Extents from in-memory geometries (via `fromGeom()`)

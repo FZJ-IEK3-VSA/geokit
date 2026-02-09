@@ -21,7 +21,7 @@ You can apply various operations on geometric objects:
 - Test geometric relationships such as: Contains, Crosses, Touches, Overlaps
 - Evaluate spatial predicates between geometry pairs
 
-## 6. [Set Operations](../../Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_.ipynb)
+## 6. [Set Operations](../../Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_union.ipynb)
 - Compute geometry intersections using `Intersection()`
 - Compute geometry unions using `Union()`
 - Ensure operations occur within the same spatial reference system

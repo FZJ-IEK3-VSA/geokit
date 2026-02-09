@@ -9,21 +9,21 @@
 	</tr>
 </table>
 
-| Name                                                                                                             | Version                                                                                                             | Test on pull request                                                                                                                                                                                                         | Docstring Style                                                                  | Documentation Coverage                                  |
+| Name                                                                                                             | Version                                                                                                             | Tests on pull requests                                                                                                                                                                                                       | Docstring Style                                                                  | Documentation Coverage                                  |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_current_branch.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml) | ![Numpy docstring Style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_current_branch.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml) | ![NumPy docstring style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) |
 
 
 
 # ETHOS.GeoKit - **Geo**spatial tool**kit** for Python
 
-ETHOS.GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses.
-It gives low overhead control of fundamental operations; such as reading, writing, and mutating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more.
+ETHOS.GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="https://gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general-purpose geospatial analyses.
+It gives low-overhead control of fundamental operations, such as reading, writing, and mutating geospatial datasets, manipulating and translating geometries, warping and resampling raster data, and much more.
 Via the RegionMask object, GeoKit even allows for seamless integration of information expressed across multiple geospatial datasets in many formats and reference systems into the context of a single region.
 
-GeoKit is not intended to replace the GDAL library, as only very small subset of GDAL's capabilities are exposed. Nor is it intended to compete with other libraries with similar functionalities.
-Instead GeoKit evolved in an ad hoc manner in order to realize the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model which is intended for rapid land eligibility analyses of renewable energy systems and is also available on GitHub.
-Nevertheless, GeoKit quickly emerged as a general purpose GIS toolkit with capabilities far beyond computing land eligibility.
+GeoKit is not intended to replace the GDAL library, as only a very small subset of GDAL's capabilities are exposed. Nor is it intended to compete with other libraries with similar functionalities.
+Instead, GeoKit evolved in an ad hoc manner to realize the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems and is also available on GitHub.
+Nevertheless, GeoKit quickly emerged as a general-purpose GIS toolkit with capabilities far beyond computing land eligibility.
 Therefore, it is our pleasure to offer it to anyone who is interested in its use.
 
 [![DOI](https://zenodo.org/badge/114900977.svg)](https://zenodo.org/badge/latestdoi/114900977)
@@ -51,20 +51,20 @@ conda install -c conda-forge geokit
 
 ### Installation from a local folder
 
-1. First clone a local copy of the repository to your computer, and move into the created directory
+1. First, clone a local copy of the repository to your computer, and move into the created directory
 
 ```
 git clone https://github.com/FZJ-IEK3-VSA/geokit.git
 cd geokit
 ```
 
-1. (Alternative) If you want to use the 'dev' branch (or another branch) then use:
+2. (Alternative) If you want to use the 'dev' branch (or another branch), then use:
 
 ```
 git checkout dev
 ```
 
-2. When using [Anaconda](https://www.anaconda.com/) / [(Micro-)Mamba](https://mamba.readthedocs.io/en/latest/) (recommended), GeoKit should be installable to a new environment with:
+3. When using [Anaconda](https://www.anaconda.com/) / [(Micro-)Mamba](https://mamba.readthedocs.io/en/latest/) (recommended), GeoKit should be installable to a new environment with:
 
 ```
 conda env create --file requirements.yml
@@ -72,7 +72,7 @@ conda activate geokit
 pip install . --no-deps
 ```
 
-2. (Alternative) Or into an existing environment with:
+4. (Alternative) Or into an existing environment with:
 
 ```
 conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
@@ -80,7 +80,7 @@ conda activate geokit
 pip install . --no-deps
 ```
 
-2. (Alternative) If you want to install GeoKit in editable mode, and also with jupyter notebook and with testing functionalities use:
+5. (Alternative) If you want to install GeoKit in editable mode, and also with Jupyter Notebook and testing functionality, use:
 
 ```
 conda env create --file requirements-dev.yml
@@ -97,9 +97,9 @@ See the [Examples page](Examples/)
 
 MIT License
 
-Active Developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
+Active developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten
 
-Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann,
+Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann
 
 You should have received a copy of the MIT License along with this program.  
 If not, see <https://opensource.org/licenses/MIT>
@@ -108,10 +108,10 @@ If not, see <https://opensource.org/licenses/MIT>
 
 <a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/iek3-square.png?raw=True" alt="Institute image IEK-3" width="280" align="right" style="margin:0px 10px"/></a>
 
-We are the <a href="https://www.fz-juelich.de/en/iek/iek-3">Institute of Energy and Climate Research - Techno-economic Systems Analysis (IEK-3)</a> belonging to the <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>. Our interdisciplinary department's research is focusing on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
+We are the <a href="https://www.fz-juelich.de/en/iek/iek-3">Institute of Energy and Climate Research - Techno-economic Systems Analysis (IEK-3)</a> belonging to the <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>. Our interdisciplinary department's research focuses on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions, and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
 
 ## Acknowledgment
 
-This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050   A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
+This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
 
 <a href="https://www.helmholtz.de/en/"><img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Logo" width="200px" style="float:right"></a>

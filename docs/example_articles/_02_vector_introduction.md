@@ -10,7 +10,7 @@ Vector data is commonly stored in formats such as Shapefiles or GeoPackages, whi
 
 The figure above summarizes how vector data is organized on disk. A vector dataset is made up of:
 
-- Geometry files that stores the actual shapes (points, lines, polygons)
+- Geometry files that store the actual shapes (points, lines, polygons)
 - Attribute tables that hold descriptive fields for each feature.
 - A coordinate reference system definition, which tells software how to interpret coordinates.
 - Optional index or metadata files that speed up access and record provenance.
@@ -55,11 +55,11 @@ These capabilities make GeoKit a versatile tool for vector data processing workf
 
 ### Create Geodata
 
-At some point you might to create your own geodata from some kind of analysis. In this case it might come in handy to create it from a pandas data frame. 
-E.g. you can create 
+At some point you might need to create your own geodata from some kind of analysis. In this case, it might come in handy to create it from a pandas data frame.
+For example, you can create:
 
 - A [shapefile (.shp)](../../Examples/_02_vector/_8_create_shapefile_from_data_frame.ipynb) with one vector layer
-- or a [geopakage (.gpkg)](../../Examples/_02_vector/_9_create_geopackage_from_data_frame.ipynb) with one vector or multiple vector layers.
+- or a [geopackage (.gpkg)](../../Examples/_02_vector/_9_create_geopackage_from_data_frame.ipynb) with one vector or multiple vector layers.
 
 
 

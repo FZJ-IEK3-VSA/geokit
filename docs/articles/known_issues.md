@@ -1,12 +1,12 @@
 # Known Issues
 
-## Incompatibility with MacOS Systems
+## Incompatibility with macOS Systems
 
-Geokit shows various incompatibilities with Mac OS X for Geokit <1.5. These are mainly caused by GDAL and its inconsistent behaviour on different operating systems. These variations are addressed in newer GDAL versions, which require updates to Geokit. If you are using a MacOS machine, please use Geokit 1.5.0 or higher.
+GeoKit shows various incompatibilities with Mac OS X for GeoKit < 1.5. These are mainly caused by GDAL and its inconsistent behaviour on different operating systems. These variations are addressed in newer GDAL versions, which require updates to GeoKit. If you are using a macOS machine, please use GeoKit 1.5.0 or higher.
 
-## Availability of Multiprocessing for RegionMask on Windows, MacOS and Linux
+## Availability of Multiprocessing for RegionMask on Windows, macOS, and Linux
 
-The Geokit multiprocessing feature of Regionmask is only available on Linux, due to different multiprocessing implementations on MacOS and Windows compared to Linux. On MacOS and Windows, new processes are started for processes invoked by multiprocessing. This requires the function to be serialised. However, many GDAL objects cannot be serialised, which causes incompatibility.
+The GeoKit multiprocessing feature of RegionMask is only available on Linux, due to different multiprocessing implementations on macOS and Windows compared to Linux. On macOS and Windows, new processes are started for each multiprocessing task. This requires the function to be serialised. However, many GDAL objects cannot be serialised, which causes incompatibility.
 
 In version 1.4.1, where multiprocessing was introduced, this caused the two tests, `test_RegionMask_indicateValues` and
 `test_RegionMask_indicateFeatures`, to fail with the following warning:
