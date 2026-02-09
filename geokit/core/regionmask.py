@@ -1599,7 +1599,7 @@ class RegionMask(object):
             self.drawSelf(ax=ax_hands, fc="None", ec="k", linewidth=2)
         return ax_hands
 
-    def drawGeoms(self, geoms, ax=None, drawSelf=True, **kwargs):
+    def drawGeoms(self, geoms, ax=None, drawSelf=True, **kwargs) -> AxHands:
         """Convenience wrapper around geokit.geom.drawGeoms which plots geometries
         which are then plotted within the context of the RegionMask.
 
