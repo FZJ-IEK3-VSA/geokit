@@ -58,7 +58,7 @@ parts:
       - file: docs/example_articles/_05_combine_raster_and_vector.md
         sections:
           - file: Examples/_05_combine_raster_and_vector/_01_warp_raster_to_region_mask_context.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_02_export_raster_from_regionmask.ipynb
+          - file: Examples/_05_combine_raster_and_vector/_02_create_raster_from_regionmask.ipynb
           - file: Examples/_05_combine_raster_and_vector/_03_extract_vector_features_within_region.ipynb
           - file: Examples/_05_combine_raster_and_vector/_04_indicate_features_and_buffer.ipynb
           - file: Examples/_05_combine_raster_and_vector/_05_indicate_values_threshold_and_buffer.ipynb
