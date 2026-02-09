@@ -7,7 +7,7 @@ You can use the Extent object to:
 ## [Create Rasters based on Extents](../../Examples/_04_raster_operations_based_on_extents/_1_create_raster_from_extent.ipynb)
 - Create rasters from Extent objects with automatic pixel size computation
 
-## [Raster Clipping](../../Examples/_04_raster_operations_based_on_extents/_2_clipping_rasters_to_an_extent.ipynb)
+## [Clip Rasters](../../Examples/_04_raster_operations_based_on_extents/_2_clipping_rasters_to_an_extent.ipynb)
 - Warp and clip rasters to specified Extents (via `warp()`)
 - Support multiple resampling algorithms (e.g., bilinear interpolation)
 
