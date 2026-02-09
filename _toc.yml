@@ -55,14 +55,14 @@ parts:
           - file: Examples/_04_raster_operations_based_on_extents/_2_clipping_rasters_to_an_extent.ipynb
           - file: Examples/_04_raster_operations_based_on_extents/_3_creating_and_transforming_extents.ipynb
           - file: Examples/_04_raster_operations_based_on_extents/_4_combine_overlapping_extents.ipynb
-      - file: docs/example_articles/_05_combine_raster_and_vector.md
+      - file: docs/example_articles/_05_combine_multiple_files.md
         sections:
-          - file: Examples/_05_combine_raster_and_vector/_01_warp_raster_to_region_mask_context.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_02_create_raster_from_regionmask.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_03_extract_vector_features_within_region.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_04_indicate_features_and_buffer.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_05_indicate_values_threshold_and_buffer.ipynb
-          - file: Examples/_05_combine_raster_and_vector/_06_setup_regionmask_aachen.ipynb
+          - file: Examples/_05_combine_multiple_files/_01_warp_raster_to_region_mask_context.ipynb
+          - file: Examples/_05_combine_multiple_files/_02_create_raster_from_regionmask.ipynb
+          - file: Examples/_05_combine_multiple_files/_03_extract_vector_features_within_region.ipynb
+          - file: Examples/_05_combine_multiple_files/_04_indicate_features_and_buffer.ipynb
+          - file: Examples/_05_combine_multiple_files/_05_indicate_values_threshold_and_buffer.ipynb
+          - file: Examples/_05_combine_multiple_files/_06_setup_regionmask_aachen.ipynb
       - file: docs/example_articles/_06_application_examples.md
         sections:
           - file: Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
