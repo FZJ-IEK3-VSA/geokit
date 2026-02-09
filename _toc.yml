@@ -75,7 +75,8 @@ parts:
     chapters:
       # The API documentation is written to the folder
       - file: _readthedocs/geokit/index.rst
-  - caption: FAQ
+  - caption: FAQ and Miscellaneous
     chapters:
       - file: docs/articles/geodata_sources.md
       - file: docs/articles/known_issues.md
+      - file: CODE_OF_CONDUCT.md

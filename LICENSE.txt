@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2017 David Severin Ryberg (FZJ IEK-3), Jochen Linßen (FZJ IEK-3), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ IEK-3)
+Copyright (c) 2017-2026 Shitab Ishmam (FZJ ICE-2), Julian Belina (FZJ ICE-2), Christoph Winkler (FZJ ICE-2), David Severin Ryberg (FZJ IEK-3), Noah Pflugradt (FZJ ICE-2), Heidi Heinrichs (FZJ ICE-2), Jann Weinand (FZJ ICE-2), Jochen Linßen (FZJ ICE-2), Martin Robinius (FZJ IEK-3), Detlef Stolten (FZJ ICE-2)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
