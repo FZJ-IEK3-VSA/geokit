@@ -51,10 +51,10 @@ parts:
               - file: Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_union.ipynb
       - file: docs/example_articles/_04_raster_operations_based_on_extents.md
         sections:
-          - file: Examples/_04_combine_data_from_multiple_files/_1_create_raster_from_extent.ipynb
-          - file: Examples/_04_combine_data_from_multiple_files/_2_clipping_rasters_to_an_extent.ipynb
-          - file: Examples/_04_combine_data_from_multiple_files/_3_creating_and_transforming_extents.ipynb
-          - file: Examples/_04_combine_data_from_multiple_files/_4_combine_overlapping_extents.ipynb
+          - file: Examples/_04_raster_operations_based_on_extents/_1_create_raster_from_extent.ipynb
+          - file: Examples/_04_raster_operations_based_on_extents/_2_clipping_rasters_to_an_extent.ipynb
+          - file: Examples/_04_raster_operations_based_on_extents/_3_creating_and_transforming_extents.ipynb
+          - file: Examples/_04_raster_operations_based_on_extents/_4_combine_overlapping_extents.ipynb
       - file: docs/example_articles/_05_combine_raster_and_vector.md
         sections:
           - file: Examples/_05_combine_raster_and_vector/_01_setup_regionmask_aachen.ipynb
