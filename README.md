@@ -1,7 +1,7 @@
 ﻿<table style="border:0; border-collapse:collapse;">
 	<tr>
 		<td style="border:0;">
-			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="GeoKit logo" width="200px">
+			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="GeoKit logo" width="300px">
 		</td>
 		<td style="border:0;">
 			<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis" width="300px"></a>
