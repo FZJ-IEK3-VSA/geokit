@@ -1,4 +1,4 @@
-# Combine Raster and Vector Data
+# Combine Multiple Files
 
 GeoKit's RegionMask object provides a powerful way to combine and analyze raster and vector data within a specific region of interest. RegionMasks can be created from shapefiles, geometries, or extent objects combined with Boolean numpy arrays, making them flexible tools for spatial analysis workflows.
 

@@ -1,18 +1,19 @@
 # Introduction to GeoKit
 
-GeoKit is designed to efficiently handle common spatial tasks, including reading, writing, transforming, and merging different kinds of geospatial data.
+GeoKit enables you to work efficiently with both **vector** and **raster** data, and is especially powerful when these data types need to be used **together**. The main areas of functionality include:
 
-GeoKit supports both **vector** and **raster** data and is especially efficient when these data types need to be used **together**. The examples in this documentation are organized by data type and typical use cases, so you can quickly find what you need for your use case. 
+### Geometry Operations
+Create and manipulate vector geometries (points, lines, polygons), transform them between coordinate systems, and perform spatial operations like buffering, intersection, and union. [Learn more about geometries](./example_articles/_03_00_geometries.md)
 
+### Raster Operations
+Create, read, visualize, warp, resample, and analyze raster datasets (GeoTIFF and other formats). Extract values at specific locations using various interpolation methods, and convert between raster and vector representations. [Learn more about raster data](./example_articles/_01_raster_overview.md)
 
-1. [**Working with Basic Geometries**](./_03_01_create_geometries.md)
-    Introduction to the basics of geometries
+### Vector Operations
+Read, analyze, and manipulate vector datasets (Shapefiles, GeoPackages) with their associated attribute tables. Filter, buffer, and clip vector data based on spatial relationships. [Learn more about vector data](./example_articles/_02_vector_introduction.md)
 
-2. [**Working with Raster Data**](./_01_raster_overview.md)
-   Learn how to load, visualize, create, and process raster datasets.
+### Extent and Region Operations
+Create and manipulate Extent objects to define spatial regions, warp and clip rasters to specific extents, and combine multiple extents. [Learn more about extent operations](./example_articles/_04_raster_operations_based_on_extents.md)
 
-3. [**Working with Vector Data**](./_02_vector_introduction.md)
-   Learn how to inspect, visualize, filter, and modify vector geometries and their attributes.
+### Multi-File Integration
+Use the powerful RegionMask object to combine and analyze raster and vector data within a specific region of interest. Create binary representations of spatial features, apply buffer zones, and extract masked data from multiple sources. [Learn more about combining multiple files](./example_articles/_05_combine_multiple_files.md)
 
-4. **Working with Multiple Files** 
-   Learn how to combine, align, and analyze multiple geospatial files in a single workflow.

@@ -15,83 +15,85 @@
 
 
 
-# ETHOS.GeoKit - **Geo**spatial tool**kit** for Python
+---
 
-ETHOS.GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="https://gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general-purpose geospatial analyses.
-It gives low-overhead control of fundamental operations, such as reading, writing, and mutating geospatial datasets, manipulating and translating geometries, warping and resampling raster data, and much more.
-Via the RegionMask object, GeoKit even allows for seamless integration of information expressed across multiple geospatial datasets in many formats and reference systems into the context of a single region.
+## Documentation Overview
 
-GeoKit is not intended to replace the GDAL library, as only a very small subset of GDAL's capabilities are exposed. Nor is it intended to compete with other libraries with similar functionalities.
-Instead, GeoKit evolved in an ad hoc manner to realize the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems and is also available on GitHub.
-Nevertheless, GeoKit quickly emerged as a general-purpose GIS toolkit with capabilities far beyond computing land eligibility.
-Therefore, it is our pleasure to offer it to anyone who is interested in its use.
+GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations.
 
-[![DOI](https://zenodo.org/badge/114900977.svg)](https://zenodo.org/badge/latestdoi/114900977)
+GeoKit provides low-overhead control of fundamental geospatial operations including:
+- Reading, writing, and mutating geospatial datasets
+- Manipulating and translating geometries between coordinate systems
+- Warping and resampling raster data
+- Seamlessly integrating multiple geospatial datasets through the **RegionMask** object
 
-## Features
+The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. An extensice Documentation about GeoKit can be found at https://geokit.readthedocs.io/.
 
-- Direct exposure of functions and objects in the GDAL library
-- Reading, writing, and manipulating raster and vector datasets
-- Translation between data formats and projection systems
-- Direct conversion of raster data into NumPy matrices
+GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses.
 
 ## Installation
 
-### Installation via conda-forge
-The easiest way to install GeoKit into a new environment is from `conda-forge` with:
+If you just want to use GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/).
+
+### Installation via conda-forge (Recommended)
+
+The easiest way to install GeoKit into a new environment is from `conda-forge`:
 
 ```bash
 conda create -n geokit -c conda-forge geokit
 ```
 
-or into an existing environment with:
+Or into an existing environment with:
+
 ```bash
 conda install -c conda-forge geokit
 ```
 
-### Installation from a local folder
+### Installation from Source
 
-1. First, clone a local copy of the repository to your computer, and move into the created directory
+1. Clone the repository and navigate to it:
 
-```
+```bash
 git clone https://github.com/FZJ-IEK3-VSA/geokit.git
 cd geokit
 ```
 
-2. (Alternative) If you want to use the 'dev' branch (or another branch), then use:
+2. (Optional) Switch to the development branch:
 
-```
+```bash
 git checkout dev
 ```
 
-3. When using [Anaconda](https://www.anaconda.com/) / [(Micro-)Mamba](https://mamba.readthedocs.io/en/latest/) (recommended), GeoKit should be installable to a new environment with:
+3. Create a new environment:
 
-```
-conda env create --file requirements.yml
+```bash
+conda env create --file requirements-dev
 conda activate geokit
 pip install . --no-deps
 ```
 
-4. (Alternative) Or into an existing environment with:
+4. (Alternative) Update an existing environment:
 
-```
-conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
+```bash
+conda env update --file requirements-dev -n <ENVIRONMENT-NAME>
 conda activate geokit
 pip install . --no-deps
 ```
 
-5. (Alternative) If you want to install GeoKit in editable mode, and also with Jupyter Notebook and testing functionality, use:
+## Getting Started
 
-```
-conda env create --file requirements-dev.yml
-conda activate geokit
-pip install . --no-deps -e
-```
+The best way to learn GeoKit is through hands-on examples. This documentation includes:
 
-## Examples
+- **Example notebooks** in the `Examples` folder demonstrating real-world use cases
+- **Detailed guides** in the `docs/example_articles` folder explaining key concepts
+- **API documentation** providing comprehensive reference information
+- **Source code** in the `geokit` folder for advanced users
 
-See the [Examples page](Examples/)
+Start with the [Introduction to GeoKit](docs/example_articles/_00_introduction.md) to understand the fundamentals, or jump directly to the capability area that interests you most.
 
+### About GeoKit
+
+GeoKit evolved from the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems. However, GeoKit quickly emerged as a versatile, general-purpose GIS toolkit with capabilities far extending beyond computing land eligibility.
 
 ## License
 
@@ -115,3 +117,6 @@ We are the <a href="https://www.fz-juelich.de/en/iek/iek-3">Institute of Energy 
 This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
 
 <a href="https://www.helmholtz.de/en/"><img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Logo" width="200px" style="float:right"></a>
+
+
+
