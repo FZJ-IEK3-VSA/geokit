@@ -32,20 +32,24 @@ parts:
           - file: Examples/_02_vector/_5_filter_vector_data_spatially.ipynb
           - file: Examples/_02_vector/_6_create_buffer.ipynb
           - file: Examples/_02_vector/_7_subdivide_geometries.ipynb
-      - file: docs/example_articles/_03_geometries.md
+      - file: docs/example_articles/_03_00_geometries.md
         sections:
-          - file: Examples/_03_geometries/_01_create_geometries/_01_create_points.ipynb
-          - file: Examples/_03_geometries/_01_create_geometries/_02_create_lines.ipynb
-          - file: Examples/_03_geometries/_01_create_geometries/_03_create_multi_lines.ipynb
-          - file: Examples/_03_geometries/_01_create_geometries/_04_create_polygon.ipynb
-          - file: Examples/_03_geometries/_01_create_geometries/_05_create_multi_polygon.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_01_get_centroid_of_geom.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_02_get_boundary.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_03_transform_srs.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_05_get_areas.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_06_spatial_relations_of_geometries.ipynb
-          - file: Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_union.ipynb
-      - file: docs/example_articles/_04_extent_based_operations.md
+          - file: _03_01_geometry_operations.md
+            sections:
+              - file: Examples/_03_geometries/_01_create_geometries/_01_create_points.ipynb
+              - file: Examples/_03_geometries/_01_create_geometries/_02_create_lines.ipynb
+              - file: Examples/_03_geometries/_01_create_geometries/_03_create_multi_lines.ipynb
+              - file: Examples/_03_geometries/_01_create_geometries/_04_create_polygon.ipynb
+              - file: Examples/_03_geometries/_01_create_geometries/_05_create_multi_polygon.ipynb
+          - file: _03_01_geometry_operations.md
+            sections:
+              - file: Examples/_03_geometries/_02_geometry_operations/_01_get_centroid_of_geom.ipynb
+              - file: Examples/_03_geometries/_02_geometry_operations/_02_get_boundary.ipynb
+              - file: Examples/_03_geometries/_02_geometry_operations/_03_transform_srs.ipynb
+              - file: Examples/_03_geometries/_02_geometry_operations/_05_get_areas.ipynb
+              - file: Examples/_03_geometries/_02_geometry_operations/_06_spatial_relations_of_geometries.ipynb
+              - file: Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_union.ipynb
+      - file: docs/example_articles/_04_raster_operations_based_on_extents.md
         sections:
           - file: Examples/_04_combine_data_from_multiple_files/_1_create_raster_from_extent.ipynb
           - file: Examples/_04_combine_data_from_multiple_files/_2_clipping_rasters_to_an_extent.ipynb

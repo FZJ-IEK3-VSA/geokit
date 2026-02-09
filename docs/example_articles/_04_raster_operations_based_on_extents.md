@@ -1,4 +1,4 @@
-# Extent for Raster Operations
+# Raster Operations Based on Extents
 
 The Extent object represents geographic extents of an area and exposes useful methods which depend on those extents.
 

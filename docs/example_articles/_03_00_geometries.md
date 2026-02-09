@@ -1,4 +1,4 @@
-# GeoKit Geometry Capabilities Summary
+# Working with Vector Geometries
 
 GeoKit provides comprehensive geometry creation and operations capabilities, demonstrated through notebooks organized into two categories:
 

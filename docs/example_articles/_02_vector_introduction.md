@@ -6,7 +6,7 @@ Vector data is commonly stored in formats such as Shapefiles or GeoPackages, whi
 
 ![Vector Files Overview](../visualizations/vector_files_overview.svg)
 
-### General structure of vector data
+### General Structure of Vector Data
 
 The figure above summarizes how vector data is organized on disk. A vector dataset is made up of:
 
