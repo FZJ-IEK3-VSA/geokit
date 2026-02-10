@@ -29,7 +29,7 @@ Enhanced raster processing capabilities with better handling of edge cases:
 
 Improvements to vector and geometry handling:
 
-- **#276**: LocationSet cannot deal witn integer arrays
+- **#276**: LocationSet cannot deal with integer arrays
 - **#265**: extractValues Cannot Handle LocationSet as input for Points
 - **#245**: Regionmask.load() does not provide coordinate system to RegionMask from Vector
 - **#244**: Check for file existence before reading vector file
@@ -54,7 +54,7 @@ Improvements to code quality, testing, and developer experience:
 
 Additional bug fixes and stability improvements:
 
-- **#254**: Add more retry attemps for downloads in Example 7
+- **#254**: Add more retry attempts for downloads in Example 7
 
 ## 📊 Release Statistics
 

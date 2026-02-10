@@ -366,7 +366,7 @@ Cell In[1], [line 8](vscode-notebook-cell:?execution_count=1&line=8)
 
 ## Vector/Geometry Operations
 
-### Issue #276: LocationSet cannot deal witn integer arrays
+### Issue #276: LocationSet cannot deal with integer arrays
 
 **Status:** closed ✓
 
@@ -702,7 +702,7 @@ Enable the "ARG" linter in Ruff to check for unused arguments. Then, pass them o
 
 ## Bug Fixes & Stability
 
-### Issue #254: Add more retry attemps for downloads in Example 7
+### Issue #254: Add more retry attempts for downloads in Example 7
 
 **Status:** closed ✓
 
