@@ -103,6 +103,7 @@ all_file_name_dict = {
     "osm_roads_minor.9.265.171.tif": "sha256:68a77d446fa5fb27b05c068d24214bd2a18135e1231b686746387b8f2aa88681",
     "osm_roads_minor.9.265.172.tif": "sha256:2a5029eee67d74a1f1e2c0d27b786a757e8687375ef4190ca2daab052aa8302e",
     "test_raster_3x3.tif": "sha256:49e4f41d636618ef38d1a6cb6f684af2d90df4735aeaea88340f3a7fb51b1a84",
+    "gadm36_NLD.gpkg": "sha256:b03604626bcdeb63adf21fe43deba229870c1a778cbc2c6c079498a756a1e04a",
 }
 
 
@@ -142,9 +143,18 @@ def _get_test_data(
     file_name: str,
     data_cache_folder: pathlib.Path,
 ) -> str:
-    return_path = data_cache_folder.joinpath(file_name)
-    if not return_path.is_file():
-        raise Exception("There is no file at: " + str(return_path))
+    list_of_subfolders = [data_cache_folder, data_cache_folder.joinpath("gadm_data")]
+    file_is_available = False
+    list_of_file_paths = []
+    for current_subfolder in list_of_subfolders:
+        current_return_path = current_subfolder.joinpath(file_name)
+        list_of_file_paths.append(current_return_path)
+
+        if current_return_path.is_file():
+            file_is_available = True
+            return_path = current_return_path
+    if file_is_available is False:
+        raise Exception("There is no file at: " + str(list_of_file_paths))
 
     _verify_file_hash(
         file_path=return_path,
@@ -364,3 +374,10 @@ class ZenodoDataDownloader:
                 results[out_idx] = path
 
         return [path for path in results if path is not None]
+
+
+if __name__ == "__main__":
+    # Example usage
+    data_cache_folder = pathlib.Path(__file__).parent.parent.joinpath("data")
+    asd = create_hash_dict(list_of_file_paths=[data_cache_folder.joinpath("gadm_data/gadm36_NLD.gpkg")])
+    print(asd)

@@ -1085,7 +1085,8 @@ def drawMultiPolygon(g, plotargs, ax: matplotlib.axes._axes.Axes, colorVal=None)
 
 def drawGeoms(
     geoms: ogr.Geometry | list[ogr.Geometry] | pd.DataFrame | np.ndarray,
-    srs: srs_input = 4326,
+    # srs: srs_input = 4326,
+    srs: srs_input | None = None,
     ax: None | matplotlib.axes._axes.Axes | AxHands = None,
     simplificationFactor: numeric | None = 5000,
     colorBy: str | None = None,
@@ -1348,15 +1349,14 @@ def drawGeoms(
     # Do Plotting
     # make patches
     handles = []
+    if not pargs is None:
+        s = [not v is None for v in pargs.iloc[gi]]
+        plotargs = pargs.iloc[gi, s].to_dict()
+    else:
+        plotargs = dict()
+    plotargs.update(mplArgs)
 
     for gi, geometry in enumerate(geoms):
-        if not pargs is None:
-            s = [not v is None for v in pargs.iloc[gi]]
-            plotargs = pargs.iloc[gi, s].to_dict()
-        else:
-            plotargs = dict()
-        plotargs.update(mplArgs)
-
         if not colorBy is None:
             colorVal = _colorVals[gi]
         else:

@@ -19,7 +19,7 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: requirements-dev.yml
-            ipynb_example_folder: "Examples"
+            ipynb_example_folder: "docs/Examples"
             library_name: "python"
             library_version: ${{ matrix.python_version }}
             dependency_position_env_file: "0"
@@ -69,12 +69,12 @@ jobs:
                     ]
         uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
         secrets:
-          ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
-          ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
+            ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
+            ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: requirements-dev.yml
-            ipynb_example_folder: "Examples"
+            ipynb_example_folder: "docs/Examples"
             library_name: ${{ matrix.dependencies.library_name }}
             library_version: ${{ matrix.dependencies.version }}
             dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}

@@ -1,7 +1,7 @@
 on:
   workflow_dispatch:
   # push:
-  #   branches: ["check_dependencies"]
+  #   branches: ["208_update_examples_2026"]
   pull_request:
     branches: ["master"]
 
@@ -11,17 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-        geopandas_version:
-          [
-            "0.11.0",
-            "0.11.1",
-            "0.12.0",
-            "0.14.4",
-            "1.0.0",
-            "1.0.1",
-            "1.1.0",
-            "1.1.1",
-          ]
+        geopandas_version: ["1.0.0", "1.0.1", "1.1.0", "1.1.1", "1.1.2"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
     secrets:
       ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
@@ -29,7 +19,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
-      ipynb_example_folder: "Examples"
+      ipynb_example_folder: "docs/Examples"
       library_name: "geopandas"
       library_version: ${{ matrix.geopandas_version }}
       dependency_position_env_file: "11"

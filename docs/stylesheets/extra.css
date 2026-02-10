@@ -1,0 +1,30 @@
+:root {
+  --md-primary-fg-color: #013e6b;
+  --md-primary-fg-color--light: #0156a3;
+  --md-primary-fg-color--dark: #012d4e;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffff;
+  --md-accent-fg-color: #013e6b;
+  --md-accent-fg-color--transparent: rgba(1, 62, 107, 0.1);
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #ffffff;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #0156a3;
+  --md-primary-fg-color--light: #0170c9;
+  --md-primary-fg-color--dark: #013e6b;
+}
+
+/* Double the logo size */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  width: auto;
+  height: 3.2rem;
+}
+
+.md-logo img,
+.md-logo svg {
+  width: auto;
+  height: 3.2rem;
+}

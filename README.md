@@ -1,108 +1,129 @@
-﻿<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis " width="300px"></a> 
+﻿<table style="border:0; border-collapse:collapse;">
+	<tr>
+		<td style="border:0;">
+			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" width="300px">
+		</td>
+		<td style="border:0;">
+			<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis" width="300px"></a>
+		</td>
+	</tr>
+</table>
 
-| Name                                                                                                             | Version                                                                                                             | Test on pull request                                                                                                                                                                                                         | Docstring Style                                                                  | Documentation Coverage                                  |
+| Name                                                                                                             | Version                                                                                                             | Tests on pull requests                                                                                                                                                                                                       | Docstring Style                                                                  | Documentation Coverage                                  |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_current_branch.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml) | ![Numpy docstring Style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![.github/workflows/test_current_branch.yml](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml/badge.svg)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_current_branch.yml) | ![NumPy docstring style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) |
 
 
 
-# GeoKit - **Geo**spatial tool**kit** for Python
+---
 
-GeoKit communicates directly with functions and objects within the Geospatial Data Abstraction Library (<a href="www.gdal.org">GDAL</a>) and exposes them in such a way that is particularly useful for programmatic general purpose geospatial analyses.
-It gives low overhead control of fundamental operations; such as reading, writing, and mutating geospatial data sets, manipulating and translating geometries, warping and resampling raster data, and much more.
-Via the RegionMask object, GeoKit even allows for seamless integration of information expressed across multiple geospatial datasets in many formats and reference systems into the context of a single region.
+## Documentation Overview
 
-GeoKit is not intended to replace the GDAL library, as only very small subset of GDAL's capabilities are exposed. Nor is it intended to compete with other libraries with similar functionalities.
-Instead GeoKit evolved in an ad hoc manner in order to realize the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model which is intended for rapid land eligibility analyses of renewable energy systems and is also available on GitHub.
-Nevertheless, GeoKit quickly emerged as a general purpose GIS toolkit with capabilities far beyond computing land eligibility.
-Therefore, it is our pleasure to offer it to anyone who is interested in its use.
+ETHOS.GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations. It provides low-overhead control of fundamental geospatial operations including:
+- Reading, writing, and mutating geospatial datasets
+- Manipulating and translating geometries between coordinate systems
+- Warping and resampling raster data
+- Seamlessly integrating multiple geospatial datasets through the **RegionMask** object
 
-[![DOI](https://zenodo.org/badge/114900977.svg)](https://zenodo.org/badge/latestdoi/114900977)
+The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. Extensive documentation about ETHOS.GeoKit can be found at https://geokit.readthedocs.io/.
 
-## Features
-
-- Direct exposure of functions and objects in the GDAL library
-- Reading, writing, and manipulating raster and vector datasets
-- Translation between data formats and projection systems
-- Direct conversion of raster data into NumPy matrices
+ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses.
 
 ## Installation
 
-### Installation via conda-forge
-The easiest way to install GeoKit into a new environment is from `conda-forge` with:
+If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/).
+
+### Installation via conda-forge (Recommended)
+
+The easiest way to install ETHOS.GeoKit into a new environment is from `conda-forge`:
 
 ```bash
 conda create -n geokit -c conda-forge geokit
 ```
 
-or into an existing environment with:
+Or into an existing environment with:
+
 ```bash
 conda install -c conda-forge geokit
 ```
 
-### Installation from a local folder
+### Installation from Source
 
-1. First clone a local copy of the repository to your computer, and move into the created directory
+1. Clone the repository and navigate to it:
 
-```
+```bash
 git clone https://github.com/FZJ-IEK3-VSA/geokit.git
 cd geokit
 ```
 
-1. (Alternative) If you want to use the 'dev' branch (or another branch) then use:
+2. (Optional) Switch to the development branch:
 
-```
+```bash
 git checkout dev
 ```
 
-2. When using [Anaconda](https://www.anaconda.com/) / [(Micro-)Mamba](https://mamba.readthedocs.io/en/latest/) (recommended), GeoKit should be installable to a new environment with:
+3. Create a new environment:
 
-```
-conda env create --file requirements.yml
+```bash
+conda env create --file requirements-dev
 conda activate geokit
 pip install . --no-deps
 ```
 
-2. (Alternative) Or into an existing environment with:
+4. (Alternative) Update an existing environment:
 
-```
-conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
+```bash
+conda env update --file requirements-dev -n <ENVIRONMENT-NAME>
 conda activate geokit
 pip install . --no-deps
 ```
 
-2. (Alternative) If you want to install GeoKit in editable mode, and also with jupyter notebook and with testing functionalities use:
+## Getting Started
 
-```
-conda env create --file requirements-dev.yml
-conda activate geokit
-pip install . --no-deps -e
-```
+The best way to learn ETHOS.GeoKit is through hands-on examples. This documentation includes:
 
-## Examples
+- **Example notebooks** in the `docs/Examples` folder demonstrating real-world use cases
+- **Detailed guides** in the `docs/example_articles` folder explaining key concepts
+- **API documentation** providing comprehensive reference information
+- **Source code** in the `geokit` folder for advanced users
 
-See the [Examples page](Examples/)
+Start with the [Introduction to ETHOS.GeoKit](docs/example_articles/_00_introduction.md) to understand the fundamentals, or jump directly to the capability area that interests you most.
 
+### About ETHOS.GeoKit
+
+ETHOS.GeoKit evolved from the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems. However, ETHOS.GeoKit quickly emerged as a versatile, general-purpose GIS toolkit with capabilities far extending beyond computing land eligibility.
 
 ## License
 
 MIT License
 
-Active Developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten 
+Active developers: Christoph Winkler, Shitab Ishmam, Julian Belina, Noah Pflugradt, Heidi Heinrichs, Jochen Linßen, Detlef Stolten
 
-Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann,
+Alumni: David Severin Ryberg, Martin Robinius, Stanley Risch, Julian Schönau, Rachel Maier, David Franzmann
 
 You should have received a copy of the MIT License along with this program.  
 If not, see <https://opensource.org/licenses/MIT>
 
 ## About Us
 
-<a href="https://www.fz-juelich.de/en/iek/iek-3"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/iek3-square.png?raw=True" alt="Institute image IEK-3" width="280" align="right" style="margin:0px 10px"/></a>
+<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/iek3-square.png?raw=True" alt="Institute image ICE-2" width="280" align="right" style="margin:0px 10px"/></a>
 
-We are the <a href="https://www.fz-juelich.de/en/iek/iek-3">Institute of Energy and Climate Research - Techno-economic Systems Analysis (IEK-3)</a> belonging to the <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>. Our interdisciplinary department's research is focusing on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
+We are the <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate and Energy Systems (ICE) - Jülich Systems Analysis</a> belonging to the <a href="https://www.fz-juelich.de/en">Forschungszentrum Jülich</a>. Our interdisciplinary department's research is focusing on energy-related process and systems analyses. Data searches and system simulations are used to determine energy and mass balances, as well as to evaluate performance, emissions and costs of energy systems. The results are used for performing comparative assessment studies between the various systems. Our current priorities include the development of energy strategies, in accordance with the German Federal Government’s greenhouse gas reduction targets, by designing new infrastructures for sustainable and secure energy supply chains and by conducting cost analysis studies for integrating new technologies into future energy market frameworks.
+
+
+## Contributions and Support
+All contributions are welcome:
+- If you have a question, want to report a bug, or have a feature request, please open an [Issue](https://github.com/FZJ-IEK3-VSA/geokit/issues/new). We will then take care of the issue as soon as possible.
+- If you want to contribute with additional features or code improvements, open a [Pull request](https://github.com/FZJ-IEK3-VSA/geokit/pulls).
+
+## Code of Conduct
+Please respect our [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Acknowledgment
 
-This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050   A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
+This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
 
 <a href="https://www.helmholtz.de/en/"><img src="https://www.helmholtz.de/fileadmin/user_upload/05_aktuelles/Marke_Design/logos/HG_LOGO_S_ENG_RGB.jpg" alt="Helmholtz Logo" width="200px" style="float:right"></a>
+
+
+
