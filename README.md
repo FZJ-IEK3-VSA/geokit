@@ -19,15 +19,13 @@
 
 ## Documentation Overview
 
-ETHOS.GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations.
-
-ETHOS.GeoKit provides low-overhead control of fundamental geospatial operations including:
+ETHOS.GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations. It provides low-overhead control of fundamental geospatial operations including:
 - Reading, writing, and mutating geospatial datasets
 - Manipulating and translating geometries between coordinate systems
 - Warping and resampling raster data
 - Seamlessly integrating multiple geospatial datasets through the **RegionMask** object
 
-The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. An extensice Documentation about ETHOS.GeoKit can be found at https://geokit.readthedocs.io/.
+The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. Extensive documentation about ETHOS.GeoKit can be found at https://geokit.readthedocs.io/.
 
 ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses.
 
@@ -114,8 +112,8 @@ We are the <a href="https://www.fz-juelich.de/en/ice/ice-2">Institute of Climate
 
 
 ## Contributions and Support
-Every contributions are welcome:
-- If you have a question want to report a bug or have feature request, please open an [Issue](https://github.com/FZJ-IEK3-VSA/geokit/issues/new). We will then take care of the issue as soon as possible.
+All contributions are welcome:
+- If you have a question, want to report a bug, or have a feature request, please open an [Issue](https://github.com/FZJ-IEK3-VSA/geokit/issues/new). We will then take care of the issue as soon as possible.
 - If you want to contribute with additional features or code improvements, open a [Pull request](https://github.com/FZJ-IEK3-VSA/geokit/pulls).
 
 ## Code of Conduct

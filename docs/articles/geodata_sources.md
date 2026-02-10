@@ -1,6 +1,6 @@
 # Geodata Sources 
 
-As obtaining data for geospatial analysis can be time-consuming, we have compiled a list of reliable sources to help you get started. This list is by no means exhaustive and is intended as a starting point only if you are new to working with geospatial data. Please note that it is your responsibility to ensure that the licences comply with your intended use.
+Since obtaining data for geospatial analysis can be time-consuming, we have compiled a list of reliable sources to help you get started. This list is by no means exhaustive and is intended as a starting point only if you are new to working with geospatial data. Please note that it is your responsibility to ensure that the licences comply with your intended use.
 
 
 ## GADM (Global Administrative Areas)
