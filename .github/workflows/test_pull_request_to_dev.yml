@@ -23,6 +23,8 @@ jobs:
             library_name: "python"
             library_version: ${{ matrix.python_version }}
             dependency_position_env_file: "0"
+            multiprocessing_example_string: "-n auto"
+            multiprocessing_pytest_string: "-n auto"
     TestMinDependencies:
         strategy:
             fail-fast: false
@@ -78,3 +80,5 @@ jobs:
             library_name: ${{ matrix.dependencies.library_name }}
             library_version: ${{ matrix.dependencies.version }}
             dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+            multiprocessing_example_string: "-n auto"
+            multiprocessing_pytest_string: "-n auto"

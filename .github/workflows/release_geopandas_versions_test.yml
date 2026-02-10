@@ -23,3 +23,5 @@ jobs:
       library_name: "geopandas"
       library_version: ${{ matrix.geopandas_version }}
       dependency_position_env_file: "11"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

@@ -52,3 +52,5 @@ jobs:
       library_name: "numpy"
       library_version: ${{ matrix.numpy_version }}
       dependency_position_env_file: "6"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

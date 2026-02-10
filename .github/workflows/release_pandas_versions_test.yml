@@ -51,3 +51,5 @@ jobs:
       library_name: "pandas"
       library_version: ${{ matrix.pandas_version }}
       dependency_position_env_file: "5"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

@@ -44,3 +44,5 @@ jobs:
       library_name: "scipy"
       library_version: ${{ matrix.scipy_version }}
       dependency_position_env_file: "7"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

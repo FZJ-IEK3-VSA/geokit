@@ -23,3 +23,5 @@ jobs:
       library_name: "gdal"
       library_version: ${{ matrix.gdal_version }}
       dependency_position_env_file: "9"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

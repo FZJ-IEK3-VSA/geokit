@@ -40,3 +40,5 @@ jobs:
       library_name: "scikit-learn"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: "8"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"
