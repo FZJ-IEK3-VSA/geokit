@@ -1,6 +1,6 @@
 # Documentation Formatting
 
-GeoKit aligns with the [PyAnsys documentation style](https://dev.docs.pyansys.com/doc-style/formatting-tools.html).
+ETHOS.GeoKit aligns with the [PyAnsys documentation style](https://dev.docs.pyansys.com/doc-style/formatting-tools.html).
 
 It uses the following tools:
 

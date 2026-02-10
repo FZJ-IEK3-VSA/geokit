@@ -1,6 +1,6 @@
 # Raster Operations Based on Extents
 
-For many workflows, it may be easier to base your analysis on the extent of a region. In more complicated analyses, it may be useful to analyze data from one file based on the extent of another file. In these cases, GeoKit's Extent object could be useful.
+For many workflows, it may be easier to base your analysis on the extent of a region. In more complicated analyses, it may be useful to analyze data from one file based on the extent of another file. In these cases, ETHOS.GeoKit's Extent object could be useful.
 
 You can use the Extent object to:
 

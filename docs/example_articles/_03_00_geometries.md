@@ -1,6 +1,6 @@
 # Working with Vector Geometries
 
-GeoKit provides comprehensive vector geometry creation and operation capabilities. These capabilities can be separated into two categories:
+ETHOS.GeoKit provides comprehensive vector geometry creation and operation capabilities. These capabilities can be separated into two categories:
 
 
 ## [Geometry Creation](./_03_01_create_geometries.md)

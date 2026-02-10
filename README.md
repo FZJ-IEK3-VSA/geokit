@@ -1,7 +1,7 @@
 ﻿<table style="border:0; border-collapse:collapse;">
 	<tr>
 		<td style="border:0;">
-			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="GeoKit logo" width="300px">
+			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" width="300px">
 		</td>
 		<td style="border:0;">
 			<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis" width="300px"></a>
@@ -19,25 +19,25 @@
 
 ## Documentation Overview
 
-GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations.
+ETHOS.GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations.
 
-GeoKit provides low-overhead control of fundamental geospatial operations including:
+ETHOS.GeoKit provides low-overhead control of fundamental geospatial operations including:
 - Reading, writing, and mutating geospatial datasets
 - Manipulating and translating geometries between coordinate systems
 - Warping and resampling raster data
 - Seamlessly integrating multiple geospatial datasets through the **RegionMask** object
 
-The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. An extensice Documentation about GeoKit can be found at https://geokit.readthedocs.io/.
+The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. An extensice Documentation about ETHOS.GeoKit can be found at https://geokit.readthedocs.io/.
 
-GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses.
+ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses.
 
 ## Installation
 
-If you just want to use GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/).
+If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/).
 
 ### Installation via conda-forge (Recommended)
 
-The easiest way to install GeoKit into a new environment is from `conda-forge`:
+The easiest way to install ETHOS.GeoKit into a new environment is from `conda-forge`:
 
 ```bash
 conda create -n geokit -c conda-forge geokit
@@ -82,18 +82,18 @@ pip install . --no-deps
 
 ## Getting Started
 
-The best way to learn GeoKit is through hands-on examples. This documentation includes:
+The best way to learn ETHOS.GeoKit is through hands-on examples. This documentation includes:
 
 - **Example notebooks** in the `docs/Examples` folder demonstrating real-world use cases
 - **Detailed guides** in the `docs/example_articles` folder explaining key concepts
 - **API documentation** providing comprehensive reference information
 - **Source code** in the `geokit` folder for advanced users
 
-Start with the [Introduction to GeoKit](docs/example_articles/_00_introduction.md) to understand the fundamentals, or jump directly to the capability area that interests you most.
+Start with the [Introduction to ETHOS.GeoKit](docs/example_articles/_00_introduction.md) to understand the fundamentals, or jump directly to the capability area that interests you most.
 
-### About GeoKit
+### About ETHOS.GeoKit
 
-GeoKit evolved from the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems. However, GeoKit quickly emerged as a versatile, general-purpose GIS toolkit with capabilities far extending beyond computing land eligibility.
+ETHOS.GeoKit evolved from the Geospatial Land Eligibility for Energy Systems (<a href="https://github.com/FZJ-IEK3-VSA/glaes">GLAES</a>) model, which is intended for rapid land eligibility analyses of renewable energy systems. However, ETHOS.GeoKit quickly emerged as a versatile, general-purpose GIS toolkit with capabilities far extending beyond computing land eligibility.
 
 ## License
 

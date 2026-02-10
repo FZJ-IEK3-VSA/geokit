@@ -1,6 +1,6 @@
-# Introduction to GeoKit
+# Introduction to ETHOS.GeoKit
 
-GeoKit enables you to work efficiently with both **vector** and **raster** data, and is especially powerful when these data types need to be used **together**. The main areas of functionality include:
+ETHOS.GeoKit enables you to work efficiently with both **vector** and **raster** data, and is especially powerful when these data types need to be used **together**. The main areas of functionality include:
 
 ### Geometry Operations
 Create and manipulate vector geometries (points, lines, polygons), transform them between coordinate systems, and perform spatial operations like buffering, intersection, and union. [Learn more about geometries](./_03_00_geometries.md)

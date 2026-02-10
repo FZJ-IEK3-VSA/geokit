@@ -17,13 +17,13 @@ The figure above summarizes how vector data is organized on disk. A vector datas
 
 Together, these components form a single logical dataset: a table of features with geometry plus attributes. The exact set of files depends on the format (e.g., Shapefile uses multiple sidecar files, while GeoPackage stores everything in one container), but the logical structure is the same.
 
-## GeoKit Vector Capabilities
+## ETHOS.GeoKit Vector Capabilities
 
-GeoKit provides comprehensive tools for working with vector data, enabling you to read, analyze, manipulate, and visualize geospatial features. The library supports common vector formats and offers functionality for both simple and advanced spatial operations.
+ETHOS.GeoKit provides comprehensive tools for working with vector data, enabling you to read, analyze, manipulate, and visualize geospatial features. The library supports common vector formats and offers functionality for both simple and advanced spatial operations.
 
 ### Reading and Analyzing Vector Files
 
-GeoKit supports reading and working with multiple vector file formats:
+ETHOS.GeoKit supports reading and working with multiple vector file formats:
 
 - **Shapefiles** – The [Analyzing Shapefiles](../Examples/_02_vector/_1_analyze_shape_files.ipynb) example demonstrates how to load and inspect Shapefile datasets, which consist of multiple component files (.shp, .dbf, .shx, .prj) that must be kept together.
 
@@ -31,7 +31,7 @@ GeoKit supports reading and working with multiple vector file formats:
 
 ### Visualization
 
-GeoKit makes it easy to visualize vector data:
+ETHOS.GeoKit makes it easy to visualize vector data:
 
 - **Basic Visualization** – The [Visualizing Vector Data](../Examples/_02_vector/_3_visualize_vector_data.ipynb) example demonstrates how to plot vector datasets and overlay multiple vector files to explore spatial relationships and compare features.
 
@@ -43,7 +43,7 @@ Vector datasets combine spatial geometries with descriptive attributes:
 
 ### Spatial Operations
 
-GeoKit provides powerful tools for spatial analysis and manipulation:
+ETHOS.GeoKit provides powerful tools for spatial analysis and manipulation:
 
 - **Spatial Filtering** – The [Spatial Filtering](../Examples/_02_vector/_5_filter_vector_data_spatially.ipynb) example demonstrates how to filter vector data based on spatial relationships and clip geometries to specific regions of interest.
 
@@ -51,7 +51,7 @@ GeoKit provides powerful tools for spatial analysis and manipulation:
 
 - **Subdividing Geometries** – The [Subdividing Geometries](../Examples/_02_vector/_7_subdivide_geometries.ipynb) example demonstrates how to break down large geometries into smaller tiled regions using the tileize function.
 
-These capabilities make GeoKit a versatile tool for vector data processing workflows, from simple data inspection to complex spatial analysis tasks.
+These capabilities make ETHOS.GeoKit a versatile tool for vector data processing workflows, from simple data inspection to complex spatial analysis tasks.
 
 ### Create Geodata
 

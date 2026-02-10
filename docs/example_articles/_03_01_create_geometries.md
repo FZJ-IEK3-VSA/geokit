@@ -1,6 +1,6 @@
 # Create Geometries
 
-With GeoKit, you can create, visualize, and store various geometries, such as:
+With ETHOS.GeoKit, you can create, visualize, and store various geometries, such as:
 
 ## 1. [Create Points](../Examples/_03_geometries/_01_create_geometries/_01_create_points.ipynb)
 
