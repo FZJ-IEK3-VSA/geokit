@@ -7,6 +7,7 @@ from typing import Literal
 
 import zipfile
 import requests
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
 
@@ -264,11 +265,14 @@ class ZenodoDataDownloader:
         filename: str | None = None,
         headers: dict | None = None,
         overwrite: bool = False,
+        max_attempts: int = 3,
+        backoff_seconds: float = 5.0,
     ) -> pathlib.Path:
         """Download a single file to the cache folder.
 
         If ``filename`` is omitted, it is derived from the URL path. Set
         ``overwrite`` to re-download an existing file.
+        ``max_attempts`` controls retries for transient failures.
         """
         parsed = urlparse(url)
         derived_name = pathlib.Path(parsed.path).name or "download"
@@ -285,11 +289,32 @@ class ZenodoDataDownloader:
             headers_internal = headers
 
         self.data_cache_folder.mkdir(parents=True, exist_ok=True)
-        with requests.get(url, timeout=300, allow_redirects=True, headers=headers_internal, stream=True) as response:
-            response.raise_for_status()
-            with open(target_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        last_error: Exception | None = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with requests.get(
+                    url,
+                    timeout=600,
+                    allow_redirects=True,
+                    headers=headers_internal,
+                    stream=True,
+                ) as response:
+                    response.raise_for_status()
+                    with open(target_path, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=1024 * 1024 * 10):  # 10MB chunks
+                            f.write(chunk)
+                last_error = None
+                break
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt >= max_attempts:
+                    break
+                sleep_for = backoff_seconds * (2 ** (attempt - 1))
+                print(f"Download failed (attempt {attempt}/{max_attempts}); retrying in {sleep_for:.1f}s...")
+                time.sleep(sleep_for)
+
+        if last_error is not None:
+            raise last_error
 
         print(f"Downloaded to {target_path}")
         return target_path
