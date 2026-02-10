@@ -48,7 +48,7 @@ plugins:
   - search
 
   - mkdocs-jupyter:
-      execute: false
+      execute: True
       include_source: true
       allow_errors: false
 

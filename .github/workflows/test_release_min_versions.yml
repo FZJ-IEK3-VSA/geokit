@@ -54,7 +54,7 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: requirements-dev.yml
-            ipynb_example_folder: "Examples"
+            ipynb_example_folder: "docs/Examples"
             library_name: ${{ matrix.dependencies.library_name }}
             library_version: ${{ matrix.dependencies.version }}
             dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
@@ -105,7 +105,7 @@ jobs:
         with:
             runner_tag: ${{ matrix.runner_tag }}
             requirements_file_name: requirements-dev.yml
-            ipynb_example_folder: "Examples"
+            ipynb_example_folder: "docs/Examples"
             library_name: ${{ matrix.dependencies.library_name }}
             library_version: ${{ matrix.dependencies.version }}
             dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}

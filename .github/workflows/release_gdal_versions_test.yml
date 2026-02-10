@@ -18,7 +18,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
-      ipynb_example_folder: "Examples"
+      ipynb_example_folder: "docs/Examples"
       library_name: "gdal"
       library_version: ${{ matrix.gdal_version }}
       dependency_position_env_file: "9"

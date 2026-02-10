@@ -34,7 +34,7 @@ jobs:
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
-      ipynb_example_folder: "Examples"
+      ipynb_example_folder: "docs/Examples"ples"ples"ples"ples"
       library_name: "scikit-learn"
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: "8"
