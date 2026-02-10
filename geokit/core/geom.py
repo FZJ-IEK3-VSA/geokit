@@ -1099,7 +1099,6 @@ def drawGeoms(
     vmin=None,
     vmax=None,
     cmap="viridis",
-    draw_cbar=False,
     cbargs: dict | None = None,
     **mplArgs,
 ) -> AxHands:
@@ -1228,7 +1227,7 @@ def drawGeoms(
     if hideAxis:
         ax.axis("off")
 
-    if draw_cbar is False:
+    if colorBy is None:
         cbax = None
     else:
         divider = make_axes_locatable(ax)
@@ -1386,16 +1385,16 @@ def drawGeoms(
             warnings.warn(msg, UserWarning)
 
     # Add the colorbar, maybe
-    if not colorBy is None and draw_cbar is True:
+    if colorBy is not None:
         norm = Normalize(vmin=cValMin, vmax=cValMax)
         tmp = dict(cmap=cmap, norm=norm, orientation="vertical")
         if not cbargs is None:
             tmp.update(cbargs)
-        draw_cbar = ColorbarBase(cbax, **tmp)
-        draw_cbar.ax.tick_params(labelsize=fontsize)
-        draw_cbar.set_label(colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
+        color_bar = ColorbarBase(cbax, **tmp)
+        color_bar.ax.tick_params(labelsize=fontsize)
+        color_bar.set_label(colorBy if cbarTitle is None else cbarTitle, fontsize=fontsize + 2)
     else:
-        draw_cbar = None
+        color_bar = None
 
     # Do some formatting
 
@@ -1409,9 +1408,9 @@ def drawGeoms(
 
     # Organize return
     if isFrame:
-        return AxHands(ax, pd.Series(handles, index=data.index), draw_cbar)
+        return AxHands(ax, pd.Series(handles, index=data.index), color_bar)
     else:
-        return AxHands(ax, handles, draw_cbar)
+        return AxHands(ax, handles, color_bar)
 
 
 def partition(geom, targetArea, growStep=None, _startPoint=0):

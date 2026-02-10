@@ -86,7 +86,11 @@ jobs:
                             version: 1.8.0,
                             yaml_position: 8,
                         },
-                        { library_name: gdal, version: 3.10, yaml_position: 9 },
+                        {
+                            library_name: gdal,
+                            version: 3.10.3,
+                            yaml_position: 9,
+                        },
                         {
                             library_name: geopandas,
                             version: 1.1.2,
