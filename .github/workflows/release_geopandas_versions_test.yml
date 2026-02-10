@@ -11,17 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-        geopandas_version:
-          [
-            "0.11.0",
-            "0.11.1",
-            "0.12.0",
-            "0.14.4",
-            "1.0.0",
-            "1.0.1",
-            "1.1.0",
-            "1.1.1",
-          ]
+        geopandas_version: ["1.0.0", "1.0.1", "1.1.0", "1.1.1", "1.1.2"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
     secrets:
       ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}

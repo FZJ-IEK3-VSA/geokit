@@ -1,7 +1,7 @@
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [270_numpybool]
+  push:
+    branches: [208_update_examples_2026]
   pull_request:
     branches: ["master"]
 
@@ -11,15 +11,8 @@ jobs:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-        scipy_version: [
-            # "1.7.2",
-            # "1.7.3",
-            # "1.8.0",
-            # "1.8.1",
-            # "1.9.0",
-            # "1.9.1",
-            # "1.9.2",
-            # "1.9.3", due to incompatability with asteroid
+        scipy_version:
+          [
             "1.10.0",
             "1.10.1",
             "1.11.0",
@@ -39,6 +32,7 @@ jobs:
             "1.16.1",
             "1.16.2",
             "1.16.3",
+            "1.17.0",
           ]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
     secrets:
