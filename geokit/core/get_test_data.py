@@ -1,4 +1,3 @@
-from sphinx.locale import __
 import hashlib
 import os
 import pathlib

@@ -84,7 +84,7 @@ pip install . --no-deps
 
 The best way to learn GeoKit is through hands-on examples. This documentation includes:
 
-- **Example notebooks** in the `Examples` folder demonstrating real-world use cases
+- **Example notebooks** in the `docs/Examples` folder demonstrating real-world use cases
 - **Detailed guides** in the `docs/example_articles` folder explaining key concepts
 - **API documentation** providing comprehensive reference information
 - **Source code** in the `geokit` folder for advanced users

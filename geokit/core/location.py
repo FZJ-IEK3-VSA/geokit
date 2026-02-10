@@ -17,24 +17,27 @@ LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 class Location(object):
     """Represents a single location using lat/lon as a base coordinate system.
 
-    Initializations:
-    ----------------
+    Examples
+    --------
+    If you trust my programming skills and have any of the argument types listed below::
 
-    # If you trust my programming skills and have any of the argument types listed
-    below:
-    >>> Location.load( args, srs=SRS )
+        Location.load( args, srs=SRS )
 
-    # If you have a latitude and longitude value
-    >>> Location( latitude, longitude )
+    If you have a latitude and longitude value::
 
-    # If you have an X and a Y coordinate in any arbitrary SRS
-    >>> Location.fromXY( X, Y, srs=SRS)
+        Location( latitude, longitude )
 
-    # If you have a string structured like such: "(5.12243,52,11342)"
-    >>> Location.fromString( string, srs=SRS )
+    If you have an X and a Y coordinate in any arbitrary SRS::
 
-    # If you have a point geometry
-    >>> Location.fromPointGeom( pointGeometryObject )
+        Location.fromXY( X, Y, srs=SRS)
+
+    If you have a string structured like such: "(5.12243,52,11342)"::
+
+        Location.fromString( string, srs=SRS )
+
+    If you have a point geometry::
+
+        Location.fromPointGeom( pointGeometryObject )
     """
 
     _TYPE_KEY_ = "Location"
@@ -88,12 +91,14 @@ class Location(object):
         return self.__str__()
 
     @staticmethod
-    def fromString(self, srs=None) -> "Location":
+    def fromString(s, srs=None) -> "Location":
         """Initialize a Location Object by providing a string.
 
-        * Must be formatted like such: "(5.12243,52,11342)"
-        * Whitespace is okay
-        * Will only take the FIRST match it finds
+        Notes
+        -----
+        - Must be formatted like such: "(5.12243,52,11342)"
+        - Whitespace is okay
+        - Will only take the FIRST match it finds
 
         Parameters
         ----------
@@ -107,7 +112,7 @@ class Location(object):
         -------
         Locations
         """
-        m = LocationMatcher.search(self)
+        m = LocationMatcher.search(s)
         if m is None:
             raise GeoKitLocationError("string does not match Location specification")
         lon, lat = m.groups()
@@ -123,7 +128,7 @@ class Location(object):
     def fromPointGeom(g) -> "Location":
         """Initialize a Location Object by providing an OGR Point Object.
 
-        * Must have an SRS within the object
+        Note: Must have an SRS within the object.
 
         Parameters
         ----------
@@ -218,7 +223,7 @@ class Location(object):
         """Tries to load a Location object in the correct manner by inferring
         from the input type.
 
-        * Ends up calling one of the Location.from??? initializers
+        Note: Ends up calling one of the Location.from??? initializers.
 
         Parameters
         ----------
@@ -226,8 +231,8 @@ class Location(object):
             The location data to interpret
 
         srs : Anything acceptable to gk.srs.loadSRS
-            The srs for input coordinates
-            * If not given, latitude and longitude coordinates are expected
+            The srs for input coordinates.
+            If not given, latitude and longitude coordinates are expected.
 
         Returns
         -------
@@ -257,14 +262,16 @@ class LocationSet(object):
     """Represents a collection of location using lat/lon as a base coordinate
     system.
 
-    Note:
-    -----
+    Note
+    ----
     When initializing, an iterable of anything acceptable by Location.load is
-    expected
+    expected.
 
-    Initializations:
-    ----------------
-    >>> LocationSet( iterable )
+    Examples
+    --------
+    ::
+
+        LocationSet( iterable )
     """
 
     _TYPE_KEY_ = "LocationSet"
@@ -272,17 +279,17 @@ class LocationSet(object):
     def __init__(self, locations, srs=4326, _skip_check=False):
         """Initialize a LocationSet Object.
 
-        * If only a single location is given, a set is still created
+        Note: If only a single location is given, a set is still created.
 
         Parameters
         ----------
         locations : iterable
-            The locations to collect
-              * Can be anything acceptable by Location.load()
+            The locations to collect.
+            Can be anything acceptable by Location.load().
 
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for input coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for input coordinates.
+            If not given, lat/lon coordinates are expected.
         """
         if not _skip_check:
             if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
@@ -352,8 +359,8 @@ class LocationSet(object):
         Parameters
         ----------
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for output coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for output coordinates.
+            If not given, lat/lon coordinates are expected.
 
         Returns
         -------
@@ -412,8 +419,8 @@ class LocationSet(object):
         Parameters
         ----------
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for output coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for output coordinates.
+            If not given, lat/lon coordinates are expected.
 
         Returns
         -------
@@ -452,7 +459,7 @@ class LocationSet(object):
     def splitKMeans(self, groups=2, **kwargs):
         """Split the locations into groups according to KMEans clustering.
 
-        * An equal count of locations in each group is not guaranteed
+        Note: An equal count of locations in each group is not guaranteed.
 
         Parameters
         ----------
@@ -481,8 +488,10 @@ class LocationSet(object):
         """Cluster the locations by finding a bisecting line in lat/lon
         coordinates in either (or both) directions.
 
-        * An equal count of locations in each group is not guaranteed
-        * Will always either return 2 or 4 cluster groups
+        Notes
+        -----
+        - An equal count of locations in each group is not guaranteed
+        - Will always either return 2 or 4 cluster groups
 
         Parameters
         ----------

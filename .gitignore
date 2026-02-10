@@ -6,6 +6,7 @@ env/*
 __pycache__/
 analysis/regions/*
 .pytest_cache/
+site/
 # file types to ignore
 #*.ipynb
 *.aux.xml

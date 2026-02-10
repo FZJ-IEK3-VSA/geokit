@@ -28,9 +28,15 @@ dependencies:
   - ruff =0.14.1
   - typeguard <=4.4.4
   - nbconvert <=7.16.6
-  - jupyter-book <2.0.0
-  - sphinx-autoapi
-  # - astroid <=3.3.11 # This fixes a broken constraint limit of sphinx-autoapi
-  - astroid
+  # documentation (MkDocs)
+  - mkdocs >=1.6
+  - mkdocs-material >=9.5
+  - mkdocstrings >=0.25
+  - mkdocstrings-python >=1.10
+  - mkdocs-jupyter >=0.25
+  - mkdocs-gen-files >=0.5
+  - mkdocs-literate-nav >=0.6
+  - mkdocs-section-index >=0.3
+  - griffe >=0.45
   - codespell
   - nbval
