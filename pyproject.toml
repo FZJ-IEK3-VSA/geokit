@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=64.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "geokit"
-version = "1.6.0"
+version = "1.7.0"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
   { name = "David Severin Ryberg" },
@@ -17,13 +17,20 @@ license = { file = "LICENSE.txt" }
 readme = "README.md"
 
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.hatch.build.targets.wheel]
+packages = ["geokit"]
 
-[tool.setuptools.package-data]
-"*" = ["*.*"]
 
-#Configureation options
+[tool.hatch.build.targets.sdist]
+include = [
+  "/geokit",
+  "/Examples",
+  "/test",
+  "/README.md",
+  "/LICENSE.txt",
+]
+
+#Configuration options
 # https://docs.pytest.org/en/7.1.x/reference/reference.html#configuration-options
 
 [tool.pytest.ini_options]

@@ -1,0 +1,604 @@
+<svg width="640" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="640" height="200" fill="#f5f5f5" />
+
+  <!-- Gray raster grid -->
+  <g id="grayRaster">
+    <!-- Create a grid pattern with gray squares -->
+    <defs>
+      <pattern id="grayGrid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+        <rect width="9" height="9" fill="#a8a8a8" stroke="#c0c0c0" stroke-width="1" />
+      </pattern>
+    </defs>
+    <rect width="640" height="200" fill="url(#grayGrid)" />
+  </g>
+
+
+  <!-- World landmass pixels (background) -->
+  <g id="worldLandmass" fill="#e8d4a0">
+    <rect x="220" y="0" width="9" height="9" />
+    <rect x="240" y="0" width="9" height="9" />
+    <rect x="250" y="0" width="9" height="9" />
+    <rect x="260" y="0" width="9" height="9" />
+    <rect x="270" y="0" width="9" height="9" />
+    <rect x="310" y="0" width="9" height="9" />
+    <rect x="140" y="10" width="9" height="9" />
+    <rect x="150" y="10" width="9" height="9" />
+    <rect x="170" y="10" width="9" height="9" />
+    <rect x="180" y="10" width="9" height="9" />
+    <rect x="190" y="10" width="9" height="9" />
+    <rect x="200" y="10" width="9" height="9" />
+    <rect x="220" y="10" width="9" height="9" />
+    <rect x="250" y="10" width="9" height="9" />
+    <rect x="260" y="10" width="9" height="9" />
+    <rect x="320" y="10" width="9" height="9" />
+    <rect x="370" y="10" width="9" height="9" />
+    <rect x="380" y="10" width="9" height="9" />
+    <rect x="390" y="10" width="9" height="9" />
+    <rect x="400" y="10" width="9" height="9" />
+    <rect x="410" y="10" width="9" height="9" />
+    <rect x="420" y="10" width="9" height="9" />
+    <rect x="430" y="10" width="9" height="9" />
+    <rect x="440" y="10" width="9" height="9" />
+    <rect x="450" y="10" width="9" height="9" />
+    <rect x="460" y="10" width="9" height="9" />
+    <rect x="470" y="10" width="9" height="9" />
+    <rect x="120" y="20" width="9" height="9" />
+    <rect x="130" y="20" width="9" height="9" />
+    <rect x="140" y="20" width="9" height="9" />
+    <rect x="150" y="20" width="9" height="9" />
+    <rect x="160" y="20" width="9" height="9" />
+    <rect x="170" y="20" width="9" height="9" />
+    <rect x="180" y="20" width="9" height="9" />
+    <rect x="190" y="20" width="9" height="9" />
+    <rect x="210" y="20" width="9" height="9" />
+    <rect x="220" y="20" width="9" height="9" />
+    <rect x="240" y="20" width="9" height="9" />
+    <rect x="300" y="20" width="9" height="9" />
+    <rect x="310" y="20" width="9" height="9" />
+    <rect x="320" y="20" width="9" height="9" />
+    <rect x="330" y="20" width="9" height="9" />
+    <rect x="340" y="20" width="9" height="9" />
+    <rect x="350" y="20" width="9" height="9" />
+    <rect x="360" y="20" width="9" height="9" />
+    <rect x="370" y="20" width="9" height="9" />
+    <rect x="380" y="20" width="9" height="9" />
+    <rect x="390" y="20" width="9" height="9" />
+    <rect x="400" y="20" width="9" height="9" />
+    <rect x="410" y="20" width="9" height="9" />
+    <rect x="420" y="20" width="9" height="9" />
+    <rect x="430" y="20" width="9" height="9" />
+    <rect x="440" y="20" width="9" height="9" />
+    <rect x="450" y="20" width="9" height="9" />
+    <rect x="460" y="20" width="9" height="9" />
+    <rect x="480" y="20" width="9" height="9" />
+    <rect x="150" y="30" width="9" height="9" />
+    <rect x="160" y="30" width="9" height="9" />
+    <rect x="170" y="30" width="9" height="9" />
+    <rect x="180" y="30" width="9" height="9" />
+    <rect x="190" y="30" width="9" height="9" />
+    <rect x="210" y="30" width="9" height="9" />
+    <rect x="220" y="30" width="9" height="9" />
+    <rect x="290" y="30" width="9" height="9" />
+    <rect x="320" y="30" width="9" height="9" />
+    <rect x="330" y="30" width="9" height="9" />
+    <rect x="340" y="30" width="9" height="9" />
+    <rect x="350" y="30" width="9" height="9" />
+    <rect x="360" y="30" width="9" height="9" />
+    <rect x="370" y="30" width="9" height="9" />
+    <rect x="380" y="30" width="9" height="9" />
+    <rect x="390" y="30" width="9" height="9" />
+    <rect x="400" y="30" width="9" height="9" />
+    <rect x="410" y="30" width="9" height="9" />
+    <rect x="420" y="30" width="9" height="9" />
+    <rect x="430" y="30" width="9" height="9" />
+    <rect x="440" y="30" width="9" height="9" />
+    <rect x="140" y="40" width="9" height="9" />
+    <rect x="150" y="40" width="9" height="9" />
+    <rect x="160" y="40" width="9" height="9" />
+    <rect x="170" y="40" width="9" height="9" />
+    <rect x="180" y="40" width="9" height="9" />
+    <rect x="190" y="40" width="9" height="9" />
+    <rect x="200" y="40" width="9" height="9" />
+    <rect x="210" y="40" width="9" height="9" />
+    <rect x="220" y="40" width="9" height="9" />
+    <rect x="290" y="40" width="9" height="9" />
+    <rect x="300" y="40" width="9" height="9" />
+    <rect x="310" y="40" width="9" height="9" />
+    <rect x="320" y="40" width="9" height="9" />
+    <rect x="330" y="40" width="9" height="9" />
+    <rect x="340" y="40" width="9" height="9" />
+    <rect x="350" y="40" width="9" height="9" />
+    <rect x="360" y="40" width="9" height="9" />
+    <rect x="370" y="40" width="9" height="9" />
+    <rect x="380" y="40" width="9" height="9" />
+    <rect x="390" y="40" width="9" height="9" />
+    <rect x="400" y="40" width="9" height="9" />
+    <rect x="410" y="40" width="9" height="9" />
+    <rect x="420" y="40" width="9" height="9" />
+    <rect x="430" y="40" width="9" height="9" />
+    <rect x="440" y="40" width="9" height="9" />
+    <rect x="450" y="40" width="9" height="9" />
+    <rect x="460" y="40" width="9" height="9" />
+    <rect x="140" y="50" width="9" height="9" />
+    <rect x="150" y="50" width="9" height="9" />
+    <rect x="160" y="50" width="9" height="9" />
+    <rect x="170" y="50" width="9" height="9" />
+    <rect x="180" y="50" width="9" height="9" />
+    <rect x="190" y="50" width="9" height="9" />
+    <rect x="290" y="50" width="9" height="9" />
+    <rect x="310" y="50" width="9" height="9" />
+    <rect x="320" y="50" width="9" height="9" />
+    <rect x="330" y="50" width="9" height="9" />
+    <rect x="350" y="50" width="9" height="9" />
+    <rect x="370" y="50" width="9" height="9" />
+    <rect x="380" y="50" width="9" height="9" />
+    <rect x="390" y="50" width="9" height="9" />
+    <rect x="400" y="50" width="9" height="9" />
+    <rect x="410" y="50" width="9" height="9" />
+    <rect x="420" y="50" width="9" height="9" />
+    <rect x="430" y="50" width="9" height="9" />
+    <rect x="440" y="50" width="9" height="9" />
+    <rect x="450" y="50" width="9" height="9" />
+    <rect x="140" y="60" width="9" height="9" />
+    <rect x="150" y="60" width="9" height="9" />
+    <rect x="160" y="60" width="9" height="9" />
+    <rect x="170" y="60" width="9" height="9" />
+    <rect x="180" y="60" width="9" height="9" />
+    <rect x="290" y="60" width="9" height="9" />
+    <rect x="300" y="60" width="9" height="9" />
+    <rect x="340" y="60" width="9" height="9" />
+    <rect x="350" y="60" width="9" height="9" />
+    <rect x="360" y="60" width="9" height="9" />
+    <rect x="370" y="60" width="9" height="9" />
+    <rect x="380" y="60" width="9" height="9" />
+    <rect x="390" y="60" width="9" height="9" />
+    <rect x="400" y="60" width="9" height="9" />
+    <rect x="410" y="60" width="9" height="9" />
+    <rect x="420" y="60" width="9" height="9" />
+    <rect x="430" y="60" width="9" height="9" />
+    <rect x="440" y="60" width="9" height="9" />
+    <rect x="150" y="70" width="9" height="9" />
+    <rect x="160" y="70" width="9" height="9" />
+    <rect x="180" y="70" width="9" height="9" />
+    <rect x="280" y="70" width="9" height="9" />
+    <rect x="290" y="70" width="9" height="9" />
+    <rect x="300" y="70" width="9" height="9" />
+    <rect x="310" y="70" width="9" height="9" />
+    <rect x="320" y="70" width="9" height="9" />
+    <rect x="330" y="70" width="9" height="9" />
+    <rect x="340" y="70" width="9" height="9" />
+    <rect x="350" y="70" width="9" height="9" />
+    <rect x="360" y="70" width="9" height="9" />
+    <rect x="370" y="70" width="9" height="9" />
+    <rect x="380" y="70" width="9" height="9" />
+    <rect x="390" y="70" width="9" height="9" />
+    <rect x="400" y="70" width="9" height="9" />
+    <rect x="410" y="70" width="9" height="9" />
+    <rect x="420" y="70" width="9" height="9" />
+    <rect x="430" y="70" width="9" height="9" />
+    <rect x="440" y="70" width="9" height="9" />
+    <rect x="450" y="70" width="9" height="9" />
+    <rect x="150" y="80" width="9" height="9" />
+    <rect x="170" y="80" width="9" height="9" />
+    <rect x="270" y="80" width="9" height="9" />
+    <rect x="280" y="80" width="9" height="9" />
+    <rect x="290" y="80" width="9" height="9" />
+    <rect x="300" y="80" width="9" height="9" />
+    <rect x="310" y="80" width="9" height="9" />
+    <rect x="320" y="80" width="9" height="9" />
+    <rect x="330" y="80" width="9" height="9" />
+    <rect x="340" y="80" width="9" height="9" />
+    <rect x="350" y="80" width="9" height="9" />
+    <rect x="360" y="80" width="9" height="9" />
+    <rect x="370" y="80" width="9" height="9" />
+    <rect x="390" y="80" width="9" height="9" />
+    <rect x="400" y="80" width="9" height="9" />
+    <rect x="420" y="80" width="9" height="9" />
+    <rect x="430" y="80" width="9" height="9" />
+    <rect x="440" y="80" width="9" height="9" />
+    <rect x="170" y="90" width="9" height="9" />
+    <rect x="270" y="90" width="9" height="9" />
+    <rect x="280" y="90" width="9" height="9" />
+    <rect x="290" y="90" width="9" height="9" />
+    <rect x="300" y="90" width="9" height="9" />
+    <rect x="310" y="90" width="9" height="9" />
+    <rect x="320" y="90" width="9" height="9" />
+    <rect x="330" y="90" width="9" height="9" />
+    <rect x="340" y="90" width="9" height="9" />
+    <rect x="350" y="90" width="9" height="9" />
+    <rect x="400" y="90" width="9" height="9" />
+    <rect x="430" y="90" width="9" height="9" />
+    <rect x="190" y="100" width="9" height="9" />
+    <rect x="200" y="100" width="9" height="9" />
+    <rect x="280" y="100" width="9" height="9" />
+    <rect x="290" y="100" width="9" height="9" />
+    <rect x="300" y="100" width="9" height="9" />
+    <rect x="310" y="100" width="9" height="9" />
+    <rect x="320" y="100" width="9" height="9" />
+    <rect x="330" y="100" width="9" height="9" />
+    <rect x="340" y="100" width="9" height="9" />
+    <rect x="350" y="100" width="9" height="9" />
+    <rect x="460" y="100" width="9" height="9" />
+    <rect x="180" y="110" width="9" height="9" />
+    <rect x="190" y="110" width="9" height="9" />
+    <rect x="200" y="110" width="9" height="9" />
+    <rect x="210" y="110" width="9" height="9" />
+    <rect x="220" y="110" width="9" height="9" />
+    <rect x="310" y="110" width="9" height="9" />
+    <rect x="320" y="110" width="9" height="9" />
+    <rect x="330" y="110" width="9" height="9" />
+    <rect x="340" y="110" width="9" height="9" />
+    <rect x="350" y="110" width="9" height="9" />
+    <rect x="430" y="110" width="9" height="9" />
+    <rect x="450" y="110" width="9" height="9" />
+    <rect x="180" y="120" width="9" height="9" />
+    <rect x="190" y="120" width="9" height="9" />
+    <rect x="200" y="120" width="9" height="9" />
+    <rect x="210" y="120" width="9" height="9" />
+    <rect x="220" y="120" width="9" height="9" />
+    <rect x="230" y="120" width="9" height="9" />
+    <rect x="240" y="120" width="9" height="9" />
+    <rect x="310" y="120" width="9" height="9" />
+    <rect x="320" y="120" width="9" height="9" />
+    <rect x="330" y="120" width="9" height="9" />
+    <rect x="340" y="120" width="9" height="9" />
+    <rect x="480" y="120" width="9" height="9" />
+    <rect x="490" y="120" width="9" height="9" />
+    <rect x="500" y="120" width="9" height="9" />
+    <rect x="190" y="130" width="9" height="9" />
+    <rect x="200" y="130" width="9" height="9" />
+    <rect x="210" y="130" width="9" height="9" />
+    <rect x="220" y="130" width="9" height="9" />
+    <rect x="230" y="130" width="9" height="9" />
+    <rect x="310" y="130" width="9" height="9" />
+    <rect x="320" y="130" width="9" height="9" />
+    <rect x="330" y="130" width="9" height="9" />
+    <rect x="340" y="130" width="9" height="9" />
+    <rect x="200" y="140" width="9" height="9" />
+    <rect x="210" y="140" width="9" height="9" />
+    <rect x="220" y="140" width="9" height="9" />
+    <rect x="230" y="140" width="9" height="9" />
+    <rect x="310" y="140" width="9" height="9" />
+    <rect x="320" y="140" width="9" height="9" />
+    <rect x="330" y="140" width="9" height="9" />
+    <rect x="460" y="140" width="9" height="9" />
+    <rect x="470" y="140" width="9" height="9" />
+    <rect x="480" y="140" width="9" height="9" />
+    <rect x="200" y="150" width="9" height="9" />
+    <rect x="210" y="150" width="9" height="9" />
+    <rect x="220" y="150" width="9" height="9" />
+    <rect x="320" y="150" width="9" height="9" />
+    <rect x="330" y="150" width="9" height="9" />
+    <rect x="450" y="150" width="9" height="9" />
+    <rect x="460" y="150" width="9" height="9" />
+    <rect x="470" y="150" width="9" height="9" />
+    <rect x="480" y="150" width="9" height="9" />
+    <rect x="490" y="150" width="9" height="9" />
+    <rect x="200" y="160" width="9" height="9" />
+    <rect x="210" y="160" width="9" height="9" />
+    <rect x="220" y="160" width="9" height="9" />
+    <rect x="320" y="160" width="9" height="9" />
+    <rect x="450" y="160" width="9" height="9" />
+    <rect x="460" y="160" width="9" height="9" />
+    <rect x="470" y="160" width="9" height="9" />
+    <rect x="480" y="160" width="9" height="9" />
+    <rect x="490" y="160" width="9" height="9" />
+    <rect x="200" y="170" width="9" height="9" />
+    <rect x="210" y="170" width="9" height="9" />
+    <rect x="480" y="170" width="9" height="9" />
+    <rect x="520" y="170" width="9" height="9" />
+    <rect x="500" y="180" width="9" height="9" />
+    <rect x="220" y="190" width="9" height="9" />
+  </g>
+
+  <!-- Blue pixels forming "GeoKit" -->
+  <g id="bluePixels" fill="#042433">
+    <!-- G -->
+    <rect x="60" y="40" width="9" height="9" />
+    <rect x="70" y="40" width="9" height="9" />
+    <rect x="60" y="50" width="9" height="9" />
+    <rect x="70" y="50" width="9" height="9" />
+    <rect x="60" y="60" width="9" height="9" />
+    <rect x="70" y="60" width="9" height="9" />
+    <rect x="60" y="70" width="9" height="9" />
+    <rect x="70" y="70" width="9" height="9" />
+    <rect x="60" y="80" width="9" height="9" />
+    <rect x="70" y="80" width="9" height="9" />
+    <rect x="60" y="90" width="9" height="9" />
+    <rect x="70" y="90" width="9" height="9" />
+    <rect x="60" y="100" width="9" height="9" />
+    <rect x="70" y="100" width="9" height="9" />
+    <rect x="60" y="110" width="9" height="9" />
+    <rect x="70" y="110" width="9" height="9" />
+    <rect x="60" y="120" width="9" height="9" />
+    <rect x="70" y="120" width="9" height="9" />
+    <rect x="60" y="130" width="9" height="9" />
+    <rect x="70" y="130" width="9" height="9" />
+    <rect x="60" y="140" width="9" height="9" />
+    <rect x="70" y="140" width="9" height="9" />
+    <rect x="60" y="150" width="9" height="9" />
+    <rect x="70" y="150" width="9" height="9" />
+    <rect x="80" y="40" width="9" height="9" />
+    <rect x="90" y="40" width="9" height="9" />
+    <rect x="80" y="50" width="9" height="9" />
+    <rect x="90" y="50" width="9" height="9" />
+    <rect x="100" y="40" width="9" height="9" />
+    <rect x="110" y="40" width="9" height="9" />
+    <rect x="100" y="50" width="9" height="9" />
+    <rect x="110" y="50" width="9" height="9" />
+    <rect x="120" y="40" width="9" height="9" />
+    <rect x="130" y="40" width="9" height="9" />
+    <rect x="120" y="50" width="9" height="9" />
+    <rect x="130" y="50" width="9" height="9" />
+    <rect x="120" y="60" width="9" height="9" />
+    <rect x="130" y="60" width="9" height="9" />
+    <rect x="120" y="70" width="9" height="9" />
+    <rect x="130" y="70" width="9" height="9" />
+    <rect x="80" y="140" width="9" height="9" />
+    <rect x="90" y="140" width="9" height="9" />
+    <rect x="80" y="150" width="9" height="9" />
+    <rect x="90" y="150" width="9" height="9" />
+    <rect x="100" y="140" width="9" height="9" />
+    <rect x="110" y="140" width="9" height="9" />
+    <rect x="100" y="150" width="9" height="9" />
+    <rect x="110" y="150" width="9" height="9" />
+    <rect x="120" y="140" width="9" height="9" />
+    <rect x="130" y="140" width="9" height="9" />
+    <rect x="120" y="150" width="9" height="9" />
+    <rect x="130" y="150" width="9" height="9" />
+    <rect x="120" y="100" width="9" height="9" />
+    <rect x="130" y="100" width="9" height="9" />
+    <rect x="120" y="110" width="9" height="9" />
+    <rect x="130" y="110" width="9" height="9" />
+    <rect x="100" y="100" width="9" height="9" />
+    <rect x="110" y="100" width="9" height="9" />
+    <rect x="100" y="110" width="9" height="9" />
+    <rect x="110" y="110" width="9" height="9" />
+    <rect x="120" y="120" width="9" height="9" />
+    <rect x="130" y="120" width="9" height="9" />
+    <rect x="120" y="130" width="9" height="9" />
+    <rect x="130" y="130" width="9" height="9" />
+
+    <!-- e (improved readability) -->
+    <rect x="160" y="80" width="9" height="9" />
+    <rect x="170" y="80" width="9" height="9" />
+    <rect x="160" y="90" width="9" height="9" />
+    <rect x="170" y="90" width="9" height="9" />
+    <rect x="160" y="100" width="9" height="9" />
+    <rect x="170" y="100" width="9" height="9" />
+    <rect x="160" y="110" width="9" height="9" />
+    <rect x="170" y="110" width="9" height="9" />
+    <rect x="160" y="120" width="9" height="9" />
+    <rect x="170" y="120" width="9" height="9" />
+    <rect x="160" y="130" width="9" height="9" />
+    <rect x="170" y="130" width="9" height="9" />
+    <rect x="180" y="60" width="9" height="9" />
+    <rect x="190" y="60" width="9" height="9" />
+    <rect x="180" y="70" width="9" height="9" />
+    <rect x="190" y="70" width="9" height="9" />
+    <rect x="200" y="60" width="9" height="9" />
+    <rect x="210" y="60" width="9" height="9" />
+    <rect x="200" y="70" width="9" height="9" />
+    <rect x="210" y="70" width="9" height="9" />
+    <rect x="220" y="80" width="9" height="9" />
+    <rect x="230" y="80" width="9" height="9" />
+    <rect x="220" y="90" width="9" height="9" />
+    <rect x="230" y="90" width="9" height="9" />
+    <rect x="180" y="100" width="9" height="9" />
+    <rect x="190" y="100" width="9" height="9" />
+    <rect x="180" y="110" width="9" height="9" />
+    <rect x="190" y="110" width="9" height="9" />
+    <rect x="200" y="100" width="9" height="9" />
+    <rect x="210" y="100" width="9" height="9" />
+    <rect x="200" y="110" width="9" height="9" />
+    <rect x="210" y="110" width="9" height="9" />
+    <rect x="180" y="140" width="9" height="9" />
+    <rect x="190" y="140" width="9" height="9" />
+    <rect x="180" y="150" width="9" height="9" />
+    <rect x="190" y="150" width="9" height="9" />
+    <rect x="200" y="140" width="9" height="9" />
+    <rect x="210" y="140" width="9" height="9" />
+    <rect x="200" y="150" width="9" height="9" />
+    <rect x="210" y="150" width="9" height="9" />
+    <rect x="220" y="140" width="9" height="9" />
+    <rect x="230" y="140" width="9" height="9" />
+    <rect x="220" y="150" width="9" height="9" />
+    <rect x="230" y="150" width="9" height="9" />
+
+    <!-- o -->
+    <rect x="260" y="80" width="9" height="9" />
+    <rect x="270" y="80" width="9" height="9" />
+    <rect x="260" y="90" width="9" height="9" />
+    <rect x="270" y="90" width="9" height="9" />
+    <rect x="260" y="100" width="9" height="9" />
+    <rect x="270" y="100" width="9" height="9" />
+    <rect x="260" y="110" width="9" height="9" />
+    <rect x="270" y="110" width="9" height="9" />
+    <rect x="260" y="120" width="9" height="9" />
+    <rect x="270" y="120" width="9" height="9" />
+    <rect x="260" y="130" width="9" height="9" />
+    <rect x="270" y="130" width="9" height="9" />
+    <rect x="280" y="60" width="9" height="9" />
+    <rect x="290" y="60" width="9" height="9" />
+    <rect x="280" y="70" width="9" height="9" />
+    <rect x="290" y="70" width="9" height="9" />
+    <rect x="300" y="60" width="9" height="9" />
+    <rect x="310" y="60" width="9" height="9" />
+    <rect x="300" y="70" width="9" height="9" />
+    <rect x="310" y="70" width="9" height="9" />
+    <rect x="320" y="80" width="9" height="9" />
+    <rect x="330" y="80" width="9" height="9" />
+    <rect x="320" y="90" width="9" height="9" />
+    <rect x="330" y="90" width="9" height="9" />
+    <rect x="320" y="100" width="9" height="9" />
+    <rect x="330" y="100" width="9" height="9" />
+    <rect x="320" y="110" width="9" height="9" />
+    <rect x="330" y="110" width="9" height="9" />
+    <rect x="320" y="120" width="9" height="9" />
+    <rect x="330" y="120" width="9" height="9" />
+    <rect x="320" y="130" width="9" height="9" />
+    <rect x="330" y="130" width="9" height="9" />
+    <rect x="280" y="140" width="9" height="9" />
+    <rect x="290" y="140" width="9" height="9" />
+    <rect x="280" y="150" width="9" height="9" />
+    <rect x="290" y="150" width="9" height="9" />
+    <rect x="300" y="140" width="9" height="9" />
+    <rect x="310" y="140" width="9" height="9" />
+    <rect x="300" y="150" width="9" height="9" />
+    <rect x="310" y="150" width="9" height="9" />
+
+    <!-- K -->
+    <rect x="360" y="40" width="9" height="9" />
+    <rect x="370" y="40" width="9" height="9" />
+    <rect x="360" y="50" width="9" height="9" />
+    <rect x="370" y="50" width="9" height="9" />
+    <rect x="360" y="60" width="9" height="9" />
+    <rect x="370" y="60" width="9" height="9" />
+    <rect x="360" y="70" width="9" height="9" />
+    <rect x="370" y="70" width="9" height="9" />
+    <rect x="360" y="80" width="9" height="9" />
+    <rect x="370" y="80" width="9" height="9" />
+    <rect x="360" y="90" width="9" height="9" />
+    <rect x="370" y="90" width="9" height="9" />
+    <rect x="360" y="100" width="9" height="9" />
+    <rect x="370" y="100" width="9" height="9" />
+    <rect x="360" y="110" width="9" height="9" />
+    <rect x="370" y="110" width="9" height="9" />
+    <rect x="360" y="120" width="9" height="9" />
+    <rect x="370" y="120" width="9" height="9" />
+    <rect x="360" y="130" width="9" height="9" />
+    <rect x="370" y="130" width="9" height="9" />
+    <rect x="360" y="140" width="9" height="9" />
+    <rect x="370" y="140" width="9" height="9" />
+    <rect x="360" y="150" width="9" height="9" />
+    <rect x="370" y="150" width="9" height="9" />
+    <rect x="420" y="40" width="9" height="9" />
+    <rect x="430" y="40" width="9" height="9" />
+    <rect x="420" y="50" width="9" height="9" />
+    <rect x="430" y="50" width="9" height="9" />
+    <rect x="400" y="60" width="9" height="9" />
+    <rect x="410" y="60" width="9" height="9" />
+    <rect x="400" y="70" width="9" height="9" />
+    <rect x="410" y="70" width="9" height="9" />
+    <rect x="380" y="80" width="9" height="9" />
+    <rect x="390" y="80" width="9" height="9" />
+    <rect x="380" y="90" width="9" height="9" />
+    <rect x="390" y="90" width="9" height="9" />
+    <rect x="380" y="100" width="9" height="9" />
+    <rect x="390" y="100" width="9" height="9" />
+    <rect x="380" y="110" width="9" height="9" />
+    <rect x="390" y="110" width="9" height="9" />
+    <rect x="400" y="120" width="9" height="9" />
+    <rect x="410" y="120" width="9" height="9" />
+    <rect x="400" y="130" width="9" height="9" />
+    <rect x="410" y="130" width="9" height="9" />
+    <rect x="420" y="140" width="9" height="9" />
+    <rect x="430" y="140" width="9" height="9" />
+    <rect x="420" y="150" width="9" height="9" />
+    <rect x="430" y="150" width="9" height="9" />
+
+    <!-- i (moved right for more space) -->
+    <rect x="460" y="40" width="9" height="9" />
+    <rect x="470" y="40" width="9" height="9" />
+    <rect x="460" y="50" width="9" height="9" />
+    <rect x="470" y="50" width="9" height="9" />
+    <rect x="460" y="80" width="9" height="9" />
+    <rect x="470" y="80" width="9" height="9" />
+    <rect x="460" y="90" width="9" height="9" />
+    <rect x="470" y="90" width="9" height="9" />
+    <rect x="460" y="100" width="9" height="9" />
+    <rect x="470" y="100" width="9" height="9" />
+    <rect x="460" y="110" width="9" height="9" />
+    <rect x="470" y="110" width="9" height="9" />
+    <rect x="460" y="120" width="9" height="9" />
+    <rect x="470" y="120" width="9" height="9" />
+    <rect x="460" y="130" width="9" height="9" />
+    <rect x="470" y="130" width="9" height="9" />
+    <rect x="460" y="140" width="9" height="9" />
+    <rect x="470" y="140" width="9" height="9" />
+    <rect x="460" y="150" width="9" height="9" />
+    <rect x="470" y="150" width="9" height="9" />
+
+    <!-- t (moved right for more space between i and t) -->
+    <rect x="520" y="60" width="9" height="9" />
+    <rect x="530" y="60" width="9" height="9" />
+    <rect x="520" y="70" width="9" height="9" />
+    <rect x="530" y="70" width="9" height="9" />
+    <rect x="520" y="80" width="9" height="9" />
+    <rect x="530" y="80" width="9" height="9" />
+    <rect x="520" y="90" width="9" height="9" />
+    <rect x="530" y="90" width="9" height="9" />
+    <rect x="520" y="100" width="9" height="9" />
+    <rect x="530" y="100" width="9" height="9" />
+    <rect x="520" y="110" width="9" height="9" />
+    <rect x="530" y="110" width="9" height="9" />
+    <rect x="520" y="120" width="9" height="9" />
+    <rect x="530" y="120" width="9" height="9" />
+    <rect x="520" y="130" width="9" height="9" />
+    <rect x="530" y="130" width="9" height="9" />
+    <rect x="520" y="140" width="9" height="9" />
+    <rect x="530" y="140" width="9" height="9" />
+    <rect x="520" y="150" width="9" height="9" />
+    <rect x="530" y="150" width="9" height="9" />
+    <rect x="540" y="140" width="9" height="9" />
+    <rect x="550" y="140" width="9" height="9" />
+    <rect x="540" y="150" width="9" height="9" />
+    <rect x="550" y="150" width="9" height="9" />
+    <rect x="560" y="140" width="9" height="9" />
+    <rect x="570" y="140" width="9" height="9" />
+    <rect x="560" y="150" width="9" height="9" />
+    <rect x="570" y="150" width="9" height="9" />
+    <rect x="500" y="80" width="9" height="9" />
+    <rect x="510" y="80" width="9" height="9" />
+    <rect x="500" y="90" width="9" height="9" />
+    <rect x="510" y="90" width="9" height="9" />
+    <rect x="540" y="80" width="9" height="9" />
+    <rect x="550" y="80" width="9" height="9" />
+    <rect x="540" y="90" width="9" height="9" />
+    <rect x="550" y="90" width="9" height="9" />
+    <rect x="560" y="80" width="9" height="9" />
+    <rect x="570" y="80" width="9" height="9" />
+    <rect x="560" y="90" width="9" height="9" />
+    <rect x="570" y="90" width="9" height="9" />
+  </g>
+
+  <!-- Polygon lines overlay to represent vector data -->
+  <g id="polygonLines" stroke="#000000" stroke-width="3" fill="none" opacity="0.6">
+    <!-- G: Single continuous path tracing all pixels with 5px gap -->
+    <!-- Trace outer edge, dip into the "mouth" cavity, trace around it, exit, continue outer edge -->
+    <path
+      d="M 55,35 L 143,35 L 143,83 L 115,83 L 115,63 L 83,63 L 83,135 L 115,135 L 115,123 L 95,123 L 95,95 L 143,95 L 143,163 L 55,163 Z"
+      stroke-linejoin="round" />
+
+    <!-- e: Outer + inner path with constant 5px gap to the pixel edges -->
+    <!-- Pixels at: (180,60),(200,60),(160,80),(220,80),(160,100),(180,100),(200,100),(160,120),(180,140),(200,140),(220,140) -->
+    <!-- Outer outline (single closed path) -->
+    <path
+      d="M 175,55 L 223,55 L 223,75 L 243,75 L 243,103 L 223,103 L 223,123 L 183,123 L 183,135 L 243,135 L 243,163 L 175,163 L 175,143 L 155,143 L 155,75 L 175,75 Z"
+      stroke-linejoin="round" />
+    <!-- Inner outline (single closed path for the upper cavity; constant 5px gap to pixel edges) -->
+    <path d="M 185,85 L 213,85 L 213,95 L 185,95 Z" stroke-linejoin="round" />
+
+    <!-- o: Left col x=260,y=80-138. Top x=280-318,y=60-78. Right col x=320,y=80-138. Bottom x=280-318,y=140-158 -->
+    <path
+      d="M 255,75 L 275,75 L 275,55 L 323,55 L 323,75 L 343,75 L 343,143 L 323,143 L 323,163 L 275,163 L 275,143 L 255,143 L 255,75"
+      stroke-linejoin="round" />
+    <!-- o inner hole -->
+    <path d="M 283,83 L 315,83 L 315,135 L 283,135 L 283,83" stroke-linejoin="round" />
+
+    <!-- K: Outer outline with constant 5px gap to pixel edges -->
+    <path
+      d="M 355,35 L 383,35 L 383,75 L 395,75 L 395,55 L 415,55 L 415,35 L 443,35 L 443,63 L 423,63 L 423,83 L 403,83 L 403,115 L 423,115 L 423,135 L 443,135 L 443,163 L 415,163 L 415,143 L 395,143 L 395,123 L 383,123 L 383,163 L 355,163 Z"
+      stroke-linejoin="round" />
+
+    <!-- i: dot at x=460,y=40-58. stem at x=460,y=80-158 -->
+    <path d="M 455,35 L 483,35 L 483,63 L 455,63 L 455,35" stroke-linejoin="round" />
+    <path d="M 455,75 L 483,75 L 483,163 L 455,163 L 455,75" stroke-linejoin="round" />
+
+    <!-- t: stem x=520,y=60-158. crossbar x=500-578,y=80-98. bottom-right x=540-578,y=140-158 -->
+    <path
+      d="M 515,55 L 543,55 L 543,75 L 583,75 L 583,103 L 543,103 L 543,135 L 583,135 L 583,163 L 515,163 L 515,103 L 495,103 L 495,75 L 515,75 L 515,55"
+      stroke-linejoin="round" />
+  </g>
+</svg>

@@ -8,11 +8,8 @@ from osgeo import ogr
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
-
-
-class GeoKitLocationError(UTIL.GeoKitError):
-    pass
-
+from geokit.data_types import srs_input, numeric
+from geokit.error import GeoKitLocationError
 
 LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 
@@ -20,30 +17,37 @@ LocationMatcher = re.compile(r"\((?P<lon> *[0-9.-]+ *),(?P<lat> *[0-9.-]+ *)\)")
 class Location(object):
     """Represents a single location using lat/lon as a base coordinate system.
 
-    Initializations:
-    ----------------
+    Examples
+    --------
+    If you trust my programming skills and have any of the argument types listed below::
 
-    # If you trust my programming skills and have any of the argument types listed
-    below:
-    >>> Location.load( args, srs=SRS )
+        Location.load( args, srs=SRS )
 
-    # If you have a latitude and longitude value
-    >>> Location( latitude, longitude )
+    If you have a latitude and longitude value::
 
-    # If you have an X and a Y coordinate in any arbitrary SRS
-    >>> Location.fromXY( X, Y, srs=SRS)
+        Location( latitude, longitude )
 
-    # If you have a string structured like such: "(5.12243,52,11342)"
-    >>> Location.fromString( string, srs=SRS )
+    If you have an X and a Y coordinate in any arbitrary SRS::
 
-    # If you have a point geometry
-    >>> Location.fromPointGeom( pointGeometryObject )
+        Location.fromXY( X, Y, srs=SRS)
+
+    If you have a string structured like such: "(5.12243,52,11342)"::
+
+        Location.fromString( string, srs=SRS )
+
+    If you have a point geometry::
+
+        Location.fromPointGeom( pointGeometryObject )
     """
 
     _TYPE_KEY_ = "Location"
     _e = 1e-5
 
-    def __init__(self, lon, lat):
+    def __init__(
+        self,
+        lon: numeric,
+        lat: numeric,
+    ):
         """Initialize a Location Object by explicitly providing lat/lon coordinates.
 
         Parameters
@@ -87,12 +91,14 @@ class Location(object):
         return self.__str__()
 
     @staticmethod
-    def fromString(self, srs=None):
+    def fromString(s, srs=None) -> "Location":
         """Initialize a Location Object by providing a string.
 
-        * Must be formatted like such: "(5.12243,52,11342)"
-        * Whitespace is okay
-        * Will only take the FIRST match it finds
+        Notes
+        -----
+        - Must be formatted like such: "(5.12243,52,11342)"
+        - Whitespace is okay
+        - Will only take the FIRST match it finds
 
         Parameters
         ----------
@@ -106,20 +112,23 @@ class Location(object):
         -------
         Locations
         """
-        m = LocationMatcher.search(self)
+        m = LocationMatcher.search(s)
         if m is None:
             raise GeoKitLocationError("string does not match Location specification")
         lon, lat = m.groups()
         if srs is None:
-            return Location(lon=float(lon), lat=float(lat))
+            return Location(
+                lon=float(lon),
+                lat=float(lat),
+            )
         else:
             return Location.fromXY(x=float(lon), y=float(lat), srs=srs)
 
     @staticmethod
-    def fromPointGeom(g):
+    def fromPointGeom(g) -> "Location":
         """Initialize a Location Object by providing an OGR Point Object.
 
-        * Must have an SRS within the object
+        Note: Must have an SRS within the object.
 
         Parameters
         ----------
@@ -136,10 +145,13 @@ class Location(object):
             g = g.Clone()
             g.TransformTo(SRS.EPSG4326)
 
-        return Location(lon=g.GetX(), lat=g.GetY())
+        return Location(
+            lon=g.GetX(),
+            lat=g.GetY(),
+        )
 
     @staticmethod
-    def fromXY(x, y, srs):
+    def fromXY(x, y, srs) -> "Location":
         """Initialize a Location Object by providing a n X and Y coordinate.
 
         Parameters
@@ -164,7 +176,7 @@ class Location(object):
     def latlon(self):
         return self.lat, self.lon
 
-    def asGeom(self, srs="latlon"):
+    def asGeom(self, srs: srs_input = "latlon") -> ogr.Geometry:
         """Extract the Location as an ogr.Geometry object in an arbitrary SRS.
 
         Parameters
@@ -179,7 +191,7 @@ class Location(object):
         g = self.geom
         return GEOM.transform(g, toSRS=srs)
 
-    def asXY(self, srs):
+    def asXY(self, srs) -> tuple:
         """Extract the Location as an (X,Y) tuple in an arbitrary SRS.
 
         Parameters
@@ -207,11 +219,11 @@ class Location(object):
         self._geom = None
 
     @staticmethod
-    def load(loc, srs=4326):
+    def load(loc, srs=4326) -> "Location":
         """Tries to load a Location object in the correct manner by inferring
         from the input type.
 
-        * Ends up calling one of the Location.from??? initializers
+        Note: Ends up calling one of the Location.from??? initializers.
 
         Parameters
         ----------
@@ -219,8 +231,8 @@ class Location(object):
             The location data to interpret
 
         srs : Anything acceptable to gk.srs.loadSRS
-            The srs for input coordinates
-            * If not given, latitude and longitude coordinates are expected
+            The srs for input coordinates.
+            If not given, latitude and longitude coordinates are expected.
 
         Returns
         -------
@@ -250,14 +262,16 @@ class LocationSet(object):
     """Represents a collection of location using lat/lon as a base coordinate
     system.
 
-    Note:
-    -----
+    Note
+    ----
     When initializing, an iterable of anything acceptable by Location.load is
-    expected
+    expected.
 
-    Initializations:
-    ----------------
-    >>> LocationSet( iterable )
+    Examples
+    --------
+    ::
+
+        LocationSet( iterable )
     """
 
     _TYPE_KEY_ = "LocationSet"
@@ -265,17 +279,17 @@ class LocationSet(object):
     def __init__(self, locations, srs=4326, _skip_check=False):
         """Initialize a LocationSet Object.
 
-        * If only a single location is given, a set is still created
+        Note: If only a single location is given, a set is still created.
 
         Parameters
         ----------
         locations : iterable
-            The locations to collect
-              * Can be anything acceptable by Location.load()
+            The locations to collect.
+            Can be anything acceptable by Location.load().
 
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for input coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for input coordinates.
+            If not given, lat/lon coordinates are expected.
         """
         if not _skip_check:
             if isinstance(locations, ogr.Geometry) or isinstance(locations, Location):
@@ -289,6 +303,10 @@ class LocationSet(object):
             elif isinstance(locations, pd.DataFrame):
                 self._locations = LocationSet(locations["geom"])[:]
             else:
+                # Ensure NumPy arrays are treated as a list of coordinate pairs
+                if isinstance(locations, np.ndarray) and locations.ndim > 1:
+                    locations = locations.tolist()
+
                 try:  # Try loading all locations one at a time
                     self._locations = np.array([Location.load(l, srs=srs) for l in locations])
                 except GeoKitLocationError as err:
@@ -341,8 +359,8 @@ class LocationSet(object):
         Parameters
         ----------
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for output coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for output coordinates.
+            If not given, lat/lon coordinates are expected.
 
         Returns
         -------
@@ -394,15 +412,15 @@ class LocationSet(object):
         for l in self._locations:
             l.makePickleable()
 
-    def asGeom(self, srs=4326):
+    def asGeom(self, srs=4326) -> list[ogr.Geometry]:
         """Create a list of ogr.Geometry representations of all locations in the
         set.
 
         Parameters
         ----------
         srs : Anything acceptable to gk.srs.loadSRS; optional
-            The srs for output coordinates
-            * if not given, lat/lon coordinates are expected
+            The srs for output coordinates.
+            If not given, lat/lon coordinates are expected.
 
         Returns
         -------
@@ -441,7 +459,7 @@ class LocationSet(object):
     def splitKMeans(self, groups=2, **kwargs):
         """Split the locations into groups according to KMEans clustering.
 
-        * An equal count of locations in each group is not guaranteed
+        Note: An equal count of locations in each group is not guaranteed.
 
         Parameters
         ----------
@@ -466,12 +484,14 @@ class LocationSet(object):
             sel = km.labels_ == i
             yield LocationSet(self[sel], _skip_check=True)
 
-    def bisect(self, lon=True, lat=True, delta=0.005):
+    def bisect(self, lon=True, lat=True):
         """Cluster the locations by finding a bisecting line in lat/lon
         coordinates in either (or both) directions.
 
-        * An equal count of locations in each group is not guaranteed
-        * Will always either return 2 or 4 cluster groups
+        Notes
+        -----
+        - An equal count of locations in each group is not guaranteed
+        - Will always either return 2 or 4 cluster groups
 
         Parameters
         ----------
@@ -481,9 +501,6 @@ class LocationSet(object):
         lat : bool
             Split locations in the latitude direction
 
-        delta : float
-            The search speed
-            * Smaller values will take longer to converge on the true bisector
 
         Yields
         ------

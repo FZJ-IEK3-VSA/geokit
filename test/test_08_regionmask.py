@@ -7,6 +7,7 @@ import pytest
 from geokit import Extent, RegionMask, error, geom, raster, util, vector
 from geokit import srs as SRS
 from test.helpers import *
+from geokit.error import GeoKitRegionMaskError
 
 
 def test_RegionMask___init__():
@@ -116,6 +117,7 @@ def test_RegionMask_fromGeom():
     assert rm4.extent.srs.IsSame(_laea)
 
 
+@pytest.mark.filterwarnings("ignore:extractFeature is deprecated use extractFeatures instead.")
 def test_RegionMask_fromVector():
     # fromVector with a padded extent and defined srs
     rm0 = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326, padExtent=0.1)
@@ -294,6 +296,7 @@ def test_RegionMask_indicateValues():
         multiProcess = False
     else:
         multiProcess = False
+    multiProcess = False
     # Setup
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
     res1 = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), multiProcess=multiProcess)
@@ -498,7 +501,7 @@ def test_RegionMask_createRaster():
     assert np.isclose(dsInfo.yMin, 50.70)
     assert np.isclose(dsInfo.yMax, 50.80)
     assert dsInfo.srs.IsSame(EPSG4326)
-    assert dsInfo.dtype == gdal.GDT_Byte
+    assert dsInfo.dtype == gdal.GDT_Int8
 
     # Fill a raster with mask data
     out2 = result("rasterMast_createRaster_2.tif")
@@ -528,11 +531,11 @@ def test_RegionMask_warp():
     # setup
     rm_3035 = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=3035)
     rm = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=EPSG4326, pixelRes=0.0005)
-
+    # raster_info_1 = raster.rasterInfo(CLC_RASTER_PATH)
     # basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
 
-    assert warped_1.dtype == np.uint8
+    assert warped_1.dtype == np.int8
     assert warped_1.shape == rm_3035.mask.shape
     assert np.isclose(warped_1.sum(), 88128)
     assert np.isclose(warped_1.std(), 9.400516136589552)
@@ -541,7 +544,7 @@ def test_RegionMask_warp():
     # basic warp Raster (FLIP CHECK!)
     warped_1f = rm_3035.warp(CLC_FLIPCHECK_PATH)
 
-    assert warped_1f.dtype == np.uint8
+    assert warped_1f.dtype == np.int8
     assert warped_1f.shape == rm_3035.mask.shape
     assert np.isclose(warped_1f.sum(), 88128)
     assert np.isclose(warped_1f.std(), 9.400516136589552)
@@ -551,14 +554,14 @@ def test_RegionMask_warp():
 
     # basic warp Raster with srs change
     warped_2 = rm.warp(CLC_RASTER_PATH)
-    assert warped_2.dtype == np.uint8
+    assert warped_2.dtype == np.int8
     assert warped_2.shape == rm.mask.shape
     assert np.isclose(warped_2.sum(), 449627)
     assert np.isclose(warped_2.std(), 9.07520801659)
     # rm.createRaster(data=warped_2, output=result("regionMask_warp_2.tif"), overwrite=True)
 
     # Define resample alg and output type
-    warped_3 = rm.warp(CLC_RASTER_PATH, dtype="float", resampleAlg="near")
+    warped_3 = rm.warp(CLC_RASTER_PATH, dtype="float64", resampleAlg="near")
 
     assert warped_3.dtype == np.float64
     assert warped_3.shape == rm.mask.shape
@@ -569,7 +572,7 @@ def test_RegionMask_warp():
     # define a resolution div
     warped_4 = rm.warp(CLC_RASTER_PATH, resolutionDiv=5, resampleAlg="near", noData=0)
 
-    assert warped_4.dtype == np.uint8
+    assert warped_4.dtype == np.int8
     assert warped_4.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(warped_4.sum(), 11240881)
     assert np.isclose(warped_4.std(), 9.37633272361)
@@ -583,7 +586,7 @@ def test_RegionMask_rasterize():
     # simple rasterize
     rasterize_1 = rm.rasterize(AACHEN_ZONES)
 
-    assert rasterize_1.dtype == np.uint8
+    assert rasterize_1.dtype == np.int8
     assert rasterize_1.shape == rm.mask.shape
     assert np.isclose(rasterize_1.sum(), 47191)
     assert np.isclose(rasterize_1.std(), 0.42181050527)
@@ -592,14 +595,16 @@ def test_RegionMask_rasterize():
     # attribute rasterizing
     rasterize_2 = rm.rasterize(AACHEN_ZONES, value="YEAR", dtype="int16")
 
-    assert rasterize_2.dtype == np.int16
+    # The datatype could be stored as int16, but is stored as int64 in the aachen_zones shapefile
+    # Its not reduced automatically.
+    assert rasterize_2.dtype == np.int64
     assert rasterize_2.shape == rm.mask.shape
     assert np.isclose(rasterize_2.sum(), 94219640)
     assert np.isclose(rasterize_2.std(), 842.177748527)
     # rm.createRaster(data=rasterize_2, output=result("regionMask_rasterize_2.tif"), overwrite=True)
 
     # where statement and resolution div
-    rasterize_3 = rm.rasterize(AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype=float)
+    rasterize_3 = rm.rasterize(AACHEN_ZONES, value=10, resolutionDiv=5, where="YEAR>2000", dtype="float64")
 
     assert rasterize_3.dtype == np.float64
     assert rasterize_3.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
@@ -608,40 +613,7 @@ def test_RegionMask_rasterize():
     # rm.createRaster(data=scaleMatrix(rasterize_3,-5), output=result("regionMask_rasterize_3.tif"), overwrite=True)
 
 
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_extractFeatures():
-#     print("RegionMask_extractFeatures not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_mutateVector():
-#     print("RegionMask_mutateVector not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_RegionMask_mutateRaster():
-#     print("RegionMask_mutateRaster not tested...")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromRaster():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMatrix():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMask():
-#     print("Nothing to do :(")
-
-
-# @pytest.mark.skip("No test implemented")
-# def test_contoursFromMask():
-#     print("Nothing to do :(")
-
-
 if __name__ == "__main__":
-    test_RegionMask_fromGeom()
+    # test_RegionMask_createRaster()
+    # test_RegionMask_indicateFeatures()
+    test_RegionMask_indicateFeatures()

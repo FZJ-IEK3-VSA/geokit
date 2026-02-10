@@ -1,7 +1,9 @@
 import numpy as np
+import pytest
 
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
 from geokit.core.get_test_data import get_all_shape_files, get_test_data
+from geokit.error import GeoKitError, GeoKitExtentError
 from test.helpers import *
 
 
@@ -393,7 +395,7 @@ def test_Extent_createRaster():
     try:
         r = ex.createRaster(pixelHeight=200, pixelWidth=200, fill=2)
         assert False
-    except error.GeoKitExtentError:
+    except GeoKitExtentError:
         assert True
     else:
         assert False
@@ -503,6 +505,7 @@ def test_Extent_extractFeatures():
 
     # Test loading as a dataframe
     vi = ex.extractFeatures(AACHEN_ZONES, asPandas=True)
+    assert isinstance(vi, pd.DataFrame)
     assert vi.shape[0] == 101
 
 
@@ -591,6 +594,7 @@ def test_Extent_clipRaster():
     assert ri.yMax == 3101000.0
 
 
+@pytest.mark.filterwarnings("ignore: The current behavior of geokits's contours function is deprecated.")
 def test_Extent_contoursFromRaster():
     if gdal.__version__ >= "3.0.0":
         ext = Extent.fromVector(AACHEN_SHAPE_PATH)
@@ -602,15 +606,6 @@ def test_Extent_contoursFromRaster():
             geoms.iloc[63].geom.Area(), 0.08834775465377398
         )  # index of geom changed from 61 to 63 with GDAL >= 3.0.0
         assert geoms.iloc[63].ID == 1
-
-    elif (gdal.__version__ > "2.2.0") and (gdal.__version__ < "3.0.0"):
-        ext = Extent.fromVector(AACHEN_SHAPE_PATH)
-        geoms = ext.contoursFromRaster(AACHEN_URBAN_LC, contourEdges=[1, 2, 3], transformGeoms=True)
-
-        assert geoms.iloc[0].geom.GetSpatialReference().IsSame(ext.srs)
-        assert len(geoms) == 95
-        assert np.isclose(geoms.iloc[61].geom.Area(), 0.08834775465377398)
-        assert geoms.iloc[61].ID == 1
 
 
 def test_Extent_subTiles():
@@ -665,7 +660,7 @@ def test_Extent_tileBox():
     assert ext_box.srs.IsSame(srs.EPSG3857)
 
 
-def test_Extent_mosiacTiles():
+def test_Extent_mosaicTiles():
     path_aachen_shape_file = get_test_data(file_name="aachenShapefile.shp")
 
     ext = Extent.fromVector(path_aachen_shape_file)
@@ -682,11 +677,15 @@ def test_Extent_mosiacTiles():
 
     string_path_with_variables = str(data_folder_path.joinpath("osm_roads_minor.{z}.{x}.{y}.tif"))
     ras = ext.tileMosaic(
-        string_path_with_variables,
-        9,
+        source=string_path_with_variables,
+        zoom=9,
     )
 
     rasmat = raster.extractMatrix(ras)
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+
+
+if __name__ == "__main__":
+    test_Extent_mosaicTiles()

@@ -6,20 +6,15 @@ import pytest
 import structlog
 from osgeo import gdal
 
+import geokit.core.raster
 from geokit import geom, raster, util
+from geokit.error import GeoKitRasterError
+from geokit.core.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType
 
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
-
-
-def test_gdalType():
-    assert raster.gdalType(bool) == "GDT_Byte"
-    assert raster.gdalType("InT64") == "GDT_Int32"
-    assert raster.gdalType("float32") == "GDT_Float32"
-    assert raster.gdalType(NUMPY_FLOAT_ARRAY) == "GDT_Float64"
-    assert raster.gdalType(NUMPY_FLOAT_ARRAY.dtype) == "GDT_Float64"
 
 
 # Describe Raster
@@ -45,7 +40,7 @@ def test_rasterInfo():
 # createRaster
 
 
-def test_createRaster():
+def test_create_raster_from_fill_values():
     ######################
     # run and check funcs
 
@@ -65,7 +60,7 @@ def test_createRaster():
         srs=inputSRS,
         dtype=inputDataType,
         noData=inputNoData,
-        fillValue=inputFillValue,
+        fill=inputFillValue,
     )
 
     assert memRas is not None  # creating raster in memory
@@ -76,7 +71,14 @@ def test_createRaster():
     assert mri.dy == inputPixelHeight  # pixel height
     assert mri.noData == inputNoData  # no data
     assert mri.srs.IsSame(EPSG4326)  # srs
+    assert mri.data_type_name_str == inputDataType
 
+    numpy_array_raster = raster.extractMatrix(source=memRas)
+    assert np.isclose(numpy_array_raster, inputFillValue).all()
+    assert numpy_array_raster.shape == (500, 500)
+
+
+def test_create_raster_from_numpy_array():
     # Disk creation
     data = (np.ones((1000, 500)) * np.arange(500)).astype("float32")
     outputFileName = result("util_raster1.tif")
@@ -88,7 +90,7 @@ def test_createRaster():
         pixelWidth=0.01,
         compress=True,
         srs=EPSG4326,
-        noDataValue=100,
+        noData=100,
         data=data,
         overwrite=True,
         meta=dict(bob="bob", TIM="TIMMY"),
@@ -99,8 +101,7 @@ def test_createRaster():
     srs = osr.SpatialReference()
     srs.ImportFromWkt(ds.GetProjection())
 
-    if gdal.__version__ >= "3.0.0":
-        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     assert srs.IsSame(EPSG4326)  # disk raster, srs mismatch
 
@@ -125,7 +126,7 @@ def test_extractValues():
     ]
 
     # test simple case
-    v1 = raster.extractValues(CLC_RASTER_PATH, points)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points, pointSRS=4326)
     for v, real in zip(v1.itertuples(), realValue):
         assert v.data == real
 
@@ -133,8 +134,10 @@ def test_extractValues():
         assert np.isclose(v.xOffset, real[0], rtol=1e-4)
         assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
+    pass
+
     # test flipped
-    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points)
+    v2 = raster.extractValues(CLC_FLIPCHECK_PATH, points, pointSRS=4326)
 
     for v, real in zip(v2.itertuples(), realValue):
         assert v.data == real
@@ -149,7 +152,7 @@ def test_extractValues():
     pt.AssignSpatialReference(EPSG3035)
 
     pass
-    v3 = raster.extractValues(CLC_RASTER_PATH, pt)
+    v3 = raster.extractValues(source=CLC_RASTER_PATH, points=pt)
 
     assert v3.data == 3
     assert np.isclose(v3.xOffset, 0.44700000000187856, rtol=1e-4)
@@ -166,7 +169,7 @@ def test_extractValues():
         ]
     )
 
-    v4 = raster.extractValues(CLC_RASTER_PATH, pt, winRange=2)
+    v4 = raster.extractValues(source=CLC_RASTER_PATH, points=pt, pointSRS=EPSG3035, winRange=2)
     assert np.isclose(np.abs(v4.data - real).sum(), 0.0)
 
     # now test multiple sources
@@ -183,9 +186,48 @@ def test_extractValues():
     # bounds, so a warning should be raised, but this should
     # not be displayed to the testing user.
     with pytest.warns(UserWarning):
-        v4 = raster.extractValues(sources, pts)
+        v4 = raster.extractValues(
+            source=sources,
+            points=pts,
+        )
 
     assert np.allclose(v4.data.array, np.array([2.0, 24.0, 12.0, 12.0, 23, np.nan]), equal_nan=True)
+
+
+def test_extractValues_location():
+    points = Location(lon=6.06590, lat=50.51939)
+    realValue = 24
+    realDiffs = (-0.18841865745838504, -0.1953854267578663)
+
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=points)
+
+    assert v1.data == realValue
+
+    assert np.isclose(v1.xOffset, realDiffs[0], rtol=1e-4)
+    assert np.isclose(v1.yOffset, realDiffs[1], rtol=1e-4)
+
+
+def test_extractValues_locationSet():
+    locations_list = [
+        Location(lon=6.06590, lat=50.51939),
+        Location(lon=6.02141, lat=50.61491),
+        Location(lon=6.371634, lat=50.846025),
+    ]
+    realValue = [24, 3, 23]
+    realDiffs = [
+        (-0.18841865745838504, -0.1953854267578663),
+        (0.03190063584128211, -0.019478775579500507),
+        (0.18415527009869948, 0.022563403500242885),
+    ]
+    location_set = LocationSet(locations=locations_list)
+    v1 = raster.extractValues(source=CLC_RASTER_PATH, points=location_set, pointSRS=4326)
+
+    for v, real in zip(v1.itertuples(), realValue):
+        assert v.data == real
+
+    for v, real in zip(v1.itertuples(), realDiffs):
+        assert np.isclose(v.xOffset, real[0], rtol=1e-4)
+        assert np.isclose(v.yOffset, real[1], rtol=1e-4)
 
 
 # A nicer way to get a single value
@@ -206,12 +248,44 @@ def test_interpolateValues():
     v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
     assert np.isclose(v, 9.0612244898)  # average
 
+    def max_value_interpolator(data, _xo, _yo):
+        return data.max()
+
+    v = raster.interpolateValues(
+        CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="func", func=max_value_interpolator
+    )
+    assert np.isclose(v, 12)  # func
+
+    # check also for multi-dimensional window (multiple cells window + multiple points)
+    points = [(6.06590, 50.51939), (6.02141, 50.61491), (6.371634, 50.846025)]
+    v = raster.interpolateValues(CLC_RASTER_PATH, points, mode="average")
+    assert np.isclose(v, np.array([31.83673469, 14.75510204, 7.08163265])).all()
+
+
+def test_interpolateValues_from_list():
+    point = [(4061794.7, 3094718.4)]
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="near")
+    assert np.isclose(v, 3)
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="linear-spline")
+    assert np.isclose(v, 4.572732)  # linear-spline
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="cubic-spline")
+    assert np.isclose(v, 2.4197586642)  # cubic-spline
+
+    v = raster.interpolateValues(CLC_RASTER_PATH, point, pointSRS="europe_laea", mode="average")
+    assert np.isclose(v, 9.0612244898)  # average
+
+    def max_value_interpolator(data, _xo, _yo):
+        return data.max()
+
     v = raster.interpolateValues(
         CLC_RASTER_PATH,
         point,
         pointSRS="europe_laea",
         mode="func",
-        func=lambda d, xo, yo: d.max(),
+        func=max_value_interpolator,
     )
     assert np.isclose(v, 12)  # func
 
@@ -260,7 +334,8 @@ def test_gradient():
     # create a sloping surface dataset
     x, y = np.meshgrid(np.abs(np.arange(-100, 100)), np.abs(np.arange(-150, 150)))
     arr = np.ones((300, 200)) + 0.01 * y + x * 0.03
-    slopingDS = raster.createRaster(bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None)
+    with pytest.warns(UserWarning, match="No srs given when creating raster."):
+        slopingDS = raster.createRaster(bounds=(0, 0, 200, 300), pixelWidth=1.0, pixelHeight=1.0, data=arr, srs=None)
 
     # do tests
     total = raster.gradient(slopingDS, mode="total", asMatrix=True)
@@ -359,24 +434,25 @@ def test_loadRaster():
 
 def test_createRasterLike():
     source = gdal.Open(CLC_RASTER_PATH)
-    sourceInfo = raster.rasterInfo(source)
+    sourceInfo = raster.rasterInfo(sourceDS=source)
 
-    data = raster.extractMatrix(source)
+    data = raster.extractMatrix(source=source)
 
     # From raster, no output
-    newRaster = raster.createRasterLike(source, data=data * 2)
+    newRaster = raster.createRasterLike(source=source, data=data * 2)
     newdata = raster.extractMatrix(newRaster)
     assert np.isclose(data, newdata / 2).all()
 
     # From raster, with output
-    raster.createRasterLike(source, data=data * 3, output=result("createRasterLike_A.tif"))
+    raster.createRasterLike(source=source, data=data * 3, output=result("createRasterLike_A.tif"))
     newdata = raster.extractMatrix(result("createRasterLike_A.tif"))
     assert np.isclose(data, newdata / 3).all()
 
     # From rasterInfo, no output
-    newRaster = raster.createRasterLike(sourceInfo, data=data * 4)
+    newRaster = raster.createRasterLike(source=sourceInfo, data=data * 4)
     newdata = raster.extractMatrix(newRaster)
-    assert np.isclose(data, newdata / 4).all()
+
+    assert np.isclose(data, newdata / 4).all(), f"data:\n{data}!=newdata\n:{newdata / 4}"
 
 
 def test_saveRasterAsTif():
@@ -472,6 +548,7 @@ def test_polygonizeRaster():
     assert geoms.geom.map(lambda g: g.IsValid()).all()
 
 
+@pytest.mark.filterwarnings("ignore: The current behavior of geokits's contours function is deprecated.")
 def test_contours():
     geoms = raster.contours(AACHEN_ELIGIBILITY_RASTER, contourEdges=[0.5])
 
@@ -559,7 +636,7 @@ def test_warpLike():
     assert raster.rasterInfo(_rstr).srs.IsSame(raster.rasterInfo(ELEVATION_PATH).srs)
 
     # must fail with meta and copyMetaData = True
-    with pytest.raises(raster.GeoKitRasterError):
+    with pytest.raises(GeoKitRasterError):
         _rstr = raster.warpLike(
             dataSource=SINGLE_HILL_PATH,
             contextSource=ELEVATION_PATH,
@@ -572,13 +649,14 @@ def test_warpLike():
         dataSource=SINGLE_HILL_PATH,
         contextSource=ELEVATION_PATH,
         copyMetadata=False,
-        dtype=5,
+        dtype="Float32",
     )
-    assert raster.rasterInfo(_rstr).dtype == 5
+    # The input raster are both in Float32
+    assert raster.rasterInfo(_rstr).data_type_name_str == "Float32"
 
 
 @pytest.fixture()
-def sieve_ds():
+def sieve_ds() -> np.ndarray:
     data_arr = np.array(
         [
             [0, 0, 1, 1, 1, 0, 0],
@@ -674,24 +752,23 @@ def sieve_mask():
     ],
 )
 def test_sieve(source, threshold, connectedness, mask, expected_output, request):
+    raster_fixture = request.getfixturevalue(source)
     if mask == "none":
-        arr_out = raster.extractMatrix(
-            raster.sieve(
-                source=request.getfixturevalue(source),
-                threshold=threshold,
-                connectedness=connectedness,
-                mask=mask,
-            )
+        sieved_raster = raster.sieve(
+            source=raster_fixture,
+            threshold=threshold,
+            connectedness=connectedness,
+            mask=mask,
         )
+        arr_out = raster.extractMatrix(source=sieved_raster)
     else:
-        arr_out = raster.extractMatrix(
-            raster.sieve(
-                source=request.getfixturevalue(source),
-                threshold=threshold,
-                connectedness=connectedness,
-                mask=request.getfixturevalue(mask),
-            )
+        sieved_raster = raster.sieve(
+            source=raster_fixture,
+            threshold=threshold,
+            connectedness=connectedness,
+            mask=request.getfixturevalue(mask),
         )
+        arr_out = raster.extractMatrix(source=sieved_raster)
 
     assert (arr_out == expected_output).all()
 
@@ -755,3 +832,107 @@ def test_rasterCellNo():
         source=AACHEN_ELIGIBILITY_RASTER,  # use the Aachen eligibility raster as epsg:4326 example
     )
     assert cellNos_geoms_rstr == [(225, 151), (375, 401)]
+
+
+def test_warp_meta_argument_in_memory():
+    rInfo = raster.rasterInfo(SINGLE_HILL_PATH)
+
+    output_raster = raster.warp(
+        source=ELEVATION_PATH,
+        meta={"AREA_OR_POINT": "Area"},
+        bounds=rInfo.bounds,
+        pixelWidth=rInfo.pixelWidth,
+        pixelHeight=rInfo.pixelHeight,
+        srs=rInfo.srs,
+    )
+    assert raster.rasterInfo(output_raster).meta["AREA_OR_POINT"] == "Area"
+
+
+def test_warp_meta_argument_hard_drive():
+    output_path = pathlib.Path(__file__).parent.joinpath("results", "warped_raster_with_meta_data.tif")
+    raster_info_input = raster.rasterInfo(SINGLE_HILL_PATH)
+
+    raster.warp(
+        source=ELEVATION_PATH,
+        meta={"AREA_OR_POINT": "Area"},
+        output=output_path,
+        bounds=raster_info_input.bounds,
+        pixelWidth=raster_info_input.pixelWidth,
+        pixelHeight=raster_info_input.pixelHeight,
+        srs=raster_info_input.srs,
+        overwrite=True,
+    )
+    raster_info_output = raster.rasterInfo(output_path)
+
+    assert raster_info_output.meta["AREA_OR_POINT"] == "Area"
+    pathlib.Path.unlink(output_path)
+
+
+# def test_():
+#     # generate the same raster twice, once with and once without srs
+#     arr = np.array([[50, 100, 150], [200, 250, 255]])
+#     rstr_withsrs = geokit.core.raster.createRaster(
+#         data=arr,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         srs=4326,
+#     )
+
+#     rstr_nosrs = gk.raster.createRaster(
+#         data=arr,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#     )
+
+#     # then warp to another noData value, once for the raster with and once without srs
+#     rstr_wrpdwithsrs = gk.raster.warp(
+#         source=rstr_withsrs,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         noData=np.nan,
+#     )
+#     print("NoData of new raster:", gk.raster.rasterInfo(rstr_wrpdwithsrs).noData)
+
+#     rstr_wrpdnosrs = gk.raster.warp(  # this one fails!
+#         source=rstr_nosrs,
+#         bounds=(0, 0, 3, 2),
+#         pixelWidth=1,
+#         pixelHeight=1,
+#         noData=np.nan,
+#     )
+#     print("NoData of new raster:", gk.raster.rasterInfo(rstr_wrpdnosrs).noData)
+
+
+# def test_warp():
+# import numpy as np
+# import geokit as gk
+
+# raster_matrix_2x3 = np.array(
+#     [
+#         [5, 255, 0],
+#         [2, 3, 7],
+#     ],
+#     dtype=np.uint8,
+# )
+
+# raster = gk.raster.createRaster(
+#     bounds=[0, 0, 3, 2],
+#     pixelWidth=1,
+#     pixelHeight=1,
+#     data=raster_matrix_2x3,
+#     srs=4326,
+#     noData=255,
+#     # output=intermediate_raster_tif_str,
+# )
+
+# raster_warped = geokit.core.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
+# raster_warped_matrix = geokit.core.raster.extractMatrix(source=raster_warped)
+# print(raster_warped_matrix)
+# pass
+
+
+if __name__ == "__main__":
+    test_createRasterLike()

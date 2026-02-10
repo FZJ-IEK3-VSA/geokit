@@ -1,8 +1,15 @@
+import hashlib
+import os
 import pathlib
 from collections import OrderedDict as _OrderedDict
 from typing import Literal
 
-import pooch
+
+import zipfile
+import requests
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
 
 all_file_name_dict = {
     "aachenShapefile.dbf": "sha256:0f1262b987e88fe3eef267b828d4b6712a7ba71fe22a995c2a67d4a8a3200292",
@@ -97,38 +104,63 @@ all_file_name_dict = {
     "osm_roads_minor.9.265.171.tif": "sha256:68a77d446fa5fb27b05c068d24214bd2a18135e1231b686746387b8f2aa88681",
     "osm_roads_minor.9.265.172.tif": "sha256:2a5029eee67d74a1f1e2c0d27b786a757e8687375ef4190ca2daab052aa8302e",
     "test_raster_3x3.tif": "sha256:49e4f41d636618ef38d1a6cb6f684af2d90df4735aeaea88340f3a7fb51b1a84",
+    "gadm36_NLD.gpkg": "sha256:b03604626bcdeb63adf21fe43deba229870c1a778cbc2c6c079498a756a1e04a",
 }
+
+
+ZENODO_PREVIEW_BASE_URL = "https://zenodo.org/records/11032664/preview/"
+_HASH_BUFFER_SIZE = 1024 * 1024  # 1MB chunks for hashing
+
+
+def _compute_file_hash(file_path: pathlib.Path, alg: str = "sha256") -> str:
+    hasher = hashlib.new(alg)
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(_HASH_BUFFER_SIZE), b""):
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def _verify_file_hash(file_path: pathlib.Path, stored_hash: str) -> None:
+    if ":" in stored_hash:
+        alg, expected_hash = stored_hash.split(":", 1)
+    else:
+        alg, expected_hash = "sha256", stored_hash
+    calculated_hash = _compute_file_hash(file_path, alg=alg)
+    assert expected_hash == calculated_hash, (
+        "There is a hash mismatch between the actual file and the stored hash: "
+        + str(file_path)
+        + ". The stored hash is: "
+        + stored_hash
+        + " and the calculated hash is: "
+        + alg
+        + ":"
+        + calculated_hash
+    )
 
 
 def _get_test_data(
     file_name: str,
     data_cache_folder: pathlib.Path,
-    no_download: bool = True,
 ) -> str:
-    if no_download is False:
-        odie = pooch.create(
-            # Use the default cache folder for the operating system
-            path=data_cache_folder,
-            base_url="https://zenodo.org/records/11032664/preview/",
-            # The registry specifies the files that can be fetched
-            registry=all_file_name_dict,
-        )
-        return_path = odie.fetch(fname=file_name)
-    else:
-        return_path = data_cache_folder.joinpath(file_name)
-        if not return_path.is_file():
-            raise Exception("There is no file at: " + str(return_path))
-        file_hash = pooch.file_hash(return_path, alg="sha256")
-        file_hash_with_algorithm_prefix = "sha256:" + file_hash
-        file_hash_stored = all_file_name_dict[file_name]
-        assert file_hash_stored == file_hash_with_algorithm_prefix, (
-            "There is a hash mismatch between the actual file and the stored hash: "
-            + str(return_path)
-            + ". The stored hash is: "
-            + file_hash_stored
-            + " and the calculated hash is: "
-            + file_hash_with_algorithm_prefix
-        )
+    list_of_subfolders = [data_cache_folder, data_cache_folder.joinpath("gadm_data")]
+    file_is_available = False
+    list_of_file_paths = []
+    for current_subfolder in list_of_subfolders:
+        current_return_path = current_subfolder.joinpath(file_name)
+        list_of_file_paths.append(current_return_path)
+
+        if current_return_path.is_file():
+            file_is_available = True
+            return_path = current_return_path
+    if file_is_available is False:
+        raise Exception("There is no file at: " + str(list_of_file_paths))
+
+    _verify_file_hash(
+        file_path=return_path,
+        stored_hash=all_file_name_dict[file_name],
+    )
     return_path_str = str(return_path)
     return return_path_str
 
@@ -154,7 +186,6 @@ list_of_all_shape_file_extensions = [
 def get_test_data(
     file_name: str,
     data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
-    no_download: bool = True,
 ) -> str:
     if file_name not in all_file_name_dict:
         raise Exception(
@@ -169,7 +200,6 @@ def get_test_data(
     return_path = _get_test_data(
         file_name=file_name,
         data_cache_folder=data_cache_folder,
-        no_download=no_download,
     )
     return_path_str = str(return_path)
     if file_extension in list_of_all_shape_file_extensions:
@@ -179,7 +209,6 @@ def get_test_data(
                 _get_test_data(
                     file_name=additional_file_name,
                     data_cache_folder=data_cache_folder,
-                    no_download=no_download,
                 )
 
     return return_path_str
@@ -187,13 +216,11 @@ def get_test_data(
 
 def get_all_shape_files(
     data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
-    no_download: bool = True,
 ):
     for current_file in all_file_name_dict.keys():
         get_test_data(
             file_name=current_file,
             data_cache_folder=data_cache_folder,
-            no_download=no_download,
         )
     path_to_all_shape_files = data_cache_folder.joinpath("*.shp")
     return path_to_all_shape_files
@@ -202,8 +229,8 @@ def get_all_shape_files(
 def create_hash_dict(list_of_file_paths: list[pathlib.Path], alg: str = "sha256") -> dict[str, str]:
     output_dict = {}
     for current_file_path in list_of_file_paths:
-        hash = pooch.file_hash(fname=current_file_path, alg=alg)
-        output_dict[current_file_path.name] = alg + ":" + hash
+        file_hash = _compute_file_hash(current_file_path, alg=alg)
+        output_dict[current_file_path.name] = alg + ":" + file_hash
     return output_dict
 
 
@@ -212,3 +239,170 @@ def get_all_test_data_dict() -> _OrderedDict[str, str]:
     for current_file_name in all_file_name_dict.keys():
         _test_data_[current_file_name] = get_test_data(file_name=current_file_name)
     return _test_data_
+
+
+class ZenodoDataDownloader:
+    def __init__(
+        self,
+        data_cache_folder: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("data"),
+    ):
+        self.data_cache_folder = data_cache_folder
+
+    def get_zenodo_header(self) -> dict[str, str]:
+        user_agent_string = os.getenv("ZENODO_USER_AGENT_STRING")
+        api_key = os.getenv("ZENODO_API_KEY")
+
+        headers = {}
+        if isinstance(user_agent_string, str):
+            headers["User-Agent"] = user_agent_string
+        if isinstance(api_key, str):
+            headers["Authorization"] = "Bearer " + api_key
+        return headers
+
+    def download_file(
+        self,
+        url: str,
+        filename: str | None = None,
+        headers: dict | None = None,
+        overwrite: bool = False,
+        max_attempts: int = 3,
+        backoff_seconds: float = 5.0,
+    ) -> pathlib.Path:
+        """Download a single file to the cache folder.
+
+        If ``filename`` is omitted, it is derived from the URL path. Set
+        ``overwrite`` to re-download an existing file.
+        ``max_attempts`` controls retries for transient failures.
+        """
+        parsed = urlparse(url)
+        derived_name = pathlib.Path(parsed.path).name or "download"
+        target_name = filename if isinstance(filename, str) else derived_name
+        target_path = self.data_cache_folder.joinpath(target_name)
+
+        if target_path.exists() and not overwrite:
+            print(f"File already exists at {target_path}, skipping download.")
+            return target_path
+
+        if headers is None:
+            headers_internal = {}
+        else:
+            headers_internal = headers
+
+        self.data_cache_folder.mkdir(parents=True, exist_ok=True)
+        last_error: Exception | None = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with requests.get(
+                    url,
+                    timeout=600,
+                    allow_redirects=True,
+                    headers=headers_internal,
+                    stream=True,
+                ) as response:
+                    response.raise_for_status()
+                    with open(target_path, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=1024 * 1024 * 10):  # 10MB chunks
+                            f.write(chunk)
+                last_error = None
+                break
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt >= max_attempts:
+                    break
+                sleep_for = backoff_seconds * (2 ** (attempt - 1))
+                print(f"Download failed (attempt {attempt}/{max_attempts}); retrying in {sleep_for:.1f}s...")
+                time.sleep(sleep_for)
+
+        if last_error is not None:
+            raise last_error
+
+        print(f"Downloaded to {target_path}")
+        return target_path
+
+    def extract_zip_archive(self, path_to_archive: pathlib.Path | str, extract_folder: str):
+        if isinstance(path_to_archive, str):
+            path_to_archive = pathlib.Path(path_to_archive)
+        if not path_to_archive.is_file():
+            raise Exception(f"Archive missing: {path_to_archive}")
+        if path_to_archive.suffix != ".zip":
+            raise Exception(f"Not a zip archive: {path_to_archive}. Only zip archives are supported.")
+
+        extract_folder_path = self.data_cache_folder.joinpath(extract_folder)
+        extract_folder_path.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(path_to_archive, "r") as zf:
+            members_to_extract = []
+            for m in zf.infolist():
+                target_path = extract_folder_path / m.filename
+                if not target_path.is_file() or target_path.stat().st_size != m.file_size:
+                    members_to_extract.append(m)
+
+            if not members_to_extract:
+                print(f"Already extracted to {extract_folder_path}")
+                return extract_folder_path
+
+            for m in members_to_extract:
+                zf.extract(m, extract_folder_path)
+            print(f"Extracted to {extract_folder_path}")
+
+        return extract_folder_path
+
+    def download_and_extract_parallel(
+        self,
+        download_list: list[tuple[str, str | None, str | None, dict | None]],
+        max_workers: int = 4,
+    ) -> list[pathlib.Path]:
+        """Parallelize multiple downloads with optional extraction per job.
+
+        Each download_list entry: (url, filename_or_none, extract_dir_or_none, header).
+        If extract_dir is provided, the downloaded file is extracted there (zip only).
+
+        Args:
+            download_list: List of jobs, each defined by a tuple of
+                (url, filename_or_none, extract_dir_or_none, header).
+            max_workers: Maximum number of threads to use for concurrent downloads.
+
+        Returns
+        -------
+            list[pathlib.Path]: Paths to the downloaded files or extraction folders
+            in the same order as the input download_list.
+
+        Raises
+        ------
+            Exception: If any download or extraction job fails. The original
+                exception from the worker is attached as the cause of the
+                raised Exception.
+        """
+
+        def _worker(idx: int, job: tuple[str, str | None, str | None, dict | None]) -> tuple[int, pathlib.Path]:
+            url, filename, extract_dir, headers = job
+            downloaded_path = self.download_file(url=url, filename=filename, headers=headers)
+            if extract_dir is None:
+                return idx, downloaded_path
+            extracted_path = self.extract_zip_archive(
+                path_to_archive=downloaded_path,
+                extract_folder=extract_dir,
+            )
+            return idx, extracted_path
+
+        indexed_jobs = list(enumerate(download_list))
+        results: list[pathlib.Path | None] = [None for _ in download_list]
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_worker, idx, job): idx for idx, job in indexed_jobs}
+            for future in as_completed(futures):
+                idx = futures[future]
+                try:
+                    out_idx, path = future.result()
+                except Exception as exc:  # bubble up with context
+                    raise Exception(f"Batch job failed for index {idx}: {exc}") from exc
+                results[out_idx] = path
+
+        return [path for path in results if path is not None]
+
+
+if __name__ == "__main__":
+    # Example usage
+    data_cache_folder = pathlib.Path(__file__).parent.parent.joinpath("data")
+    asd = create_hash_dict(list_of_file_paths=[data_cache_folder.joinpath("gadm_data/gadm36_NLD.gpkg")])
+    print(asd)

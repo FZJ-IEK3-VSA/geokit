@@ -4,25 +4,35 @@ import pathlib
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from tempfile import TemporaryDirectory
-from typing import Literal
+from typing import Literal, NamedTuple, Callable
+import warnings
 
+import matplotlib.axes._axes
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import pandas as pd
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
+from geokit.c_data_type_handler import MinimumCDataTypeHandler, geokit_c_data_types_literal
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
-from geokit.core.location import Location
 
-
-class GeoKitRasterError(UTIL.GeoKitError):
-    pass
-
+from geokit.core.location import Location, LocationSet
+from geokit.data_types import (
+    load_raster_input,
+    srs_input,
+    numeric,
+    RasterInfo,
+    ptValue,
+    AxHands,
+)
+from geokit.error import GeoKitGeomError, GeoKitRasterError
 
 if "win" in sys.platform:
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -34,7 +44,7 @@ else:
 # Basic Loader
 
 
-def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
+def loadRaster(source: load_raster_input, mode=0) -> gdal.Dataset:
     """
     Load a raster dataset from a path to a file on disc.
 
@@ -49,6 +59,8 @@ def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
     -------
     gdal.Dataset
     """
+    if isinstance(source, pathlib.Path):
+        source = str(source)
     if isinstance(source, str):
         ds = gdal.Open(source, mode)
     else:
@@ -59,57 +71,58 @@ def loadRaster(source: str | gdal.Dataset, mode=0) -> gdal.Dataset:
     return ds
 
 
-# GDAL type mapper
-_gdalIntToType = dict((v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items()))
-_gdalType = {
-    bool: "GDT_Byte",
-    int: "GDT_Int32",
-    float: "GDT_Float64",
-    "bool": "GDT_Byte",
-    "int8": "GDT_Byte",
-    "int16": "GDT_Int16",
-    "int32": "GDT_Int32",
-    "int64": "GDT_Int32",
-    "uint8": "GDT_Byte",
-    "uint16": "GDT_UInt16",
-    "uint32": "GDT_UInt32",
-    "float32": "GDT_Float32",
-    "float64": "GDT_Float64",
-}
+# # GDAL type mapper
+# _gdalIntToType = dict((v, k) for k, v in filter(lambda x: "GDT_" in x[0], gdal.__dict__.items()))
+# _gdalType = {
+#     bool: "GDT_Byte",
+#     int: "GDT_Int32",
+#     float: "GDT_Float64",
+#     "bool": "GDT_Byte",
+#     "int8": "GDT_Byte",
+#     "int16": "GDT_Int16",
+#     "int32": "GDT_Int32",
+#     "int64": "GDT_Int32",
+#     "uint8": "GDT_Byte",
+#     "uint16": "GDT_UInt16",
+#     "uint32": "GDT_UInt32",
+#     "float32": "GDT_Float32",
+#     "float64": "GDT_Float64",
+# }
 
 
-def gdalType(s):
-    """Tries to determine gdal datatype from the given input type."""
-    if s is None:
-        return "GDT_Unknown"
-    elif isinstance(s, str):
-        if hasattr(gdal, s):
-            return s
-        elif s.lower() in _gdalType:
-            return _gdalType[s.lower()]
-        elif hasattr(gdal, "GDT_%s" % s):
-            return "GDT_%s" % s
-        elif s == "float" or s == "int" or s == "bool":
-            return gdalType(np.dtype(s))
+# # TODO check this function
+# def gdalType(s):
+#     """Tries to determine gdal datatype from the given input type."""
+#     if s is None:
+#         return "GDT_Unknown"
+#     elif isinstance(s, str):
+#         if hasattr(gdal, s):
+#             return s
+#         elif s.lower() in _gdalType:
+#             return _gdalType[s.lower()]
+#         elif hasattr(gdal, "GDT_%s" % s):
+#             return "GDT_%s" % s
+#         elif s == "float" or s == "int" or s == "bool":
+#             return gdalType(np.dtype(s))
 
-    elif isinstance(s, int):
-        return _gdalIntToType[s]  # If an int is given, it's probably
-        #  the GDAL type indicator (and not a sample data value)
-    elif isinstance(s, np.dtype):
-        return gdalType(str(s))
-    elif isinstance(s, np.generic):
-        return gdalType(s.dtype)
-    elif s is bool:
-        return _gdalType[bool]
-    elif s is int:
-        return _gdalType[int]
-    elif s is float:
-        return _gdalType[float]
-    elif isinstance(s, type):  # Default to Numpy for all other 'types'
-        return gdalType(np.dtype(s))
-    elif isinstance(s, Iterable):
-        return gdalType(s[0])
-    raise GeoKitRasterError("GDAL type could not be determined")
+#     elif isinstance(s, int):
+#         return _gdalIntToType[s]  # If an int is given, it's probably
+#         #  the GDAL type indicator (and not a sample data value)
+#     elif isinstance(s, np.dtype):
+#         return gdalType(str(s))
+#     elif isinstance(s, np.generic):
+#         return gdalType(s.dtype)
+#     elif s is bool:
+#         return _gdalType[bool]
+#     elif s is int:
+#         return _gdalType[int]
+#     elif s is float:
+#         return _gdalType[float]
+#     elif isinstance(s, type):  # Default to Numpy for all other 'types'
+#         return gdalType(np.dtype(s))
+#     elif isinstance(s, Iterable):
+#         return gdalType(s[0])
+#     raise GeoKitRasterError("GDAL type could not be determined")
 
 
 ####################################################################
@@ -117,22 +130,22 @@ def gdalType(s):
 
 
 def createRaster(
-    bounds,
-    output: None | str = None,
-    pixelWidth=100,
-    pixelHeight=100,
-    dtype=None,
-    srs=None,
-    compress=True,
-    noData=None,
+    bounds: tuple[numeric, numeric, numeric, numeric],
+    output: None | str | pathlib.Path = None,
+    pixelWidth: numeric = 100,
+    pixelHeight: numeric = 100,
+    dtype: None | geokit_c_data_types_literal = None,
+    srs: srs_input | None = None,
+    compress: bool = True,
+    noData: numeric | None = None,
     overwrite: bool = True,
-    fill=None,
-    data=None,
-    meta=None,
-    scale=1,
-    offset=0,
-    creationOptions=dict(),
-    **kwargs,
+    fill: numeric | None = None,
+    data: np.ndarray | None = None,
+    meta: dict | None = None,
+    scale: numeric | None = 1,
+    offset: numeric = 0,
+    creationOptions: dict = dict(),
+    raster_band_index: int = 1,
 ) -> gdal.Dataset | str:
     """Create a raster file.
 
@@ -148,7 +161,7 @@ def createRaster(
 
     Parameters
     ----------
-    bounds : (xMin, yMix, xMax, yMax) or Extent
+    bounds : (xMin, yMin, xMax, yMax) or Extent
         The geographic extents spanned by the raster
 
     pixelWidth : numeric
@@ -161,14 +174,14 @@ def createRaster(
         * The keyword 'dy' can be used as well and will override anything given
           assigned to 'pixelHeight'
 
-    output : str; optional
+    output : str, pathlib.Path, None
         A path to an output file
         * If output is None, the raster will be created in memory and a dataset
           handle will be returned
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : str; optional
+    dtype : geokit_c_data_types_literal, none
         The datatype of the represented by the created raster's band
         * Options are: Byte, Int16, Int32, Int64, Float32, Float64
         * If dtype is None and data is None, the assumed datatype is a 'Byte'
@@ -177,8 +190,8 @@ def createRaster(
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
-          * If not given, longitude/latitude is assumed
-          * srs MUST be given as a keyword argument
+          * If not given, no srs will be assigned to the created raster. Please be
+            aware that some operations may not work correctly if no SRS is given.
         * If 'bounds' is an Extent object, the bounds' internal srs will override
           this input
 
@@ -206,6 +219,10 @@ def createRaster(
         A 2D matrix to write into the resulting raster
         * array dimensions must fit raster dimensions as calculated by the bounds
           and the pixel resolution
+    meta : dictionary, None
+        of key values pairs that is stored in the raster as meta data. Is written
+        to the raster using the
+
 
     scale : numeric; optional
         The scaling value given to apply to all values
@@ -217,6 +234,9 @@ def createRaster(
         - numeric
         * Must be the same datatype as the 'dtype' input (or that which is derived)
 
+    raster_band_index: int, defaults to 1
+        Determines which band is written to in the output raster dataset.
+
     Returns
     -------
     * If 'output' is None: gdal.Dataset
@@ -224,17 +244,22 @@ def createRaster(
                                 It has to be saved as geotiff with .tif suffix.
     """
     # Check for existing file
+
     if output is not None:
-        if os.path.isfile(output):
+        output = str(output)
+        output_path = pathlib.Path(output)
+        if output_path.exists():
             if overwrite is True:
-                os.remove(output)
-                if os.path.isfile(output + ".aux.xml"):
-                    os.remove(output + ".aux.xml")
+                output_path.unlink()
+                output_path_with_aux_extension = output_path.with_suffix(".aux.xml")
+                if output_path_with_aux_extension.exists():
+                    output_path_with_aux_extension.unlink()
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
         # check if the directory exists
-        elif not os.path.isdir(os.path.dirname(output)):
+
+        elif not output_path.parent.is_dir():
             raise FileNotFoundError(f"Output directory does not exist: {os.path.dirname(output)}")
 
         # check if writeable:
@@ -246,19 +271,43 @@ def createRaster(
     # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
     # Make a raster dataset and pull the band/maskBand objects
-    originX = bounds[0]
-    originY = bounds[3]  # Always use the "Y-at-Top" orientation
+    x_min = bounds[0]
+    y_min = bounds[1]
+    x_max = bounds[2]
+    y_max = bounds[3]  # Always use the "Y-at-Top" orientation
 
-    cols = int(round((bounds[2] - originX) / pixelWidth))
-    rows = int(round((originY - bounds[1]) / abs(pixelHeight)))
+    cols = int(round((x_max - x_min) / pixelWidth))
+    rows = int(round((y_max - y_min) / abs(pixelHeight)))
 
-    # Get DataType
-    if dtype is not None:  # a dtype was given, use it!
-        dtype = gdalType(dtype)
-    elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
-        dtype = gdalType(data.dtype)
-    else:  # Otherwise, just assume we want a Byte
-        dtype = "GDT_Byte"
+    list_of_numbers = []
+    minimum_gdal_type_list = []
+    if isinstance(dtype, str):
+        minimum_gdal_type_list.append(dtype)
+    if isinstance(noData, numeric):
+        list_of_numbers.append(noData)
+
+    if isinstance(fill, numeric):
+        list_of_numbers.append(fill)
+    if isinstance(data, np.ndarray):
+        numpy_data_type = str(data.dtype)
+        minimum_gdal_type_list.append(numpy_data_type)
+        list_of_numbers.append(data.min())
+        list_of_numbers.append(data.max())
+    elif data is None:
+        pass
+    else:
+        raise GeoKitRasterError("Data must be given as a numpy ndarray or None")
+
+    data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
+    )
+    # # Get DataType
+    # if dtype is not None:  # a dtype was given, use it!
+    #     dtype = gdalType(dtype)
+    # elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
+    #     dtype = gdalType(data.dtype)
+    # else:  # Otherwise, just assume we want a Byte
+    #     dtype = "GDT_Byte"
 
     # Open the driver
     opts = OrderedDict()
@@ -270,25 +319,30 @@ def createRaster(
 
     if output is None:
         driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-        raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create("", cols, rows, 1, data_type_constant, opts)
     else:
         driver: gdal.Driver = gdal.GetDriverByName("GTiff")  # Create a raster in storage
-        raster = driver.Create(output, cols, rows, 1, getattr(gdal, dtype), opts)
+        raster: gdal.Dataset = driver.Create(output, cols, rows, 1, data_type_constant, opts)
 
     if raster is None:
         raise GeoKitRasterError("Failed to create raster")
 
     # Do the rest in a "try" statement so that a failure won't bind the source
     try:
-        raster.SetGeoTransform((originX, abs(pixelWidth), 0, originY, 0, -1 * abs(pixelHeight)))
+        raster.SetGeoTransform((x_min, abs(pixelWidth), 0, y_max, 0, -1 * abs(pixelHeight)))
 
         # Set the SRS
         if srs is not None:
             rasterSRS = SRS.loadSRS(srs)
             raster.SetProjection(rasterSRS.ExportToWkt())
+        else:
+            warnings.warn(
+                message="No srs given when creating raster. Please be aware that some operations may not work correctly.",
+                category=UserWarning,
+            )
 
         # Fill the raster will zeros, null values, or initial values (if given)
-        band: gdal.Band = raster.GetRasterBand(1)
+        band: gdal.Band = raster.GetRasterBand(raster_band_index)
         if scale is not None:
             band.SetScale(scale)
         if offset is not None:
@@ -307,7 +361,16 @@ def createRaster(
         else:
             # make sure dimension size is good
             if not (data.shape[0] == rows and data.shape[1] == cols):
-                raise GeoKitRasterError("Raster dimensions and input data dimensions do not match")
+                raise GeoKitRasterError(
+                    "Raster dimensions and input data dimensions do not match.The data has rows="
+                    + str(data.shape[0])
+                    + " and columns="
+                    + str(data.shape[1])
+                    + ". The raster specification expects rows="
+                    + str(rows)
+                    + " and columns="
+                    + str(cols)
+                )
 
             # See if data needs flipping
             if pixelHeight < 0:
@@ -320,13 +383,13 @@ def createRaster(
             band.ComputeRasterMinMax(0)
             band.ComputeBandStats(0)
 
-        raster.FlushCache()
-
         # Write MetaData, maybe
         if meta is not None:
             for k, v in meta.items():
                 raster.SetMetadataItem(k, v)
 
+        # writes the raster to the hard drive
+        raster.FlushCache()
         # Return raster if in memory
         if output is None:
             return raster
@@ -340,7 +403,14 @@ def createRaster(
         raise e
 
 
-def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
+def createRasterLike(
+    source: load_raster_input | RasterInfo,
+    copyMetadata: bool = True,
+    metadata: dict | None = None,
+    data: None | np.ndarray = None,
+    dtype: None | geokit_c_data_types_literal = None,
+    **kwargs,
+):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
@@ -350,23 +420,23 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
       source
     """
     if UTIL.isRaster(source):
-        source = rasterInfo(source)
-
-    if not isinstance(source, RasterInfo):
+        raster_info = rasterInfo(source)
+    elif isinstance(source, RasterInfo):
+        raster_info = source
+    else:
         raise GeoKitRasterError("Could not understand source")
 
     if copyMetadata and metadata is not None:
         raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
-    bounds = kwargs.pop("bounds", source.bounds)
-    pixelWidth = kwargs.pop("pixelWidth", source.pixelWidth)
-    pixelHeight = kwargs.pop("pixelHeight", source.pixelHeight)
-    dtype = kwargs.pop("dtype", source.dtype)
-    srs = kwargs.pop("srs", source.srs)
-    noData = kwargs.pop("noData", source.noData)
-
+    bounds = kwargs.pop("bounds", raster_info.bounds)
+    pixelWidth = kwargs.pop("pixelWidth", raster_info.pixelWidth)
+    pixelHeight = kwargs.pop("pixelHeight", raster_info.pixelHeight)
+    srs = kwargs.pop("srs", raster_info.srs)
+    noData = kwargs.pop("noData", raster_info.noData)
+    data_type_as_string = kwargs.pop("data_type_as_string", dtype)
     if copyMetadata:
-        meta = kwargs.pop("meta", source.meta)
+        meta = kwargs.pop("meta", raster_info.meta)
     else:
         meta = metadata
 
@@ -374,15 +444,16 @@ def createRasterLike(source, copyMetadata=True, metadata=None, **kwargs):
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
-        dtype=dtype,
         srs=srs,
         noData=noData,
         meta=meta,
+        dtype=data_type_as_string,
+        data=data,
         **kwargs,
     )
 
 
-def saveRasterAsTif(source, output, **kwargs):
+def saveRasterAsTif(source: gdal.Dataset, output: str, **kwargs):
     """Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
 
     Parameters
@@ -411,7 +482,7 @@ def saveRasterAsTif(source, output, **kwargs):
         pixelWidth=sourceInfo.dx,
         pixelHeight=sourceInfo.dy,
         noData=sourceInfo.noData,
-        dtype=sourceInfo.dtype,
+        dtype=sourceInfo.data_type_name_str,
         srs=sourceInfo.srs,
         data=data,
         output=output,
@@ -422,9 +493,9 @@ def saveRasterAsTif(source, output, **kwargs):
 ####################################################################
 # extract the raster as a matrix
 def extractMatrix(
-    source,
+    source: load_raster_input,
     bounds=None,
-    boundsSRS="latlon",
+    boundsSRS: srs_input = "latlon",
     maskBand: bool = False,
     autocorrect: bool = False,
     returnBounds: bool = False,
@@ -739,14 +810,17 @@ def isFlipped(source):
         return False
 
 
-RasterInfo = namedtuple(
-    "RasterInfo",
-    "srs dtype flipY yAtTop bounds xMin yMin xMax yMax dx dy pixelWidth pixelHeight noData, xWinSize, yWinSize, meta, source, scale, offset",
-)
-
-
-def rasterInfo(sourceDS) -> RasterInfo:
+def rasterInfo(sourceDS: load_raster_input, compute_statistics: bool = False) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster.
+
+    Parameters
+    ----------
+    sourceDS : Anything acceptable by loadRaster()
+        The raster datasource
+    compute_statistics : bool; optional
+        If True, the maximum and minimum value of the raster data are computed.
+        This is computationally expensive for large rasters and repeated calls of
+        this function on the same raster should be avoided.
 
     Returns
     -------
@@ -772,7 +846,6 @@ def rasterInfo(sourceDS) -> RasterInfo:
     """
     output = {}
     sourceDS = loadRaster(sourceDS)
-
     # get srs
     if sourceDS.GetProjectionRef() == "":
         # return None directly if raster has no srs
@@ -784,10 +857,28 @@ def rasterInfo(sourceDS) -> RasterInfo:
 
     # get extent and resolution
     sourceBand = sourceDS.GetRasterBand(1)
+    # Is required to get the maximum and minimum value of the raster data
+
     output["dtype"] = sourceBand.DataType
     output["noData"] = sourceBand.GetNoDataValue()
     output["scale"] = sourceBand.GetScale()
     output["offset"] = sourceBand.GetOffset()
+
+    if compute_statistics is True:
+        try:
+            sourceBand.ComputeStatistics(0)
+
+            maximum_value = sourceBand.GetMaximum()
+            minimum_value = sourceBand.GetMinimum()
+
+            output["maximum_value"] = maximum_value
+            output["minimum_value"] = minimum_value
+        except:
+            output["maximum_value"] = output["noData"]
+            output["minimum_value"] = output["noData"]
+    else:
+        output["maximum_value"] = None
+        output["minimum_value"] = None
 
     xSize = sourceBand.XSize
     ySize = sourceBand.YSize
@@ -822,20 +913,255 @@ def rasterInfo(sourceDS) -> RasterInfo:
     output["bounds"] = (xMin, yMin, xMax, yMax)
     output["meta"] = sourceDS.GetMetadata_Dict()
     output["source"] = sourceDS.GetDescription()
+    output["data_type_name_str"] = gdal.GetDataTypeName(output["dtype"])
 
     # clean up
     del sourceBand, sourceDS
 
-    # return
-    return RasterInfo(**output)
+    raster_info = RasterInfo(**output)
+
+    return raster_info
 
 
 ####################################################################
 # extract specific points in a raster
-ptValue = namedtuple("value", "data xOffset yOffset inBounds")
 
 
-def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True, _onlyValues=False):
+def _convertTupleToOGRPoint(
+    point_as_tuple: tuple[float, float],
+    point_srs_loaded: osr.SpatialReference,
+    point_srs_is_set: bool,
+    output_srs: osr.SpatialReference,
+) -> ogr.Geometry:
+    """This function converts a two dimensional point that is specified as a tuple into
+    a ogr.Gemotry object.
+
+    Parameters
+    ----------
+    point_as_tuple : tuple[float, float]
+        The coordinates of the points.
+    point_srs_loaded : osr.SpatialReference
+        The spatial reference system that the point coordinates are
+        specified in.
+    point_srs_is_set : bool
+        A flag that states if the spatial reference system has been set
+        by th user.
+    output_srs : osr.SpatialReference
+        The target spatial reference system of the ogr.Geometry point
+
+    Returns
+    -------
+    ogr.Geometry
+        The point as an ogr.Geometry in the target spatial reference system.
+    """
+    if point_srs_is_set is False:
+        _raise_srs_required_exception(object_name="tuple")
+    ogr_geometry_point = ogr.Geometry(ogr.wkbPoint)
+    ogr_geometry_point.AddPoint(*point_as_tuple)
+    ogr_geometry_point.AssignSpatialReference(point_srs_loaded)
+    assert isinstance(point_srs_loaded, osr.SpatialReference)
+    if not point_srs_loaded.IsSame(output_srs):
+        ogr_geometry_point_transformed = GEOM.transform(ogr_geometry_point, fromSRS=point_srs_loaded, toSRS=output_srs)
+    else:
+        ogr_geometry_point_transformed = ogr_geometry_point
+
+    return ogr_geometry_point_transformed
+
+
+def _check_if_geometry_is_point(point_to_check: ogr.Geometry):
+    if point_to_check.GetGeometryName() != "POINT":
+        raise GEOM.GeoKitGeomError(
+            "A " + str(point_to_check.GetGeometryName()) + " geometry has been passed as a point."
+            "However only 'POINT' Geometries are an appropriate input as points"
+        )
+
+
+def _check_if_srs_is_epsg_4326(srs: osr.SpatialReference):
+    if not srs.IsSame(SRS.loadSRS(4326)):
+        srs_string = srs.ExportToWkt
+        warnings.warn(
+            "The Location Object assumes the Spatial Reference System EPSG 4326 internally. "
+            "However the provided point system in WKT is: " + str(srs_string)
+        )
+
+
+def _raise_srs_required_exception(object_name: str):
+    raise GEOM.GeoKitGeomError(
+        "A spatial reference systems is required when passing" + str(object_name) + " but None has been provided."
+    )
+
+
+def _transform_ogr_point_spatial_reference_system(
+    ogr_point: ogr.Geometry, point_input_SRS_external: osr.SpatialReference | None, output_srs: osr.SpatialReference
+) -> ogr.Geometry:
+    """This function transforms the ogr.Geometry point transforms into the output output spatial reference system.
+
+    Before transforming the spatial reference system of the ogr.Geometry, it performs some sanity checks.
+    ogr.Geometry object. First, it verifies that the geometry is a point. Then, it verifies that the spatial
+    reference system stored in the ogr.geometry object with the spatial reference system provided by the
+    user to ensure consistency.
+
+    Parameters
+    ----------
+    ogr_point : ogr.Geometry
+        The point that should be transformed into a new spatial reference system.
+    point_input_SRS_external : osr.SpatialReference | None
+        The current spatial reference system of the point. If provided it musst be consistent
+        with the one stored in the ogr.Geometry object or ogr.Geometry does not store a
+        srs yet.
+    output_srs : osr.SpatialReference
+        The target spatial reference system that the point is transferred to
+
+    Returns
+    -------
+    ogr.Geometry
+        The transformed point.
+
+    """
+    _check_if_geometry_is_point(point_to_check=ogr_point)
+    point_srs_loaded_geometry: osr.SpatialReference = ogr_point.GetSpatialReference()
+    if point_srs_loaded_geometry is None and point_input_SRS_external is None:
+        # Wrong configuration of the function
+        raise GEOM.GeoKitGeomError(
+            "The ogr.Geometry Point does not store a spatial reference system, "
+            "nor does the user provide one. However, in order to convert the coordinates "
+            "into another spatial reference system, the point needs to define a spatial "
+            "reference system for its current coordinates."
+        )
+    elif isinstance(point_srs_loaded_geometry, osr.SpatialReference) and point_input_SRS_external is None:
+        # Although the user did not provide a spatial reference system,
+        # the OGR geometry stores one, which is an acceptable use of this function.
+        pass
+    elif isinstance(point_srs_loaded_geometry, osr.SpatialReference) and isinstance(
+        point_input_SRS_external, osr.SpatialReference
+    ):
+        # The user provided a spatial but reference system and the
+        if not point_srs_loaded_geometry.IsSame(point_input_SRS_external):
+            raise GEOM.GeoKitGeomError(
+                "The user has provided another spatial reference system in the 'point_input_SRS' "
+                "argument than the one stored in the ogr.Geometry object. This indicates that the "
+                "user assumes that the point is in a different spatial reference system than the "
+                "one in which the point is actually stored. To use the point set's internal spatial "
+                "reference system, set point_input_SRS to None. The target spatial reference system "
+                "is determined by the spatial reference system of the raster anyway. The spatial "
+                "reference system that is stored in the ogr.Geometry in WKT is: \n "
+                + str(point_srs_loaded_geometry.ExportToWkt())
+                + " the user provided spatial reference system is:\n"
+                + str(point_input_SRS_external.ExportToWkt())
+            )
+    elif point_srs_loaded_geometry is None and isinstance(point_input_SRS_external, osr.SpatialReference):
+        ogr_point.AssignSpatialReference(point_input_SRS_external)
+
+    if not point_srs_loaded_geometry.IsSame(output_srs):
+        ogr_point = GEOM.transform(ogr_point, fromSRS=point_srs_loaded_geometry, toSRS=output_srs)
+    return ogr_point
+
+
+def _convertPointsToListOfOGRPoints(
+    points: tuple[float, float]
+    | list[tuple[float, float]]
+    | ogr.Geometry
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    point_input_SRS: srs_input | None,
+    output_srs: osr.SpatialReference,
+) -> list[ogr.Geometry]:
+    """This function takes tuple[float, float] | ogr.Geometry | list[tuple[float, float]] | Location | LocationSet
+    as input and converts them to a list ogr.Geometry objects of the type point.
+
+    Parameters
+    ----------
+    points : tuple[float, float] | list[tuple[float, float]] | ogr.Geometry | list[ogr.Geometry] | Location | LocationSet
+        The points that should be converted into a list of ogr.Geometry objects.
+    point_input_SRS : srs_input | None
+        The spatial reference system that the points are specified in when passed to the function
+    output_srs : osr.SpatialReference
+        The target spatial reference system that the points should be converted to.
+
+    Returns
+    -------
+    list[ogr.Geometry]
+        A list of the points in the target spatial reference systems as ogr.Geometry objects.
+
+    """
+    if point_input_SRS is None:
+        point_srs_is_set = False
+        point_srs_loaded = None
+    else:
+        point_srs_is_set = True
+        point_srs_loaded = SRS.loadSRS(point_input_SRS)
+
+    # Ensure we have a list of point geometries
+    if isinstance(points, Location):
+        if point_srs_is_set is True:
+            assert isinstance(point_srs_loaded, osr.SpatialReference)
+            _check_if_srs_is_epsg_4326(srs=point_srs_loaded)
+        points_as_list_of_geom = [points.asGeom(srs=output_srs)]
+    elif isinstance(points, LocationSet):
+        if point_srs_is_set is True:
+            assert isinstance(point_srs_loaded, osr.SpatialReference)
+            _check_if_srs_is_epsg_4326(srs=point_srs_loaded)
+        points_as_list_of_geom = points.asGeom(
+            srs=output_srs,
+        )
+    elif isinstance(points, tuple):
+        points_as_list_of_geom = [
+            _convertTupleToOGRPoint(
+                point_as_tuple=points,
+                point_srs_loaded=point_srs_loaded,
+                point_srs_is_set=point_srs_is_set,
+                output_srs=output_srs,
+            )
+        ]
+    elif isinstance(points, ogr.Geometry):
+        points_as_list_of_geom = [
+            _transform_ogr_point_spatial_reference_system(
+                ogr_point=points, point_input_SRS_external=point_srs_loaded, output_srs=output_srs
+            )
+        ]
+    elif isinstance(points, list):
+        points_as_list_of_geom = []
+        for current_point in points:
+            if isinstance(current_point, tuple):
+                current_point = _convertTupleToOGRPoint(
+                    point_as_tuple=current_point,
+                    point_srs_loaded=point_srs_loaded,
+                    point_srs_is_set=point_srs_is_set,
+                    output_srs=output_srs,
+                )
+
+            elif isinstance(current_point, ogr.Geometry):
+                current_point = _transform_ogr_point_spatial_reference_system(
+                    ogr_point=current_point, point_input_SRS_external=point_srs_loaded, output_srs=output_srs
+                )
+
+            else:
+                raise GEOM.GeoKitGeomError(
+                    "The list of points only accepts tuples or ogr.Geometry objects."
+                    " However, an object of the following type has been passed: " + str(type(current_point))
+                )
+
+            points_as_list_of_geom.append(current_point)
+    else:
+        raise GEOM.GeoKitGeomError("The point was supplied in an unexpected data type: " + str(points))
+
+    return points_as_list_of_geom
+
+
+def extractValues(
+    source: load_raster_input | list[load_raster_input],
+    points: tuple[float, float]
+    | ogr.Geometry
+    | list[tuple[float, float]]
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    pointSRS: srs_input | None = None,
+    winRange: int = 0,
+    noDataOkay: bool = True,
+    _onlyValues: bool = False,
+) -> ptValue | pd.DataFrame | numeric | np.ndarray:
     """Extracts the value of a raster at a given point or collection of points.
        Can also extract a window of values if desired.
 
@@ -875,6 +1201,9 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         If True, an error is raised if a 'noData' value is extracted
         If False, numpy.nan is inserted whenever a 'noData' value is extracted
 
+    _onlyValues: bool
+        Return only the extracted data and omit xOffeset, yOffset, inBounds
+
     Returns
     -------
     * If only a single location is given:
@@ -891,7 +1220,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             * Columns are (data, xOffset, yOffset, inBounds)
                 - See above for column descriptions
             * Index is 0...N if 'points' input is not a LocationSet
-            * Index is the LocationSet is if 'points' input is a LocationSet
+        or returns numpy array if _onlyValues=True
     """
     # Be sure we have a raster and srs
     if not isinstance(source, list):
@@ -901,62 +1230,24 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         source = [loadRaster(s) for s in source]
     except:
         raise TypeError("At least one source cannot be loaded by geokit.raster.loadRaster().")
-    srs = None
+    raster_srs = None
     for s in source:
         # load file to make sure it can be interpreted by loadRaster
-        if srs is None:
-            srs = rasterInfo(s).srs
+        if raster_srs is None:
+            raster_srs = rasterInfo(s).srs
         else:
-            assert srs.IsSame(rasterInfo(s).srs), "All source entries must have the same SRS."
-
-    # generate srs for points
-    pointSRS = SRS.loadSRS(pointSRS)
+            assert raster_srs.IsSame(rasterInfo(s).srs), "All source entries must have the same SRS."
 
     # Ensure we have a list of point geometries
-    try:
-        if points._TYPE_KEY_ == "Location":
-            asSingle = True
-            pointsKey = None
-            points = [
-                points.asGeom(srs),
-            ]
-        elif points._TYPE_KEY_ == "LocationSet":
-            asSingle = False
-            pointsKey = points
-            points = points.asGeom(srs)
-    except AttributeError:
-        pointsKey = None
-
-        def loadPoint(pt, s):
-            if isinstance(pt, ogr.Geometry):
-                if pt.GetGeometryName() != "POINT":
-                    raise GEOM.GeoKitGeomError("Invalid geometry given")
-                return pt
-
-            if isinstance(pt, Location):
-                return pt.geom
-
-            tmpPt = ogr.Geometry(ogr.wkbPoint)
-            tmpPt.AddPoint(*pt)
-            tmpPt.AssignSpatialReference(s)
-
-            return tmpPt
-
-        # check for an individual point input
-        if isinstance(points, Location) or isinstance(points, tuple) or isinstance(points, ogr.Geometry):
-            asSingle = True
-            points = [
-                loadPoint(points, pointSRS),
-            ]
-        else:  # assume points is iterable
-            asSingle = False
-            points = [loadPoint(pt, pointSRS) for pt in points]
-
-        # Cast to source srs
-        # make sure we're using the pointSRS for the points in the list
-        pointSRS = points[0].GetSpatialReference()
-        if not pointSRS.IsSame(srs):
-            points = GEOM.transform(points, fromSRS=pointSRS, toSRS=srs)
+    points_as_list_of_geom = _convertPointsToListOfOGRPoints(
+        points=points, point_input_SRS=pointSRS, output_srs=raster_srs
+    )
+    if len(points_as_list_of_geom) > 1:
+        asSingle = False
+    elif len(points_as_list_of_geom) == 1:
+        asSingle = True
+    else:
+        raise GEOM.GeoKitGeomError("No points have been passed to the function extractValues()")
 
     # get the srcs that are actually overlapping with our points
     src_mapper = {}
@@ -966,22 +1257,22 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             _bounds = rasterInfo(s).bounds
             _indices = [
                 i
-                for i, p in enumerate(points)
+                for i, p in enumerate(points_as_list_of_geom)
                 if (_bounds[0] <= p.GetX() <= _bounds[2]) and (_bounds[1] <= p.GetY() <= _bounds[3])
             ]
             # add source as key plus list of overlapped point indices
             src_mapper[s] = _indices
     else:
         # we have only one source which must be applied to all points
-        src_mapper[source[0]] = list(range(len(points)))
+        src_mapper[source[0]] = list(range(len(points_as_list_of_geom)))
         # srcs = source * len(points)
 
     # iterate over all unique srcs and extract the raster values for the affected points _src by _src
 
-    values = [np.nan] * len(points)  # initialize values with nan for every point
-    inBounds = [False] * len(points)  # initialize inbounds with False for every point
-    xOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
-    yOffset = [np.nan] * len(points)  # initialize offsets with nan for every point
+    values = [np.nan] * len(points_as_list_of_geom)  # initialize values with nan for every point
+    inBounds = [False] * len(points_as_list_of_geom)  # initialize inbounds with False for every point
+    xOffset = [np.nan] * len(points_as_list_of_geom)  # initialize offsets with nan for every point
+    yOffset = [np.nan] * len(points_as_list_of_geom)  # initialize offsets with nan for every point
 
     for _src, _inds in src_mapper.items():
         # get the indices of the points for which data has been extracted already
@@ -994,7 +1285,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
             continue
 
         # get the points with this _src via list indices
-        _points = [points[i] for i in _inds]
+        _points = [points_as_list_of_geom[i] for i in _inds]
 
         # get the raster info for this _src
         _info = rasterInfo(_src)
@@ -1095,7 +1386,7 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
         else:
             return pd.DataFrame(
                 dict(data=values, xOffset=xOffset, yOffset=yOffset, inBounds=inBounds),
-                index=pointsKey,
+                index=None,
             )
 
 
@@ -1103,7 +1394,20 @@ def extractValues(source, points, pointSRS="latlon", winRange=0, noDataOkay=True
 # Shortcut for getting just the raster value
 
 
-def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None, winRange=None, **kwargs):
+def interpolateValues(
+    source: load_raster_input,
+    points: tuple[float, float]
+    | ogr.Geometry
+    | list[tuple[float, float]]
+    | list[ogr.Geometry]
+    | Location
+    | LocationSet,
+    pointSRS: srs_input = "latlon",
+    mode: Literal["near", "linear-spline", "cubic-spline", "average", "func"] = "near",
+    func: Callable | None = None,
+    winRange: int | None = None,
+    **kwargs,
+):
     """Interpolates the value of a raster at a given point or collection of points.
 
     Supports various interpolation schemes:
@@ -1185,20 +1489,35 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
     >>>                             func=medianFinder, winRange=2)
     """
     # Determine what the user probably wants as an output
-    if isinstance(points, tuple) or isinstance(points, ogr.Geometry) or isinstance(points, Location):
+    if isinstance(points, (tuple, ogr.Geometry, Location)):
         asSingle = True
         # make points a list of length 1 so that the rest works (will be unpacked later)
-        points = [
-            points,
-        ]
+    elif isinstance(points, list):
+        if len(points) == 1:
+            asSingle = True
+        else:
+            asSingle = False
+    elif isinstance(points, LocationSet):
+        if points.count == 1:
+            asSingle = True
+        else:
+            asSingle = False
+
     else:  # Assume points is already an iterable of some sort
-        asSingle = False
+        raise GeoKitRasterError(
+            "The following datatype has been provided as point but something different was expected: "
+            + str(type(points))
+        )
 
     # Do interpolation
     if mode == "near":
         # Simple get the nearest value
         win = 0 if winRange is None else winRange
-        result = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, _onlyValues=True, **kwargs)
+        if asSingle is True:
+            result = [values]
+        else:
+            result = values
 
     elif mode == "linear-spline":  # use a spline interpolation scheme
         # setup inputs
@@ -1207,11 +1526,20 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
-
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         # Calculate interpolated values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             rbs = RectBivariateSpline(y, x, v.data, kx=1, ky=1)
 
             result.append(rbs(v.yOffset, v.xOffset)[0][0])
@@ -1223,29 +1551,59 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
         y = np.linspace(-1 * win, win, 2 * win + 1)
 
         # Get raw data
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
 
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         # Calculate interpolated values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             rbs = RectBivariateSpline(y, x, v.data)
 
             result.append(rbs(v.yOffset, v.xOffset)[0][0])
 
     elif mode == "average":  # Get the average in a window
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             result.append(v.data.mean())
 
     elif mode == "func":  # Use a general function processor
         if func is None:
             raise GeoKitRasterError("'func' mode chosen, but no func kwargs was given")
         win = 3 if winRange is None else winRange
-        values = extractValues(source, points, pointSRS=pointSRS, winRange=win)
+        values = extractValues(source, points, pointSRS=pointSRS, winRange=win, **kwargs)
+        if asSingle is True:
+            assert isinstance(values, ptValue)
+            data_frame_values = pd.DataFrame(
+                dict(
+                    dict(data=[values.data], xOffset=values.xOffset, yOffset=values.yOffset, inBounds=values.inBounds),
+                ),
+                index=None,
+            )
+        else:
+            data_frame_values = values
         result = []
-        for v in values.itertuples(index=False):
+        for v in data_frame_values.itertuples(index=False):
             result.append(func(v.data, v.xOffset, v.yOffset))
 
     else:
@@ -1263,14 +1621,14 @@ def interpolateValues(source, points, pointSRS="latlon", mode="near", func=None,
 
 
 def mutateRaster(
-    source,
-    processor=None,
-    bounds=None,
-    boundsSRS="latlon",
-    autocorrect=False,
-    output=None,
-    dtype=None,
-    **kwargs,
+    source: load_raster_input,
+    processor: Callable | None = None,
+    bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
+    boundsSRS: srs_input = "latlon",
+    autocorrect: bool = False,
+    output: str | None = None,
+    dtype: geokit_c_data_types_literal | None = None,
+    **create_raster_kwargs,
 ):
     """Process all pixels in a raster according to a given function. The boundaries
     of the resulting raster can be changed as long as the new boundaries are within
@@ -1363,11 +1721,11 @@ def mutateRaster(
     workingExtent = dsInfo.bounds if (bounds is None) else bounds
 
     # Perform processing
-    processedData = processor(sourceData) if processor else sourceData
-    if dtype and processedData.dtype != dtype:
-        processedData = processedData.astype(dtype)
+    if processor:
+        processedData = processor(sourceData)
 
-    dtype = gdalType(processedData.dtype)
+    else:
+        processedData = sourceData
 
     # Ensure returned matrix is okay
     if processedData.shape != sourceData.shape:
@@ -1376,18 +1734,24 @@ def mutateRaster(
             format(processedData.shape, sourceData.shape),
         )
     del sourceData
+    list_of_numbers = [processedData.min(), processedData.max()]
+    minimum_gdal_type_list = [str(processedData.dtype)]
+    if isinstance(dtype, str):
+        minimum_gdal_type_list.append(dtype)
 
+    gdal_data_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
+    )
     # Create an output raster
     if output is None:
-        dtype = gdalType(processedData.dtype) if dtype is None else gdalType(dtype)
         return UTIL.quickRaster(
             dy=dsInfo.dy,
             dx=dsInfo.dx,
             bounds=workingExtent,
-            dtype=dtype,
+            dtype=gdal_data_string,
             srs=dsInfo.srs,
             data=processedData,
-            **kwargs,
+            **create_raster_kwargs,
         )
 
     else:
@@ -1398,7 +1762,8 @@ def mutateRaster(
             srs=dsInfo.srs,
             data=processedData,
             output=output,
-            **kwargs,
+            dtype=gdal_data_string,
+            **create_raster_kwargs,
         )
 
         return output
@@ -1589,33 +1954,42 @@ def drawSmopyMap(
 
 
 def drawRaster(
-    source,
-    srs=None,
-    ax=None,
-    resolution=None,
+    source: load_raster_input | pd.DataFrame,
+    srs: srs_input | None = None,
+    ax: matplotlib.axes._axes.Axes | None | AxHands = None,
+    resolution: numeric | None = None,
     cutline=None,
-    figsize: tuple[int, int] = (12, 12),
-    xlim: tuple[int, int] | None = None,
-    ylim: tuple[int, int] | None = None,
+    figsize: tuple[numeric, numeric] = (12, 12),
+    xlim: tuple[numeric, numeric] | None = None,
+    ylim: tuple[numeric, numeric] | None = None,
     fontsize: int = 16,
     hideAxis: bool = False,
-    cbar=True,
-    cbarPadding=0.01,
-    cbarTitle=None,
-    vmin=None,
-    vmax=None,
+    cbar: bool = True,
+    cbarTitle: str | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     cmap="viridis",
-    cbax=None,
     cbargs=None,
-    cutlineFillValue=-9999,
-    leftMargin=0,
-    rightMargin=0,
-    topMargin=0,
-    bottomMargin=0,
+    noData: numeric | None = None,
     zorder=0,
-    resampleAlg="med",
-    **kwargs,
-):
+    resampleAlg: Literal[
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "Q1",
+        "Q3",
+        "sum",
+    ] = "med",
+    **warp_kwargs,
+) -> AxHands:
     """Draw a raster as an image on a matplotlib canvas.
 
     Parameters
@@ -1643,12 +2017,8 @@ def drawRaster(
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
         * If a string is given, it must be a path to a vector file
-        * Values outside of the cutline are given the value 'cutlineFillValue'
+        * Values outside of the cutline are given the noData value of the raster
         * Requires a warp
-
-    cutlineFillValue : numeric; optional
-        The value to give to values outside a cutline
-        * Has no effect when cutline is not given
 
     figsize : (int, int); optional
         The figure size to create when generating a new axis
@@ -1664,12 +2034,6 @@ def drawRaster(
     fontsize : int; optional
         A base font size to apply to tick marks which appear
           * Titles and labels are given a size of 'fontsize' + 2
-
-    cbarPadding : float; optional
-        The spacing padding to add between the generated axis and the generated
-        colorbar axis
-          * Only useful when generating a new axis
-          * Only useful when 'colorBy' is given
 
     cbarTitle : str; optional
         The title to give to the generated colorbar
@@ -1689,28 +2053,10 @@ def drawRaster(
         The colormap to use when coloring
           * Only useful when 'colorBy' is given
 
-    cbax : matplotlib axis; optional
-        An explicitly given axis to use for drawing the colorbar
-          * If not given, but 'colorBy' is given, an axis for the colorbar is
-            automatically generated
-
     cbargs : dict; optional
 
-    leftMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    rightMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    topMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
-
-    bottomMargin : float; optional
-        Additional margin to add to the left of the figure
-          * Before using this, try adjusting the 'figsize'
+    noData : numeric; optional
+        Replaces all previous noData values with this value in the output raster.
 
     resampleAlg : str, optional
         The resampleAlg passed on to a call of warp() if needed, by default "med"
@@ -1727,61 +2073,29 @@ def drawRaster(
                     drawn
        'cbar' -> The colorbar handle if it was drawn
     """
-    # Create an axis, if needed
-    if isinstance(ax, UTIL.AxHands):
+    if isinstance(ax, AxHands):
         ax = ax.ax
-    import matplotlib.pyplot as plt
-
     if ax is None:
-        newAxis = True
-        plt.figure(figsize=figsize)
-
-        if not cbar:  # We don't need a colorbar
-            if not hideAxis:
-                leftMargin += 0.07
-
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-            cbax = None
-
-        else:  # We need a colorbar
-            rightMargin += 0.08  # Add area on the right for colorbar text
-            if not hideAxis:
-                leftMargin += 0.07
-
-            cbarExtraPad = 0.05
-            cbarWidth = 0.04
-
-            ax = plt.axes(
-                [
-                    leftMargin,
-                    bottomMargin,
-                    1 - (rightMargin + leftMargin + cbarWidth + cbarPadding),
-                    1 - (topMargin + bottomMargin),
-                ]
-            )
-
-            cbax = plt.axes(
-                [
-                    1 - (rightMargin + cbarWidth),
-                    bottomMargin + cbarExtraPad,
-                    cbarWidth,
-                    1 - (topMargin + bottomMargin + 2 * cbarExtraPad),
-                ]
-            )
-
-        if hideAxis:
-            ax.axis("off")
-        else:
-            ax.tick_params(labelsize=fontsize)
+        new_main_axis = True
+        fig, ax = plt.subplots(figsize=figsize)
+    elif isinstance(ax, matplotlib.axes._axes.Axes):
+        new_main_axis = False
     else:
-        newAxis = False
+        raise Exception(
+            "Expected None or matplotlib.axes._axes.Axes object for the 'ax' argument. However, an object of type: "
+            + str(type(ax))
+            + " has been provided."
+        )
+    if hideAxis:
+        ax.axis("off")
+
+    if cbar is False:
+        cbax = None
+    else:
+        divider = make_axes_locatable(ax)
+        cbax = divider.append_axes("right", size="2.5%", pad=0.05)
+
+    ax.tick_params(labelsize=fontsize)
 
     # Load the raster datasource and check for transformation
     source = loadRaster(source)
@@ -1813,18 +2127,17 @@ def drawRaster(
             pixelWidth=xres,
             srs=srs,
             bounds=bounds,
-            fill=cutlineFillValue,
-            noData=cutlineFillValue,
+            noData=noData,
             resampleAlg=resampleAlg,
-            **kwargs,
+            **warp_kwargs,
         )
 
     info = rasterInfo(source)
 
     # Read the Data
     data = extractMatrix(source).astype(float)
-    if cutlineFillValue is not None:
-        data[data == info.noData] = np.nan
+
+    data[data == info.noData] = np.nan
 
     # Draw image
     ext = (
@@ -1844,24 +2157,21 @@ def drawRaster(
     )
 
     # Draw Colorbar
-    if cbar:
+    if cbar is True:
         tmp = dict(cmap=cmap, orientation="vertical")
         if cbargs is not None:
             tmp.update(cbargs)
 
-        if cbax is None:
-            cbar = plt.colorbar(h, ax=ax, **tmp)
-        else:
-            cbar = plt.colorbar(h, cax=cbax, **tmp)
-
-        cbar.ax.tick_params(labelsize=fontsize)
+        cbar_output = plt.colorbar(h, cax=cbax, **tmp)
+        cbar_output.ax.tick_params(labelsize=fontsize)
         if cbarTitle is not None:
-            cbar.set_label(cbarTitle, fontsize=fontsize + 2)
+            cbar_output.set_label(cbarTitle, fontsize=fontsize + 2)
+    else:
+        cbar_output = None
 
     # Do some formatting
-    if newAxis:
-        ax.set_aspect("equal")
-        ax.autoscale(enable=True)
+    ax.set_aspect("equal")
+    ax.autoscale(enable=True)
 
     if xlim is not None:
         ax.set_xlim(*xlim)
@@ -1869,7 +2179,7 @@ def drawRaster(
         ax.set_ylim(*ylim)
 
     # Done!
-    return UTIL.AxHands(ax, h, cbar)
+    return UTIL.AxHands(ax, h, cbar_output)
 
 
 # 3
@@ -1931,7 +2241,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # Polygonize geometry
     result = gdal.Polygonize(band, maskBand, vecLyr, 0)
     if result != 0:
-        raise GEOM.GeoKitGeomError("Failed to polygonize geometry")
+        raise GeoKitGeomError("Failed to polygonize geometry")
 
     # Check the geoms
     ftrN = vecLyr.GetFeatureCount()
@@ -1980,10 +2290,11 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
 
 
 def contours(
-    source,
+    source: load_raster_input,
     contourEdges: list[float] | None,
     polygonize: bool = True,
     unpack: bool = True,
+    raster_band_index: int = 1,
     **kwargs,
 ) -> pd.DataFrame:
     """Create contour geometries at specified edges for the given raster data.
@@ -2015,6 +2326,9 @@ def contours(
     unpack : bool
         If True, Multipolygon/MultiLinestring objects are decomposed
 
+    raster_band_index : int
+        The index of the raster which should be loaded from the raster band.
+
     **kwargs:
         * All keyword arguments are passed on to a call to gdal.ContourGenerateEx
         * They are used to construct the 'options' parameter
@@ -2028,15 +2342,18 @@ def contours(
     * The column 'geom' corresponds to generated geometry objects
     * The columns 'ID' corresponds to the associated contour edge for each object
     """
+    warnings.warn(
+        message="The current behavior of geokits's contours function is deprecated. GDAL has changed"
+        " how contours are drawn close to minimum and maximum values, and will discontinue"
+        " the current behavior in GDAL 3.11 or 3.12. Geokit will also drop the current"
+        " behavior with the next GDAL update. For more information, please see the"
+        " following discussion: https://github.com/OSGeo/gdal/issues/12938.",
+        category=DeprecationWarning,
+    )
     # Open raster
     raster = loadRaster(source)
-    band = raster.GetRasterBand(1)
-    # TODO: Should a warning be printed in case there are multiple
-    # bands?
-    # if raster.RasterCount>1:
+    band = raster.GetRasterBand(raster_band_index)
 
-    #    Warning.warn("There are multiple bands in the dataset.
-    # The contour is obtained for the first one"")
     rasterSRS = SRS.loadSRS(raster.GetProjectionRef())
 
     # Make temporary vector
@@ -2087,7 +2404,7 @@ def contours(
 
 
 def warp(
-    source,
+    source: load_raster_input,
     resampleAlg: Literal[
         "near",
         "bilinear",
@@ -2104,17 +2421,16 @@ def warp(
         "Q3",
         "sum",
     ] = "bilinear",
-    cutline=None,
-    output: str | None = None,
-    pixelHeight=None,
-    pixelWidth=None,
-    srs=None,
-    bounds: tuple | None = None,
-    dtype=None,
-    noData=None,
-    fill=None,
-    overwrite=True,
-    meta=None,
+    cutline: str | ogr.Geometry | None = None,
+    output: str | pathlib.Path | None = None,
+    pixelHeight: numeric | None = None,
+    pixelWidth: numeric | None = None,
+    srs: srs_input | None = None,
+    bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
+    dtype: None | geokit_c_data_types_literal = None,
+    noData: numeric | None = None,
+    overwrite: bool = True,
+    meta: None | dict[str, str] = None,
     **kwargs,
 ) -> gdal.Dataset | str:
     """Warps a given raster source to another context.
@@ -2148,7 +2464,7 @@ def warp(
         * Values outside of the cutline are given the value 'cutlineFillValue'
         * Requires a warp
 
-    output : str; optional
+    output : str; pathlib.Path optional
         The path on disk where the new raster should be created
 
     pixelHeight : numeric; optional
@@ -2172,11 +2488,10 @@ def warp(
           - a String such as "Byte", "UInt16", or "Double"
 
     noData : numeric; optional
-        The no-data value to apply to the output raster
+        Replaces all previous noData values with this value in the output raster.
 
-    fill : numeric; optional
-        The fill data to place into the new raster before warping occurs
-        * Does not play a role when writing a file to disk
+    meta: dict; optional: contains a key value pair that is passed to the
+          output gdal.dataset using the SetMetadataItem method.
 
     **kwargs:
         * All keyword arguments are passed on to a call to gdal.WarpOptions
@@ -2203,7 +2518,7 @@ def warp(
     """
     # open source and get info
     source = loadRaster(source)
-    dsInfo = rasterInfo(source)
+    dsInfo = rasterInfo(sourceDS=source, compute_statistics=True)
     if dsInfo.scale != 1.0 or dsInfo.offset != 0.0:
         isAdjusted = True
     else:
@@ -2240,12 +2555,28 @@ def warp(
             pixelWidth = (bounds[2] - bounds[0]) / (dsInfo.xWinSize * 1.1)
     bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
 
-    if dtype is None:
-        dtype = dsInfo.dtype
-    dtype = gdalType(dtype)
-
     if noData is None:
-        noData = dsInfo.noData
+        noDataRead = dsInfo.noData
+    else:
+        noDataRead = noData
+    list_of_numbers = []
+    if isinstance(noDataRead, (numeric, bool)):
+        list_of_numbers.append(noDataRead)
+    elif noDataRead is None:
+        pass
+    else:
+        raise GeoKitRasterError("noData must be a numeric or boolean value but got: %s" % str(type(noDataRead)))
+
+    list_of_datatypes = []
+    if isinstance(dtype, str):
+        list_of_datatypes.append(dtype)
+    elif dtype is None:
+        pass
+    else:
+        raise GeoKitRasterError("dtype must be a gdal data type, string or None value but got: %s" % str(type(dtype)))
+    list_of_datatypes.append(dsInfo.data_type_name_str)
+    list_of_numbers.append(dsInfo.minimum_value)
+    list_of_numbers.append(dsInfo.maximum_value)
 
     # If a cutline is given, create the output
     if cutline is not None:
@@ -2259,7 +2590,9 @@ def warp(
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
     # Workflow depends on whether or not we have an output
-    if output is not None:  # Simply do a translate
+    if isinstance(output, pathlib.Path):
+        output = str(output)
+    if isinstance(output, str):  # Simply do a translate
         if os.path.isfile(output):
             if overwrite is True:
                 os.remove(output)
@@ -2267,6 +2600,12 @@ def warp(
                     os.remove(output + ".aux.xml")
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
+
+        gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
+        )
 
         # # Check some for bad input configurations
         # if not srs is None:
@@ -2287,14 +2626,14 @@ def warp(
         )
 
         # Let gdalwarp do everything...
-        opts = gdal.WarpOptions(
-            outputType=getattr(gdal, dtype),
+        gdal_warp_options = gdal.WarpOptions(
+            outputType=gdal_data_type_constant,
             xRes=pixelWidth,
             yRes=pixelHeight,
             creationOptions=co,
             outputBounds=bounds,
             dstSRS=srs,
-            dstNodata=noData,
+            dstNodata=noDataRead,
             resampleAlg=resampleAlg,
             copyMetadata=copyMeta,
             targetAlignedPixels=aligned,
@@ -2302,65 +2641,55 @@ def warp(
             **kwargs,
         )
 
-        result = gdal.Warp(output, source, options=opts)
-        if not UTIL.isRaster(result):
+        result_dataset = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
+        if not UTIL.isRaster(result_dataset):
             raise GeoKitRasterError("Failed to translate raster")
 
-        destRas = output
+        destination_raster = output
+
     else:
         if "cropToCutline" in kwargs:
             msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
             warnings.warn(msg, UserWarning)
+        gdal_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
+            list_of_numbers=list_of_numbers,
+            minimum_gdal_type_list=list_of_datatypes,
+            user_defined_minimum_gdal_type=dtype,
+        )
 
         # Warp to a raster in memory
-        destRas = UTIL.quickRaster(
+        destination_raster = UTIL.quickRaster(
             bounds=bounds,
             srs=srs,
             dx=pixelWidth,
             dy=pixelHeight,
-            dtype=dtype,
-            noData=noData,
-            fill=fill,
+            dtype=gdal_data_type_string,
+            noData=noDataRead,
         )
 
         # Do a warp
-        result = gdal.Warp(destRas, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
-        destRas.FlushCache()
+        result_dataset = gdal.Warp(destination_raster, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
 
+        destination_raster.FlushCache()
     # Do we have meta data?
     if meta is not None:
-        if isinstance(result, str):
-            ds = loadRaster(result, 1)
+        if isinstance(destination_raster, str):
+            loaded_output_raster = loadRaster(destination_raster, 1)
         else:
-            ds = result
+            loaded_output_raster = destination_raster
 
         for k, v in meta.items():
-            ds.SetMetadataItem(k, v)
+            loaded_output_raster.SetMetadataItem(k, v)
 
-        del ds
+        # FlushCache writes all changes to disk
+        loaded_output_raster.FlushCache()
 
-    # Do we need to readjust?
-    #    if isAdjusted:
-    #        if isinstance(result, str):
-    #            ds = loadRaster(result, 1)
-    #        else:
-    #            ds = result
-    #        band = ds.GetRasterBand(1)
-    #        band.SetScale(dsInfo.scale)
-    #        band.SetOffset(dsInfo.offset)
-    #        band.FlushCache()
-    #        ds.FlushCache()
-    #        del band, ds
-
-    # TODO: Should 'result' be deleted at this point?
-
-    # Done!
     if cutline is not None:
         del tempdir
-    return destRas
+    return destination_raster
 
 
-def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
+def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, copyMetadata: bool = False, **kwargs):
     """
     Convenience function to warp a raster to the context of another raster
     as returned from a call to rasterInfo(contextSource).
@@ -2374,7 +2703,10 @@ def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
         If True, the metadata of the dataSource raster will be copied, else
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
-        All kwargs will be passed on to raster.warp().
+        All kwargs will be passed on to raster.warp()
+        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined
+        automatically based on the value range, this can be time-consuming
+        depending on data size. Avoid by specifying dtype explicitly.
     """
     if UTIL.isRaster(dataSource):
         dataInfo = rasterInfo(dataSource)
@@ -2392,32 +2724,22 @@ def warpLike(dataSource, contextSource, copyMetadata=False, **kwargs):
         meta = dataInfo.meta
     else:
         meta = kwargs.pop("meta", None)
-    print(meta)
-    dtype = kwargs.pop("dtype", dataInfo.dtype)
-    noData = kwargs.pop("noData", dataInfo.noData)
-    if "cutline" in kwargs:
-        # make sure that the cells outside are filled with noData if not specified
-        fill = kwargs.pop("fill", dataInfo.noData)
-    else:
-        # set to default of warp() function for consistent behavior
-        fill = inspect.signature(warp).parameters["fill"].default
 
     # then get context related parameters from CONTEXT source
     bounds = kwargs.pop("bounds", contextInfo.bounds)
     pixelWidth = kwargs.pop("pixelWidth", contextInfo.pixelWidth)
     pixelHeight = kwargs.pop("pixelHeight", contextInfo.pixelHeight)
     srs = kwargs.pop("srs", contextInfo.srs)
+    noData = kwargs.pop("noData", contextInfo.noData)
 
     return warp(
         source=dataSource,
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
-        dtype=dtype,
         srs=srs,
         noData=noData,
         meta=meta,
-        fill=fill,
         **kwargs,
     )
 

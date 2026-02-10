@@ -1,0 +1,183 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
+site_name: ETHOS.GeoKit
+site_url: https://fzj-iek3-vsa.github.io/geokit/
+site_description: Geospatial toolkit for Python
+site_author: Julian Belina
+
+repo_url: https://github.com/FZJ-IEK3-VSA/geokit
+repo_name: FZJ-IEK3-VSA/geokit
+edit_uri: edit/dev/docs/
+
+docs_dir: docs
+site_dir: site
+use_directory_urls: false
+
+theme:
+    name: material
+    logo: visualizations/logos/geokit_logo.svg
+    favicon: visualizations/logos/geokit_logo.svg
+    palette:
+        - media: "(prefers-color-scheme: light)"
+          scheme: default
+          primary: custom
+          accent: custom
+          toggle:
+              icon: material/brightness-7
+              name: Switch to dark mode
+        - media: "(prefers-color-scheme: dark)"
+          scheme: slate
+          primary: custom
+          accent: custom
+          toggle:
+              icon: material/brightness-4
+              name: Switch to light mode
+    features:
+        - navigation.tabs
+        - navigation.sections
+        - navigation.expand
+        - navigation.top
+        - navigation.indexes
+        - search.suggest
+        - search.highlight
+        - content.code.copy
+        - content.action.edit
+        - toc.follow
+
+plugins:
+    - search
+
+    - mkdocs-jupyter:
+          execute: True
+          include_source: true
+          allow_errors: false
+
+    - mkdocstrings:
+          default_handler: python
+          handlers:
+              python:
+                  paths: [geokit]
+                  options:
+                      docstring_section_style: list
+                      signature_crossrefs: true
+                      docstring_style: numpy
+                      unwrap_annotated: true
+                      inherited_members: true
+                      summary: true
+                      heading_level: 1
+                      parameter_headings: true
+                      type_parameter_headings: true
+                      show_root_heading: true
+                      show_root_full_path: false
+                      show_symbol_type_heading: true
+                      show_symbol_type_toc: true
+                      merge_init_into_class: true
+                      separate_signature: true
+                      # Show type annotations in signatures.
+                      show_signature_annotations: true
+
+                      # Show type parameters in signatures.
+                      show_signature_type_parameters: true
+                      show_bases: false
+                      allow_inspection: true
+
+    - gen-files:
+          scripts:
+              - docs/scripts/gen_ref_pages.py
+
+    - literate-nav:
+          nav_file: SUMMARY.md
+
+    - section-index
+
+markdown_extensions:
+    - admonition
+    - attr_list
+    - md_in_html
+    - toc:
+          permalink: true
+    - pymdownx.highlight:
+          anchor_linenums: true
+    - pymdownx.superfences
+    - pymdownx.tabbed:
+          alternate_style: true
+    - pymdownx.details
+
+extra_css:
+    - stylesheets/extra.css
+
+nav:
+    - Home: index.md
+
+    - Examples and Documentation:
+          - Introduction: example_articles/_00_introduction.md
+
+          - Working with Raster Data:
+                - Overview: example_articles/_01_raster_overview.md
+                - Create Raster Data: Examples/_01_raster/_1_create_raster_data.ipynb
+                - Visualize Raster Data: Examples/_01_raster/_2_visualize_raster_data.ipynb
+                - Extract Data from Raster: Examples/_01_raster/_3_extract_data_from_raster.ipynb
+                - Polygonize Raster: Examples/_01_raster/_4_polygonize_raster.ipynb
+                - Warp Raster: Examples/_01_raster/_5_warp_raster.ipynb
+
+          - Working with Vector Files:
+                - Overview: example_articles/_02_vector_introduction.md
+                - Analyze Shapefiles: Examples/_02_vector/_1_analyze_shape_files.ipynb
+                - Analyze GeoPackage: Examples/_02_vector/_2_analyze_geopackage.ipynb
+                - Visualize Vector Data: Examples/_02_vector/_3_visualize_vector_data.ipynb
+                - Attribute Extraction and Manipulation: Examples/_02_vector/_4_attribute_extraction_and_manipulation.ipynb
+                - Spatial Filtering: Examples/_02_vector/_5_filter_vector_data_spatially.ipynb
+                - Create Buffer: Examples/_02_vector/_6_create_buffer.ipynb
+                - Subdivide Geometries: Examples/_02_vector/_7_subdivide_geometries.ipynb
+                - Create Shapefile from Data Frame: Examples/_02_vector/_8_create_shapefile_from_data_frame.ipynb
+                - Create Geopackage from Data Frames: Examples/_02_vector/_9_create_geopackage_from_data_frame.ipynb
+
+          - Working with Geometries:
+                - Overview: example_articles/_03_00_geometries.md
+                - Create Geometries:
+                      - Overview: example_articles/_03_01_create_geometries.md
+                      - Create Points: Examples/_03_geometries/_01_create_geometries/_01_create_points.ipynb
+                      - Create Lines: Examples/_03_geometries/_01_create_geometries/_02_create_line.ipynb
+                      - Create Multi Lines: Examples/_03_geometries/_01_create_geometries/_03_create_multi_line.ipynb
+                      - Create Polygons: Examples/_03_geometries/_01_create_geometries/_04_create_polygon.ipynb
+                      - Create Multi Polygons: Examples/_03_geometries/_01_create_geometries/_05_create_multi_polygon.ipynb
+                - Geometry Operations:
+                      - Overview: example_articles/_03_02_geometry_operations.md
+                      - Get Centroid: Examples/_03_geometries/_02_geometry_operations/_01_get_centroid_of_geom.ipynb
+                      - Get Boundary: Examples/_03_geometries/_02_geometry_operations/_02_get_boundary.ipynb
+                      - Transform SRS: Examples/_03_geometries/_02_geometry_operations/_03_transform_srs.ipynb
+                      - Get Areas: Examples/_03_geometries/_02_geometry_operations/_05_get_areas.ipynb
+                      - Spatial Relations: Examples/_03_geometries/_02_geometry_operations/_06_spatial_relations_of_geometries.ipynb
+                      - Intersection and Union: Examples/_03_geometries/_02_geometry_operations/_07_intersection_and_union.ipynb
+
+          - Raster Operations with Extents:
+                - Overview: example_articles/_04_raster_operations_based_on_extents.md
+                - Create Raster from Extent: Examples/_04_raster_operations_based_on_extents/_1_create_raster_from_extent.ipynb
+                - Clip Rasters to Extent: Examples/_04_raster_operations_based_on_extents/_2_clipping_rasters_to_an_extent.ipynb
+                - Create and Transform Extents: Examples/_04_raster_operations_based_on_extents/_3_creating_and_transforming_extents.ipynb
+                - Combine Overlapping Extents: Examples/_04_raster_operations_based_on_extents/_4_combine_overlapping_extents.ipynb
+
+          - Combine Raster and Vector Data:
+                - Overview: example_articles/_05_combine_multiple_files.md
+                - Setup RegionMask: Examples/_05_combine_multiple_files/_01_setup_regionmask_aachen.ipynb
+                - Warp Raster to RegionMask: Examples/_05_combine_multiple_files/_02_warp_raster_to_region_mask_context.ipynb
+                - Create Raster from RegionMask: Examples/_05_combine_multiple_files/_03_create_raster_from_regionmask.ipynb
+                - Extract Vector Features: Examples/_05_combine_multiple_files/_04_extract_vector_features_within_region.ipynb
+                - Indicate Features and Buffer: Examples/_05_combine_multiple_files/_05_indicate_features_and_buffer.ipynb
+                - Indicate Values and Buffer: Examples/_05_combine_multiple_files/_06_indicate_values_threshold_and_buffer.ipynb
+
+          - Application Examples:
+                - Overview: example_articles/_06_application_examples.md
+                - Offshore Turbine Depths: Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
+
+          - Configuration:
+                - Overview: example_articles/_07_configuration.md
+                - Spatial Reference Systems: Examples/_07_configuration_options/_01_srs.ipynb
+                - C Data Types: Examples/_07_configuration_options/_02_c_datatypes.ipynb
+
+    - API Reference: reference/
+
+    - FAQ & Miscellaneous:
+          - Geodata Sources: articles/geodata_sources.md
+          - Known Issues: articles/known_issues.md
+          - Code of Conduct: CODE_OF_CONDUCT.md

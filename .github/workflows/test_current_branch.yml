@@ -10,7 +10,12 @@ jobs:
       matrix:
         runner_tag: ["self-hosted"]
     uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    secrets:
+      ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
+      ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
-      ipynb_example_folder: "Examples"
+      ipynb_example_folder: "docs/Examples"
+      multiprocessing_example_string: "-n auto"
+      multiprocessing_pytest_string: "-n auto"

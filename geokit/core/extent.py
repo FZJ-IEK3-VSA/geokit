@@ -2,6 +2,7 @@ import warnings
 from collections import namedtuple
 from glob import glob
 from os.path import isfile
+from typing import Literal, Callable
 
 import numpy as np
 import pandas as pd
@@ -14,11 +15,15 @@ from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core import vector as VECTOR
 from geokit.core.location import Location, LocationSet
-
-
-class GeoKitExtentError(UTIL.GeoKitError):
-    pass
-
+from geokit.data_types import (
+    TransformedPointsXY,
+    TransformedPointsXYZ,
+    load_raster_input,
+    numeric,
+    srs_input,
+    geokit_c_data_types_literal,
+)
+from geokit.error import GeoKitExtentError
 
 IndexSet = namedtuple("IndexSet", "xStart yStart xWin yWin xEnd yEnd")
 TileIndexBox = namedtuple("tileBox", "xi_start xi_stop yi_start yi_stop zoom")
@@ -49,7 +54,7 @@ class Extent(object):
 
     _whatami = "Extent"
 
-    def __init__(self, *args, srs="latlon"):
+    def __init__(self, *args, srs: srs_input = "latlon"):
         """Create extent from explicitly defined boundaries.
 
         Usage:
@@ -125,7 +130,7 @@ class Extent(object):
         return Extent(xMin, yMin, xMax, yMax, srs=geom.GetSpatialReference())
 
     @staticmethod
-    def fromTile(xi, yi, zoom) -> "Extent":
+    def fromTile(xi: int, yi: int, zoom: int) -> "Extent":
         """Generates an Extent corresponding to tiles used for "slippery maps".
 
         Parameters
@@ -150,7 +155,7 @@ class Extent(object):
         br = smopy.num2deg(xi + 1.0, yi - 0.0, zoom)[::-1]
 
         o = SRS.xyTransform([tl, br], fromSRS=SRS.EPSG4326, toSRS=SRS.EPSG3857, outputFormat="xy")
-
+        assert isinstance(o, TransformedPointsXY)
         return Extent(o.x.min(), o.y.min(), o.x.max(), o.y.max(), srs=SRS.EPSG3857)
 
     @staticmethod
@@ -215,7 +220,7 @@ class Extent(object):
 
             return Extent(xMin, yMin, xMax, yMax, srs=shapeSRS)
         else:
-            geom = VECTOR.extractFeature(source, where=where, geom=geom, onlyGeom=True)
+            geom = VECTOR.extractFeature(source=source, where=where, geom=geom, onlyGeom=True)
             return Extent.fromGeom(geom)
 
     @staticmethod
@@ -642,7 +647,7 @@ class Extent(object):
                 y = xy.y
         return x, y
 
-    def castTo(self, srs, segments=100):
+    def castTo(self, srs: srs_input, segments: numeric = 100):
         """
         Creates a new Extent by transforming an extent from the original Extent's
         srs to a target SRS.
@@ -771,16 +776,16 @@ class Extent(object):
 
         return filter(self.inSourceExtent, directoryList)
 
-    def containsLoc(self, locs, srs=None):
+    def containsLoc(
+        self,
+        locs,
+    ):
         """Test if the extent contains a location or an iterable of locations.
 
         Parameters
         ----------
         locs : Anything acceptable to LocationSet()
             The locations to be checked
-
-        srs : Anything acceptable to geokit.srs.loadSRS()
-            The srs to cast the Extent object to
 
         Returns
         -------
@@ -1012,7 +1017,16 @@ class Extent(object):
             **kwargs,
         )
 
-    def _quickRaster(self, pixelWidth, pixelHeight, **kwargs):
+    def _quickRaster(
+        self,
+        dx: numeric,
+        dy: numeric,
+        dtype: geokit_c_data_types_literal | None = None,
+        noData: numeric | None | bool = None,
+        data: np.ndarray | None = None,
+        scale: numeric | None = None,
+        offset: numeric | None = None,
+    ):
         """Convenience function for geokit.raster.createRaster which sets 'bounds'
         and 'srs' inputs.
 
@@ -1038,11 +1052,21 @@ class Extent(object):
         * If 'output' is None: gdal.Dataset
         * If 'output' is a string: None
         """
-        assert self.fitsResolution((pixelWidth, pixelHeight)), GeoKitExtentError(
+        assert self.fitsResolution((dx, dy)), GeoKitExtentError(
             "The given resolution does not fit to the Extent boundaries"
         )
 
-        return UTIL.quickRaster(bounds=self.xyXY, dx=pixelWidth, dy=pixelHeight, srs=self.srs, **kwargs)
+        return UTIL.quickRaster(
+            bounds=self.xyXY,
+            dx=dx,
+            dy=dy,
+            srs=self.srs,
+            dtype=dtype,
+            noData=noData,
+            data=data,
+            scale=scale,
+            offset=offset,
+        )
 
     def extractMatrix(self, source, strict=True, **kwargs):
         """Convenience wrapper around geokit.raster.extractMatrix(). Extracts the
@@ -1081,7 +1105,7 @@ class Extent(object):
 
         return RASTER.extractMatrix(source, bounds=self.xyXY, boundsSRS=self.srs, **kwargs)
 
-    def warp(self, source, pixelWidth, pixelHeight, strict=True, **kwargs):
+    def warp(self, source: load_raster_input, pixelWidth, pixelHeight, strict=True, **kwargs):
         """Convenience function for geokit.raster.warp() which automatically sets the
         'srs' and 'bounds' input.
 
@@ -1234,13 +1258,13 @@ class Extent(object):
 
     def mutateRaster(
         self,
-        source,
-        pixelWidth=None,
-        pixelHeight=None,
-        matchContext=False,
-        warpArgs=None,
-        processor=None,
-        resampleAlg="bilinear",
+        source: load_raster_input,
+        pixelWidth: numeric | None = None,
+        pixelHeight: numeric | None = None,
+        matchContext: bool = False,
+        warpArgs: dict | None = None,
+        processor: Callable | None = None,
+        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "bilinear",
         **mutateArgs,
     ):
         """Convenience function for geokit.raster.mutateRaster which automatically
@@ -1310,7 +1334,7 @@ class Extent(object):
                 raise GeoKitExtentError("pixelWidth and pixelHeight must be provided when matchContext is True")
 
             source = self.warp(
-                source,
+                source=source,
                 resampleAlg=resampleAlg,
                 pixelWidth=pixelWidth,
                 pixelHeight=pixelWidth,
@@ -1324,7 +1348,7 @@ class Extent(object):
 
             ext = self.castTo(srs)
             source = ext.warp(
-                source,
+                source=source,
                 resampleAlg=resampleAlg,
                 pixelWidth=pixelWidth,
                 pixelHeight=pixelWidth,
@@ -1368,7 +1392,10 @@ class Extent(object):
             fname = output
         ds = gdal.Translate(fname, source, options=opts)
 
-        return ds if output is None else output
+        if output is None:
+            return ds
+        else:
+            return output
 
     def contoursFromRaster(
         self, raster, contourEdges: list[float], transformGeoms: bool = True, **kwargs
@@ -1412,7 +1439,7 @@ class Extent(object):
 
         return geoms
 
-    def tileIndexBox(self, zoom):
+    def tileIndexBox(self, zoom: int):
         """Determine the tile indexes at a given zoom level which surround the invoked Extent.
 
         Parameters
@@ -1441,7 +1468,7 @@ class Extent(object):
             zoom=zoom,
         )
 
-    def tileSources(self, zoom, source=None):
+    def tileSources(self, zoom: int, source: str | None = None):
         """Get the tiles sources which contribute to the invoking Extent.
 
         Parameters
@@ -1465,7 +1492,7 @@ class Extent(object):
         if source is given:     str
         if source is not given: (xi,yi,zoom)
         """
-        tb = self.tileIndexBox(zoom)
+        tb = self.tileIndexBox(zoom=zoom)
         for xi in range(tb.xi_start, tb.xi_stop + 1):
             for yi in range(tb.yi_start, tb.yi_stop + 1):
                 if source is None:
@@ -1490,7 +1517,7 @@ class Extent(object):
         """
         yield from GEOM.subTiles(self.box, zoom, checkIntersect=False, asGeom=asGeom)
 
-    def tileBox(self, zoom, return_index_box=False):
+    def tileBox(self, zoom: int, return_index_box: bool = False):
         """Determine the tile Extent at a given zoom level which surround the invoked Extent.
 
         Parameters
@@ -1540,7 +1567,7 @@ class Extent(object):
         else:
             return ext
 
-    def tileMosaic(self, source, zoom, **kwargs):
+    def tileMosaic(self, source: str, zoom: int, **kwargs):
         """Create a raster source surrounding the Extent from a collection of tiles.
 
         Parameters
@@ -1579,7 +1606,13 @@ class Extent(object):
         sources = list(self.tileSources(zoom=zoom, source=source))
         return self.rasterMosaic(sources, _skipFiltering=True, **kwargs)
 
-    def rasterMosaic(self, sources, _warpKwargs={}, _skipFiltering=False, **kwargs):
+    def rasterMosaic(
+        self,
+        sources: list[load_raster_input],
+        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "near",
+        _warpKwargs={},
+        _skipFiltering: bool = False,
+    ):
         """Create a raster source surrounding the Extent from a collection of other rasters.
 
         Parameters
@@ -1601,36 +1634,26 @@ class Extent(object):
             warnings.warn("No suitable sources found")
             return None
 
-        ri = RASTER.rasterInfo(sources[0])
-        inputs = {}
-        for key in [
-            "pixelWidth",
-            "pixelHeight",
-            "noData",
-            "srs",
-            "dtype",
-            "scale",
-            "offset",
-        ]:
-            inputs[key] = getattr(ri, key)
-        inputs.update(kwargs)
+        raster_info = RASTER.rasterInfo(sources[0])
 
-        ext = self.castTo(inputs.pop("srs")).fit((inputs["pixelWidth"], inputs["pixelHeight"]))
+        ext = self.castTo(raster_info.srs).fit((raster_info.dx, raster_info.dy))
 
-        output = inputs.pop("output", None)
-        master_raster = ext._quickRaster(**inputs)
+        master_raster = ext._quickRaster(
+            dx=raster_info.pixelWidth,
+            dy=raster_info.pixelHeight,
+            noData=raster_info.noData,
+            scale=raster_info.scale,
+            offset=raster_info.offset,
+            dtype=raster_info.data_type_name_str,
+        )
         gdal.Warp(
             master_raster,
             sources,
-            resampleAlg=_warpKwargs.pop("resampleAlg", "near"),
+            resampleAlg=resampleAlg,
             **_warpKwargs,
         )
 
-        if output is not None:
-            gdal.Translate(output, master_raster, creationOptions=["COMPRESS=DEFLATE"])
-            return output
-        else:
-            return master_raster
+        return master_raster
 
     def drawSmopyMap(
         self,

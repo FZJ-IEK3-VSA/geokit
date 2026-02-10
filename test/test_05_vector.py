@@ -1,10 +1,14 @@
 from functools import reduce
 from os.path import dirname, join
-
+import pathlib
+import geopandas as gpd
 import pandas as pd
 import pytest
+from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
+from geokit.core.get_test_data import get_test_data
+from geokit.error import GeoKitError, GeoKitVectorError
 from test.helpers import *
 
 # ogrType
@@ -128,6 +132,7 @@ def test_extractFeatures():
     assert vi["name"][0] == "ron"  # attribute mismatch
 
 
+@pytest.mark.filterwarnings("ignore:extractFeature is deprecated use extractFeatures instead.")
 def test_extractFeature():
     # test succeed
     geom, attr = vector.extractFeature(BOXES, where=1)
@@ -142,7 +147,7 @@ def test_extractFeature():
     try:
         geom, attr = vector.extractFeature(BOXES, where="smart=0")
         assert False
-    except util.GeoKitError:
+    except GeoKitError:
         assert True
     else:
         assert False
@@ -160,10 +165,8 @@ def test_extractAndClipFeatures():
     assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
 
 
-# Create shape file
-
-
 def test_createVector(tmpdir):
+    # Create shape file
     # Setup
     out1 = result("util_shape1.shp")
     out2 = result("util_shape2.shp")
@@ -270,7 +273,8 @@ def test_createVector(tmpdir):
     vec_gpkg_lyr_1 = vector.extractFeatures(vector.createVector(POINT_SET, layerName="layer_1", srs=EPSG4326))
 
     # create new geopackage on disk
-    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326)
+    vector.createVector(POINT_SET, output=output_gpkg, layerName="layer_1", srs=EPSG4326, driverName="GPKG")
+    assert os.path.isfile(output_gpkg)
 
     # append new layer to existing geopackage
     vector.createVector(
@@ -391,7 +395,33 @@ def test_mutateVector():
 
 
 def test_loadVector():
-    assert util.isVector(vector.loadVector(BOXES))
+    # 1) Valid vector file → returns gdal.Dataset
+    test_shp_path = get_test_data(file_name="boxes.shp")
+
+    ds = vector.loadVector(test_shp_path)
+    assert isinstance(ds, gdal.Dataset)
+    ds = None
+
+    # 2) Passing an already-open gdal.Dataset → returns it unchanged
+    ds_open = gdal.OpenEx(test_shp_path)
+    ds_again = vector.loadVector(ds_open)
+    # same object (GDAL returns the same handle)
+    assert ds_again is ds_open
+    ds_open = None
+    ds_again = None
+
+    # 3) Non-existent path → FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        vector.loadVector("missing_path/missing.shp")
+
+    with suppress_type_checks():
+        # 4) None → GeoKitVectorError
+        with pytest.raises(GeoKitVectorError):
+            vector.loadVector(None)
+
+        # 5) Wrong type → TypeError
+        with pytest.raises(TypeError):
+            vector.loadVector(123)  # not str or gdal.Dataset
 
 
 def test_vectorInfo():
@@ -427,6 +457,8 @@ def test_vectorInfo():
 
 def test_rasterize():
     # Simple vectorization to file
+
+    pathlib.Path(result("rasterized1.tif")).unlink(missing_ok=True)
     r = vector.rasterize(
         source=AACHEN_ZONES,
         pixelWidth=250,
@@ -434,7 +466,7 @@ def test_rasterize():
         output=result("rasterized1.tif"),
     )
     mat1 = raster.extractMatrix(r)
-    assert np.isclose(mat1.mean(), 0.13910192)
+    assert np.isclose(mat1.mean(), 0.13910192), f"mat1.mean()={mat1.mean()}!=0.13910192"
 
     # Simple vectorization to mem
     r = vector.rasterize(
@@ -445,6 +477,7 @@ def test_rasterize():
     mat2 = raster.extractMatrix(r)
     assert np.isclose(mat2, mat1).all()
 
+    pathlib.Path(result("rasterized2.tif")).unlink(missing_ok=True)
     # Change srs to disc
     r = vector.rasterize(
         source=AACHEN_ZONES,
@@ -456,6 +489,7 @@ def test_rasterize():
     mat = raster.extractMatrix(r)
     assert np.isclose(mat.mean(), 0.12660478)
 
+    pathlib.Path(result("rasterized3.tif")).unlink(missing_ok=True)
     # Write attribute values to disc
     r = vector.rasterize(
         source=AACHEN_ZONES,
@@ -477,6 +511,7 @@ def test_rasterize():
         pixelHeight=250,
         noData=-1,
         where="YEAR>2000",
+        dtype="Float32",
     )
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
@@ -484,8 +519,6 @@ def test_rasterize():
 
 
 def test_createGeoDataFrame():
-    import geopandas as gpd
-
     dfIn = pd.DataFrame()
     dfIn["geom"] = [geom.point(7, 51, srs=3857), geom.point(7.5, 52, srs=3857)]
     dfIn["data_column"] = ["abc", 123]
@@ -499,8 +532,6 @@ def test_createGeoDataFrame():
 
 
 def test_createDataFrameFromGeoDataFrame():
-    import geopandas as gpd
-
     # load input df geopandas style
     gdf = gpd.read_file(AACHEN_ZONES)
     # convert to gk style df
@@ -536,3 +567,7 @@ def test_applyGeopandasMethod():
     # ron is neither one
     assert joint.set_index("name").loc["ron", "female"] == False
     assert joint.set_index("name").loc["ron", "smart"] == 0
+
+
+if __name__ == "__main__":
+    test_rasterize()
