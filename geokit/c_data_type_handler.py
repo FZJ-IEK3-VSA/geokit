@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -8,12 +8,9 @@ from geokit.error import GeoKitCDataError
 from geokit.data_types import (
     gdal_abbreviation_mapper_dict,
     gdal_c_raster_data_types_literal,
-    gdal_c_raster_data_types_with_abbreviations_literal,
     geokit_c_data_types_literal,
     integer_data_types_literal,
     _gdal_c_raster_data_types_list,
-    numpy_data_types_list_literal,
-    _gdal_c_raster_data_types_with_abbreviations_list,
 )
 
 
@@ -58,7 +55,9 @@ class CIntegerDataTypeInfo:
         elif "GDT_Byte" in self.gdal_data_type_string:
             return "GDT_Int8"
         else:
-            raise GeoKitCDataError(f"Could not convert {self.gdal_data_type_string} to unsigned integer string.")
+            raise GeoKitCDataError(
+                f"Could not convert {self.gdal_data_type_string} to unsigned integer string."
+            )
 
         return unsigned_string
 
@@ -90,19 +89,34 @@ class MinimumCDataTypeHandler:
         signed=True,
     )
     unint16bit: CIntegerDataTypeInfo = CIntegerDataTypeInfo(
-        gdal_data_type_string="GDT_UInt16", numpy_data_type_string="uint16", bits=16, signed=False
+        gdal_data_type_string="GDT_UInt16",
+        numpy_data_type_string="uint16",
+        bits=16,
+        signed=False,
     )
     int32bit: CIntegerDataTypeInfo = CIntegerDataTypeInfo(
-        gdal_data_type_string="GDT_Int32", numpy_data_type_string="int32", bits=32, signed=True
+        gdal_data_type_string="GDT_Int32",
+        numpy_data_type_string="int32",
+        bits=32,
+        signed=True,
     )
     unint32bit: CIntegerDataTypeInfo = CIntegerDataTypeInfo(
-        gdal_data_type_string="GDT_UInt32", numpy_data_type_string="uint32", bits=32, signed=False
+        gdal_data_type_string="GDT_UInt32",
+        numpy_data_type_string="uint32",
+        bits=32,
+        signed=False,
     )
     int64bit: CIntegerDataTypeInfo = CIntegerDataTypeInfo(
-        gdal_data_type_string="GDT_Int64", numpy_data_type_string="int64", bits=64, signed=True
+        gdal_data_type_string="GDT_Int64",
+        numpy_data_type_string="int64",
+        bits=64,
+        signed=True,
     )
     unint64bit: CIntegerDataTypeInfo = CIntegerDataTypeInfo(
-        gdal_data_type_string="GDT_UInt64", numpy_data_type_string="uint64", bits=64, signed=False
+        gdal_data_type_string="GDT_UInt64",
+        numpy_data_type_string="uint64",
+        bits=64,
+        signed=False,
     )
     gdal_implemented_integer_data_types_dict: dict[str, CIntegerDataTypeInfo] = {
         int8bit.gdal_data_type_string: int8bit,
@@ -138,7 +152,9 @@ class MinimumCDataTypeHandler:
         float64bit.gdal_data_type_string: float64bit,
     }
 
-    gdal_implemented_float_list: list[CFloatDataTypeInfo] = [*gdal_implemented_float_dict.values()]
+    gdal_implemented_float_list: list[CFloatDataTypeInfo] = [
+        *gdal_implemented_float_dict.values()
+    ]
     bit_to_gdal_name_float: dict[int, str] = {
         float32bit.bits: float32bit.gdal_data_type_string,
         float64bit.bits: float64bit.gdal_data_type_string,
@@ -185,7 +201,11 @@ class MinimumCDataTypeHandler:
     def _get_valid_data_types_integer(cls, int_to_check: int | np.integer) -> list[str]:
         valid_data_types_list: list[str] = []
         for relevant_data_type in cls.gdal_implemented_integer_data_types_list:
-            if relevant_data_type.min_value <= int_to_check <= relevant_data_type.max_value:
+            if (
+                relevant_data_type.min_value
+                <= int_to_check
+                <= relevant_data_type.max_value
+            ):
                 valid_data_types_list.append(relevant_data_type.gdal_data_type_string)
         return valid_data_types_list
 
@@ -195,11 +215,15 @@ class MinimumCDataTypeHandler:
     ) -> CIntegerDataTypeInfo:
         list_of_bits: list[int] = []
         for current_integer_string in list_of_integer_strings:
-            int_d_type_class = cls.gdal_implemented_integer_data_types_dict[current_integer_string]
+            int_d_type_class = cls.gdal_implemented_integer_data_types_dict[
+                current_integer_string
+            ]
             list_of_bits.append(int_d_type_class.bits)
         highest_common_bits = max(list_of_bits)
         highest_common_data_type_string = cls.bit_to_gdal_name_int[highest_common_bits]
-        highest_common_integer_type = cls.gdal_implemented_integer_data_types_dict[highest_common_data_type_string]
+        highest_common_integer_type = cls.gdal_implemented_integer_data_types_dict[
+            highest_common_data_type_string
+        ]
         return highest_common_integer_type
 
     @classmethod
@@ -240,18 +264,27 @@ class MinimumCDataTypeHandler:
             ):
                 valid_data_types_list.append(relevant_data_type.gdal_data_type_string)
         if not valid_data_types_list:
-            raise GeoKitCDataError(f"Could find a common data type to display {int_and_bool_list} in the same raster")
+            raise GeoKitCDataError(
+                f"Could find a common data type to display {int_and_bool_list} in the same raster"
+            )
 
         # if isinstance(user_defined_minimum_gdal_type,str):
         if isinstance(minimum_integer_type_list, list):
-            minimum_data_type_info = cls.gdal_implemented_integer_data_types_dict[valid_data_types_list[0]]
-            data_types_to_consider: list[str] = [valid_data_types_list[0], *minimum_integer_type_list]
+            minimum_data_type_info = cls.gdal_implemented_integer_data_types_dict[
+                valid_data_types_list[0]
+            ]
+            data_types_to_consider: list[str] = [
+                valid_data_types_list[0],
+                *minimum_integer_type_list,
+            ]
             highest_common_integer_type = cls.get_highest_common_integer_type(
                 list_of_integer_strings=data_types_to_consider
             )
 
             if highest_common_integer_type.bits > minimum_data_type_info.bits:
-                output_data_type_string = highest_common_integer_type.get_unsigned_gdal_integer_string()
+                output_data_type_string = (
+                    highest_common_integer_type.get_unsigned_gdal_integer_string()
+                )
 
             else:
                 output_data_type_string = minimum_data_type_info.gdal_data_type_string
@@ -260,15 +293,23 @@ class MinimumCDataTypeHandler:
 
         # Return unsigned integer if it has been request by the user and passed the validity check
         if user_defined_minimum_gdal_type in valid_data_types_list:
-            user_requested_bits = cls.gdal_implemented_integer_data_types_dict[user_defined_minimum_gdal_type].bits
-            required_bit_size = cls.gdal_implemented_integer_data_types_dict[output_data_type_string].bits
+            user_requested_bits = cls.gdal_implemented_integer_data_types_dict[
+                user_defined_minimum_gdal_type
+            ].bits
+            required_bit_size = cls.gdal_implemented_integer_data_types_dict[
+                output_data_type_string
+            ].bits
             if user_requested_bits == required_bit_size:
                 output_data_type_string = user_defined_minimum_gdal_type
 
         return output_data_type_string
 
     @staticmethod
-    def _all_between(list_of_integer: list[int | np.integer], lower: int | np.integer, upper: int | np.integer) -> bool:
+    def _all_between(
+        list_of_integer: list[int | np.integer],
+        lower: int | np.integer,
+        upper: int | np.integer,
+    ) -> bool:
         """Checks if all integers in the list are greater than lower and smaller than upper.
 
         Parameters
@@ -290,7 +331,9 @@ class MinimumCDataTypeHandler:
     @classmethod
     def _get_minimum_float_type(
         cls,
-        list_of_float_data_types: list[np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType],
+        list_of_float_data_types: list[
+            np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType
+        ],
         list_of_integer: list[int | np.integer],
         minimum_required_datatype_list: None | list[gdal_c_raster_data_types_literal],
     ) -> str:
@@ -323,14 +366,20 @@ class MinimumCDataTypeHandler:
                 if current_datatype in cls.gdal_implemented_integer_data_types_dict:
                     pass
                 elif current_datatype in cls.gdal_implemented_float_dict:
-                    bits_of_minimum_required_data_type = cls.gdal_implemented_float_dict[current_datatype].bits
+                    bits_of_minimum_required_data_type = (
+                        cls.gdal_implemented_float_dict[current_datatype].bits
+                    )
                     list_of_bits.append(bits_of_minimum_required_data_type)
         for current_float_data_type in list_of_float_data_types:
             float_type_numpy_string = str(current_float_data_type)
-            float_gdal_string = cls.numpy_data_to_gdal_type_conversion_dict[float_type_numpy_string]
-            bits_of_current_float_type = cls.gdal_implemented_float_dict[float_gdal_string].bits
+            float_gdal_string = cls.numpy_data_to_gdal_type_conversion_dict[
+                float_type_numpy_string
+            ]
+            bits_of_current_float_type = cls.gdal_implemented_float_dict[
+                float_gdal_string
+            ].bits
             list_of_bits.append(bits_of_current_float_type)
-        if not list_of_float_data_types:
+        if not list_of_bits:
             return cls.float64bit.gdal_data_type_string
         required_bit_length = max(list_of_bits)
         required_data_type = cls.bit_to_gdal_name_float[required_bit_length]
@@ -340,11 +389,16 @@ class MinimumCDataTypeHandler:
     def _determine_if_gdal_data_type_is_int_float_or_complex(
         cls, gdal_data_type_string_list: list[gdal_c_raster_data_types_literal]
     ) -> Literal["GDT_Byte", "GDT_Int", "GDT_Float", "GDT_CInt", "GDT_CFloat"]:
-        output_data_type_list: list[Literal["GDT_Byte", "GDT_Int", "GDT_Float", "GDT_CInt", "GDT_CFloat"]] = []
+        output_data_type_list: list[
+            Literal["GDT_Byte", "GDT_Int", "GDT_Float", "GDT_CInt", "GDT_CFloat"]
+        ] = []
         for current_data_type_to_check in gdal_data_type_string_list:
             if current_data_type_to_check[0:8] == "GDT_Byte":
                 current_data_type = "GDT_Int"
-            elif current_data_type_to_check[0:7] == "GDT_Int" or current_data_type_to_check[0:8] == "GDT_UInt":
+            elif (
+                current_data_type_to_check[0:7] == "GDT_Int"
+                or current_data_type_to_check[0:8] == "GDT_UInt"
+            ):
                 current_data_type = "GDT_Int"
             elif current_data_type_to_check[0:9] == "GDT_Float":
                 current_data_type = "GDT_Float"
@@ -374,9 +428,14 @@ class MinimumCDataTypeHandler:
     @classmethod
     def _check_if_integers_can_be_displayed_as_integers(
         cls, list_of_numbers: list[int | np.integer]
-    ) -> tuple[list[np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType], list[int | np.integer]]:
+    ) -> tuple[
+        list[np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType],
+        list[int | np.integer],
+    ]:
         list_of_output_integers: list[int | np.integer] = []
-        list_of_output_floats: list[np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType] = []
+        list_of_output_floats: list[
+            np.dtypes.Float16DType | np.dtypes.Float32DType | np.dtypes.Float64DType
+        ] = []
         if all(list_of_numbers) >= 0:
             max_integer_site = cls.unint64bit.max_value
         else:
@@ -416,7 +475,9 @@ class MinimumCDataTypeHandler:
             elif input_string in _gdal_c_raster_data_types_list:
                 output_gdal_data_type_string_list.append(input_string)
             elif input_string in cls.numpy_data_to_gdal_type_conversion_dict:
-                gdal_data_type_string = cls.numpy_data_to_gdal_type_conversion_dict[input_string]
+                gdal_data_type_string = cls.numpy_data_to_gdal_type_conversion_dict[
+                    input_string
+                ]
                 output_gdal_data_type_string_list.append(gdal_data_type_string)
             else:
                 raise GeoKitCDataError(
@@ -440,11 +501,18 @@ class MinimumCDataTypeHandler:
             The automatically determined minimum gdal data type.
         """
         if user_defined_minimum_gdal_type is not None:
-            converted_user_defined_minimum_gdal_type_list = cls._convert_abbreviation_to_gdal_data_type(
-                input_string_list=[user_defined_minimum_gdal_type]
+            converted_user_defined_minimum_gdal_type_list = (
+                cls._convert_abbreviation_to_gdal_data_type(
+                    input_string_list=[user_defined_minimum_gdal_type]
+                )
             )
-            converted_user_defined_minimum_gdal_type = converted_user_defined_minimum_gdal_type_list[0]
-            if automatically_determined_minimum_gdal_type != converted_user_defined_minimum_gdal_type:
+            converted_user_defined_minimum_gdal_type = (
+                converted_user_defined_minimum_gdal_type_list[0]
+            )
+            if (
+                automatically_determined_minimum_gdal_type
+                != converted_user_defined_minimum_gdal_type
+            ):
                 warning_message = (
                     f"The user-defined minimum GDAL data type: {user_defined_minimum_gdal_type},"
                     f" which is understood as the rigorous GDAL datatype: {converted_user_defined_minimum_gdal_type},"
@@ -460,7 +528,15 @@ class MinimumCDataTypeHandler:
     @classmethod
     def get_valid_gdal_data_type_as_string(
         cls,
-        list_of_numbers: list[float | int | np.integer | np.floating | np.complexfloating | bool | np.bool_],
+        list_of_numbers: list[
+            float
+            | int
+            | np.integer
+            | np.floating
+            | np.complexfloating
+            | bool
+            | np.bool_
+        ],
         minimum_gdal_type_list: list[geokit_c_data_types_literal] | None = None,
         user_defined_minimum_gdal_type: geokit_c_data_types_literal | None = None,
     ) -> str:
@@ -493,14 +569,18 @@ class MinimumCDataTypeHandler:
         if user_defined_minimum_gdal_type is None:
             user_defined_minimum_gdal_type_converted_list = [None]
         elif isinstance(user_defined_minimum_gdal_type, str):
-            user_defined_minimum_gdal_type_converted_list = cls._convert_abbreviation_to_gdal_data_type(
-                input_string_list=[user_defined_minimum_gdal_type]
+            user_defined_minimum_gdal_type_converted_list = (
+                cls._convert_abbreviation_to_gdal_data_type(
+                    input_string_list=[user_defined_minimum_gdal_type]
+                )
             )
         else:
             raise GeoKitCDataError(
                 "For argument: user_defined_minimum_gdal_type either a string with a valid Gdal datatype or None is allowed. However the following type has been provided: {user_defined_minimum_gdal_type}"
             )
-        user_defined_minimum_gdal_type_converted = user_defined_minimum_gdal_type_converted_list[0]
+        user_defined_minimum_gdal_type_converted = (
+            user_defined_minimum_gdal_type_converted_list[0]
+        )
 
         list_of_integer: list[int | np.integer] = []
         list_of_float_data_types: list[np.dtype] = []
@@ -536,16 +616,20 @@ class MinimumCDataTypeHandler:
                 raise GeoKitCDataError(
                     f"GeoKit only supports the integers, floats and complex floats as data types. Nonetheless the following data type has been provided {type(current_number)} "
                 )
-        list_of_output_float_data_types, list_of_output_integers = cls._check_if_integers_can_be_displayed_as_integers(
-            list_of_numbers=list_of_integer
+        list_of_output_float_data_types, list_of_output_integers = (
+            cls._check_if_integers_can_be_displayed_as_integers(
+                list_of_numbers=list_of_integer
+            )
         )
 
         list_of_float_data_types.extend(list_of_output_float_data_types)
 
         if isinstance(minimum_gdal_type_list_converted, list):
             if minimum_gdal_type_list_converted:
-                c_number_category = cls._determine_if_gdal_data_type_is_int_float_or_complex(
-                    minimum_gdal_type_list_converted
+                c_number_category = (
+                    cls._determine_if_gdal_data_type_is_int_float_or_complex(
+                        minimum_gdal_type_list_converted
+                    )
                 )
             else:
                 c_number_category = None
@@ -556,9 +640,17 @@ class MinimumCDataTypeHandler:
                 "For argument: minimum_gdal_type either a list of strings with valid Gdal datatypes or None is allowed. However the following type has been provided: {minimum_gdal_type}"
             )
 
-        if list_of_complex_floats or c_number_category == "GDT_CInt" or c_number_category == "GDT_CFloat":
+        if (
+            list_of_complex_floats
+            or c_number_category == "GDT_CInt"
+            or c_number_category == "GDT_CFloat"
+        ):
             raise GeoKitCDataError("Complex Data Types are not implemented yet.")
-        if not list_of_float_data_types and not list_of_output_integers and c_number_category is None:
+        if (
+            not list_of_float_data_types
+            and not list_of_output_integers
+            and c_number_category is None
+        ):
             cls.check_if_user_requested_data_type_deviates(
                 user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
                 automatically_determined_minimum_gdal_type=cls.int8bit.gdal_data_type_string,
@@ -577,11 +669,15 @@ class MinimumCDataTypeHandler:
             return minimum_float_type
         if list_of_output_integers or c_number_category == "GDT_Int":
             if isinstance(user_defined_minimum_gdal_type_converted, str):
-                user_defined_c_number_category = cls._determine_if_gdal_data_type_is_int_float_or_complex(
-                    user_defined_minimum_gdal_type_converted_list
+                user_defined_c_number_category = (
+                    cls._determine_if_gdal_data_type_is_int_float_or_complex(
+                        user_defined_minimum_gdal_type_converted_list
+                    )
                 )
                 if user_defined_c_number_category == "GDT_Int":
-                    user_defined_minimum_gdal_type_int = user_defined_minimum_gdal_type_converted
+                    user_defined_minimum_gdal_type_int = (
+                        user_defined_minimum_gdal_type_converted
+                    )
                 else:
                     user_defined_minimum_gdal_type_int = None
             else:
@@ -629,7 +725,15 @@ class MinimumCDataTypeHandler:
     @classmethod
     def get_valid_gdal_data_type_as_constant(
         cls,
-        list_of_numbers: list[float | int | np.integer | np.floating | np.complexfloating | bool | np.bool_],
+        list_of_numbers: list[
+            float
+            | int
+            | np.integer
+            | np.floating
+            | np.complexfloating
+            | bool
+            | np.bool_
+        ],
         minimum_gdal_type_list: list[geokit_c_data_types_literal] | None = None,
         user_defined_minimum_gdal_type: geokit_c_data_types_literal | None = None,
     ) -> int:
@@ -661,5 +765,7 @@ class MinimumCDataTypeHandler:
             minimum_gdal_type_list=minimum_gdal_type_list,
             user_defined_minimum_gdal_type=user_defined_minimum_gdal_type,
         )
-        data_type_constant = cls.get_gdal_constant_from_string(input_string=data_type_string)
+        data_type_constant = cls.get_gdal_constant_from_string(
+            input_string=data_type_string
+        )
         return data_type_constant
