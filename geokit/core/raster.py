@@ -1,13 +1,11 @@
-import inspect
 import os
 import pathlib
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from tempfile import TemporaryDirectory
-from typing import Literal, NamedTuple, Callable
-import warnings
+from typing import Literal, Callable
 
 import matplotlib.axes._axes
 import matplotlib.pyplot as plt
@@ -18,7 +16,10 @@ from osgeo import gdal, ogr, osr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
-from geokit.c_data_type_handler import MinimumCDataTypeHandler, geokit_c_data_types_literal
+from geokit.c_data_type_handler import (
+    MinimumCDataTypeHandler,
+    geokit_c_data_types_literal,
+)
 from geokit.core import geom as GEOM
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
