@@ -1,13 +1,11 @@
-import inspect
 import os
 import pathlib
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from tempfile import TemporaryDirectory
-from typing import Literal, NamedTuple, Callable
-import warnings
+from typing import Literal, Callable
 
 import matplotlib.axes._axes
 import matplotlib.pyplot as plt

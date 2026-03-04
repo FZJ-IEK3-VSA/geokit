@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "geokit"
-version = "1.7.0"
+version = "1.7.1"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
   { name = "David Severin Ryberg" },
@@ -39,6 +39,9 @@ pythonpath = [
   "test",
 ] # Sets the path which should be prepended to pythonpath relative to the root folder
 console_output_style = "count"
+filterwarnings = [
+    "ignore:This process.*is multi-threaded.*fork:DeprecationWarning:multiprocessing.popen_fork",
+]
 typeguard-packages = """
 geokit"""
 typeguard-debug-instrumentation = true

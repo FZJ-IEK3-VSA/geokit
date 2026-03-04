@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -8,12 +8,9 @@ from geokit.error import GeoKitCDataError
 from geokit.data_types import (
     gdal_abbreviation_mapper_dict,
     gdal_c_raster_data_types_literal,
-    gdal_c_raster_data_types_with_abbreviations_literal,
     geokit_c_data_types_literal,
     integer_data_types_literal,
     _gdal_c_raster_data_types_list,
-    numpy_data_types_list_literal,
-    _gdal_c_raster_data_types_with_abbreviations_list,
 )
 
 
@@ -330,7 +327,7 @@ class MinimumCDataTypeHandler:
             float_gdal_string = cls.numpy_data_to_gdal_type_conversion_dict[float_type_numpy_string]
             bits_of_current_float_type = cls.gdal_implemented_float_dict[float_gdal_string].bits
             list_of_bits.append(bits_of_current_float_type)
-        if not list_of_float_data_types:
+        if not list_of_bits:
             return cls.float64bit.gdal_data_type_string
         required_bit_length = max(list_of_bits)
         required_data_type = cls.bit_to_gdal_name_float[required_bit_length]
