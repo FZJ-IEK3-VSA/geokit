@@ -4,8 +4,7 @@ import numbers
 import os
 import pathlib
 import warnings
-from binascii import hexlify
-from collections import OrderedDict, defaultdict, namedtuple
+from collections import defaultdict
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
 from typing import Generator
@@ -20,8 +19,11 @@ from geokit.core import raster as RASTER
 from geokit.core import srs as SRS
 from geokit.core import util as UTIL
 from geokit.core.extent import Extent
-from geokit.data_types import load_raster_input, load_vector_input, numeric, srs_input, vecInfo
-from geokit.c_data_type_handler import geokit_c_data_types_literal, MinimumCDataTypeHandler
+from geokit.data_types import load_vector_input, numeric, srs_input, vecInfo
+from geokit.c_data_type_handler import (
+    geokit_c_data_types_literal,
+    MinimumCDataTypeHandler,
+)
 from geokit.error import GeoKitRasterError, GeoKitVectorError
 
 ####################################################################
@@ -1238,6 +1240,8 @@ def createVector(
 
         # Finish
         if output:
+            dataSource.FlushCache()
+            dataSource = None  # Explicitly close to flush .shx and other sidecar files to disk
             return output
         else:
             return dataSource
