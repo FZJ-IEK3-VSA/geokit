@@ -22,6 +22,7 @@ from geokit.data_types import (
     numeric,
     srs_input,
     geokit_c_data_types_literal,
+    gdal_resample_alogorithms_literal,
 )
 from geokit.error import GeoKitExtentError
 
@@ -647,7 +648,7 @@ class Extent(object):
                 y = xy.y
         return x, y
 
-    def castTo(self, srs: srs_input, segments: numeric = 100):
+    def castTo(self, srs: srs_input, segments: numeric = 100) -> "Extent":
         """
         Creates a new Extent by transforming an extent from the original Extent's
         srs to a target SRS.
@@ -1264,7 +1265,7 @@ class Extent(object):
         matchContext: bool = False,
         warpArgs: dict | None = None,
         processor: Callable | None = None,
-        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
         **mutateArgs,
     ):
         """Convenience function for geokit.raster.mutateRaster which automatically
@@ -1309,7 +1310,6 @@ class Extent(object):
         resampleAlg : str; optional
             The resampling algorithm to use while warping
             * Knowing which option to use can have significant impacts!
-            * Options are: 'near', 'bilinear', 'cubic', 'average'
 
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
@@ -1337,7 +1337,7 @@ class Extent(object):
                 source=source,
                 resampleAlg=resampleAlg,
                 pixelWidth=pixelWidth,
-                pixelHeight=pixelWidth,
+                pixelHeight=pixelHeight,
                 strict=True,
                 **warpArgs,
             )
@@ -1351,7 +1351,7 @@ class Extent(object):
                 source=source,
                 resampleAlg=resampleAlg,
                 pixelWidth=pixelWidth,
-                pixelHeight=pixelWidth,
+                pixelHeight=pixelHeight,
                 strict=False,
                 **warpArgs,
             )
@@ -1609,7 +1609,7 @@ class Extent(object):
     def rasterMosaic(
         self,
         sources: list[load_raster_input],
-        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "near",
+        resampleAlg: gdal_resample_alogorithms_literal = "near",
         _warpKwargs={},
         _skipFiltering: bool = False,
     ):

@@ -27,6 +27,7 @@ from geokit.data_types import (
     load_raster_input,
     load_vector_input,
     numeric,
+    gdal_resample_alogorithms_literal,
 )
 from geokit.error import GeoKitGeomError, GeoKitRegionMaskError
 
@@ -738,7 +739,7 @@ class RegionMask(object):
         forceMaskShape: bool = False,
         applyMask: bool = True,
         noData: numeric | None = None,
-        resampleAlg: Literal["near", "bilinear", "cubic", "average", "mode", "max", "min"] = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
         bufferMethod: Literal["area", "contour"] = "area",
         preBufferSimplification=None,
         warpDType: geokit_c_data_types_literal | None = None,
@@ -933,7 +934,7 @@ class RegionMask(object):
             forceMaskShape=False,
             applyMask=True,
             noData=None,
-            resampleAlg: Literal["near", "bilinear", "cubic", "average", "mode", "max", "min"] = "bilinear",
+            resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
             bufferMethod="area",
             preBufferSimplification=None,
             warpDType=None,
@@ -1014,7 +1015,6 @@ class RegionMask(object):
             newDS = self.extent.mutateRaster(
                 source,
                 processor=processor,
-                dtype="uint8",
                 noData=noData,
                 matchContext=False,
             )
@@ -1022,10 +1022,21 @@ class RegionMask(object):
 
             # Warp onto region
             if warpDType is None:
-                if resampleAlg in ["bilinear", "cubic", "average"]:
+                if resampleAlg in [
+                    "bilinear",
+                    "cubic",
+                    "cubicspline",
+                    "lanczos",
+                    "average",
+                    "rms",
+                    "med",
+                    "q1",
+                    "q3",
+                    "sum",
+                ]:
                     warpDType = "float32"
                 elif resampleAlg in ["near", "mode", "max", "min"]:
-                    warpDType = "uint8"
+                    warpDType = None  # Let the function decide
                 else:
                     warpDType = "float32"
 
@@ -1679,7 +1690,7 @@ class RegionMask(object):
         returnMatrix=True,
         applyMask=True,
         noData=None,
-        resampleAlg="bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
         **kwargs,
     ) -> gdal.Dataset | np.ndarray | None:
         """Convenience wrapper for geokit.raster.warp() which automatically sets
@@ -1967,7 +1978,7 @@ class RegionMask(object):
         warpArgs: dict | None = None,
         applyMask: bool = True,
         processor: Callable | None = None,
-        resampleAlg: Literal["near", "bilinear", "cubic", "average"] = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
         **mutateArgs,
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
