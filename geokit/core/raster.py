@@ -32,6 +32,7 @@ from geokit.data_types import (
     RasterInfo,
     ptValue,
     AxHands,
+    gdal_resample_alogorithms_literal,
 )
 from geokit.error import GeoKitGeomError, GeoKitRasterError
 
@@ -1973,22 +1974,7 @@ def drawRaster(
     cbargs=None,
     noData: numeric | None = None,
     zorder=0,
-    resampleAlg: Literal[
-        "near",
-        "bilinear",
-        "cubic",
-        "cubicspline",
-        "lanczos",
-        "average",
-        "rms",
-        "mode",
-        "max",
-        "min",
-        "med",
-        "Q1",
-        "Q3",
-        "sum",
-    ] = "med",
+    resampleAlg: gdal_resample_alogorithms_literal = "med",
     **warp_kwargs,
 ) -> AxHands:
     """Draw a raster as an image on a matplotlib canvas.
@@ -2406,22 +2392,7 @@ def contours(
 
 def warp(
     source: load_raster_input,
-    resampleAlg: Literal[
-        "near",
-        "bilinear",
-        "cubic",
-        "cubicspline",
-        "lanczos",
-        "average",
-        "rms",
-        "mode",
-        "max",
-        "min",
-        "med",
-        "Q1",
-        "Q3",
-        "sum",
-    ] = "bilinear",
+    resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
     cutline: str | ogr.Geometry | None = None,
     output: str | pathlib.Path | None = None,
     pixelHeight: numeric | None = None,
