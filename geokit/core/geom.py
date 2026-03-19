@@ -1295,21 +1295,34 @@ def drawGeoms(
         geoms = []
 
         def doSimplify(g):
-            ng = g.Simplify(simplificationValue)
+            gName = g.GetGeometryName()
+            if "POLYGON" in gName:
+                try:
+                    # Preserve topology for polygons to reduce the chance of simplification swallowing tiny geoms.
+                    ng = g.SimplifyPreserveTopology(simplificationValue)
+                except AttributeError:
+                    ng = g.Simplify(simplificationValue)
+            else:
+                ng = g.Simplify(simplificationValue)
+
+            if ng is None:
+                return g.Clone()
+
+            if "POLYGON" in gName:
+                # If simplification collapses the geometry, keep visibility by plotting a centroid point instead.
+                if ng.IsEmpty() or "POLYGON" not in ng.GetGeometryName():
+                    ng = g.Centroid()
+                    if ng is None or ng.IsEmpty():
+                        return g.Clone()
+
+                    srs = g.GetSpatialReference()
+                    if srs is not None and ng.GetSpatialReference() is None:
+                        ng.AssignSpatialReference(srs)
+
             return ng
 
         for geometry in oGeoms:
-            # carefulSimplification=False
-            # if carefulSimplification and "MULTI" in g.GetGeometryName():
-            if "MULTI" in geometry.GetGeometryName():
-                subgeoms = []
-                for gi in range(geometry.GetGeometryCount()):
-                    ng = doSimplify(geometry.GetGeometryRef(gi))
-                    subgeoms.append(ng)
-
-                geoms.append(flatten(subgeoms))
-            else:
-                geoms.append(doSimplify(geometry))
+            geoms.append(doSimplify(geometry))
 
     # Handle color value
     if not colorBy is None:

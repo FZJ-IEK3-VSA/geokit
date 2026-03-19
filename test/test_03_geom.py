@@ -435,6 +435,31 @@ def test_drawGeoms():
     assert True
 
 
+def test_drawGeoms_tiny_polygons_are_not_swallowed():
+    df = pd.DataFrame(
+        {
+            "lat": [39.81185621588202, 58.93567319666448, 59.46405632057338],
+            "lon": [4.28354750095754, 18.17925548543914, 17.269890445748125],
+        }
+    )
+    df["geom"] = df.apply(lambda x: geom.point(x.lon, x.lat, srs=4326), axis=1)
+    df["geom"] = df.apply(
+        lambda x: geom.applyBuffer(
+            geom=x.geom,
+            buffer=100,
+            srs="laea",
+            split="shift",
+        ),
+        axis=1,
+    )
+
+    r = geom.drawGeoms(df, figsize=(4, 4))
+    plt.savefig(result("drawGeoms-tiny-polygons.png"), dpi=100)
+
+    # Regression check for issue #304: tiny polygons used to disappear after simplification.
+    assert any(h is not None for h in r.handles)
+
+
 def test_shift():
     # test point, no srs
     assert geom.shift(geom=geom.point((0, 1)), lonShift=5).Equals(geom.point((5, 1)))
