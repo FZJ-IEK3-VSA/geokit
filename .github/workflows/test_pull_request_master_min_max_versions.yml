@@ -1,0 +1,34 @@
+on:
+    workflow_dispatch:
+    pull_request:
+        branches: ["master"]
+
+jobs:
+    extract-versions:
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_extract_env_versions_matrix.yml@v1
+        with:
+            libraries: "pandas,numpy,scipy,scikit-learn,gdal,geopandas,psutil"
+            version_type: both
+            env_file: requirements-dev.yml
+
+    TestDependencyVersions:
+        name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
+        needs: extract-versions
+        strategy:
+            fail-fast: false
+            matrix:
+                runner_tag: ["self-hosted"]
+                dependencies: ${{ fromJSON(needs.extract-versions.outputs.matrix) }}
+        uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@v1
+        secrets:
+            ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
+            ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
+        with:
+            runner_tag: ${{ matrix.runner_tag }}
+            requirements_file_name: requirements-dev.yml
+            ipynb_example_folder: "docs/Examples"
+            library_version: ${{ matrix.dependencies.version }}
+            dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
+            library_name: ${{ matrix.dependencies.library_name }}
+            multiprocessing_pytest_string: "-n auto"
+            multiprocessing_example_string: "-n auto"

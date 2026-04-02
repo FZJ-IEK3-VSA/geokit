@@ -1,18 +1,16 @@
 on:
   workflow_dispatch:
-  # push:
-  #   branches: ["208_update_examples_2026"]
-  pull_request:
-    branches: ["master"]
+  push:
+    branches: ["**"]
 
 jobs:
   TestPushCondaForgeDev:
+    name: Test conda-forge development version on ${{ matrix.runner_tag }}
     strategy:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-        gdal_version: ["3.10.0", "3.10.1", "3.10.2", "3.10.3", "3.9.3"]
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@main
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@v1
     secrets:
       ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
       ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
@@ -20,8 +18,7 @@ jobs:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
       ipynb_example_folder: "docs/Examples"
-      library_name: "gdal"
-      library_version: ${{ matrix.gdal_version }}
-      dependency_position_env_file: "9"
-      multiprocessing_example_string: "-n auto"
       multiprocessing_pytest_string: "-n auto"
+      multiprocessing_example_string: "-n auto"
+      coverage: true
+      coverage_package_name: geokit
