@@ -131,8 +131,11 @@ def centeredLAEA(lon=None, lat=None, name="unnamed_m", geom=None):
         # transform to EPSG:4326 in case it not already is lat/lon projection
         geom = GEOM.transform(geom, toSRS=4326)
         # extract lat/lon centroid coordinates to center LAEA upon
-        lon = geom.Centroid().GetX()
-        lat = geom.Centroid().GetY()
+        srs = geom.GetSpatialReference()
+        centroid = geom.Centroid()
+        centroid.AssignSpatialReference(srs)
+        lon = centroid.GetX()
+        lat = centroid.GetY()
 
     srs = osr.SpatialReference()
     srs.ImportFromWkt(

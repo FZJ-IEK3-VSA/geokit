@@ -25,7 +25,7 @@ from geokit.c_data_type_handler import (
     MinimumCDataTypeHandler,
 )
 from geokit.error import GeoKitRasterError, GeoKitVectorError
-
+from geokit.core.geom import getCentroid
 ####################################################################
 # INTERNAL FUNCTIONS
 
@@ -428,14 +428,14 @@ def _extractFeatures(
 
             elif spatialPredicate == "CentroidWithin":
                 # applies to all extracted geom types alike: the centroid must fall "within" the filter _geom (works also for point and line filter geoms)
-                if oGeom.Centroid().Intersects(geom.GetBoundary()):
+                if getCentroid(oGeom).Intersects(geom.GetBoundary()):
                     # the Centroid falls right on the filter geom boundary, will be extracted neither here nor by neighboring filter geoms
                     if not _warned:
                         warnings.warn(
                             f"Centroid of at least one geometry of the vector data to be extracted lies exactly on (filter) geom boundary and will not be extracted."
                         )
                         _warned = True
-                if not oGeom.Centroid().Within(_geom):
+                if not getCentroid(oGeom).Within(_geom):
                     # the extracted geom centroid lies outside filter geom (or on its boundary if filter geom is a polygon!), skip
                     continue
         if oGeom is not None:
