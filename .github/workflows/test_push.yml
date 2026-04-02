@@ -14,6 +14,7 @@ jobs:
     secrets:
       ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
       ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       runner_tag: ${{ matrix.runner_tag }}
       requirements_file_name: requirements-dev.yml
