@@ -7,7 +7,7 @@ import pytest
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
-from geokit.core.get_test_data import get_test_data
+from geokit.get_test_data import get_test_data
 from geokit.error import GeoKitError, GeoKitVectorError
 from test.helpers import *
 

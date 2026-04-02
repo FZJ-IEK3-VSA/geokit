@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from geokit import Extent, LocationSet, error, raster, srs, util, vector
-from geokit.core.get_test_data import get_all_shape_files, get_test_data
+from geokit.get_test_data import get_all_shape_files, get_test_data
 from geokit.error import GeoKitError, GeoKitExtentError
 from test.helpers import *
 
