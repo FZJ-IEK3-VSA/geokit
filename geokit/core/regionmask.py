@@ -13,6 +13,7 @@ import numpy as np
 import psutil
 from osgeo import gdal, ogr, osr
 
+from geokit.error import checkMultiProcessingAvailability
 from geokit.core import geom as GEOM
 from geokit.core import raster as RASTER
 from geokit.core import srs as SRS
@@ -903,28 +904,6 @@ class RegionMask(object):
         -------
         numpy.ndarray
         """
-        multi_processing_warning_message = (
-            "Multiprocessing has been set to 'False' because it is not available for Windows or Mac."
-            " To deactivate this warning, please set the multiProcess variable to False. On Windows and "
-            "Mac, new processes must be spawned, which requires the serialisation of the method to be "
-            "executed via multiprocessing. However, Geokit contains objects that cannot be serialised by Pickle. "
-            "On Linux, however, new processes are inherited and no serialisation is required."
-        )
-        if platform == "linux" or platform == "linux2":
-            pass
-        elif platform == "darwin" and multiProcess is True:
-            multiProcess = False
-            warn(multi_processing_warning_message)
-        elif platform == "win32" and multiProcess is True:
-            multiProcess = False
-            warn(multi_processing_warning_message)
-        elif platform == "darwin" and multiProcess is False:
-            pass
-        elif platform == "win32" and multiProcess is False:
-            pass
-        else:
-            multiProcess = False
-            warn(multi_processing_warning_message)
 
         def _indicateValues(
             source: load_raster_input,
@@ -1165,8 +1144,8 @@ class RegionMask(object):
         ####################
 
         # try multiprocessing or fall back to linear processing
-
-        if multiProcess:
+        multiProcessAdjusted = checkMultiProcessingAvailability(multiProcess=multiProcess)
+        if multiProcessAdjusted:
             # multiprocessing is requested, try to execute
             with multiprocessing.Manager() as manager:
                 # initialize a dict to combine the results from parallel processes
@@ -1448,8 +1427,8 @@ class RegionMask(object):
         ####################
         # EXECUTE FUNCTION #
         ####################
-
-        if multiProcess:
+        multiProcessAdjusted = checkMultiProcessingAvailability(multiProcess=multiProcess)
+        if multiProcessAdjusted:
             # multiprocessing is requested, try to execute
             with multiprocessing.Manager() as manager:
                 # initialize a dict to combine the results from parallel processes
