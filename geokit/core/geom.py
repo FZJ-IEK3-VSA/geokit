@@ -1311,7 +1311,10 @@ def drawGeoms(
             if "POLYGON" in gName:
                 # If simplification collapses the geometry, keep visibility by plotting a centroid point instead.
                 if ng.IsEmpty() or "POLYGON" not in ng.GetGeometryName():
-                    ng = g.Centroid()
+                    srs = g.GetSpatialReference()
+                    centroid = g.Centroid()
+                    centroid.AssignSpatialReference(srs)
+                    ng = getCentroid(g)
                     if ng is None or ng.IsEmpty():
                         return g.Clone()
 
@@ -1957,3 +1960,22 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
     # assign srs and return
     geom_fixed.AssignSpatialReference(_srs)
     return geom_fixed
+
+
+def getCentroid(geom: ogr.Geometry) -> ogr.Geometry:
+    """Get the centroid of a geometry. If the geometry is a point, the point itself is returned.
+
+    Parameters
+    ----------
+    geom : ogr.Geometry
+        The geometry for which to calculate the centroid.
+
+    Returns
+    -------
+    ogr.Geometry
+        The centroid of the input geometry.
+    """
+    srs = geom.GetSpatialReference()
+    centroid = geom.Centroid()
+    centroid.AssignSpatialReference(srs)
+    return centroid

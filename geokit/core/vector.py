@@ -25,7 +25,6 @@ from geokit.c_data_type_handler import (
     MinimumCDataTypeHandler,
 )
 from geokit.error import GeoKitRasterError, GeoKitVectorError
-
 ####################################################################
 # INTERNAL FUNCTIONS
 
