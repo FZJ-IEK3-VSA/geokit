@@ -20,6 +20,6 @@ jobs:
       requirements_file_name: requirements-dev.yml
       ipynb_example_folder: "docs/Examples"
       multiprocessing_pytest_string: "-n auto"
-      multiprocessing_example_string: "-n auto"
+      multiprocessing_example_string: "-n 2"
       coverage: true
       coverage_package_name: geokit
