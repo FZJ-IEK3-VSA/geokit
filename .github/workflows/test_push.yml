@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         runner_tag: ["self-hosted"]
-    uses: FZJ-IEK3-VSA/.github/.github/workflows/_run_single_conda_forge_test.yml@v1
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test.yml@v1
     secrets:
       ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
       ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
