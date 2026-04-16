@@ -6,10 +6,10 @@ import pytest
 import structlog
 from osgeo import gdal
 
-import geokit.core.raster
+import geokit.raster
 from geokit import geom, raster, util
 from geokit.error import GeoKitRasterError
-from geokit.core.location import Location, LocationSet
+from geokit.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 
 # gdalType

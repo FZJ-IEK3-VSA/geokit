@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from osgeo import gdal, ogr, osr
 
-from geokit.core.get_test_data import get_test_data
+from geokit.get_test_data import get_test_data
 
 # Runtime vars
 RESULT = "results"

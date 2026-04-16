@@ -9,7 +9,7 @@ from osgeo.gdal import Driver
 from osgeo.ogr import Feature, FieldDefn, Layer, OFTInteger, wkbPolygon
 
 from geokit import raster
-from geokit.core.get_test_data import get_test_data
+from geokit.get_test_data import get_test_data
 from test.helpers import (
     AACHEN_ELIGIBILITY_RASTER,
     AACHEN_URBAN_LC,

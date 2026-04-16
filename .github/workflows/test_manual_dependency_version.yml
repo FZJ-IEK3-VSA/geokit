@@ -63,4 +63,4 @@ jobs:
       library_version: ${{ matrix.library_version }}
       dependency_position_env_file: ${{ matrix.dependency_position_env_file }}
       multiprocessing_pytest_string: "-n auto"
-      multiprocessing_example_string: "-n auto"
+      multiprocessing_example_string: "-n 2"
