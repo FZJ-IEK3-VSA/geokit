@@ -621,6 +621,162 @@ def test_warp():
     )
     v5 = raster.extractMatrix(d5)
     assert np.isclose(v4, v5, atol=0).all()
+    
+
+
+
+@pytest.fixture(scope="module")
+def simple_4x4_raster():
+    """In-memory 4x4 raster with values 1..16, pixel size 100, bounds (0,0,400,400)."""
+    data = np.arange(1, 17, dtype=np.float32).reshape(4, 4)
+    return raster.createRaster(
+        bounds=(0, 0, 400, 400),
+        data=data,
+        pixelWidth=100,
+        pixelHeight=100,
+        srs=EPSG3035,
+    )
+
+
+@pytest.fixture(scope="module")
+def uniform_raster():
+    """In-memory 4x4 raster filled with a constant value (7.0), pixel size 100, bounds (0,0,400,400).
+
+    This is based on the fact that any resampling algorithm applied to a uniform
+    raster must return that same constant value in every output pixel.
+    """
+    data = np.full((4, 4), fill_value=7.0, dtype=np.float32)
+    return raster.createRaster(
+        bounds=(0, 0, 400, 400),
+        data=data,
+        pixelWidth=100,
+        pixelHeight=100,
+        srs=EPSG3035,
+    )
+
+
+@pytest.mark.parametrize(
+    "resample_alg",
+    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+)
+def test_warp_resampling(simple_4x4_raster, resample_alg):
+    """Test that each resampling algorithm produces output consistent with its GDAL definition.
+
+    Source: 4x4 raster with values 1..16 (mean=8.5), pixel size 100, warped to pixel size 200.
+    Each output pixel aggregates a 2x2 block of input pixels:
+      top-left [1,2,5,6], top-right [3,4,7,8], bottom-left [9,10,13,14], bottom-right [11,12,15,16]
+
+    Invariants are derived directly from the GDAL API descriptions for each algorithm.
+    """
+    warped = raster.warp(simple_4x4_raster, resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    arr = raster.extractMatrix(warped)
+
+    assert arr.shape == (2, 2), f"Expected (2,2) output for {resample_alg}, got {arr.shape}"
+    assert np.isfinite(arr).all(), f"{resample_alg}: output contains non-finite values"
+
+    input_mean = 8.5  # mean of 1..16
+    input_values = set(range(1, 17))
+    output_mean = float(arr.mean())
+
+    def _warp_mean(alg):
+        return float(raster.extractMatrix(raster.warp(simple_4x4_raster, resampleAlg=alg, pixelHeight=200, pixelWidth=200)).mean())
+
+    if resample_alg in ("near", "mode"):
+        # Both pick an existing input value per output pixel — no interpolation.
+        # near: value of the nearest input pixel centre.
+        # mode: value that appears most often among contributing pixels.
+        assert set(arr.flatten().astype(int)).issubset(input_values), (
+            f"{resample_alg}: output contains values not present in the input set"
+        )
+
+    elif resample_alg == "average":
+        # Weighted average of all contributing pixels — preserves the mean exactly.
+        assert np.isclose(output_mean, input_mean, rtol=1e-3), (
+            f"average: output mean {output_mean:.4f} should equal input mean {input_mean}"
+        )
+
+    elif resample_alg == "bilinear":
+        # Bilinear is a distance-weighted average — also preserves the mean for a uniform grid.
+        assert np.isclose(output_mean, input_mean, rtol=0.05), (
+            f"bilinear: output mean {output_mean:.4f} should be close to input mean {input_mean}"
+        )
+
+    elif resample_alg == "rms":
+        # RMS = sqrt(mean(x²)) ≥ arithmetic mean for positive values (power mean inequality).
+        assert output_mean >= _warp_mean("average"), (
+            f"rms: output mean {output_mean:.4f} should be >= average mean"
+        )
+
+    elif resample_alg == "max":
+        # Selects the maximum of contributing pixels — output mean must exceed the average mean.
+        assert output_mean > _warp_mean("average"), (
+            f"max: output mean {output_mean:.4f} should exceed average mean"
+        )
+
+    elif resample_alg == "min":
+        # Selects the minimum of contributing pixels — output mean must be below the average mean.
+        assert output_mean < _warp_mean("average"), (
+            f"min: output mean {output_mean:.4f} should be below average mean"
+        )
+
+    elif resample_alg == "med":
+        # Median lies between the minimum and maximum by definition.
+        assert _warp_mean("min") <= output_mean <= _warp_mean("max"), (
+            f"med: output mean {output_mean:.4f} should be between min and max means"
+        )
+
+    elif resample_alg == "q1":
+        # First quartile ≤ median ≤ third quartile by definition.
+        assert output_mean <= _warp_mean("med"), (
+            f"q1: output mean {output_mean:.4f} should be <= med mean"
+        )
+
+    elif resample_alg == "q3":
+        # Third quartile ≥ median ≥ first quartile by definition.
+        assert output_mean >= _warp_mean("med"), (
+            f"q3: output mean {output_mean:.4f} should be >= med mean"
+        )
+
+    elif resample_alg == "sum":
+        # Weighted sum of contributing pixels.
+        # With a clean 2:1 downsampling (4 input pixels → 1 output pixel, full overlap),
+        # each output pixel = sum of its 2x2 input block, so the mean scales by factor 4.
+        expected = input_mean * 4
+        assert np.isclose(output_mean, expected, rtol=1e-3), (
+            f"sum: output mean {output_mean:.4f} should be ~{expected} (input mean × 4)"
+        )
+
+    # cubic, cubicspline, lanczos: convolution-based interpolation that can produce values
+    # outside the input range (ringing). No simple closed-form invariant applies for a
+    # 4x4 input, so shape and finiteness checks above are sufficient.
+
+
+@pytest.mark.parametrize(
+    "resample_alg",
+    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+)
+def test_warp_resampling_uniform(uniform_raster, resample_alg):
+    """Any algorithm applied to a uniform raster must return that same constant value.
+
+    This is the one invariant that holds for every algorithm except "sum".
+    """
+    fill_value = 7.0
+    warped = raster.warp(uniform_raster, resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    arr = raster.extractMatrix(warped)
+
+    assert arr.shape == (2, 2), f"Expected (2,2) output for {resample_alg}, got {arr.shape}"
+
+    if resample_alg == "sum":
+        # sum adds all contributing pixels, so a 2:1 downsampling (4 inputs per output)
+        # of a uniform raster with value f produces f * 4, not f.
+        scale = (200 / 100) ** 2
+        assert np.allclose(arr, fill_value * scale, rtol=1e-5), (
+            f"sum: uniform input ({fill_value}) should produce {fill_value * scale} after 2x downsampling, got {arr}"
+        )
+    else:
+        assert np.allclose(arr, fill_value, rtol=1e-5), (
+            f"{resample_alg}: uniform input ({fill_value}) should produce uniform output, got {arr}"
+        )
 
 
 def test_warpLike():
