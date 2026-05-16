@@ -710,26 +710,54 @@ class Extent(object):
             The sources to test
         """
         try:
-            # cover the case that the source file is an empty or single-point vector = no extent possible
+            # first try the "normal way"
+            sourceExtent = Extent.load(source)
+            return self.overlaps(sourceExtent)
+        except Exception as e:
+            # we may have to extract vectors with a single point or zero width/height (e.g. 2 aligned points, a vertical line etc.) - extent will fail
             _tmp = VECTOR.extractFeatures(source)
-            if len(_tmp) == 1 and _tmp.geom.iloc[0].GetGeometryName() == "POINT":
-                # we have a single point, add minimal tolerance in each direction to enable an extent
-                tol = 0.00001
-                sourceExtent = Extent(
-                    _tmp.geom.iloc[0].GetX() * (1 - tol),
-                    _tmp.geom.iloc[0].GetY() * (1 - tol),
-                    _tmp.geom.iloc[0].GetX() * (1 + tol),
-                    _tmp.geom.iloc[0].GetY() * (1 + tol),
-                )
-                return self.overlaps(sourceExtent)
-            elif len(_tmp) == 0:
+            if len(_tmp) == 0:
                 # source is an empty vector file, overlap is not possible
                 return False
-            else:
-                # fall back to normal path below in except
-                raise Exception()
-        except:
-            sourceExtent = Extent.load(source)
+            # else we have geoms, but probably only one or vertically/horizontally aligned
+            # get the extreme x and y values that span the extent of these geometries
+            xmin, ymin, xmax, ymax = (
+                min(e[0] for e in (g.GetEnvelope() for g in _tmp.geom)),
+                min(e[2] for e in (g.GetEnvelope() for g in _tmp.geom)),
+                max(e[1] for e in (g.GetEnvelope() for g in _tmp.geom)),
+                max(e[3] for e in (g.GetEnvelope() for g in _tmp.geom)),
+            )
+            tol = 0.00000001 # the buffer tolerance to apply in case of zero width/height
+            if xmax - xmin == 0:
+                # we have zero width, buffer slightly
+                if xmin == xmax == 0:
+                    # relative buffer makes no sense, exceptionally apply as absolute buffer
+                    xmin = xmin - tol
+                    xmax = xmax + tol
+                else:
+                    # apply relatively
+                    xmin = xmin * (1 - tol)
+                    xmax = xmax * (1 + tol)
+            if ymax - ymin == 0:
+                # we have zero height, proceed as above
+                if ymin == ymax == 0:
+                    # again, relative buffer makes no sense, exceptionally apply as absolute buffer
+                    ymin = ymin - tol
+                    ymax = ymax + tol
+                else:
+                    # apply relatively
+                    ymin = ymin * (1 - tol)
+                    ymax = ymax * (1 + tol)
+            # now create the extent based on the buffered envelope
+            srs = _tmp.geom.iloc[0].GetSpatialReference() # keep the srs of the input vector
+            sourceExtent = Extent(
+                xmin,
+                ymin,
+                xmax,
+                ymax,
+                srs = srs
+            )
+            # NOTE that this might return also objects which are minimally out of extent (max. by tolerance value)
             return self.overlaps(sourceExtent)
 
     def filterSources(self, sources, error_on_missing=True):
