@@ -333,10 +333,12 @@ def test_Extent_filterSources():
 
     # add a test for special case with zero-dimension source
     # two points which happen to be longitudinally/vertically aligned
-    ZERO_DIM_VECTOR = vector.createVector([
-        geom.point(6.0,50.5, srs=4326),
-        geom.point(6.0,50.7, srs=4326), # same lon
-    ])
+    ZERO_DIM_VECTOR = vector.createVector(
+        [
+            geom.point(6.0, 50.5, srs=4326),
+            geom.point(6.0, 50.7, srs=4326),  # same lon
+        ]
+    )
     goodZeroDimSources = list(ex.filterSources([ZERO_DIM_VECTOR]))
     assert len(goodZeroDimSources) == 1
 

@@ -727,7 +727,7 @@ class Extent(object):
                 max(e[1] for e in (g.GetEnvelope() for g in _tmp.geom)),
                 max(e[3] for e in (g.GetEnvelope() for g in _tmp.geom)),
             )
-            tol = 0.00000001 # the buffer tolerance to apply in case of zero width/height
+            tol = 0.00000001  # the buffer tolerance to apply in case of zero width/height
             if xmax - xmin == 0:
                 # we have zero width, buffer slightly
                 if xmin == xmax == 0:
@@ -749,14 +749,8 @@ class Extent(object):
                     ymin = ymin * (1 - tol)
                     ymax = ymax * (1 + tol)
             # now create the extent based on the buffered envelope
-            srs = _tmp.geom.iloc[0].GetSpatialReference() # keep the srs of the input vector
-            sourceExtent = Extent(
-                xmin,
-                ymin,
-                xmax,
-                ymax,
-                srs = srs
-            )
+            srs = _tmp.geom.iloc[0].GetSpatialReference()  # keep the srs of the input vector
+            sourceExtent = Extent(xmin, ymin, xmax, ymax, srs=srs)
             # NOTE that this might return also objects which are minimally out of extent (max. by tolerance value)
             return self.overlaps(sourceExtent)
 
