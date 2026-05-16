@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from geokit import Extent, LocationSet, error, raster, srs, util, vector
+from geokit import Extent, LocationSet, geom, raster, srs, util, vector
 from geokit.get_test_data import get_all_shape_files, get_test_data
 from geokit.error import GeoKitError, GeoKitExtentError
 from test.helpers import *
@@ -330,6 +330,15 @@ def test_Extent_filterSources():
     assert BOXES not in goodSources
     assert LUX_SHAPE_PATH not in goodSources
     assert LUX_LINES_PATH not in goodSources
+
+    # add a test for special case with zero-dimension source
+    # two points which happen to be longitudinally/vertically aligned
+    ZERO_DIM_VECTOR = vector.createVector([
+        geom.point(6.0,50.5, srs=4326),
+        geom.point(6.0,50.7, srs=4326), # same lon
+    ])
+    goodZeroDimSources = list(ex.filterSources([ZERO_DIM_VECTOR]))
+    assert len(goodZeroDimSources) == 1
 
 
 def test_Extent_containsLoc():
