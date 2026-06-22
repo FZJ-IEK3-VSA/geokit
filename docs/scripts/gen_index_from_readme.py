@@ -30,7 +30,7 @@ def _readme_to_index(text: str) -> str:
     # Rewrite the repo-root 'docs/' prefixes to be relative to the docs root.
     text = text.replace("./docs/", "./")  # HTML/Markdown asset paths
     text = text.replace("](docs/", "](")  # Markdown links
-    text = text.replace("`docs/", "`")    # inline-code folder mentions
+    text = text.replace("`docs/", "`")  # inline-code folder mentions
     return text
 
 

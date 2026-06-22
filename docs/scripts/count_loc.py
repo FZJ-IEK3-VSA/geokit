@@ -125,8 +125,7 @@ def analyse_notebook(path: Path) -> dict:
         category = _cell_category(cell)
         if category is None:
             raise ValueError(
-                f"{path.name}: code cell #{code_index} must carry exactly one of "
-                f"{list(CATEGORY_TAGS)} in metadata.tags"
+                f"{path.name}: code cell #{code_index} must carry exactly one of {list(CATEGORY_TAGS)} in metadata.tags"
             )
 
         loc = count_code_lines(cell["source"])

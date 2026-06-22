@@ -62,7 +62,8 @@ DEFAULT_RETRIES = 3  # retries for transient kernel-startup failures under load
 
 def discover(include_cached: bool = False, only: str | None = None) -> list[Path]:
     """Return the notebooks to execute, sorted, excluding checkpoints (and the
-    cached comparison notebooks unless ``include_cached``)."""
+    cached comparison notebooks unless ``include_cached``).
+    """
     notebooks = []
     for path in sorted(EXAMPLES_DIR.rglob("*.ipynb")):
         if ".ipynb_checkpoints" in path.parts:
@@ -95,7 +96,8 @@ def _clear_boilerplate_outputs(nb) -> None:
 def _normalize_paths_in_outputs(nb) -> None:
     """Rewrite absolute repo paths in cell outputs to repo-relative form, so no
     machine-specific path is committed/rendered (e.g. when a cell prints a list
-    of data file paths)."""
+    of data file paths).
+    """
     root = str(REPO_ROOT) + os.sep
 
     def fix(value):
@@ -225,20 +227,27 @@ def cmd_strip() -> int:
 
 def cmd_check_clean() -> int:
     """Fail if any non-cached notebook has committed outputs, or a cached one is
-    missing them. Intended as a CI guard. Stdlib only."""
+    missing them. Intended as a CI guard. Stdlib only.
+    """
     dirty = [nb.relative_to(DOCS_DIR).as_posix() for nb in discover(include_cached=False) if has_committed_outputs(nb)]
     missing = [rel for rel in sorted(CACHED_NOTEBOOKS) if not has_committed_outputs(DOCS_DIR / rel)]
     ok = True
     if dirty:
         ok = False
-        print("ERROR: these notebooks must NOT carry committed outputs "
-              "(run: python docs/scripts/execute_notebooks.py --strip):", file=sys.stderr)
+        print(
+            "ERROR: these notebooks must NOT carry committed outputs "
+            "(run: python docs/scripts/execute_notebooks.py --strip):",
+            file=sys.stderr,
+        )
         for rel in dirty:
             print(f"  {rel}", file=sys.stderr)
     if missing:
         ok = False
-        print("ERROR: these cached comparison notebooks are missing their committed outputs "
-              "(refresh with the rasterio env: --include-cached --only '*_determine_offshore_turbine_depths_*'):", file=sys.stderr)
+        print(
+            "ERROR: these cached comparison notebooks are missing their committed outputs "
+            "(refresh with the rasterio env: --include-cached --only '*_determine_offshore_turbine_depths_*'):",
+            file=sys.stderr,
+        )
         for rel in missing:
             print(f"  {rel}", file=sys.stderr)
     if ok:
@@ -249,13 +258,23 @@ def cmd_check_clean() -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--jobs", "-j", type=int, default=0,
-                        help="number of parallel worker processes (default: min(CPU count, #notebooks))")
+    parser.add_argument(
+        "--jobs",
+        "-j",
+        type=int,
+        default=0,
+        help="number of parallel worker processes (default: min(CPU count, #notebooks))",
+    )
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="per-cell execution timeout in seconds")
-    parser.add_argument("--startup-timeout", type=int, default=DEFAULT_STARTUP_TIMEOUT,
-                        help="seconds to wait for each kernel to start")
-    parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES,
-                        help="retries for transient kernel-startup failures under high parallelism")
+    parser.add_argument(
+        "--startup-timeout", type=int, default=DEFAULT_STARTUP_TIMEOUT, help="seconds to wait for each kernel to start"
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=DEFAULT_RETRIES,
+        help="retries for transient kernel-startup failures under high parallelism",
+    )
     parser.add_argument("--list", action="store_true", help="list the notebooks that would be executed and exit")
     parser.add_argument("--only", default=None, help="glob (relative to docs/) selecting a subset of notebooks")
     parser.add_argument(
@@ -263,10 +282,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also execute the cached comparison notebooks (_2/_3); requires rasterio/geopandas",
     )
-    parser.add_argument("--strip", action="store_true",
-                        help="strip outputs from non-cached notebooks (does not execute); for pre-commit cleanup")
-    parser.add_argument("--check-clean", action="store_true",
-                        help="CI guard: fail if non-cached notebooks carry committed outputs (or cached ones don't)")
+    parser.add_argument(
+        "--strip",
+        action="store_true",
+        help="strip outputs from non-cached notebooks (does not execute); for pre-commit cleanup",
+    )
+    parser.add_argument(
+        "--check-clean",
+        action="store_true",
+        help="CI guard: fail if non-cached notebooks carry committed outputs (or cached ones don't)",
+    )
     args = parser.parse_args(argv)
 
     if args.strip:
@@ -291,8 +316,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.time()
     with ProcessPoolExecutor(max_workers=jobs) as pool:
         futures = {
-            pool.submit(execute_one, str(nb), args.timeout, args.startup_timeout, args.retries): nb
-            for nb in notebooks
+            pool.submit(execute_one, str(nb), args.timeout, args.startup_timeout, args.retries): nb for nb in notebooks
         }
         for fut in as_completed(futures):
             rel, ok, msg = fut.result()
