@@ -19,6 +19,7 @@ docs/geokit
 docs/combineSimilarRasters
 _build
 conf.py
+paper_feedback/*
 
 # Remove things in testing results dir
 testing/results/*.tif
