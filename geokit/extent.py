@@ -1112,10 +1112,8 @@ class Extent(object):
 
         Note:
         -----
-        When creating an 'in memory' raster vs one which is saved to disk, a slightly
-        different algorithm is used which can sometimes add an extra row of pixels. Be
-        aware of this if you intend to compare value-matricies directly from rasters
-        generated with this function.
+        The 'in memory' and on-disk outputs are produced from one shared grid definition and the
+        same warp options, so their value-matrices are identical and can be compared directly.
 
         Parameters
         ----------

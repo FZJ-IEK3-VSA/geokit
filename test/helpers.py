@@ -19,6 +19,15 @@ def result(s):
     return join(dirname(__file__), RESULT, s)
 
 
+# Committed golden raster results (checked into the repo for cross-version regression testing).
+RASTER_RESULT = join(dirname(dirname(__file__)), "geokit", "data", "raster_results")
+
+
+def raster_result(s):
+    """Path to a committed golden raster result: geokit/data/raster_results/<s>."""
+    return join(RASTER_RESULT, s)
+
+
 ### make working items
 EPSG4326 = osr.SpatialReference()
 if gdal.__version__ >= "3.0.0":
@@ -159,3 +168,67 @@ def vis(mat, points=None):
         plt.plot(points[1], points[0], "o")
 
     plt.show()
+
+
+def assert_raster_equal(a, b, *, atol=0):
+    """Assert two rasters describe the same grid and hold the same values.
+
+    `a` and `b` may each be a file path or a gdal.Dataset. Compares the full grid definition
+    (bounds, pixel size, SRS, noData, dtype) and the pixel matrix exactly (atol=0 by default).
+    Used to prove the in-memory and on-disk warp paths produce byte-identical output.
+    """
+    import math
+
+    import numpy as _np
+
+    from geokit import raster as _raster
+
+    ia = _raster.rasterInfo(a)
+    ib = _raster.rasterInfo(b)
+
+    assert _np.allclose(ia.bounds, ib.bounds, atol=0), f"bounds differ: {ia.bounds} vs {ib.bounds}"
+    assert (ia.dx, ia.dy) == (ib.dx, ib.dy), f"pixel size differs: {(ia.dx, ia.dy)} vs {(ib.dx, ib.dy)}"
+    assert ia.srs.IsSame(ib.srs), "SRS differs"
+    assert ia.dtype == ib.dtype, f"dtype differs: {ia.dtype} vs {ib.dtype}"
+
+    na, nb = ia.noData, ib.noData
+    nan_a = isinstance(na, float) and math.isnan(na)
+    nan_b = isinstance(nb, float) and math.isnan(nb)
+    assert (na is None and nb is None) or (nan_a and nan_b) or na == nb, f"noData differs: {na} vs {nb}"
+
+    ma = _raster.extractMatrix(a)
+    mb = _raster.extractMatrix(b)
+    assert ma.shape == mb.shape, f"matrix shape differs: {ma.shape} vs {mb.shape}"
+    assert _np.allclose(ma, mb, atol=atol, equal_nan=True), "pixel values differ"
+
+
+def make_resampling_test_raster(pixel=100, srs=None):
+    """Build a deterministic source raster whose features make resampling algorithms differ.
+
+    Contains a smooth diagonal ramp, a constant block, a sharp step edge, two discrete class
+    patches and a single bright spike -- enough that near / bilinear / cubic / lanczos / mode /
+    min / max / median / quartile / sum each produce a distinguishable result. Returns an in-memory
+    gdal.Dataset on a 32x32 grid with bounds (0, 0, 32*pixel, 32*pixel). Shared by the
+    golden-regression tests and the test_case_inspector notebook so both exercise the same input.
+    """
+    import numpy as _np
+
+    from geokit import raster as _raster
+
+    n = 32
+    rows, cols = _np.meshgrid(_np.arange(n), _np.arange(n), indexing="ij")
+    data = (rows + cols).astype(_np.float32)  # smooth diagonal ramp (0..62)
+    data[2:10, 2:10] = 10.0  # constant block
+    data[12:20, :16] = 5.0  # step edge: low ...
+    data[12:20, 16:] = 90.0  # ... to high at column 16
+    data[22:26, 2:10] = 120.0  # discrete class patch A
+    data[22:26, 18:26] = 210.0  # discrete class patch B
+    data[29, 29] = 300.0  # single bright spike
+
+    return _raster.createRaster(
+        bounds=(0, 0, n * pixel, n * pixel),
+        data=data,
+        pixelWidth=pixel,
+        pixelHeight=pixel,
+        srs=EPSG3035 if srs is None else srs,
+    )

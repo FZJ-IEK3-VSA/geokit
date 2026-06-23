@@ -779,6 +779,107 @@ def test_warp_resampling_uniform(uniform_raster, resample_alg):
         )
 
 
+@pytest.mark.parametrize("source_key", ["simple_4x4", "clc"])
+@pytest.mark.parametrize(
+    "resample_alg",
+    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+)
+def test_warp_memory_vs_disk_equal(source_key, resample_alg, tmp_path, request):
+    """The in-memory and on-disk warp paths must produce byte-identical output.
+
+    Regression guard for the path unification (issue #168): both paths share one grid definition
+    (geokit.util.canonicalGrid) and the same gdal.WarpOptions, so for identical inputs the only
+    difference is the output driver (MEM vs GTiff), which cannot change pixel values. Exact
+    equality is therefore the correct assertion.
+    """
+    source = request.getfixturevalue("simple_4x4_raster") if source_key == "simple_4x4" else CLC_RASTER_PATH
+    warp_kwargs = dict(resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+
+    mem = raster.warp(source, **warp_kwargs)
+    disk = raster.warp(source, output=str(tmp_path / "warp_mem_vs_disk.tif"), **warp_kwargs)
+
+    assert_raster_equal(mem, disk)
+
+
+def test_warp_cropToCutline_in_memory(tmp_path):
+    """In-memory warp now honours cropToCutline (previously ignored with a warning, issue #168).
+
+    The unified path lets GDAL create the in-memory dataset itself, so the cutline can drive the
+    output extent. The cropped output must be smaller than the un-cropped one and must match the
+    on-disk cropToCutline result exactly.
+    """
+    cutline = geom.box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035)  # a sub-box of the CLC extent
+    common = dict(resampleAlg="near", pixelHeight=200, pixelWidth=200, cutline=cutline, noData=99)
+
+    cropped = raster.warp(CLC_RASTER_PATH, cropToCutline=True, **common)
+    full = raster.warp(CLC_RASTER_PATH, **common)  # cutline applied, but extent NOT cropped
+
+    cropped_shape = raster.extractMatrix(cropped).shape
+    full_shape = raster.extractMatrix(full).shape
+    assert cropped_shape != full_shape, "cropToCutline should shrink the in-memory output extent"
+    assert cropped_shape[0] <= full_shape[0] and cropped_shape[1] <= full_shape[1]
+
+    disk = raster.warp(CLC_RASTER_PATH, output=str(tmp_path / "crop.tif"), cropToCutline=True, **common)
+    assert_raster_equal(cropped, disk)
+
+
+def test_warp_cropToCutline_requires_cutline():
+    """cropToCutline without a cutline is a user error, not a silent no-op."""
+    with pytest.raises(GeoKitRasterError):
+        raster.warp(CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200, cropToCutline=True)
+
+
+def test_warp_provenance_metadata(tmp_path):
+    """Every warp output is stamped with the toolchain versions + resampling algorithm."""
+    expected_keys = (
+        "GEOKIT_PROVENANCE_GDAL_VERSION",
+        "GEOKIT_PROVENANCE_PROJ_VERSION",
+        "GEOKIT_PROVENANCE_GEOKIT_VERSION",
+        "GEOKIT_PROVENANCE_RESAMPLE_ALG",
+    )
+    warp_kwargs = dict(resampleAlg="cubic", pixelHeight=200, pixelWidth=200)
+
+    mem = raster.warp(CLC_RASTER_PATH, **warp_kwargs)
+    disk_path = str(tmp_path / "prov.tif")
+    raster.warp(CLC_RASTER_PATH, output=disk_path, **warp_kwargs)
+
+    for ds in (mem, raster.loadRaster(disk_path)):
+        for key in expected_keys:
+            assert ds.GetMetadataItem(key), f"missing provenance key {key}"
+        assert ds.GetMetadataItem("GEOKIT_PROVENANCE_GDAL_VERSION") == gdal.__version__
+        assert ds.GetMetadataItem("GEOKIT_PROVENANCE_RESAMPLE_ALG") == "cubic"
+
+
+@pytest.mark.parametrize(
+    "resample_alg",
+    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+)
+def test_warp_resampling_golden(resample_alg):
+    """Golden-regression canary: warp output must match the committed reference (issue #168).
+
+    A deterministic feature-rich source (make_resampling_test_raster) is downsampled with each
+    algorithm and compared, via assert_raster_equal, against a GeoTIFF checked into
+    geokit/data/raster_results. Because the warp is deterministic (single-threaded, explicit grid),
+    a mismatch means the resampling *numerics* changed -- almost always a GDAL upgrade. The
+    comparison ignores metadata, so the provenance stamp (which records the GDAL version) never
+    causes a false failure.
+
+    The reference is generated automatically on first run (and the test is skipped). To regenerate
+    after a deliberate toolchain change, run with GEOKIT_REGEN_GOLDEN=1 and commit the updated files.
+    """
+    source = make_resampling_test_raster()
+    warp_kwargs = dict(resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    golden_path = raster_result(f"warp_resampling_{resample_alg}.tif")
+
+    if os.environ.get("GEOKIT_REGEN_GOLDEN") or not os.path.isfile(golden_path):
+        os.makedirs(os.path.dirname(golden_path), exist_ok=True)
+        raster.warp(source, output=golden_path, overwrite=True, **warp_kwargs)
+        pytest.skip(f"(re)generated golden reference for '{resample_alg}': {golden_path}")
+
+    produced = raster.warp(source, **warp_kwargs)
+    assert_raster_equal(golden_path, produced)
+
+
 def test_warpLike():
     _rstr = raster.warpLike(
         dataSource=SINGLE_HILL_PATH,
