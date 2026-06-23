@@ -426,7 +426,7 @@ def canonicalGrid(
 
     This is the single source of truth for translating a (bounds, resolution) request into a
     concrete raster grid, so that the in-memory and on-disk warp paths (and quickRaster) always
-    agree. 
+    agree.
 
     Parameters
     ----------

@@ -621,8 +621,6 @@ def test_warp():
     )
     v5 = raster.extractMatrix(d5)
     assert np.isclose(v4, v5, atol=0).all()
-    
-
 
 
 @pytest.fixture(scope="module")
@@ -657,7 +655,22 @@ def uniform_raster():
 
 @pytest.mark.parametrize(
     "resample_alg",
-    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
 )
 def test_warp_resampling(simple_4x4_raster, resample_alg):
     """Test that each resampling algorithm produces output consistent with its GDAL definition.
@@ -679,7 +692,11 @@ def test_warp_resampling(simple_4x4_raster, resample_alg):
     output_mean = float(arr.mean())
 
     def _warp_mean(alg):
-        return float(raster.extractMatrix(raster.warp(simple_4x4_raster, resampleAlg=alg, pixelHeight=200, pixelWidth=200)).mean())
+        return float(
+            raster.extractMatrix(
+                raster.warp(simple_4x4_raster, resampleAlg=alg, pixelHeight=200, pixelWidth=200)
+            ).mean()
+        )
 
     if resample_alg in ("near", "mode"):
         # Both pick an existing input value per output pixel — no interpolation.
@@ -703,21 +720,15 @@ def test_warp_resampling(simple_4x4_raster, resample_alg):
 
     elif resample_alg == "rms":
         # RMS = sqrt(mean(x²)) ≥ arithmetic mean for positive values (power mean inequality).
-        assert output_mean >= _warp_mean("average"), (
-            f"rms: output mean {output_mean:.4f} should be >= average mean"
-        )
+        assert output_mean >= _warp_mean("average"), f"rms: output mean {output_mean:.4f} should be >= average mean"
 
     elif resample_alg == "max":
         # Selects the maximum of contributing pixels — output mean must exceed the average mean.
-        assert output_mean > _warp_mean("average"), (
-            f"max: output mean {output_mean:.4f} should exceed average mean"
-        )
+        assert output_mean > _warp_mean("average"), f"max: output mean {output_mean:.4f} should exceed average mean"
 
     elif resample_alg == "min":
         # Selects the minimum of contributing pixels — output mean must be below the average mean.
-        assert output_mean < _warp_mean("average"), (
-            f"min: output mean {output_mean:.4f} should be below average mean"
-        )
+        assert output_mean < _warp_mean("average"), f"min: output mean {output_mean:.4f} should be below average mean"
 
     elif resample_alg == "med":
         # Median lies between the minimum and maximum by definition.
@@ -727,15 +738,11 @@ def test_warp_resampling(simple_4x4_raster, resample_alg):
 
     elif resample_alg == "q1":
         # First quartile ≤ median ≤ third quartile by definition.
-        assert output_mean <= _warp_mean("med"), (
-            f"q1: output mean {output_mean:.4f} should be <= med mean"
-        )
+        assert output_mean <= _warp_mean("med"), f"q1: output mean {output_mean:.4f} should be <= med mean"
 
     elif resample_alg == "q3":
         # Third quartile ≥ median ≥ first quartile by definition.
-        assert output_mean >= _warp_mean("med"), (
-            f"q3: output mean {output_mean:.4f} should be >= med mean"
-        )
+        assert output_mean >= _warp_mean("med"), f"q3: output mean {output_mean:.4f} should be >= med mean"
 
     elif resample_alg == "sum":
         # Weighted sum of contributing pixels.
@@ -753,7 +760,22 @@ def test_warp_resampling(simple_4x4_raster, resample_alg):
 
 @pytest.mark.parametrize(
     "resample_alg",
-    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
 )
 def test_warp_resampling_uniform(uniform_raster, resample_alg):
     """Any algorithm applied to a uniform raster must return that same constant value.
@@ -782,7 +804,22 @@ def test_warp_resampling_uniform(uniform_raster, resample_alg):
 @pytest.mark.parametrize("source_key", ["simple_4x4", "clc"])
 @pytest.mark.parametrize(
     "resample_alg",
-    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
 )
 def test_warp_memory_vs_disk_equal(source_key, resample_alg, tmp_path, request):
     """The in-memory and on-disk warp paths must produce byte-identical output.
@@ -824,7 +861,7 @@ def test_warp_cropToCutline_in_memory(tmp_path):
 
 
 def test_warp_cropToCutline_requires_cutline():
-    """cropToCutline without a cutline is a user error, not a silent no-op."""
+    """CropToCutline without a cutline is a user error, not a silent no-op."""
     with pytest.raises(GeoKitRasterError):
         raster.warp(CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200, cropToCutline=True)
 
@@ -852,7 +889,22 @@ def test_warp_provenance_metadata(tmp_path):
 
 @pytest.mark.parametrize(
     "resample_alg",
-    ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"],
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
 )
 def test_warp_resampling_golden(resample_alg):
     """Golden-regression canary: warp output must match the committed reference (issue #168).
