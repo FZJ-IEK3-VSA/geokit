@@ -14,6 +14,11 @@ build:
     pre_build:
       - conda run --name $READTHEDOCS_VERSION pip install -e . --no-deps
       - conda list -n $READTHEDOCS_VERSION
+      # Execute the example notebooks in parallel before the build. mkdocs-jupyter
+      # is configured with execute:False and renders these outputs. The GDAL (_2)
+      # and GeoPandas+Rasterio (_3) comparison notebooks are skipped here (they
+      # need rasterio, not a docs dependency) and rendered from committed outputs.
+      - conda run --name $READTHEDOCS_VERSION python docs/scripts/execute_notebooks.py
 
     build:
       html:

@@ -17,21 +17,28 @@
 
 ---
 
+<!-- readme-only:start -->
+📖 **Read the full documentation at [geokit.readthedocs.io](https://geokit.readthedocs.io/).**
+<!-- readme-only:end -->
+
 ## Documentation Overview
 
-ETHOS.GeoKit is a Python toolkit designed to efficiently handle geospatial data and spatial operations. It provides low-overhead control of fundamental geospatial operations including:
-- Reading, writing, and mutating geospatial datasets
+ETHOS.GeoKit is a Python toolkit for efficiently handling geospatial data and spatial operations. Its **main advantage is the seamless combination of raster and vector data**: through the **RegionMask** and **Extent** objects, datasets in different formats, resolutions, and coordinate reference systems are integrated into the context of a single region of interest — without the manual CRS, extent, and resolution bookkeeping this normally requires.
+
+GeoKit equally supports the individual building blocks on their own, so it works just as well for pure raster or pure vector tasks:
+- Reading, writing, and mutating vector and raster datasets
 - Manipulating and translating geometries between coordinate systems
-- Warping and resampling raster data
-- Seamlessly integrating multiple geospatial datasets through the **RegionMask** object
+- Warping and resampling raster data, and sampling values at point locations
+- Converting between raster and vector representations (rasterize / polygonize)
+- Seamlessly integrating multiple raster and vector datasets within a region through the **RegionMask** object
 
-The RegionMask object is particularly powerful, allowing seamless integration of information expressed across multiple geospatial datasets in various formats and reference systems into the context of a single region. Extensive documentation about ETHOS.GeoKit can be found at https://geokit.readthedocs.io/.
+New here? See [Why ETHOS.GeoKit?](https://geokit.readthedocs.io/why_geokit.html) for how it compares to GDAL, GeoPandas, and Rasterio — and how much less code it takes to achieve the same result.
 
-ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). It builds upon the software [GDAL (Geospatial Data Abstraction Library)](https://gdal.org/) and exposes its capabilities in a way that is particularly useful for programmatic, general-purpose geospatial analyses. Geokit is for example used in [GLAES](https://github.com/FZJ-IEK3-VSA/glaes) and [RESKit](https://github.com/FZJ-IEK3-VSA/reskit).
+ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). Geokit is for example directly used in [GLAES](https://github.com/FZJ-IEK3-VSA/glaes) and [RESKit](https://github.com/FZJ-IEK3-VSA/reskit).
 
 ## Installation
 
-If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/).
+If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/). Please remove other conda installers if you decide to use miniforge.  Having multiple conda installs on your machine will likely cause issues.
 
 ### Installation via conda-forge (Recommended)
 
