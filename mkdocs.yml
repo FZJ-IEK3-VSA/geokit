@@ -13,6 +13,14 @@ docs_dir: docs
 site_dir: site
 use_directory_urls: false
 
+# Files excluded from the documentation build (removed from the mkdocs file set
+# before mkdocs-jupyter sees them). docs/scripts/*.py are build helpers
+# (gen-files / count_loc / execute_notebooks), NOT content; mkdocs-jupyter's
+# default `include` covers *.py, so without this it would try to execute them as
+# notebooks (and fail, e.g. on __file__).
+exclude_docs: |
+  scripts/*.py
+
 theme:
     name: material
     logo: visualizations/logos/geokit_logo.svg
@@ -48,7 +56,13 @@ plugins:
     - search
 
     - mkdocs-jupyter:
-          execute: True
+          # Notebooks are NOT executed by mkdocs-jupyter. They are pre-executed
+          # in parallel by docs/scripts/execute_notebooks.py (a docs pre-build
+          # step; see .readthedocs.yaml) and rendered here from those outputs.
+          # The GDAL (_2) and GeoPandas+Rasterio (_3) comparison notebooks are
+          # never executed in CI (they need rasterio); they are cached as
+          # committed outputs and rendered as-is.
+          execute: False
           include_source: true
           allow_errors: false
 
@@ -83,7 +97,9 @@ plugins:
 
     - gen-files:
           scripts:
+              - docs/scripts/gen_index_from_readme.py
               - docs/scripts/gen_ref_pages.py
+              - docs/scripts/gen_loc_comparison.py
 
     - literate-nav:
           nav_file: SUMMARY.md
@@ -107,7 +123,9 @@ extra_css:
     - stylesheets/extra.css
 
 nav:
-    - Home: index.md
+    - Home:
+          - index.md
+          - Why ETHOS.GeoKit?: why_geokit.md
 
     - Examples and Documentation:
           - Introduction: example_articles/_00_introduction.md
@@ -167,8 +185,10 @@ nav:
                 - Indicate Values and Buffer: Examples/_05_combine_multiple_files/_06_indicate_values_threshold_and_buffer.ipynb
 
           - Application Examples:
-                - Overview: example_articles/_06_application_examples.md
-                - Offshore Turbine Depths: Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
+                - Overview: Examples/_06_application_examples/code_length_comparison.md
+                - Offshore Turbine Depths (GeoKit): Examples/_06_application_examples/_1_determine_offshore_turbine_depths.ipynb
+                - Offshore Turbine Depths (GDAL/OGR): Examples/_06_application_examples/_2_determine_offshore_turbine_depths_gdal.ipynb
+                - Offshore Turbine Depths (GeoPandas + Rasterio): Examples/_06_application_examples/_3_determine_offshore_turbine_depths_geopandas_rasterio.ipynb
 
           - Configuration:
                 - Overview: example_articles/_07_configuration.md
