@@ -11,6 +11,11 @@ from geokit import geom, raster, util
 from geokit.error import GeoKitRasterError
 from geokit.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
+from test.test_case_creator import (
+    TEST_CASE_NAMES,
+    golden_raster_path,
+    load_test_raster,
+)
 
 # gdalType
 
@@ -887,49 +892,69 @@ def test_warp_provenance_metadata(tmp_path):
         assert ds.GetMetadataItem("GEOKIT_PROVENANCE_RESAMPLE_ALG") == "cubic"
 
 
-@pytest.mark.parametrize(
-    "resample_alg",
-    [
-        "near",
-        "bilinear",
-        "cubic",
-        "cubicspline",
-        "lanczos",
-        "average",
-        "rms",
-        "mode",
-        "max",
-        "min",
-        "med",
-        "q1",
-        "q3",
-        "sum",
-    ],
-)
-def test_warp_resampling_golden(resample_alg):
+RESAMPLE_ALGS = ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"]
+
+
+@pytest.fixture(scope="session")
+def resampling_test_rasters():
+    """Load each warp test-case raster (integer + float, both with nodata) once per session.
+
+    The rasters are read from their committed files under geokit/data/raster_data/input_data rather
+    than rebuilt in memory, so the inputs the tests run against are exactly what is checked into the
+    repo (see test.test_case_creator)."""
+    return {name: load_test_raster(name) for name in TEST_CASE_NAMES}
+
+
+@pytest.mark.parametrize("case", list(TEST_CASE_NAMES))
+@pytest.mark.parametrize("resample_alg", RESAMPLE_ALGS)
+def test_warp_resampling_golden(resampling_test_rasters, case, resample_alg):
     """Golden-regression canary: warp output must match the committed reference (issue #168).
 
-    A deterministic feature-rich source (make_resampling_test_raster) is downsampled with each
-    algorithm and compared, via assert_raster_equal, against a GeoTIFF checked into
-    geokit/data/raster_results. Because the warp is deterministic (single-threaded, explicit grid),
-    a mismatch means the resampling *numerics* changed -- almost always a GDAL upgrade. The
-    comparison ignores metadata, so the provenance stamp (which records the GDAL version) never
-    causes a false failure.
+    Each test-case raster (an integer and a float raster, both carrying a nodata region; see
+    test.test_case_creator) is downsampled with every algorithm and compared, via
+    assert_raster_equal, against a GeoTIFF checked into
+    geokit/data/raster_data/golden_regression_results. Because the warp is deterministic
+    (single-threaded, explicit grid), a mismatch means the resampling numerics changed -- almost
+    always a GDAL upgrade. The comparison ignores metadata, so the provenance stamp never causes a
+    false failure.
 
-    The reference is generated automatically on first run (and the test is skipped). To regenerate
-    after a deliberate toolchain change, run with GEOKIT_REGEN_GOLDEN=1 and commit the updated files.
+    References are generated automatically on first run (the test is skipped). To regenerate after a
+    deliberate toolchain change, run with GEOKIT_REGEN_GOLDEN=1 and commit the updated files.
     """
-    source = make_resampling_test_raster()
+    source = resampling_test_rasters[case]
     warp_kwargs = dict(resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
-    golden_path = raster_result(f"warp_resampling_{resample_alg}.tif")
+    golden_path = golden_raster_path(case, resample_alg)
 
     if os.environ.get("GEOKIT_REGEN_GOLDEN") or not os.path.isfile(golden_path):
         os.makedirs(os.path.dirname(golden_path), exist_ok=True)
         raster.warp(source, output=golden_path, overwrite=True, **warp_kwargs)
-        pytest.skip(f"(re)generated golden reference for '{resample_alg}': {golden_path}")
+        pytest.skip(f"(re)generated golden reference for '{case}/{resample_alg}': {golden_path}")
 
     produced = raster.warp(source, **warp_kwargs)
     assert_raster_equal(golden_path, produced)
+
+
+@pytest.mark.parametrize("case", list(TEST_CASE_NAMES))
+@pytest.mark.parametrize("resample_alg", RESAMPLE_ALGS)
+def test_warp_resampling_nodata_respected(resampling_test_rasters, case, resample_alg):
+    """Wherever the source is entirely nodata, every algorithm must output nodata and preserve it.
+
+    'average' marks an output pixel nodata only when every contributing source pixel is nodata --
+    the minimal 'fully nodata' set. No algorithm can synthesise valid data there, so that set must
+    be nodata for every algorithm. (Kernel algorithms like near/bilinear additionally spread nodata
+    into partially-covered pixels; that wider behaviour is captured by the golden test above.)
+    """
+    source = resampling_test_rasters[case]
+    nodata = raster.rasterInfo(source).noData
+    warp_kwargs = dict(pixelHeight=200, pixelWidth=200)
+
+    out = raster.warp(source, resampleAlg=resample_alg, **warp_kwargs)
+    assert raster.rasterInfo(out).noData == nodata, f"{case}/{resample_alg}: output lost the nodata value"
+
+    out_mat = raster.extractMatrix(out)
+    core_nodata = raster.extractMatrix(raster.warp(source, resampleAlg="average", **warp_kwargs)) == nodata
+    assert core_nodata.any(), "expected some fully-nodata output pixels in the test raster"
+    assert (out_mat[core_nodata] == nodata).all(), f"{case}/{resample_alg}: produced valid data over a fully-nodata region"
 
 
 def test_warpLike():

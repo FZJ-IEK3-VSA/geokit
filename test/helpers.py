@@ -19,13 +19,9 @@ def result(s):
     return join(dirname(__file__), RESULT, s)
 
 
-# Committed golden raster results (checked into the repo for cross-version regression testing).
-RASTER_RESULT = join(dirname(dirname(__file__)), "geokit", "data", "raster_results")
-
-
-def raster_result(s):
-    """Path to a committed golden raster result: geokit/data/raster_results/<s>."""
-    return join(RASTER_RESULT, s)
+# Committed warp test data (input rasters + golden regression outputs) lives under
+# geokit/data/raster_data; its paths are owned by test.test_case_creator (input_raster_path /
+# golden_raster_path), the single source of truth for the warp resampling test cases.
 
 
 ### make working items
@@ -202,33 +198,5 @@ def assert_raster_equal(a, b, *, atol=0):
     assert _np.allclose(ma, mb, atol=atol, equal_nan=True), "pixel values differ"
 
 
-def make_resampling_test_raster(pixel=100, srs=None):
-    """Build a deterministic source raster whose features make resampling algorithms differ.
-
-    Contains a smooth diagonal ramp, a constant block, a sharp step edge, two discrete class
-    patches and a single bright spike -- enough that near / bilinear / cubic / lanczos / mode /
-    min / max / median / quartile / sum each produce a distinguishable result. Returns an in-memory
-    gdal.Dataset on a 32x32 grid with bounds (0, 0, 32*pixel, 32*pixel). Shared by the
-    golden-regression tests and the test_case_inspector notebook so both exercise the same input.
-    """
-    import numpy as _np
-
-    from geokit import raster as _raster
-
-    n = 32
-    rows, cols = _np.meshgrid(_np.arange(n), _np.arange(n), indexing="ij")
-    data = (rows + cols).astype(_np.float32)  # smooth diagonal ramp (0..62)
-    data[2:10, 2:10] = 10.0  # constant block
-    data[12:20, :16] = 5.0  # step edge: low ...
-    data[12:20, 16:] = 90.0  # ... to high at column 16
-    data[22:26, 2:10] = 120.0  # discrete class patch A
-    data[22:26, 18:26] = 210.0  # discrete class patch B
-    data[29, 29] = 300.0  # single bright spike
-
-    return _raster.createRaster(
-        bounds=(0, 0, n * pixel, n * pixel),
-        data=data,
-        pixelWidth=pixel,
-        pixelHeight=pixel,
-        srs=EPSG3035 if srs is None else srs,
-    )
+# The deterministic warp test rasters now live in test/test_case_creator (build_test_raster); they
+# are no longer defined here so there is a single source of truth.
