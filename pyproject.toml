@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "geokit"
-version = "1.8.0"
+version = "1.9.0"
 description = "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
 authors = [
   { name = "David Severin Ryberg" },
