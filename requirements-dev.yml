@@ -19,7 +19,7 @@ dependencies:
   - structlog <=26.1.0
   - rich <=15.0.0
   - pandas-stubs <=3.0.3.260530
-  - scipy-stubs <=1.17.0.2
+  - scipy-stubs <=1.17.1.5
   - requests <=2.34.2
   # development dependencies
   - pytest <=9.1.1
