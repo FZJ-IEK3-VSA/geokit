@@ -1,5 +1,6 @@
 import os
 import pathlib
+import sys
 
 import numpy as np
 import pytest
@@ -909,14 +910,16 @@ RESAMPLE_ALGS = [
     "sum",
 ]
 
-# Value-selecting algorithms (raster.EXACT_RESAMPLE_ALGS) are bit-identical across CPU architectures,
-# so the golden canary holds them to exact equality. The remaining (interpolating) algorithms do
-# floating-point convolution/division/sqrt; GDAL's x86_64 and arm64 builds differ in the low-order
-# bits, so the goldens -- generated on x86_64 -- cannot match exactly on Apple Silicon. These
-# tolerances absorb that hardware noise but still catch a genuine numeric regression (a real
-# algorithm change moves values far more than ~0.1%). warp() itself warns on macOS/arm64.
+# The committed goldens are generated on x86_64; Linux and Windows runners reproduce them at full
+# accuracy, so the golden canary compares them exactly there. Only platforms whose GDAL build deviates
+# from the x86_64 reference get a tolerance -- currently just macOS/arm64, where the interpolating
+# kernels differ in the low-order bits (and the Int16 case additionally flips by +-1 when that
+# difference straddles a rounding boundary). Keeping the strict comparison on Linux/Windows means the
+# canary still catches a real numeric regression there; warp() emits its own macOS/arm64 warning.
+_TOLERANT_RESAMPLE_PLATFORMS = {"darwin"}
+# atol=1 covers the worst case (one Int16 rounding step); rtol adds headroom proportional to magnitude.
 _GOLDEN_RTOL = 1e-3
-_GOLDEN_ATOL = 1e-2
+_GOLDEN_ATOL = 1.0
 
 
 @pytest.fixture(scope="session")
@@ -943,11 +946,12 @@ def test_warp_resampling_golden(resampling_test_rasters, case, resample_alg):
     always a GDAL upgrade. The comparison ignores metadata, so the provenance stamp never causes a
     false failure.
 
-    Value-selecting algorithms (raster.EXACT_RESAMPLE_ALGS) are compared exactly. The interpolating
-    algorithms are compared with a tolerance, because GDAL's floating-point kernels differ in the
-    low-order bits between x86_64 (where the goldens are generated) and arm64 -- without it the
-    canary is red on every Apple-Silicon runner for benign hardware noise rather than a real
-    regression. warp() emits its own macOS/arm64 warning, so the looser comparison is never silent.
+    On Linux and Windows the output is compared to the golden exactly (full accuracy), so the canary
+    still fires on a genuine numeric regression there. On platforms that deviate from the x86_64
+    reference (_TOLERANT_RESAMPLE_PLATFORMS -- currently macOS/arm64) the comparison uses a tolerance,
+    because GDAL's floating-point kernels differ in the low-order bits and the Int16 case rounds those
+    differences to +-1; without it the canary is red on every Apple-Silicon runner for benign hardware
+    noise. warp() emits its own macOS/arm64 warning, so the looser comparison is never silent.
 
     References are generated automatically on first run (the test is skipped). To regenerate after a
     deliberate toolchain change, run with GEOKIT_REGEN_GOLDEN=1 and commit the updated files.
@@ -963,10 +967,10 @@ def test_warp_resampling_golden(resampling_test_rasters, case, resample_alg):
 
     produced = raster.warp(source, **warp_kwargs)
 
-    if resample_alg in raster.EXACT_RESAMPLE_ALGS:
-        assert_raster_equal(golden_path, produced)
-    else:
+    if sys.platform in _TOLERANT_RESAMPLE_PLATFORMS:
         assert_raster_equal(golden_path, produced, rtol=_GOLDEN_RTOL, atol=_GOLDEN_ATOL)
+    else:
+        assert_raster_equal(golden_path, produced)
 
 
 @pytest.mark.parametrize("case", list(TEST_CASE_NAMES))
