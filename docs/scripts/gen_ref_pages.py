@@ -11,8 +11,10 @@ import mkdocs_gen_files
 
 nav = mkdocs_gen_files.Nav()
 
-# Directories to skip
-SKIP_DIRS = {"__pycache__", "data"}
+# Directories to skip.
+# "core" is the deprecated subpackage (re-exports from the top-level modules);
+# it issues FutureWarnings on import, so we don't generate reference pages for it.
+SKIP_DIRS = {"__pycache__", "data", "core"}
 
 for path in sorted(Path("geokit").rglob("*.py")):
     module_path = path.with_suffix("")

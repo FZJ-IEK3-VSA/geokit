@@ -32,7 +32,7 @@ jobs:
       library_version: ${{ matrix.python_version }}
       dependency_position_env_file: ${{ needs.extract-python-versions.outputs.dependency_position }}
       multiprocessing_pytest_string: "-n auto"
-      multiprocessing_example_string: "-n auto"
+      multiprocessing_example_string: "-n 2"
 
   extract-min-versions:
     if: github.actor != 'renovate[bot]'
@@ -62,4 +62,4 @@ jobs:
       library_version: ${{ matrix.dependencies.version }}
       dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}
       multiprocessing_pytest_string: "-n auto"
-      multiprocessing_example_string: "-n auto"
+      multiprocessing_example_string: "-n 2"

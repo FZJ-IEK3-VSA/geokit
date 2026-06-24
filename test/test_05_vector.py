@@ -1,5 +1,6 @@
 from functools import reduce
 from os.path import dirname, join
+import json
 import pathlib
 import geopandas as gpd
 import pandas as pd
@@ -7,7 +8,7 @@ import pytest
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
-from geokit.core.get_test_data import get_test_data
+from geokit.get_test_data import get_test_data
 from geokit.error import GeoKitError, GeoKitVectorError
 from test.helpers import *
 
@@ -164,6 +165,15 @@ def test_extractAndClipFeatures():
     assert all(np.isclose(clipped.areaShare.values, np.array([0.827164, 1.0])))
     assert all(np.isclose(clipped.testAttr.values, np.array([82.716413, 100.0])))
 
+    # An empty source DataFrame must be handled gracefully (previously raised
+    # IndexError): return the empty frame with the expected 'areaShare' column
+    # and the input attribute columns preserved.
+    empty_source = pd.DataFrame(columns=["geom", "testAttr"])
+    clipped_empty = vector.extractAndClipFeatures(source=empty_source, geom=box)
+    assert len(clipped_empty) == 0
+    assert "areaShare" in clipped_empty.columns
+    assert "testAttr" in clipped_empty.columns
+
 
 def test_createVector(tmpdir):
     # Create shape file
@@ -297,6 +307,60 @@ def test_createVector(tmpdir):
     assert all(test_equal_gpkg)
 
     assert all([g.IsValid() for g in vec_gpkg_lyr_1_disk["geom"]])
+
+
+def test_createVector_empty(tmpdir):
+    # Filtering large/parallelized geodata may legitimately yield empty datasets.
+    # createVector must be able to save these (like geopandas) instead of raising.
+    empty_df = pd.DataFrame(columns=["geom", "attributeA", "attributeB"])
+
+    # ESRI Shapefile, default geometry type -> POINT, schema preserved
+    out_shp = tmpdir.join("empty.shp").__str__()
+    vector.createVector(empty_df, output=out_shp, srs=EPSG4326)
+    ds = ogr.Open(out_shp)
+    ly = ds.GetLayer()
+    assert ly.GetFeatureCount() == 0
+    assert ogr.GeometryTypeToName(ly.GetGeomType()) == "Point"
+    assert ly.GetSpatialRef().IsSame(EPSG4326)
+    fieldNames = [ly.GetLayerDefn().GetFieldDefn(i).GetName() for i in range(ly.GetLayerDefn().GetFieldCount())]
+    assert fieldNames == ["attributeA", "attributeB"]  # attribute schema preserved
+    ds = None
+
+    # explicit geomType overrides the default for empty input
+    out_poly = tmpdir.join("empty_poly.shp").__str__()
+    vector.createVector(empty_df, output=out_poly, srs=EPSG4326, geomType="POLYGON")
+    ds = ogr.Open(out_poly)
+    assert ogr.GeometryTypeToName(ds.GetLayer().GetGeomType()) == "Polygon"
+    ds = None
+
+    # GeoPackage, empty
+    out_gpkg = tmpdir.join("empty.gpkg").__str__()
+    vector.createVector(empty_df, output=out_gpkg, srs=EPSG4326, driverName="GPKG", layerName="flag")
+    ds = ogr.Open(out_gpkg)
+    assert ds.GetLayer().GetFeatureCount() == 0
+    ds = None
+
+    # in-memory empty dataset
+    memVec = vector.createVector(empty_df, srs=EPSG4326)
+    assert memVec.GetLayer().GetFeatureCount() == 0
+
+    # geomType override also applies to non-empty input (here forcing the layer type)
+    out_forced = tmpdir.join("forced.gpkg").__str__()
+    vector.createVector([GEOM], output=out_forced, srs=EPSG4326, driverName="GPKG", geomType="MULTIPOLYGON")
+    ds = ogr.Open(out_forced)
+    assert ogr.GeometryTypeToName(ds.GetLayer().GetGeomType()) == "Multi Polygon"
+    ds = None
+
+
+def test_createGeoJson_empty():
+    # An empty dataset must produce a valid, empty FeatureCollection
+    empty_df = pd.DataFrame(columns=["geom", "attributeA", "attributeB"])
+
+    geojson = vector.createGeoJson(empty_df)
+    assert json.loads(geojson) == {"type": "FeatureCollection", "features": []}
+
+    # empty list input as well
+    assert json.loads(vector.createGeoJson([])) == {"type": "FeatureCollection", "features": []}
 
 
 def test_mutateVector():

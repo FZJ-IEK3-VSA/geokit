@@ -5,7 +5,7 @@ coverage:
         enabled: false
     patch:
       default:
-        target: auto
+        enabled: false
 
 comment:
   layout: "reach,diff,flags,files"

@@ -1,16 +1,22 @@
 import os
 import pathlib
+import sys
 
 import numpy as np
 import pytest
 import structlog
 from osgeo import gdal
 
-import geokit.core.raster
+import geokit.raster
 from geokit import geom, raster, util
 from geokit.error import GeoKitRasterError
-from geokit.core.location import Location, LocationSet
+from geokit.location import Location, LocationSet
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
+from test.test_case_creator import (
+    TEST_CASE_NAMES,
+    golden_raster_path,
+    load_test_raster,
+)
 
 # gdalType
 
@@ -623,6 +629,375 @@ def test_warp():
     assert np.isclose(v4, v5, atol=0).all()
 
 
+@pytest.fixture(scope="module")
+def simple_4x4_raster():
+    """In-memory 4x4 raster with values 1..16, pixel size 100, bounds (0,0,400,400)."""
+    data = np.arange(1, 17, dtype=np.float32).reshape(4, 4)
+    return raster.createRaster(
+        bounds=(0, 0, 400, 400),
+        data=data,
+        pixelWidth=100,
+        pixelHeight=100,
+        srs=EPSG3035,
+    )
+
+
+@pytest.fixture(scope="module")
+def uniform_raster():
+    """In-memory 4x4 raster filled with a constant value (7.0), pixel size 100, bounds (0,0,400,400).
+
+    This is based on the fact that any resampling algorithm applied to a uniform
+    raster must return that same constant value in every output pixel.
+    """
+    data = np.full((4, 4), fill_value=7.0, dtype=np.float32)
+    return raster.createRaster(
+        bounds=(0, 0, 400, 400),
+        data=data,
+        pixelWidth=100,
+        pixelHeight=100,
+        srs=EPSG3035,
+    )
+
+
+@pytest.mark.parametrize(
+    "resample_alg",
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
+)
+def test_warp_resampling(simple_4x4_raster, resample_alg):
+    """Test that each resampling algorithm produces output consistent with its GDAL definition.
+
+    Source: 4x4 raster with values 1..16 (mean=8.5), pixel size 100, warped to pixel size 200.
+    Each output pixel aggregates a 2x2 block of input pixels:
+      top-left [1,2,5,6], top-right [3,4,7,8], bottom-left [9,10,13,14], bottom-right [11,12,15,16]
+
+    Invariants are derived directly from the GDAL API descriptions for each algorithm.
+    """
+    warped = raster.warp(simple_4x4_raster, resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    arr = raster.extractMatrix(warped)
+
+    assert arr.shape == (2, 2), f"Expected (2,2) output for {resample_alg}, got {arr.shape}"
+    assert np.isfinite(arr).all(), f"{resample_alg}: output contains non-finite values"
+
+    input_mean = 8.5  # mean of 1..16
+    input_values = set(range(1, 17))
+    output_mean = float(arr.mean())
+
+    def _warp_mean(alg):
+        return float(
+            raster.extractMatrix(
+                raster.warp(simple_4x4_raster, resampleAlg=alg, pixelHeight=200, pixelWidth=200)
+            ).mean()
+        )
+
+    if resample_alg in ("near", "mode"):
+        # Both pick an existing input value per output pixel — no interpolation.
+        # near: value of the nearest input pixel centre.
+        # mode: value that appears most often among contributing pixels.
+        assert set(arr.flatten().astype(int)).issubset(input_values), (
+            f"{resample_alg}: output contains values not present in the input set"
+        )
+
+    elif resample_alg == "average":
+        # Weighted average of all contributing pixels — preserves the mean exactly.
+        assert np.isclose(output_mean, input_mean, rtol=1e-3), (
+            f"average: output mean {output_mean:.4f} should equal input mean {input_mean}"
+        )
+
+    elif resample_alg == "bilinear":
+        # Bilinear is a distance-weighted average — also preserves the mean for a uniform grid.
+        assert np.isclose(output_mean, input_mean, rtol=0.05), (
+            f"bilinear: output mean {output_mean:.4f} should be close to input mean {input_mean}"
+        )
+
+    elif resample_alg == "rms":
+        # RMS = sqrt(mean(x²)) ≥ arithmetic mean for positive values (power mean inequality).
+        assert output_mean >= _warp_mean("average"), f"rms: output mean {output_mean:.4f} should be >= average mean"
+
+    elif resample_alg == "max":
+        # Selects the maximum of contributing pixels — output mean must exceed the average mean.
+        assert output_mean > _warp_mean("average"), f"max: output mean {output_mean:.4f} should exceed average mean"
+
+    elif resample_alg == "min":
+        # Selects the minimum of contributing pixels — output mean must be below the average mean.
+        assert output_mean < _warp_mean("average"), f"min: output mean {output_mean:.4f} should be below average mean"
+
+    elif resample_alg == "med":
+        # Median lies between the minimum and maximum by definition.
+        assert _warp_mean("min") <= output_mean <= _warp_mean("max"), (
+            f"med: output mean {output_mean:.4f} should be between min and max means"
+        )
+
+    elif resample_alg == "q1":
+        # First quartile ≤ median ≤ third quartile by definition.
+        assert output_mean <= _warp_mean("med"), f"q1: output mean {output_mean:.4f} should be <= med mean"
+
+    elif resample_alg == "q3":
+        # Third quartile ≥ median ≥ first quartile by definition.
+        assert output_mean >= _warp_mean("med"), f"q3: output mean {output_mean:.4f} should be >= med mean"
+
+    elif resample_alg == "sum":
+        # Weighted sum of contributing pixels.
+        # With a clean 2:1 downsampling (4 input pixels → 1 output pixel, full overlap),
+        # each output pixel = sum of its 2x2 input block, so the mean scales by factor 4.
+        expected = input_mean * 4
+        assert np.isclose(output_mean, expected, rtol=1e-3), (
+            f"sum: output mean {output_mean:.4f} should be ~{expected} (input mean × 4)"
+        )
+
+    # cubic, cubicspline, lanczos: convolution-based interpolation that can produce values
+    # outside the input range (ringing). No simple closed-form invariant applies for a
+    # 4x4 input, so shape and finiteness checks above are sufficient.
+
+
+@pytest.mark.parametrize(
+    "resample_alg",
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
+)
+def test_warp_resampling_uniform(uniform_raster, resample_alg):
+    """Any algorithm applied to a uniform raster must return that same constant value.
+
+    This is the one invariant that holds for every algorithm except "sum".
+    """
+    fill_value = 7.0
+    warped = raster.warp(uniform_raster, resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    arr = raster.extractMatrix(warped)
+
+    assert arr.shape == (2, 2), f"Expected (2,2) output for {resample_alg}, got {arr.shape}"
+
+    if resample_alg == "sum":
+        # sum adds all contributing pixels, so a 2:1 downsampling (4 inputs per output)
+        # of a uniform raster with value f produces f * 4, not f.
+        scale = (200 / 100) ** 2
+        assert np.allclose(arr, fill_value * scale, rtol=1e-5), (
+            f"sum: uniform input ({fill_value}) should produce {fill_value * scale} after 2x downsampling, got {arr}"
+        )
+    else:
+        assert np.allclose(arr, fill_value, rtol=1e-5), (
+            f"{resample_alg}: uniform input ({fill_value}) should produce uniform output, got {arr}"
+        )
+
+
+@pytest.mark.parametrize("source_key", ["simple_4x4", "clc"])
+@pytest.mark.parametrize(
+    "resample_alg",
+    [
+        "near",
+        "bilinear",
+        "cubic",
+        "cubicspline",
+        "lanczos",
+        "average",
+        "rms",
+        "mode",
+        "max",
+        "min",
+        "med",
+        "q1",
+        "q3",
+        "sum",
+    ],
+)
+def test_warp_memory_vs_disk_equal(source_key, resample_alg, tmp_path, request):
+    """The in-memory and on-disk warp paths must produce byte-identical output.
+
+    Regression guard for the path unification (issue #168): both paths share one grid definition
+    (geokit.util.canonicalGrid) and the same gdal.WarpOptions, so for identical inputs the only
+    difference is the output driver (MEM vs GTiff), which cannot change pixel values. Exact
+    equality is therefore the correct assertion.
+    """
+    source = request.getfixturevalue("simple_4x4_raster") if source_key == "simple_4x4" else CLC_RASTER_PATH
+    warp_kwargs = dict(resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+
+    mem = raster.warp(source, **warp_kwargs)
+    disk = raster.warp(source, output=str(tmp_path / "warp_mem_vs_disk.tif"), **warp_kwargs)
+
+    assert_raster_equal(mem, disk)
+
+
+def test_warp_cropToCutline_in_memory(tmp_path):
+    """In-memory warp now honours cropToCutline (previously ignored with a warning, issue #168).
+
+    The unified path lets GDAL create the in-memory dataset itself, so the cutline can drive the
+    output extent. The cropped output must be smaller than the un-cropped one and must match the
+    on-disk cropToCutline result exactly.
+    """
+    cutline = geom.box(*AACHEN_SHAPE_EXTENT_3035, srs=EPSG3035)  # a sub-box of the CLC extent
+    common = dict(resampleAlg="near", pixelHeight=200, pixelWidth=200, cutline=cutline, noData=99)
+
+    cropped = raster.warp(CLC_RASTER_PATH, cropToCutline=True, **common)
+    full = raster.warp(CLC_RASTER_PATH, **common)  # cutline applied, but extent NOT cropped
+
+    cropped_shape = raster.extractMatrix(cropped).shape
+    full_shape = raster.extractMatrix(full).shape
+    assert cropped_shape != full_shape, "cropToCutline should shrink the in-memory output extent"
+    assert cropped_shape[0] <= full_shape[0] and cropped_shape[1] <= full_shape[1]
+
+    disk = raster.warp(CLC_RASTER_PATH, output=str(tmp_path / "crop.tif"), cropToCutline=True, **common)
+    assert_raster_equal(cropped, disk)
+
+
+def test_warp_cropToCutline_requires_cutline():
+    """CropToCutline without a cutline is a user error, not a silent no-op."""
+    with pytest.raises(GeoKitRasterError):
+        raster.warp(CLC_RASTER_PATH, resampleAlg="near", pixelHeight=200, pixelWidth=200, cropToCutline=True)
+
+
+def test_warp_provenance_metadata(tmp_path):
+    """Every warp output is stamped with the toolchain versions + resampling algorithm."""
+    expected_keys = (
+        "GEOKIT_PROVENANCE_GDAL_VERSION",
+        "GEOKIT_PROVENANCE_PROJ_VERSION",
+        "GEOKIT_PROVENANCE_GEOKIT_VERSION",
+        "GEOKIT_PROVENANCE_RESAMPLE_ALG",
+    )
+    warp_kwargs = dict(resampleAlg="cubic", pixelHeight=200, pixelWidth=200)
+
+    mem = raster.warp(CLC_RASTER_PATH, **warp_kwargs)
+    disk_path = str(tmp_path / "prov.tif")
+    raster.warp(CLC_RASTER_PATH, output=disk_path, **warp_kwargs)
+
+    for ds in (mem, raster.loadRaster(disk_path)):
+        for key in expected_keys:
+            assert ds.GetMetadataItem(key), f"missing provenance key {key}"
+        assert ds.GetMetadataItem("GEOKIT_PROVENANCE_GDAL_VERSION") == gdal.__version__
+        assert ds.GetMetadataItem("GEOKIT_PROVENANCE_RESAMPLE_ALG") == "cubic"
+
+
+RESAMPLE_ALGS = [
+    "near",
+    "bilinear",
+    "cubic",
+    "cubicspline",
+    "lanczos",
+    "average",
+    "rms",
+    "mode",
+    "max",
+    "min",
+    "med",
+    "q1",
+    "q3",
+    "sum",
+]
+
+# The committed goldens are generated on x86_64; Linux and Windows runners reproduce them at full
+# accuracy, so the golden canary compares them exactly there. Only platforms whose GDAL build deviates
+# from the x86_64 reference get a tolerance -- currently just macOS/arm64, where the interpolating
+# kernels differ in the low-order bits (and the Int16 case additionally flips by +-1 when that
+# difference straddles a rounding boundary). Keeping the strict comparison on Linux/Windows means the
+# canary still catches a real numeric regression there; warp() emits its own macOS/arm64 warning.
+_TOLERANT_RESAMPLE_PLATFORMS = {"darwin"}
+# atol=1 covers the worst case (one Int16 rounding step); rtol adds headroom proportional to magnitude.
+_GOLDEN_RTOL = 1e-3
+_GOLDEN_ATOL = 1.0
+
+
+@pytest.fixture(scope="session")
+def resampling_test_rasters():
+    """Load each warp test-case raster (integer + float, both with nodata) once per session.
+
+    The rasters are read from their committed files under geokit/data/raster_data/input_data rather
+    than rebuilt in memory, so the inputs the tests run against are exactly what is checked into the
+    repo (see test.test_case_creator).
+    """
+    return {name: load_test_raster(name) for name in TEST_CASE_NAMES}
+
+
+@pytest.mark.parametrize("case", list(TEST_CASE_NAMES))
+@pytest.mark.parametrize("resample_alg", RESAMPLE_ALGS)
+def test_warp_resampling_golden(resampling_test_rasters, case, resample_alg):
+    """Golden-regression canary: warp output must match the committed reference (issue #168).
+
+    Each test-case raster (an integer and a float raster, both carrying a nodata region, see
+    test.test_case_creator) is downsampled with every algorithm and compared, via
+    assert_raster_equal, against a GeoTIFF checked into
+    geokit/data/raster_data/golden_regression_results. Because the warp is deterministic
+    (single-threaded, explicit grid), a mismatch means the resampling numerics changed -- almost
+    always a GDAL upgrade. The comparison ignores metadata, so the provenance stamp never causes a
+    false failure.
+
+    On Linux and Windows the output is compared to the golden exactly (full accuracy), so the canary
+    still fires on a genuine numeric regression there. On platforms that deviate from the x86_64
+    reference (_TOLERANT_RESAMPLE_PLATFORMS -- currently macOS/arm64) the comparison uses a tolerance,
+    because GDAL's floating-point kernels differ in the low-order bits and the Int16 case rounds those
+    differences to +-1; without it the canary is red on every Apple-Silicon runner for benign hardware
+    noise. warp() emits its own macOS/arm64 warning, so the looser comparison is never silent.
+
+    References are generated automatically on first run (the test is skipped). To regenerate after a
+    deliberate toolchain change, run with GEOKIT_REGEN_GOLDEN=1 and commit the updated files.
+    """
+    source = resampling_test_rasters[case]
+    warp_kwargs = dict(resampleAlg=resample_alg, pixelHeight=200, pixelWidth=200)
+    golden_path = golden_raster_path(case, resample_alg)
+
+    if os.environ.get("GEOKIT_REGEN_GOLDEN") or not os.path.isfile(golden_path):
+        os.makedirs(os.path.dirname(golden_path), exist_ok=True)
+        raster.warp(source, output=golden_path, overwrite=True, **warp_kwargs)
+        pytest.skip(f"(re)generated golden reference for '{case}/{resample_alg}': {golden_path}")
+
+    produced = raster.warp(source, **warp_kwargs)
+
+    if sys.platform in _TOLERANT_RESAMPLE_PLATFORMS:
+        assert_raster_equal(golden_path, produced, rtol=_GOLDEN_RTOL, atol=_GOLDEN_ATOL)
+    else:
+        assert_raster_equal(golden_path, produced)
+
+
+@pytest.mark.parametrize("case", list(TEST_CASE_NAMES))
+@pytest.mark.parametrize("resample_alg", RESAMPLE_ALGS)
+def test_warp_resampling_nodata_respected(resampling_test_rasters, case, resample_alg):
+    """Wherever the source is entirely nodata, every algorithm must output nodata and preserve it.
+
+    'average' marks an output pixel nodata only when every contributing source pixel is nodata --
+    the minimal 'fully nodata' set. No algorithm can synthesise valid data there, so that set must
+    be nodata for every algorithm. (Kernel algorithms like near/bilinear additionally spread nodata
+    into partially-covered pixels; that wider behaviour is captured by the golden test above.)
+    """
+    source = resampling_test_rasters[case]
+    nodata = raster.rasterInfo(source).noData
+    warp_kwargs = dict(pixelHeight=200, pixelWidth=200)
+
+    out = raster.warp(source, resampleAlg=resample_alg, **warp_kwargs)
+    assert raster.rasterInfo(out).noData == nodata, f"{case}/{resample_alg}: output lost the nodata value"
+
+    out_mat = raster.extractMatrix(out)
+    core_nodata = raster.extractMatrix(raster.warp(source, resampleAlg="average", **warp_kwargs)) == nodata
+    assert core_nodata.any(), "expected some fully-nodata output pixels in the test raster"
+    assert (out_mat[core_nodata] == nodata).all(), (
+        f"{case}/{resample_alg}: produced valid data over a fully-nodata region"
+    )
+
+
 def test_warpLike():
     _rstr = raster.warpLike(
         dataSource=SINGLE_HILL_PATH,
@@ -871,7 +1246,7 @@ def test_warp_meta_argument_hard_drive():
 # def test_():
 #     # generate the same raster twice, once with and once without srs
 #     arr = np.array([[50, 100, 150], [200, 250, 255]])
-#     rstr_withsrs = geokit.core.raster.createRaster(
+#     rstr_withsrs = geokit.raster.createRaster(
 #         data=arr,
 #         bounds=(0, 0, 3, 2),
 #         pixelWidth=1,
@@ -928,8 +1303,8 @@ def test_warp_meta_argument_hard_drive():
 #     # output=intermediate_raster_tif_str,
 # )
 
-# raster_warped = geokit.core.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
-# raster_warped_matrix = geokit.core.raster.extractMatrix(source=raster_warped)
+# raster_warped = geokit.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
+# raster_warped_matrix = geokit.raster.extractMatrix(source=raster_warped)
 # print(raster_warped_matrix)
 # pass
 

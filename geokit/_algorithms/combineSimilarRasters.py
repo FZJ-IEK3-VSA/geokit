@@ -7,15 +7,15 @@ from warnings import warn
 import numpy as np
 from osgeo import gdal
 
-from geokit.core.raster import RasterInfo
-from geokit.core.regionmask import *
-from geokit.core.util import nodata_equal
+from geokit.regionmask import *
 from geokit.raster import (
+    RasterInfo,
     createRaster,
     extractMatrix,
     loadRaster,
     rasterInfo,
 )
+from geokit.util import nodata_equal
 from geokit.error import GeoKitError
 from geokit.c_data_type_handler import MinimumCDataTypeHandler
 

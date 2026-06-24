@@ -1,7 +1,7 @@
-import geokit.core.util
+import geokit.util
 from geokit import util
-from geokit.core.srs import loadSRS
-from geokit.core.raster import rasterInfo, extractMatrix
+from geokit.srs import loadSRS
+from geokit.raster import rasterInfo, extractMatrix
 from test.helpers import AACHEN_SHAPE_PATH, CLC_RASTER_PATH, MASK_DATA, np
 
 
@@ -122,7 +122,7 @@ def test_fitBoundsTo():
 
 def test_quickRaster():
     load_srs = loadSRS(source=4326)
-    new_raster = geokit.core.util.quickRaster(bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, noData=-9999)
+    new_raster = geokit.util.quickRaster(bounds=(0, 0, 4, 4), srs=load_srs, dx=1, dy=1, noData=-9999)
     extracted_raster = extractMatrix(source=new_raster)
     raster_for_comparison = np.array(
         [
