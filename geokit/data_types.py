@@ -7,7 +7,7 @@ import matplotlib.lines
 import matplotlib.patches
 import numpy as np
 import osgeo.ogr
-import pandas.core.series
+import pandas as pd
 from matplotlib.axes._axes import Axes
 from osgeo import gdal, osr
 from packaging.version import Version
@@ -16,7 +16,7 @@ from packaging.version import Version
 class AxHands(NamedTuple):
     ax: Axes
     handles: (
-        pandas.core.series.Series
+        pd.Series
         | matplotlib.image.AxesImage
         | list[matplotlib.patches.PathPatch | matplotlib.lines.Line2D]
         | list[list[matplotlib.lines.Line2D | matplotlib.patches.PathPatch]]

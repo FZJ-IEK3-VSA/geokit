@@ -132,6 +132,12 @@ def ogrType(s):
 
     elif s is str:
         return "OFTString"
+    elif isinstance(s, pd.api.extensions.ExtensionDtype):
+        # pandas >=3.0 infers string columns as StringDtype (and nullable
+        # Int64/Float64/boolean) instead of the numpy 'object' dtype. These
+        # are ExtensionDtypes, not np.dtype, so map them via their name
+        # (e.g. 'string' -> OFTString, 'Int64' -> OFTInteger64).
+        return ogrType(s.name)
     elif isinstance(s, np.dtype):
         return ogrType(str(s))
     elif isinstance(s, np.generic):
