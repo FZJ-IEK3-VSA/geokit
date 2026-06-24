@@ -416,6 +416,49 @@ def fitBoundsTo(
     return xMin, yMin, xMax, yMax
 
 
+def canonicalGrid(
+    bounds: tuple[numeric, numeric, numeric, numeric],
+    dx: numeric,
+    dy: numeric,
+    tol: float = 1e-6,
+) -> tuple[tuple[float, float, float, float], int, int]:
+    """Return the canonical snapped bounds and exact integer (cols, rows) for a pixel grid.
+
+    This is the single source of truth for translating a (bounds, resolution) request into a
+    concrete raster grid, so that the in-memory and on-disk warp paths (and quickRaster) always
+    agree.
+
+    Parameters
+    ----------
+    bounds : tuple[numeric, numeric, numeric, numeric]
+        The (xMin, yMin, xMax, yMax) request, snapped to the pixel grid via fitBoundsTo.
+    dx : numeric
+        The pixel width in x direction.
+    dy : numeric
+        The pixel height in y direction (sign is ignored).
+    tol : float, optional
+        Relative tolerance for accepting a span as an integer pixel count, by default 1e-6.
+
+    Returns
+    -------
+    tuple
+        ((xMin, yMin, xMax, yMax), cols, rows) with the bounds snapped to the grid and integer
+        pixel counts.
+    """
+    xMin, yMin, xMax, yMax = fitBoundsTo(bounds, dx, dy)
+
+    def _count(span: numeric, res: numeric) -> int:
+        n = span / abs(res)
+        nearest = round(n)
+        if abs(n - nearest) > tol * max(1.0, nearest):
+            raise GeoKitError(
+                "bounds span %s is not an integer multiple of resolution %s (got %s pixels)" % (span, res, n)
+            )
+        return int(nearest)
+
+    return (xMin, yMin, xMax, yMax), _count(xMax - xMin, dx), _count(yMax - yMin, dy)
+
+
 def _check_fill_return_code(fill_return_code):
     # if =CE_None
     pass

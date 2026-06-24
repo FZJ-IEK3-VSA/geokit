@@ -19,6 +19,11 @@ def result(s):
     return join(dirname(__file__), RESULT, s)
 
 
+# Committed warp test data (input rasters + golden regression outputs) lives under
+# geokit/data/raster_data; its paths are owned by test.test_case_creator (input_raster_path /
+# golden_raster_path), the single source of truth for the warp resampling test cases.
+
+
 ### make working items
 EPSG4326 = osr.SpatialReference()
 if gdal.__version__ >= "3.0.0":
@@ -159,3 +164,66 @@ def vis(mat, points=None):
         plt.plot(points[1], points[0], "o")
 
     plt.show()
+
+
+def assert_raster_equal(a, b, *, atol=0, rtol=1e-5):
+    """Assert two rasters describe the same grid and hold the same values.
+
+    `a` and `b` may each be a file path or a gdal.Dataset. Compares the full grid definition
+    (bounds, pixel size, SRS, noData, dtype) and the pixel matrix with ``numpy.isclose`` (default
+    atol=0, rtol=1e-5 -- i.e. effectively exact). Used to prove the in-memory and on-disk warp paths
+    produce byte-identical output; the golden canary loosens ``atol``/``rtol`` for the interpolating
+    resampling algorithms, whose low-order bits differ between CPU architectures.
+    """
+    import math
+
+    import numpy as _np
+
+    from geokit import raster as _raster
+
+    ia = _raster.rasterInfo(a)
+    ib = _raster.rasterInfo(b)
+
+    assert _np.allclose(ia.bounds, ib.bounds, atol=0), f"bounds differ: {ia.bounds} vs {ib.bounds}"
+    assert (ia.dx, ia.dy) == (ib.dx, ib.dy), f"pixel size differs: {(ia.dx, ia.dy)} vs {(ib.dx, ib.dy)}"
+    assert ia.srs.IsSame(ib.srs), "SRS differs"
+    assert ia.dtype == ib.dtype, f"dtype differs: {ia.dtype} vs {ib.dtype}"
+
+    na, nb = ia.noData, ib.noData
+    nan_a = isinstance(na, float) and math.isnan(na)
+    nan_b = isinstance(nb, float) and math.isnan(nb)
+    assert (na is None and nb is None) or (nan_a and nan_b) or na == nb, f"noData differs: {na} vs {nb}"
+
+    ma = _raster.extractMatrix(a)
+    mb = _raster.extractMatrix(b)
+    assert ma.shape == mb.shape, f"matrix shape differs: {ma.shape} vs {mb.shape}"
+
+    # isclose(...).all() is exactly what allclose does; computing the boolean mask first lets us
+    # report *where* and *by how much* the rasters disagree instead of a bare "pixel values differ".
+    close = _np.isclose(ma, mb, atol=atol, rtol=rtol, equal_nan=True)
+    if not close.all():
+        mism = ~close
+        n_bad = int(mism.sum())
+        diff = _np.abs(ma.astype("float64") - mb.astype("float64"))
+        max_abs = float(_np.nanmax(diff[mism]))
+        rel = diff / _np.maximum(_np.abs(mb.astype("float64")), _np.finfo("float64").tiny)
+        max_rel = float(_np.nanmax(rel[mism]))
+
+        # show the few worst-offending pixels with both values, for an immediately actionable report
+        ys, xs = _np.where(mism)
+        worst = _np.argsort(_np.nan_to_num(diff[mism], nan=_np.inf))[::-1][:5]
+        samples = "\n".join(
+            f"    [{int(ys[i])},{int(xs[i])}] a={ma[ys[i], xs[i]]!r} b={mb[ys[i], xs[i]]!r} "
+            f"|Δ|={diff[ys[i], xs[i]]:.6g}"
+            for i in worst
+        )
+        raise AssertionError(
+            f"pixel values differ (atol={atol}, rtol={rtol}):\n"
+            f"  {n_bad}/{ma.size} pixels mismatch ({100 * n_bad / ma.size:.2f}%)\n"
+            f"  max |Δ|={max_abs:.6g}  max relative Δ={max_rel:.3g}\n"
+            f"  dtype={ma.dtype}->{mb.dtype}  worst offenders (y,x):\n{samples}"
+        )
+
+
+# The deterministic warp test rasters now live in test/test_case_creator (build_test_raster); they
+# are no longer defined here so there is a single source of truth.

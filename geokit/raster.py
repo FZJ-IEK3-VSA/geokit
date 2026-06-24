@@ -43,6 +43,10 @@ else:
     COMPRESSION_OPTION = ["COMPRESS=DEFLATE"]
     COMPRESSION_OPTION_STR = "DEFLATE"
 
+# Deterministic warp defaults. Pinned so a future GDAL default change cannot silently move study
+# outputs, and so the floating-point summation order in average/sum/rms is reproducible.
+DETERMINISTIC_WARP_OPTIONS = ["NUM_THREADS=1"]
+
 # Basic Loader
 
 
@@ -2390,6 +2394,63 @@ def contours(
     return countour_data_frame
 
 
+def _stampProvenance(raster_ds: gdal.Dataset, resampleAlg) -> None:
+    """Write toolchain provenance into the output raster's default metadata domain.
+
+    Records the GDAL, PROJ and GeoKit versions plus the resampling algorithm so a study output
+    self-documents the toolchain that produced it -- making cross-version differences in geospatial
+    results explainable after the fact. Keys are namespaced with ``GEOKIT_PROVENANCE_`` and stored in
+    the default domain so they travel inside the file (no .aux.xml sidecar).
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        geokit_version = version("geokit")
+    except PackageNotFoundError:
+        geokit_version = "unknown"
+
+    proj_version = f"{osr.GetPROJVersionMajor()}.{osr.GetPROJVersionMinor()}.{osr.GetPROJVersionMicro()}"
+    provenance = {
+        "GEOKIT_PROVENANCE_GDAL_VERSION": gdal.__version__,
+        "GEOKIT_PROVENANCE_PROJ_VERSION": proj_version,
+        "GEOKIT_PROVENANCE_GEOKIT_VERSION": geokit_version,
+        "GEOKIT_PROVENANCE_RESAMPLE_ALG": str(resampleAlg),
+    }
+    for key, value in provenance.items():
+        raster_ds.SetMetadataItem(key, value)
+
+
+# Resampling algorithms that select an existing source value (near/mode/min/max/med/q1/q3/sum) do no
+# floating-point arithmetic, so their output is bit-identical across CPU architectures. The remaining
+# algorithms (bilinear/cubic/cubicspline/lanczos/average/rms) do floating-point convolution, division
+# or sqrt; GDAL's x86_64 and arm64 builds differ in the low-order bits, so for those the warp output
+# is not bit-reproducible across architectures (see test_warp_resampling_golden).
+EXACT_RESAMPLE_ALGS = frozenset({"near", "mode", "min", "max", "med", "q1", "q3", "sum"})
+
+_RESAMPLE_ARCH_WARNED = False
+
+
+def _warnNonReproducibleResampling(resampleAlg) -> None:
+    """Warn once when an interpolating resampling algorithm runs on macOS/arm64.
+
+    GDAL's floating-point resampling kernels differ in the low-order bits between the x86_64 builds
+    used to generate geokit's reference outputs and the arm64 build on Apple Silicon, so warp results
+    there are not bit-reproducible. The value-selecting algorithms (``EXACT_RESAMPLE_ALGS``) are
+    unaffected and never warn. Fires at most once per process to avoid flooding bulk-warp workflows.
+    """
+    global _RESAMPLE_ARCH_WARNED
+    if _RESAMPLE_ARCH_WARNED or sys.platform != "darwin" or str(resampleAlg) in EXACT_RESAMPLE_ALGS:
+        return
+    _RESAMPLE_ARCH_WARNED = True
+    warnings.warn(
+        f"warp: resampling algorithm {str(resampleAlg)!r} uses floating-point interpolation, whose "
+        "low-order bits differ between CPU architectures. This process runs on macOS/arm64, so its "
+        "output is not bit-reproducible with x86_64 reference outputs. Value-selecting algorithms "
+        f"({', '.join(sorted(EXACT_RESAMPLE_ALGS))}) are unaffected.",
+        stacklevel=3,
+    )
+
+
 def warp(
     source: load_raster_input,
     resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
@@ -2403,6 +2464,12 @@ def warp(
     noData: numeric | None = None,
     overwrite: bool = True,
     meta: None | dict[str, str] = None,
+    cropToCutline: bool = False,
+    copyMetadata: bool = True,
+    targetAlignedPixels: bool = True,
+    multithread: bool = False,
+    creationOptions: list[str] | None = None,
+    warpOptions: list[str] | None = None,
     **kwargs,
 ) -> gdal.Dataset | str:
     """Warps a given raster source to another context.
@@ -2411,8 +2478,13 @@ def warp(
 
     Note:
     -----
-    Unless manually altered as keyword arguments, the gdal.Warp options
-    'targetAlignedPixels' and 'copyMetadata' are both set to True
+    The in-memory and on-disk outputs are produced from one shared grid definition
+    (geokit.util.canonicalGrid) and the same gdal.Warp options, so they are byte-identical.
+    The output grid is pinned with an explicit width/height to avoid GDAL inventing a spurious
+    edge row/column; the warp is run single-threaded for reproducible results. 'copyMetadata'
+    defaults to True and the output is stamped with toolchain-provenance metadata
+    (keys prefixed 'GEOKIT_PROVENANCE_'). 'cropToCutline' is honoured for both in-memory and
+    on-disk outputs (it requires a 'cutline').
 
     Parameters
     ----------
@@ -2465,21 +2537,37 @@ def warp(
     meta: dict; optional: contains a key value pair that is passed to the
           output gdal.dataset using the SetMetadataItem method.
 
+    cropToCutline : bool; optional
+        If True, the output extent is set to the cutline's bounding box. Requires 'cutline'.
+        Honoured for both in-memory and on-disk outputs. Defaults to False.
+
+    copyMetadata : bool; optional
+        If True, copy the source metadata onto the output. Defaults to True.
+
+    targetAlignedPixels : bool; optional
+        Whether to force the output bounds to be a multiple of the output resolution. Only used
+        when cropToCutline is True; otherwise the output grid is pinned explicitly and this is
+        ignored. Defaults to True.
+
+    multithread : bool; optional
+        Whether to multithread the warp. Defaults to False for deterministic, reproducible output
+        (the floating-point summation order of average/sum/rms then does not depend on thread count).
+
+    creationOptions : list of str; optional
+        GDAL creation options for the on-disk output. Defaults to the platform compression option.
+
+    warpOptions : list of str; optional
+        GDAL warp options (name=value strings). Defaults to a deterministic single-threaded
+        configuration (NUM_THREADS=1).
+
     **kwargs:
-        * All keyword arguments are passed on to a call to gdal.WarpOptions
+        * Any further keyword arguments are passed on to a call to gdal.WarpOptions
         * Use these to fine-tune the warping procedure
-        * Key Options are (from gdal.WarpOptions):
-            format --- output format ("GTiff", etc...)
-            targetAlignedPixels --- whether to force output bounds to be multiple
-                                    of output resolution
+        * Example options (from gdal.WarpOptions):
             workingType --- working type (gdal.GDT_Byte, etc...)
             warpMemoryLimit --- size of working buffer in bytes
-            creationOptions --- list of creation options
             srcNodata --- source nodata value(s)
-            dstNodata --- output nodata value(s)
-            multithread --- whether to multithread computation and I/O operations
             cutlineWhere --- cutline WHERE clause
-            cropToCutline --- whether to use cutline extent for output bounds
             setColorInterpretation --- whether to force color interpretation of
                                        input bands to output bands
 
@@ -2488,13 +2576,11 @@ def warp(
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
+    _warnNonReproducibleResampling(resampleAlg)
+
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(sourceDS=source, compute_statistics=True)
-    if dsInfo.scale != 1.0 or dsInfo.offset != 0.0:
-        isAdjusted = True
-    else:
-        isAdjusted = False
 
     # Handle potentially missing arguments
     if srs is not None:
@@ -2561,10 +2647,54 @@ def warp(
         else:
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
+    # Single dtype decision shared by both the on-disk and in-memory paths (outputType is a GDAL
+    # constant and format-agnostic, so there is no need for a separate string/constant code path).
+    gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
+        list_of_numbers=list_of_numbers,
+        minimum_gdal_type_list=list_of_datatypes,
+        user_defined_minimum_gdal_type=dtype,
+    )
+
+    # Build one set of warp options shared by both the on-disk and in-memory paths so they produce
+    # byte-identical output. When cropToCutline is requested the cutline drives the output extent,
+    # so we must NOT pin an explicit grid (outputBounds/width/height conflict with cropToCutline in
+    # gdalwarp). Otherwise we compute one canonical grid (UTIL.canonicalGrid) and hand GDAL an
+    # explicit width/height so it has no rounding freedom to invent a spurious edge row/column
+    # ("phantom pixel") -- this replaces the historical 0.001*pixel bounds nudge.
+    if cropToCutline and cutline is None:
+        raise GeoKitRasterError("cropToCutline=True requires a 'cutline' to be given")
+
+    shared_warp_options = dict(
+        outputType=gdal_data_type_constant,
+        dstSRS=srs,
+        dstNodata=noDataRead,
+        resampleAlg=resampleAlg,
+        cutlineDSName=cutline,
+        copyMetadata=copyMetadata,
+        # Pin determinism: single-threaded warp -> reproducible floating-point summation order.
+        multithread=multithread,
+        warpOptions=DETERMINISTIC_WARP_OPTIONS if warpOptions is None else warpOptions,
+    )
+    if cropToCutline:
+        shared_warp_options.update(
+            xRes=pixelWidth,
+            yRes=pixelHeight,
+            cropToCutline=True,
+            targetAlignedPixels=targetAlignedPixels,
+        )
+    else:
+        # targetAlignedPixels is intentionally not used here: the explicit width/height pins the grid.
+        (xMin, yMin, xMax, yMax), cols, rows = UTIL.canonicalGrid(bounds, pixelWidth, pixelHeight)
+        shared_warp_options.update(
+            outputBounds=(xMin, yMin, xMax, yMax),
+            width=cols,
+            height=rows,
+        )
+
     # Workflow depends on whether or not we have an output
     if isinstance(output, pathlib.Path):
         output = str(output)
-    if isinstance(output, str):  # Simply do a translate
+    if isinstance(output, str):  # Write to disk
         if os.path.isfile(output):
             if overwrite is True:
                 os.remove(output)
@@ -2573,88 +2703,37 @@ def warp(
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
-        gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-            list_of_numbers=list_of_numbers,
-            minimum_gdal_type_list=list_of_datatypes,
-            user_defined_minimum_gdal_type=dtype,
-        )
-
-        # # Check some for bad input configurations
-        # if not srs is None:
-        #     if (pixelHeight is None or pixelWidth is None):
-        #         raise GeoKitRasterError("When warping between srs's and writing to a file, pixelWidth and pixelHeight must be given")
-
-        # Arange inputs
-        co = kwargs.pop("creationOptions", COMPRESSION_OPTION)
-        copyMeta = kwargs.pop("copyMetadata", True)
-        aligned = kwargs.pop("targetAlignedPixels", True)
-
-        # Fix the bounds issue by making them  just a little bit smaller, which should be fixed by gdalwarp
-        bounds = (
-            bounds[0] + 0.001 * pixelWidth,
-            bounds[1] + 0.001 * pixelHeight,
-            bounds[2] - 0.001 * pixelWidth,
-            bounds[3] - 0.001 * pixelHeight,
-        )
-
-        # Let gdalwarp do everything...
         gdal_warp_options = gdal.WarpOptions(
-            outputType=gdal_data_type_constant,
-            xRes=pixelWidth,
-            yRes=pixelHeight,
-            creationOptions=co,
-            outputBounds=bounds,
-            dstSRS=srs,
-            dstNodata=noDataRead,
-            resampleAlg=resampleAlg,
-            copyMetadata=copyMeta,
-            targetAlignedPixels=aligned,
-            cutlineDSName=cutline,
+            format="GTiff",
+            creationOptions=COMPRESSION_OPTION if creationOptions is None else creationOptions,
+            **shared_warp_options,
             **kwargs,
         )
-
-        result_dataset = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
-        if not UTIL.isRaster(result_dataset):
+        output_dataset = gdal.Warp(destNameOrDestDS=output, srcDSOrSrcDSTab=source, options=gdal_warp_options)
+        if not UTIL.isRaster(output_dataset):
             raise GeoKitRasterError("Failed to translate raster")
 
         destination_raster = output
 
-    else:
-        if "cropToCutline" in kwargs:
-            msg = "The 'cropToCutline' option is not taken into account when writing to a raster in memory. Try using geokit.Extent.warp instead"
-            warnings.warn(msg, UserWarning)
-        gdal_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-            list_of_numbers=list_of_numbers,
-            minimum_gdal_type_list=list_of_datatypes,
-            user_defined_minimum_gdal_type=dtype,
-        )
+    else:  # Warp to a raster in memory (GDAL creates the MEM grid the same way as the on-disk grid)
+        gdal_warp_options = gdal.WarpOptions(format="MEM", **shared_warp_options, **kwargs)
+        output_dataset = gdal.Warp("", source, options=gdal_warp_options)
+        if not UTIL.isRaster(output_dataset):
+            raise GeoKitRasterError("Failed to warp raster in memory")
+        destination_raster = output_dataset
 
-        # Warp to a raster in memory
-        destination_raster = UTIL.quickRaster(
-            bounds=bounds,
-            srs=srs,
-            dx=pixelWidth,
-            dy=pixelHeight,
-            dtype=gdal_data_type_string,
-            noData=noDataRead,
-        )
-
-        # Do a warp
-        result_dataset = gdal.Warp(destination_raster, source, resampleAlg=resampleAlg, cutlineDSName=cutline, **kwargs)
-
-        destination_raster.FlushCache()
-    # Do we have meta data?
+    # Stamp provenance (toolchain versions) and apply any user metadata directly on the open warp
+    # handle. NB: do NOT re-open an on-disk output here -- the warp handle is still open and unflushed,
+    # and a second open of the same file would corrupt it (yielding an all-noData raster).
+    _stampProvenance(output_dataset, resampleAlg)
     if meta is not None:
-        if isinstance(destination_raster, str):
-            loaded_output_raster = loadRaster(destination_raster, 1)
-        else:
-            loaded_output_raster = destination_raster
-
         for k, v in meta.items():
-            loaded_output_raster.SetMetadataItem(k, v)
+            output_dataset.SetMetadataItem(k, v)
 
-        # FlushCache writes all changes to disk
-        loaded_output_raster.FlushCache()
+    # FlushCache writes all changes; closing the on-disk handle finalises the file on disk.
+    output_dataset.FlushCache()
+    if isinstance(destination_raster, str):
+        output_dataset = None
 
     if cutline is not None:
         del tempdir
