@@ -1246,7 +1246,7 @@ def test_warp_meta_argument_hard_drive():
 # def test_():
 #     # generate the same raster twice, once with and once without srs
 #     arr = np.array([[50, 100, 150], [200, 250, 255]])
-#     rstr_withsrs = geokit.core.raster.createRaster(
+#     rstr_withsrs = geokit.raster.createRaster(
 #         data=arr,
 #         bounds=(0, 0, 3, 2),
 #         pixelWidth=1,
@@ -1303,8 +1303,8 @@ def test_warp_meta_argument_hard_drive():
 #     # output=intermediate_raster_tif_str,
 # )
 
-# raster_warped = geokit.core.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
-# raster_warped_matrix = geokit.core.raster.extractMatrix(source=raster_warped)
+# raster_warped = geokit.raster.warp(source=raster, pixelWidth=1, pixelHeight=1, noData=255, fill=-9999)
+# raster_warped_matrix = geokit.raster.extractMatrix(source=raster_warped)
 # print(raster_warped_matrix)
 # pass
 
