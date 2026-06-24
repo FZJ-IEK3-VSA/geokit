@@ -19,7 +19,6 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-import pandas.core.series
 from matplotlib.axes._axes import Axes
 from matplotlib.axis import Axis
 from osgeo import gdal, ogr, osr

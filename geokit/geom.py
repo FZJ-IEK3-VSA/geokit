@@ -1365,7 +1365,10 @@ def drawGeoms(
     # make patches
     handles = []
     if not pargs is None:
-        s = [not v is None for v in pargs.iloc[gi]]
+        # Drop unset args. pandas >=3.0 stores missing values in string
+        # columns as NaN rather than None, so filter both (guarding is_scalar
+        # so non-scalar args such as RGBA tuples are not treated as NA).
+        s = [not (pd.api.types.is_scalar(v) and pd.isna(v)) for v in pargs.iloc[gi]]
         plotargs = pargs.iloc[gi, s].to_dict()
     else:
         plotargs = dict()
