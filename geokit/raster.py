@@ -2420,6 +2420,37 @@ def _stampProvenance(raster_ds: gdal.Dataset, resampleAlg) -> None:
         raster_ds.SetMetadataItem(key, value)
 
 
+# Resampling algorithms that select an existing source value (near/mode/min/max/med/q1/q3/sum) do no
+# floating-point arithmetic, so their output is bit-identical across CPU architectures. The remaining
+# algorithms (bilinear/cubic/cubicspline/lanczos/average/rms) do floating-point convolution, division
+# or sqrt; GDAL's x86_64 and arm64 builds differ in the low-order bits, so for those the warp output
+# is not bit-reproducible across architectures (see test_warp_resampling_golden).
+EXACT_RESAMPLE_ALGS = frozenset({"near", "mode", "min", "max", "med", "q1", "q3", "sum"})
+
+_RESAMPLE_ARCH_WARNED = False
+
+
+def _warnNonReproducibleResampling(resampleAlg) -> None:
+    """Warn once when an interpolating resampling algorithm runs on macOS/arm64.
+
+    GDAL's floating-point resampling kernels differ in the low-order bits between the x86_64 builds
+    used to generate geokit's reference outputs and the arm64 build on Apple Silicon, so warp results
+    there are not bit-reproducible. The value-selecting algorithms (``EXACT_RESAMPLE_ALGS``) are
+    unaffected and never warn. Fires at most once per process to avoid flooding bulk-warp workflows.
+    """
+    global _RESAMPLE_ARCH_WARNED
+    if _RESAMPLE_ARCH_WARNED or sys.platform != "darwin" or str(resampleAlg) in EXACT_RESAMPLE_ALGS:
+        return
+    _RESAMPLE_ARCH_WARNED = True
+    warnings.warn(
+        f"warp: resampling algorithm {str(resampleAlg)!r} uses floating-point interpolation, whose "
+        "low-order bits differ between CPU architectures. This process runs on macOS/arm64, so its "
+        "output is not bit-reproducible with x86_64 reference outputs. Value-selecting algorithms "
+        f"({', '.join(sorted(EXACT_RESAMPLE_ALGS))}) are unaffected.",
+        stacklevel=3,
+    )
+
+
 def warp(
     source: load_raster_input,
     resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
@@ -2545,6 +2576,8 @@ def warp(
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
+    _warnNonReproducibleResampling(resampleAlg)
+
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(sourceDS=source, compute_statistics=True)
