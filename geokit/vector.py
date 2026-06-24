@@ -7,7 +7,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from tempfile import TemporaryDirectory
-from typing import Generator
+from typing import BinaryIO, Generator
 
 import geopandas as gpd
 import numpy as np
@@ -154,6 +154,40 @@ def ogrType(s):
         return ogrType(s[0])
 
     raise ValueError("OGR type could not be determined")
+
+
+# Mapping of geometry names to their OGR wkb type, used to resolve a
+# user-supplied geometry type in createVector()
+_geomNameToWkb = {
+    "POINT": ogr.wkbPoint,
+    "MULTIPOINT": ogr.wkbMultiPoint,
+    "LINE": ogr.wkbLineString,
+    "LINESTRING": ogr.wkbLineString,
+    "MULTILINESTRING": ogr.wkbMultiLineString,
+    "POLYGON": ogr.wkbPolygon,
+    "MULTIPOLYGON": ogr.wkbMultiPolygon,
+    "UNKNOWN": ogr.wkbUnknown,
+}
+
+
+def ogrGeomType(geomType):
+    """Resolve a user-supplied geometry type into an OGR wkb* constant.
+
+    Accepts:
+      * an OGR wkb* integer constant (returned unchanged)
+      * an OGR attribute name, e.g. 'wkbPolygon'
+      * a geometry name, e.g. 'POLYGON', 'point', 'MultiLineString'
+    """
+    if isinstance(geomType, int):
+        return geomType
+    if isinstance(geomType, str):
+        # Allow direct ogr attribute names like 'wkbPolygon'
+        if geomType.startswith("wkb") and hasattr(ogr, geomType):
+            return getattr(ogr, geomType)
+        key = geomType.replace(" ", "").upper()
+        if key in _geomNameToWkb:
+            return _geomNameToWkb[key]
+    raise GeoKitVectorError(f"Could not resolve geomType: {geomType!r}")
 
 
 def filterLayer(layer, geom=None, where=None):
@@ -828,14 +862,16 @@ def extractAndClipFeatures(
         # check validity of input dataframe
         if not "geom" in source.columns:
             raise AttributeError(f"source is given as a pd.DataFrame but has not 'geom' column.")
+        # Nothing to clip: return the (empty) frame with the expected "areaShare" column.
+        # Checked before the dtype check below, which would otherwise index the empty frame
+        # out of bounds.
+        if len(source) == 0:
+            source["areaShare"] = None
+            return source
         if not isinstance(source.geom.iloc[0], ogr.Geometry):
             raise TypeError(
                 f"source is given as a pd.DataFrame but value in 'geom' column is not of type osgeo.ogr.Geometry."
             )
-        # return empty dataframe with empty expected "areaShare" column if no geometries contained since vector cannot be created without geometries
-        if len(source) == 0:
-            source["areaShare"] = None
-            return source
         # generate a vector from source dataframe
         source = createVector(source)
     elif isinstance(source, str) or isinstance(source, pathlib.Path):
@@ -951,17 +987,17 @@ def extractAndClipFeatures(
 ####################################################################
 # Create a vector
 def createVector(
-    # geoms: ogr.Geometry | list[ogr.Geometry | gdal.Dataset | str] | pd.DataFrame | np.ndarray | str | gdal.Dataset,
-    geoms,
+    geoms: ogr.Geometry | str | pd.Series | pd.DataFrame | np.ndarray | list[ogr.Geometry | str],
     output: str | None = None,
-    srs=None,
+    srs: srs_input | None = None,
     driverName: str = "ESRI Shapefile",
     layerName: str = "default",
-    fieldVals=None,
-    fieldDef=None,
-    checkAllGeoms=False,
+    fieldVals: dict | pd.DataFrame | None = None,
+    fieldDef: dict | str | type | None = None,
+    checkAllGeoms: bool = False,
     overwrite: bool = True,
-):
+    geomType: int | str | None = None,
+) -> gdal.Dataset | str:
     """
     Create a vector on disk from geometries or a DataFrame with 'geom' column.
 
@@ -1028,10 +1064,20 @@ def createVector(
         Determines whether the preexisting files should be overwritten
         * Only used when output is not None
 
+    geomType : int or str; optional
+        Explicitly set the geometry type of the output layer
+        * Accepts an OGR wkb* constant (e.g. ogr.wkbPolygon), an OGR attribute
+          name (e.g. 'wkbPolygon') or a geometry name (e.g. 'POLYGON')
+        * If None (default), the geometry type is inferred from the input
+          geometries. When the input is empty, it defaults to 'POINT'.
+        * If given, it overrides the inferred type for both empty and
+          non-empty inputs. The caller is responsible for ensuring the chosen
+          type is compatible with the geometries written.
+
     Returns
     -------
     * If 'output' is None: gdal.Dataset
-    * If 'output' is given: None
+    * If 'output' is given: str (the output path)
     """
     if srs:
         srs = SRS.loadSRS(srs)
@@ -1054,70 +1100,82 @@ def createVector(
         geoms = geoms.geom.values
         fieldVals.drop("geom", inplace=True, axis=1)
 
-    if len(geoms) == 0:
-        raise GeoKitVectorError("Empty geometry list given")
+    # Resolve an explicitly given geometry type (overrides the inferred type)
+    if geomType is not None:
+        geomType = ogrGeomType(geomType)
 
-    # Test if the first geometry is an ogr-Geometry type
-    if isinstance(geoms[0], ogr.Geometry):
-        #  (Assume all geometries in the array have the same type)
-        geomSRS = geoms[0].GetSpatialReference()
-        if checkAllGeoms:
-            # check if all other geoms have the same SRS
-            assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), (
-                f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
-            )
-        # Set up some variables for the upcoming loop
-        doTransform = False
-        setSRS = False
+    # An empty geometry list is allowed: a valid, empty dataset is written so
+    # that filtered-to-empty results can still serve as a flag/input downstream.
+    # The per-geometry type/SRS inference below is skipped in that case; 'srs'
+    # stays as given and the geometry type defaults to POINT (see below) unless
+    # explicitly set via 'geomType'.
+    if len(geoms) > 0:
+        # Test if the first geometry is an ogr-Geometry type
+        if isinstance(geoms[0], ogr.Geometry):
+            #  (Assume all geometries in the array have the same type)
+            geomSRS = geoms[0].GetSpatialReference()
+            if checkAllGeoms:
+                # check if all other geoms have the same SRS
+                assert all([geomSRS.IsSame(g.GetSpatialReference()) for g in geoms]), (
+                    f"Not all geoms have the same SRS, srs of first geom: {geomSRS}"
+                )
+            # Set up some variables for the upcoming loop
+            doTransform = False
+            setSRS = False
 
-        if srs and geomSRS and not srs.IsSame(geomSRS):  # Test if a transformation is needed
-            trx = osr.CoordinateTransformation(geomSRS, srs)
-            doTransform = True
-        # Test if an srs was NOT given, but the incoming geometries have an SRS already
-        elif srs is None and geomSRS:
-            srs = geomSRS
-        # Test if an srs WAS given, but the incoming geometries do NOT have an srs already
-        elif srs and geomSRS is None:
-            # In which case, assume the geometries are meant to have the given srs
-            setSRS = True
+            if srs and geomSRS and not srs.IsSame(geomSRS):  # Test if a transformation is needed
+                trx = osr.CoordinateTransformation(geomSRS, srs)
+                doTransform = True
+            # Test if an srs was NOT given, but the incoming geometries have an SRS already
+            elif srs is None and geomSRS:
+                srs = geomSRS
+            # Test if an srs WAS given, but the incoming geometries do NOT have an srs already
+            elif srs and geomSRS is None:
+                # In which case, assume the geometries are meant to have the given srs
+                setSRS = True
 
-        # Create geoms
-        for i in range(len(geoms)):
-            # clone just in case the geometry is tethered outside of function
-            finalGeoms.append(geoms[i].Clone())
-            if doTransform:
-                finalGeoms[i].Transform(trx)  # Do transform if necessary
-            if setSRS:
-                finalGeoms[i].AssignSpatialReference(srs)  # Set srs if necessary
+            # Create geoms
+            for i in range(len(geoms)):
+                # clone just in case the geometry is tethered outside of function
+                finalGeoms.append(geoms[i].Clone())
+                if doTransform:
+                    finalGeoms[i].Transform(trx)  # Do transform if necessary
+                if setSRS:
+                    finalGeoms[i].AssignSpatialReference(srs)  # Set srs if necessary
 
-    # Otherwise, the geometry array should contain only WKT strings
-    elif isinstance(geoms[0], str):
-        if srs is None:
-            raise ValueError("srs must be given when passing wkt strings")
+        # Otherwise, the geometry array should contain only WKT strings
+        elif isinstance(geoms[0], str):
+            if srs is None:
+                raise ValueError("srs must be given when passing wkt strings")
 
-        # Create geoms
-        finalGeoms = [GEOM.convertWKT(wkt, srs) for wkt in geoms]
+            # Create geoms
+            finalGeoms = [GEOM.convertWKT(wkt, srs) for wkt in geoms]
 
-    else:
-        raise ValueError("Geometry inputs must be ogr.Geometry objects or WKT strings")
+        else:
+            raise ValueError("Geometry inputs must be ogr.Geometry objects or WKT strings")
 
     geoms = finalGeoms  # Overwrite geoms array with the conditioned finalGeoms
 
-    # Determine geometry types
-    types = set()
-    for g in geoms:
-        # Get a set of all geometry type-names (POINT, POLYGON, etc...)
-        types.add(g.GetGeometryName())
+    # Determine the geometry type of the output layer
+    if geomType is None:
+        if len(geoms) == 0:
+            # No geometries to infer from -> default to POINT
+            geomType = ogr.wkbPoint
+        else:
+            # Get a set of all geometry type-names (POINT, POLYGON, etc...)
+            types = set()
+            for g in geoms:
+                types.add(g.GetGeometryName())
 
-    if types.issubset({"POINT", "MULTIPOINT"}):
-        geomType = ogr.wkbPoint
-    elif types.issubset({"LINESTRING", "MULTILINESTRING"}):
-        geomType = ogr.wkbLineString
-    elif types.issubset({"POLYGON", "MULTIPOLYGON"}):
-        geomType = ogr.wkbPolygon
-    else:
-        # geomType = ogr.wkbGeometryCollection
-        raise RuntimeError("Could not determine output shape's geometry type")
+            if types.issubset({"POINT", "MULTIPOINT"}):
+                geomType = ogr.wkbPoint
+            elif types.issubset({"LINESTRING", "MULTILINESTRING"}):
+                geomType = ogr.wkbLineString
+            elif types.issubset({"POLYGON", "MULTIPOLYGON"}):
+                geomType = ogr.wkbPolygon
+            else:
+                # geomType = ogr.wkbGeometryCollection
+                raise RuntimeError("Could not determine output shape's geometry type")
 
     # Create a driver and datasource
     # driver = gdal.GetDriverByName("ESRI Shapefile")
@@ -1257,7 +1315,13 @@ def createVector(
         raise e
 
 
-def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
+def createGeoJson(
+    geoms: ogr.Geometry | pd.Series | pd.DataFrame | Iterable[ogr.Geometry],
+    output: str | BinaryIO | None = None,
+    srs: srs_input | None = 4326,
+    topo: bool = False,
+    fill: str = "",
+) -> str | None:
     """Convert a set of geometries to a geoJSON object."""
     if srs:
         srs = SRS.loadSRS(srs)
@@ -1287,11 +1351,9 @@ def createGeoJson(geoms, output=None, srs=4326, topo=False, fill=""):
         data = None
         index = list(range(len(finalGeoms)))
 
-    if len(finalGeoms) == 0:
-        raise GeoKitVectorError("Empty geometry list given")
-
-    # Transform?
-    if not srs is None:
+    # Transform? (skipped for empty input, which writes a valid empty
+    # FeatureCollection so filtered-to-empty results can still be saved)
+    if not srs is None and len(finalGeoms) > 0:
         finalGeoms = GEOM.transform(finalGeoms, toSRS=srs)
 
     # Make JSON object
