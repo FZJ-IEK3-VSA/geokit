@@ -892,7 +892,22 @@ def test_warp_provenance_metadata(tmp_path):
         assert ds.GetMetadataItem("GEOKIT_PROVENANCE_RESAMPLE_ALG") == "cubic"
 
 
-RESAMPLE_ALGS = ["near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "rms", "mode", "max", "min", "med", "q1", "q3", "sum"]
+RESAMPLE_ALGS = [
+    "near",
+    "bilinear",
+    "cubic",
+    "cubicspline",
+    "lanczos",
+    "average",
+    "rms",
+    "mode",
+    "max",
+    "min",
+    "med",
+    "q1",
+    "q3",
+    "sum",
+]
 
 
 @pytest.fixture(scope="session")
@@ -901,7 +916,8 @@ def resampling_test_rasters():
 
     The rasters are read from their committed files under geokit/data/raster_data/input_data rather
     than rebuilt in memory, so the inputs the tests run against are exactly what is checked into the
-    repo (see test.test_case_creator)."""
+    repo (see test.test_case_creator).
+    """
     return {name: load_test_raster(name) for name in TEST_CASE_NAMES}
 
 
@@ -910,7 +926,7 @@ def resampling_test_rasters():
 def test_warp_resampling_golden(resampling_test_rasters, case, resample_alg):
     """Golden-regression canary: warp output must match the committed reference (issue #168).
 
-    Each test-case raster (an integer and a float raster, both carrying a nodata region; see
+    Each test-case raster (an integer and a float raster, both carrying a nodata region, see
     test.test_case_creator) is downsampled with every algorithm and compared, via
     assert_raster_equal, against a GeoTIFF checked into
     geokit/data/raster_data/golden_regression_results. Because the warp is deterministic
@@ -954,7 +970,9 @@ def test_warp_resampling_nodata_respected(resampling_test_rasters, case, resampl
     out_mat = raster.extractMatrix(out)
     core_nodata = raster.extractMatrix(raster.warp(source, resampleAlg="average", **warp_kwargs)) == nodata
     assert core_nodata.any(), "expected some fully-nodata output pixels in the test raster"
-    assert (out_mat[core_nodata] == nodata).all(), f"{case}/{resample_alg}: produced valid data over a fully-nodata region"
+    assert (out_mat[core_nodata] == nodata).all(), (
+        f"{case}/{resample_alg}: produced valid data over a fully-nodata region"
+    )
 
 
 def test_warpLike():
