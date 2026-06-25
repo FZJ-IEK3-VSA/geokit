@@ -682,6 +682,11 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
 
     # compute statistics
     data = rawData[sel].flatten()
+    # scipy>=1.17 casts the element count to the input array's dtype when
+    # computing the variance, which overflows for narrow integer types (e.g.
+    # int8). Statistics are floating point anyway, so promote integer data.
+    if np.issubdtype(data.dtype, np.integer):
+        data = data.astype(np.float64)
     return describe(data)
 
 
