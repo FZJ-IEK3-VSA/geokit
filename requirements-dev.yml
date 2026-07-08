@@ -7,7 +7,7 @@ dependencies:
   - jupyter <=1.1.1
   - descartes <=1.1.0
   - pip <=26.1.2
-  - matplotlib <=3.10.9
+  - matplotlib <=3.11.0
   - pandas >=1.4.0,<=3.0.3
   - numpy >=1.26.0,<=2.5.1
   - scipy >=1.10.0,<=1.18.0
