@@ -23,9 +23,9 @@
 
 ## Documentation Overview
 
-ETHOS.GeoKit is a Python toolkit for efficiently handling geospatial data and spatial operations. Its **main advantage is the seamless combination of raster and vector data**: through the **RegionMask** and **Extent** objects, datasets in different formats, resolutions, and coordinate reference systems are integrated into the context of a single region of interest — without the manual CRS, extent, and resolution bookkeeping this normally requires.
+ETHOS.GeoKit is a Python toolkit for efficiently handling geospatial data and spatial operations. Its **main advantage is the seamless combination of raster and vector data**: through the **RegionMask** and **Extent** objects, datasets in different formats, resolutions, and coordinate reference systems are integrated into the context of a single region of interest — without the manual CRS, extent, and resolution bookkeeping this normally requires. It is [scientifically reviewed and published](https://doi.org/10.1016/j.softx.2026.102870).
 
-GeoKit equally supports the individual building blocks on their own, so it works just as well for pure raster or pure vector tasks:
+ETHOS.GeoKit equally supports the individual building blocks on their own, so it works just as well for pure raster or pure vector tasks:
 - Reading, writing, and mutating vector and raster datasets
 - Manipulating and translating geometries between coordinate systems
 - Warping and resampling raster data, and sampling values at point locations
@@ -34,11 +34,11 @@ GeoKit equally supports the individual building blocks on their own, so it works
 
 New here? See [Why ETHOS.GeoKit?](https://geokit.readthedocs.io/why_geokit.html) for how it compares to GDAL, GeoPandas, and Rasterio — and how much less code it takes to achieve the same result.
 
-ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). Geokit is for example directly used in [GLAES](https://github.com/FZJ-IEK3-VSA/glaes) and [RESKit](https://github.com/FZJ-IEK3-VSA/reskit).
+ETHOS.GeoKit is part of the [ETHOS (**E**nergy **T**ransformation **P**at**H**way **O**ptimization **S**uite)](https://www.fz-juelich.de/de/ice/ice-2/leistungen/model-services). ETHOS.GeoKit is, for example, directly used in [GLAES](https://github.com/FZJ-IEK3-VSA/glaes) and [RESKit](https://github.com/FZJ-IEK3-VSA/reskit).
 
 ## Installation
 
-If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from the source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/). Please remove other conda installers if you decide to use miniforge.  Having multiple conda installs on your machine will likely cause issues.
+If you just want to use ETHOS.GeoKit, install it from Conda Forge. To download and execute all the examples or develop the source code, install it from source. Both installations require conda or mamba, which can be used interchangeably. We recommend the [Miniforge installer](https://conda-forge.org/download/). Please remove other conda installers if you decide to use miniforge.  Having multiple conda installs on your machine will likely cause issues.
 
 ### Installation via conda-forge (Recommended)
 
@@ -97,6 +97,25 @@ The best way to learn ETHOS.GeoKit is through hands-on examples. This documentat
 Start with the [Introduction to ETHOS.GeoKit](docs/example_articles/_00_introduction.md) to understand the fundamentals, or jump directly to the capability area that interests you most.
 
 
+
+## Citation
+
+If you use or reference ETHOS.GeoKit in your research, please cite our [SoftwareX article](https://doi.org/10.1016/j.softx.2026.102870):
+
+> Ishmam, S., Belina, J., Winkler, C., Weinand, J. M., Pflugradt, N., Heinrichs, H., & Linßen, J. (2026). ETHOS.GeoKit: A Python toolkit for analyzing and altering geospatial data for energy systems modeling and beyond. *SoftwareX*, 35, 102870. https://doi.org/10.1016/j.softx.2026.102870
+
+```bibtex
+@article{ishmam2026geokit,
+  title   = {{ETHOS.GeoKit}: A {P}ython toolkit for analyzing and altering geospatial data for energy systems modeling and beyond},
+  author  = {Ishmam, Shitab and Belina, Julian and Winkler, Christoph and Weinand, Jann M. and Pflugradt, Noah and Heinrichs, Heidi and Lin{\ss}en, Jochen},
+  journal = {SoftwareX},
+  volume  = {35},
+  pages   = {102870},
+  year    = {2026},
+  publisher = {Elsevier},
+  doi     = {10.1016/j.softx.2026.102870}
+}
+```
 
 ## Contributions and Support
 All contributions are welcome:

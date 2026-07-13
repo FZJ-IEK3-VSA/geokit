@@ -1,0 +1,54 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software itself and the accompanying SoftwareX article (see preferred-citation)."
+type: software
+title: "ETHOS.GeoKit"
+abstract: "Geokit is a library that interfaces with GDAL to support general-purpose geospatial data analysis."
+version: 1.9.0
+date-released: "2026-06-24"
+license: MIT
+repository-code: "https://github.com/FZJ-IEK3-VSA/geokit"
+url: "https://geokit.readthedocs.io/"
+authors:
+  - given-names: Christoph
+    family-names: Winkler
+    affiliation: "Forschungszentrum Jülich"
+  - given-names: Shitab
+    family-names: Ishmam
+    affiliation: "Forschungszentrum Jülich"
+  - given-names: Julian
+    family-names: Belina
+    affiliation: "Forschungszentrum Jülich"
+  - given-names: Noah
+    family-names: Pflugradt
+    affiliation: "Forschungszentrum Jülich"
+  - given-names: Heidi
+    family-names: Heinrichs
+    affiliation: "Forschungszentrum Jülich"
+  - given-names: Jochen
+    family-names: Linßen
+    affiliation: "Forschungszentrum Jülich"
+preferred-citation:
+  type: article
+  title: "ETHOS.GeoKit: A Python toolkit for analyzing and altering geospatial data for energy systems modeling and beyond"
+  journal: SoftwareX
+  volume: 35
+  pages: "102870"
+  year: 2026
+  doi: "10.1016/j.softx.2026.102870"
+  publisher:
+    name: Elsevier
+  authors:
+    - given-names: Shitab
+      family-names: Ishmam
+    - given-names: Julian
+      family-names: Belina
+    - given-names: Christoph
+      family-names: Winkler
+    - given-names: Jann M.
+      family-names: Weinand
+    - given-names: Noah
+      family-names: Pflugradt
+    - given-names: Heidi
+      family-names: Heinrichs
+    - given-names: Jochen
+      family-names: Linßen
