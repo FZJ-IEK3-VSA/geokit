@@ -1,17 +1,14 @@
-﻿<table style="border:0; border-collapse:collapse;">
-  <tr>
-    <td>
-      <a href="https://geokit.readthedocs.io/latest/">
-        <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80px">
-      </a>
-    </td>
-    <td>
-      <a href="https://www.fz-juelich.de/en/ice/ice-2">
-        <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich System Analysis Header" height="80px">
-      </a>
-    </td>
-  </tr>
-</table>
+﻿<p align="center">
+  <a href="https://geokit.readthedocs.io/">
+    <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg#gh-light-mode-only" alt="Jülich Systems Analysis" height="80">
+    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg#gh-dark-mode-only" alt="Jülich Systems Analysis" height="80">
+  </a>
+</p>
+
 
 
 

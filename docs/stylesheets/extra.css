@@ -28,3 +28,13 @@
   width: auto;
   height: 3.2rem;
 }
+
+
+/* Logo light/dark switch. The README tags the two Jülich logos with GitHub's
+   native #gh-light-mode-only / #gh-dark-mode-only fragments. GitHub honors them
+   automatically; these rules make MkDocs Material's palette toggle honor the
+   same fragments, so the logo follows the docs theme too. */
+[data-md-color-scheme="default"] img[src$="#gh-dark-mode-only"],
+[data-md-color-scheme="slate"] img[src$="#gh-light-mode-only"] {
+  display: none;
+}
