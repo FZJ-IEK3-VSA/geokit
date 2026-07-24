@@ -13,8 +13,13 @@ jobs:
       requirements_file_name: requirements.yml
       extra_repos: |
         [
-          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev"},
+          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev", "requirements_file": "requirements-dev.yml"},
         ]
       multiprocessing_pytest_string: "-n auto"
-      ipynb_example_folder: "Examples"
+      # Run GeoKit's own examples (main repo at the workflow root) AND glaes'
+      # examples (extra repo cloned into ./glaes/) in a single pytest session,
+      # so a failure in one set still lets the other run and report.
+      # nbval runs each notebook with its own folder as the working directory,
+      # so glaes' relative "data/..." paths resolve correctly.
+      examples_to_execute: "docs/Examples glaes/Examples"
       multiprocessing_example_string: "-n 2"
