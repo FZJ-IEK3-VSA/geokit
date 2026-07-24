@@ -9,7 +9,7 @@ jobs:
     uses: FZJ-IEK3-VSA/.github/.github/workflows/extract_versions.yml@v1
     with:
       libraries: "python"
-      env_file: requirements-dev.yml
+      env_file: requirements.yml
 
   TestPullCondaForgeDev:
     name: Test development version on ${{ matrix.runner_tag }}
@@ -26,7 +26,7 @@ jobs:
       ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: requirements-dev.yml
+      requirements_file_name: requirements.yml
       ipynb_example_folder: "docs/Examples"
       library_name: "python"
       library_version: ${{ matrix.python_version }}
@@ -40,7 +40,7 @@ jobs:
     with:
       libraries: "pandas,numpy,scipy,scikit-learn,gdal,geopandas,psutil"
       version_type: min
-      env_file: requirements-dev.yml
+      env_file: requirements.yml
 
   TestMinDependencies:
     needs: extract-min-versions
@@ -56,7 +56,7 @@ jobs:
       ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: requirements-dev.yml
+      requirements_file_name: requirements.yml
       ipynb_example_folder: "docs/Examples"
       library_name: ${{ matrix.dependencies.library_name }}
       library_version: ${{ matrix.dependencies.version }}

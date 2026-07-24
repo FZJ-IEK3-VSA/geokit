@@ -9,7 +9,7 @@ jobs:
         with:
             libraries: "pandas,numpy,scipy,scikit-learn,gdal,geopandas,psutil"
             version_type: both
-            env_file: requirements-dev.yml
+            env_file: requirements.yml
 
     TestDependencyVersions:
         name: Test ${{ matrix.dependencies.library_name }} ${{ matrix.dependencies.version }} (${{ matrix.dependencies.version_type }})
@@ -25,7 +25,7 @@ jobs:
             ZENODO_USER_AGENT_STRING: ${{ secrets.ZENODO_USER_AGENT_STRING }}
         with:
             runner_tag: ${{ matrix.runner_tag }}
-            requirements_file_name: requirements-dev.yml
+            requirements_file_name: requirements.yml
             ipynb_example_folder: "docs/Examples"
             library_version: ${{ matrix.dependencies.version }}
             dependency_position_env_file: ${{ matrix.dependencies.yaml_position }}

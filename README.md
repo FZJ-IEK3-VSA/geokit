@@ -3,10 +3,14 @@
     <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80">
   </a>
   &nbsp;&nbsp;
+  <!-- logo:jsa:start -->
   <a href="https://www.fz-juelich.de/en/ice/ice-2">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg#gh-light-mode-only" alt="Jülich Systems Analysis" height="80">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg#gh-dark-mode-only" alt="Jülich Systems Analysis" height="80">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich Systems Analysis" height="80">
+    </picture>
   </a>
+  <!-- logo:jsa:end -->
 </p>
 
 
@@ -76,7 +80,7 @@ git checkout dev
 3. Create a new environment:
 
 ```bash
-conda env create --file requirements-dev
+conda env create --file requirements.yml
 conda activate geokit
 pip install . --no-deps
 ```
@@ -84,7 +88,7 @@ pip install . --no-deps
 4. (Alternative) Update an existing environment:
 
 ```bash
-conda env update --file requirements-dev -n <ENVIRONMENT-NAME>
+conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
 conda activate geokit
 pip install . --no-deps
 ```
@@ -151,10 +155,14 @@ Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_asse
 This work received primary support from the Helmholtz Association through the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.helmholtz.de/en/research/research-fields/energy/energy-system-design/). 
 
 <p align="left">
+  <!-- logo:helmholtz:start -->
   <a href="https://www.fz-juelich.de/en/ice/ice-2">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg#gh-light-mode-only" alt="Helmholtz Logo" width="200">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg#gh-dark-mode-only" alt="Helmholtz Logo" width="200">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Logo" width="200">
+    </picture>
   </a>
+  <!-- logo:helmholtz:end -->
 </p>
 
 Additionally, parts of this work were supported by the [H2Atlas-Africa project (03EW0001)](https://www.fz-juelich.de/de/ice/ice-2/projekte/h2-atlas-africa), funded by the German Federal Ministry of Research, Technology, and Space (BMFTR).

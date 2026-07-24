@@ -13,7 +13,7 @@ jobs:
       requirements_file_name: requirements.yml
       extra_repos: |
         [
-          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev", "requirements_file": "requirements-dev.yml"},
+          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev", "requirements_file": "requirements-no-geokit.yml"},
         ]
       multiprocessing_pytest_string: "-n auto"
       # Run GeoKit's own examples (main repo at the workflow root) AND glaes'
