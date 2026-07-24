@@ -17,7 +17,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       runner_tag: ${{ matrix.runner_tag }}
-      requirements_file_name: requirements-dev.yml
+      requirements_file_name: requirements.yml
       ipynb_example_folder: "docs/Examples"
       multiprocessing_pytest_string: "-n auto"
       multiprocessing_example_string: "-n 2"
