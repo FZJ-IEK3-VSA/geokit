@@ -151,10 +151,6 @@ Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_asse
 This work received primary support from the Helmholtz Association through the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.helmholtz.de/en/research/research-fields/energy/energy-system-design/). 
 
 <p align="left">
-  <a href="https://www.helmholtz.de/en/">
-    <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80">
-  </a>
-  &nbsp;&nbsp;
   <a href="https://www.fz-juelich.de/en/ice/ice-2">
     <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg#gh-light-mode-only" alt="Helmholtz Logo" width="200">
     <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg#gh-dark-mode-only" alt="Helmholtz Logo" width="200">
