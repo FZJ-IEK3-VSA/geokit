@@ -1,0 +1,20 @@
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["dev"]
+
+jobs:
+  TestPullMinVersionsDev:
+    name: Test GLAES compatabiltiy on self-hosted
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test_with_extra_repos.yml@v1
+    secrets: inherit
+    with:
+      runner_tag: "self-hosted"
+      requirements_file_name: requirements.yml
+      extra_repos: |
+        [
+          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev"},
+        ]
+      multiprocessing_pytest_string: "-n auto"
+      ipynb_example_folder: "Examples"
+      multiprocessing_example_string: "-n 2"
