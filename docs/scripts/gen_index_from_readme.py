@@ -46,8 +46,8 @@ LOGO_BLOCKS = {
   </a>""",
     "helmholtz": f"""\
 <a href="https://www.fz-juelich.de/en/ice/ice-2">
-    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-Dark-Blue-RGB.svg#only-light" alt="Helmholtz Logo" width="200">
-    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-White-RGB.svg#only-dark" alt="Helmholtz Logo" width="200">
+    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-Dark-Blue-RGB.svg#only-light" alt="Helmholtz Logo" height="80">
+    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-White-RGB.svg#only-dark" alt="Helmholtz Logo" height="80">
   </a>""",
 }
 
