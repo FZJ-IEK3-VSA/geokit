@@ -63,22 +63,27 @@
    568.23x81.38 (6.98:1). At the height="80" GitHub renders, the pair is
    256px + 558px = 830px wide — GitHub's README column fits that, but Material's
    content column is only ~696px here (61rem grid, less two 12.1rem sidebars and
-   padding, at html font-size 125%), so the row overflowed and wrapped onto two
-   lines. A common ~64px height keeps them side by side at 205px + 446px.
+   padding, at html font-size 125%), so the row overflowed and wrapped.
 
-   `height: auto` lets each SVG's own ratio set the height, so the two stay
-   optically equal. The percent caps are in that same 205:446 ratio, so on a
-   narrow viewport both shrink together — and since they total 92%, the row can
-   never wrap regardless of how the px widths and the column interact. */
+   Widths are in PERCENT, not pixels, for two reasons. It makes the pair fill the
+   content column instead of leaving a ragged gap at the right; and because every
+   ETHOS docs site uses the same Material grid and sidebars, a given percentage
+   is the same rendered width on all of them, which is what keeps the ICE-2
+   header the same size across GeoKit, GLAES, TSAM and FINE. Keep
+   `.hero-logo--jsa` identical in each repo's extra.css.
+
+   The two are in the ratio of their natural widths at equal height (30.2:65.8 ≈
+   256:558), so `height: auto` resolves each from its own aspect ratio and they
+   come out the same height. Together they take 96% of the row, leaving the
+   remaining 4% (~28px) for the `&nbsp;&nbsp;` separator — comfortably more than
+   the ~15px it occupies, so the row cannot wrap. */
 .md-typeset .hero-logo--geokit {
-  width: 205px;
-  max-width: 29%;
+  width: 30.2%;
   height: auto;
 }
 
 .md-typeset .hero-logo--jsa {
-  width: 446px;
-  max-width: 63%;
+  width: 65.8%;
   height: auto;
 }
 
