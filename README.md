@@ -15,7 +15,7 @@
   <!-- logo:jsa:end -->
 </p>
 
-
+# ETHOS.GeoKit - **Geo**spatial tool**kit** for Python for analyzing and altering geospatial data for energy systems modeling and beyond
 
 
 
