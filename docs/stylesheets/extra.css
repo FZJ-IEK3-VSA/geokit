@@ -1,21 +1,41 @@
+/* ==========================================================================
+   ETHOS.GeoKit — Forschungszentrum Jülich Brand Theme
+   ========================================================================== */
+
+/* -- FZJ Brand Colors ---------------------------------------------------- */
 :root {
-  --md-primary-fg-color: #013e6b;
-  --md-primary-fg-color--light: #0156a3;
-  --md-primary-fg-color--dark: #012d4e;
+  --md-primary-fg-color: #023d6b;
+  --md-primary-fg-color--light: #0a5a9e;
+  --md-primary-fg-color--dark: #012845;
   --md-primary-bg-color: #ffffff;
-  --md-primary-bg-color--light: #ffffff;
-  --md-accent-fg-color: #013e6b;
-  --md-accent-fg-color--transparent: rgba(1, 62, 107, 0.1);
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: #21918c;
+  --md-accent-fg-color--transparent: #21918c1a;
   --md-accent-bg-color: #ffffff;
-  --md-accent-bg-color--light: #ffffff;
+  --md-accent-bg-color--light: #ffffffb3;
+  --md-typeset-a-color: #35b0ab;
+}
+
+.md-typeset a {
+  color: #35b0ab;
+}
+
+.md-typeset a:hover {
+  color: #21918c;
 }
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #0156a3;
-  --md-primary-fg-color--light: #0170c9;
-  --md-primary-fg-color--dark: #013e6b;
+  --md-primary-fg-color: #023d6b;
+  --md-primary-fg-color--light: #0a5a9e;
+  --md-primary-fg-color--dark: #012845;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: #35b0ab;
+  --md-accent-fg-color--transparent: #35b0ab1a;
+  --md-typeset-a-color: #35b0ab;
 }
 
+/* -- Header logo ---------------------------------------------------------- */
 /* Double the logo size */
 .md-header__button.md-logo img,
 .md-header__button.md-logo svg {
@@ -27,6 +47,26 @@
 .md-logo svg {
   width: auto;
   height: 3.2rem;
+}
+
+/* -- Home page logo row --------------------------------------------------- */
+/* The home page is generated from README.md by
+   docs/scripts/gen_index_from_readme.py, which sizes its logos with the HTML
+   `height`/`width` attributes because that is what GitHub honours. Material's
+   ".md-typeset img" rule (specificity 0,1,1) sets `height: auto` and so
+   overrides those attributes — the GeoKit mark is intrinsically 640x200 and
+   renders eight times too wide. Re-assert the intended sizes here at
+   specificity 0,2,0 so the docs match what GitHub shows. Keep in sync with
+   LOGO_BLOCKS in the generator script. */
+.md-typeset .hero-logo--geokit,
+.md-typeset .hero-logo--jsa {
+  height: 80px;
+  width: auto;
+}
+
+.md-typeset .hero-logo--helmholtz {
+  width: 200px;
+  height: auto;
 }
 
 /* -- Institutional footer ------------------------------------------------- */

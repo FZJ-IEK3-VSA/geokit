@@ -35,19 +35,34 @@ README_ONLY = re.compile(r"<!-- readme-only:start -->.*?<!-- readme-only:end -->
 # version that replaces everything between those markers. To tweak a docs logo
 # (URL, size, alt) edit its string below and keep it in sync with the <picture>
 # version in the README, which is what GitHub renders.
+#
+# The GeoKit mark has no light/dark variants, so it is passed through unchanged
+# apart from the sizing class -- it is wrapped in markers only so that it, too,
+# gets a "hero-logo--*" class (see below).
+#
+# Sizing: the `height`/`width` attributes below are what GitHub honours, but on
+# the docs site Material's ".md-typeset img" rule (specificity 0,1,1) sets
+# `height: auto` and overrides them -- the GeoKit mark is intrinsically 640x200,
+# so unsized it renders eight times too wide. Every logo therefore also carries a
+# "hero-logo--NAME" class, which docs/stylesheets/extra.css re-sizes at a higher
+# specificity. Keep the attributes and the CSS rules in agreement.
 _JSA_LOGOS = "https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos"
 _HELMHOLTZ_LOGOS = "https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos"
 
 LOGO_BLOCKS = {
+    "geokit": """\
+<a href="https://geokit.readthedocs.io/">
+    <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" class="hero-logo hero-logo--geokit" height="80">
+  </a>""",
     "jsa": f"""\
 <a href="https://www.fz-juelich.de/en/ice/ice-2">
-    <img src="{_JSA_LOGOS}/JSA-Header.svg#only-light" alt="Jülich Systems Analysis" height="80">
-    <img src="{_JSA_LOGOS}/JSA-Header-dark.svg#only-dark" alt="Jülich Systems Analysis" height="80">
+    <img src="{_JSA_LOGOS}/JSA-Header.svg#only-light" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa" height="80">
+    <img src="{_JSA_LOGOS}/JSA-Header-dark.svg#only-dark" alt="Jülich Systems Analysis" class="hero-logo hero-logo--jsa" height="80">
   </a>""",
     "helmholtz": f"""\
-<a href="https://www.fz-juelich.de/en/ice/ice-2">
-    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-Dark-Blue-RGB.svg#only-light" alt="Helmholtz Logo" height="80">
-    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-White-RGB.svg#only-dark" alt="Helmholtz Logo" height="80">
+<a href="https://www.helmholtz.de/en/">
+    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-Dark-Blue-RGB.svg#only-light" alt="Helmholtz Association" class="hero-logo hero-logo--helmholtz" width="200">
+    <img src="{_HELMHOLTZ_LOGOS}/Helmholtz-Logo-White-RGB.svg#only-dark" alt="Helmholtz Association" class="hero-logo hero-logo--helmholtz" width="200">
   </a>""",
 }
 

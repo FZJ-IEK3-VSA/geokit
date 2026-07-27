@@ -1,7 +1,9 @@
 ﻿<p align="center">
+  <!-- logo:geokit:start -->
   <a href="https://geokit.readthedocs.io/">
     <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80">
   </a>
+  <!-- logo:geokit:end -->
   &nbsp;&nbsp;
   <!-- logo:jsa:start -->
   <a href="https://www.fz-juelich.de/en/ice/ice-2">
@@ -156,10 +158,10 @@ This work received primary support from the Helmholtz Association through the Jo
 
 <p align="left">
   <!-- logo:helmholtz:start -->
-  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+  <a href="https://www.helmholtz.de/en/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
-      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Logo" width="200">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Association" width="200">
     </picture>
   </a>
   <!-- logo:helmholtz:end -->
