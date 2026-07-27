@@ -55,13 +55,31 @@
    `height`/`width` attributes because that is what GitHub honours. Material's
    ".md-typeset img" rule (specificity 0,1,1) sets `height: auto` and so
    overrides those attributes — the GeoKit mark is intrinsically 640x200 and
-   renders eight times too wide. Re-assert the intended sizes here at
-   specificity 0,2,0 so the docs match what GitHub shows. Keep in sync with
-   LOGO_BLOCKS in the generator script. */
-.md-typeset .hero-logo--geokit,
+   renders eight times too wide. These rules re-assert a size at specificity
+   0,2,0. Keep in sync with LOGO_BLOCKS in the generator script.
+
+   Sized by WIDTH rather than height, because the two logos have very different
+   aspect ratios: the GeoKit mark is 640x200 (3.20:1) but the JSA header is
+   568.23x81.38 (6.98:1). At the height="80" GitHub renders, the pair is
+   256px + 558px = 830px wide — GitHub's README column fits that, but Material's
+   content column is only ~696px here (61rem grid, less two 12.1rem sidebars and
+   padding, at html font-size 125%), so the row overflowed and wrapped onto two
+   lines. A common ~64px height keeps them side by side at 205px + 446px.
+
+   `height: auto` lets each SVG's own ratio set the height, so the two stay
+   optically equal. The percent caps are in that same 205:446 ratio, so on a
+   narrow viewport both shrink together — and since they total 92%, the row can
+   never wrap regardless of how the px widths and the column interact. */
+.md-typeset .hero-logo--geokit {
+  width: 205px;
+  max-width: 29%;
+  height: auto;
+}
+
 .md-typeset .hero-logo--jsa {
-  height: 80px;
-  width: auto;
+  width: 446px;
+  max-width: 63%;
+  height: auto;
 }
 
 .md-typeset .hero-logo--helmholtz {

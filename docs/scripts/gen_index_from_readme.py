@@ -45,7 +45,13 @@ README_ONLY = re.compile(r"<!-- readme-only:start -->.*?<!-- readme-only:end -->
 # `height: auto` and overrides them -- the GeoKit mark is intrinsically 640x200,
 # so unsized it renders eight times too wide. Every logo therefore also carries a
 # "hero-logo--NAME" class, which docs/stylesheets/extra.css re-sizes at a higher
-# specificity. Keep the attributes and the CSS rules in agreement.
+# specificity. The attributes are left in place as a sane fallback if that
+# stylesheet ever fails to load.
+#
+# The docs sizes deliberately do NOT match GitHub's: the header pair is 830px
+# wide at height="80", which fits GitHub's README column but overflows Material's
+# ~696px content column and wraps to two lines. extra.css renders the pair at a
+# common ~64px height instead. See the comment there before changing either side.
 _JSA_LOGOS = "https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos"
 _HELMHOLTZ_LOGOS = "https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos"
 
