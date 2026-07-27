@@ -7,7 +7,7 @@ dependencies:
   - jupyter <=1.1.1
   - descartes <=1.1.0
   - pip <=26.1.2
-  - matplotlib <=3.11.0
+  - matplotlib <=3.11.1
   - pandas >=1.4.0,<=3.0.3
   - numpy >=1.26.0,<=2.5.1
   - scipy >=1.10.0,<=1.18.0
@@ -19,7 +19,7 @@ dependencies:
   - structlog <=26.1.0
   - rich <=15.0.0
   - pandas-stubs <=3.0.3.260530
-  - scipy-stubs <=1.17.1.5
+  - scipy-stubs <=1.18.0.1
   - requests <=2.34.2
   # development dependencies
   - pytest <=9.1.1
