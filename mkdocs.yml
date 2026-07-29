@@ -18,11 +18,16 @@ use_directory_urls: false
 # (gen-files / count_loc / execute_notebooks), NOT content; mkdocs-jupyter's
 # default `include` covers *.py, so without this it would try to execute them as
 # notebooks (and fail, e.g. on __file__).
+#
+# docs/overrides/ holds the Material theme overrides (see theme.custom_dir); it
+# is template source, not content, so it must not be copied into the site.
 exclude_docs: |
   scripts/*.py
+  overrides/
 
 theme:
     name: material
+    custom_dir: docs/overrides
     logo: visualizations/logos/geokit_logo.svg
     favicon: visualizations/logos/geokit_logo.svg
     palette:
@@ -118,6 +123,9 @@ markdown_extensions:
     - pymdownx.tabbed:
           alternate_style: true
     - pymdownx.details
+
+extra:
+    generator: false
 
 extra_css:
     - stylesheets/extra.css

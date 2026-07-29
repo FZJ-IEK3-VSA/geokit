@@ -1,0 +1,25 @@
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["dev"]
+
+jobs:
+  TestPullMinVersionsDev:
+    name: Test GLAES compatabiltiy on self-hosted
+    uses: FZJ-IEK3-VSA/.github/.github/workflows/run_conda_forge_test_with_extra_repos.yml@v1
+    secrets: inherit
+    with:
+      runner_tag: "self-hosted"
+      requirements_file_name: requirements.yml
+      extra_repos: |
+        [
+          {"repo": "FZJ-IEK3-VSA/glaes", "branch": "dev", "requirements_file": "requirements-no-geokit.yml"},
+        ]
+      multiprocessing_pytest_string: "-n auto"
+      # Run GeoKit's own examples (main repo at the workflow root) AND glaes'
+      # examples (extra repo cloned into ./glaes/) in a single pytest session,
+      # so a failure in one set still lets the other run and report.
+      # nbval runs each notebook with its own folder as the working directory,
+      # so glaes' relative "data/..." paths resolve correctly.
+      examples_to_execute: "docs/Examples glaes/Examples"
+      multiprocessing_example_string: "-n 2"

@@ -293,7 +293,7 @@
   </g>
 
   <!-- Blue pixels forming "GeoKit" -->
-  <g id="bluePixels" fill="#042433">
+  <g id="bluePixels" fill="#023d6b">
     <!-- G -->
     <rect x="60" y="40" width="9" height="9" />
     <rect x="70" y="40" width="9" height="9" />

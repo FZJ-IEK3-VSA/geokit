@@ -25,7 +25,7 @@
         {
             "customType": "regex",
             "managerFilePatterns": [
-                "/(^|/)requirements-dev\\.yml$/"
+                "/(^|/)requirements\\.yml$/"
             ],
             "matchStrings": [
                 "- (?<depName>[a-zA-Z0-9_.-]+)[^\\n]*?(?<currentValue><=\\d[^\\n,]*)"

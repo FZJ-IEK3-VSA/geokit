@@ -1,17 +1,27 @@
-﻿<table style="border:0; border-collapse:collapse;">
-	<tr>
-		<td style="border:0;">
-			<img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" width="300px">
-		</td>
-		<td style="border:0;">
-			<a href="https://www.fz-juelich.de/en/ice/ice-2"><img src="https://github.com/FZJ-IEK3-VSA/README_assets/blob/main/JSA-Header.svg?raw=True" alt="Logo für Forschungszentrum Juelich - Juelich System Analysis" width="300px"></a>
-		</td>
-	</tr>
-</table>
+﻿<p align="center">
+  <!-- logo:geokit:start -->
+  <a href="https://geokit.readthedocs.io/">
+    <img src="./docs/visualizations/logos/geokit_logo.svg" alt="ETHOS.GeoKit logo" height="80">
+  </a>
+  <!-- logo:geokit:end -->
+  &nbsp;&nbsp;
+  <!-- logo:jsa:start -->
+  <a href="https://www.fz-juelich.de/en/ice/ice-2">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header-dark.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/ICE2_Logos/JSA-Header.svg" alt="Jülich Systems Analysis" height="80">
+    </picture>
+  </a>
+  <!-- logo:jsa:end -->
+</p>
 
-| Name                                                                                                             | Version                                                                                                             | Tests                                                                                                                                                                                                    | Pytest Coverage                                                                                                                                                 | Docstring Style                                                                  | Documentation Coverage                                  |
-| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![Tests](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_push.yml/badge.svg?branch=dev)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_push.yml) | [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/geokit/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/geokit) | ![NumPy docstring style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) |
+# ETHOS.GeoKit - **Geo**spatial tool**kit** for Python for analyzing and altering geospatial data for energy systems modeling and beyond
+
+
+
+| Name                                                                                                             | Version                                                                                                             | Tests                                                                                                                                                                                                    | Pytest Coverage                                                                                                                                                 | Docstring Style                                                                  | Documentation Coverage                                  | Publication                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-geokit-green.svg)](https://anaconda.org/conda-forge/geokit) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/geokit.svg)](https://anaconda.org/conda-forge/geokit) | [![Tests](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_push.yml/badge.svg?branch=dev)](https://github.com/FZJ-IEK3-VSA/geokit/actions/workflows/test_push.yml) | [![codecov](https://codecov.io/gh/FZJ-IEK3-VSA/geokit/graph/badge.svg)](https://codecov.io/gh/FZJ-IEK3-VSA/geokit) | ![NumPy docstring style](https://img.shields.io/badge/%20style-numpy-459db9.svg) | ![Documentation Coverage](./docs/interrogate_badge.svg) | [![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.softx.2026.102870-blue.svg)](https://doi.org/10.1016/j.softx.2026.102870) |
 
 
 
@@ -72,7 +82,7 @@ git checkout dev
 3. Create a new environment:
 
 ```bash
-conda env create --file requirements-dev
+conda env create --file requirements.yml
 conda activate geokit
 pip install . --no-deps
 ```
@@ -80,7 +90,7 @@ pip install . --no-deps
 4. (Alternative) Update an existing environment:
 
 ```bash
-conda env update --file requirements-dev -n <ENVIRONMENT-NAME>
+conda env update --file requirements.yml -n <ENVIRONMENT-NAME>
 conda activate geokit
 pip install . --no-deps
 ```
@@ -144,15 +154,24 @@ Please respect our [code of conduct](https://github.com/FZJ-IEK3-VSA/README_asse
 
 ## Acknowledgment
 
-This work was supported by the Helmholtz Association under the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/).
+This work received primary support from the Helmholtz Association through the Joint Initiative ["Energy System 2050: A Contribution of the Research Field Energy"](https://www.helmholtz.de/en/research/energy/energy_system_2050/) and the program ["Energy System Design"](https://www.helmholtz.de/en/research/research-fields/energy/energy-system-design/). 
 
-<a href="https://www.helmholtz.de/en/">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg">
-    <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Logo" width="200px" style="float:left">
-  </picture>
-</a>
+<p align="left">
+  <!-- logo:helmholtz:start -->
+  <a href="https://www.helmholtz.de/en/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-White-RGB.svg">
+      <img src="https://raw.githubusercontent.com/FZJ-IEK3-VSA/README_assets/v.1.0.0/Helmholtz_Logos/Helmholtz-Logo-Dark-Blue-RGB.svg" alt="Helmholtz Association" width="200">
+    </picture>
+  </a>
+  <!-- logo:helmholtz:end -->
+</p>
+
+Additionally, parts of this work were supported by the [H2Atlas-Africa project (03EW0001)](https://www.fz-juelich.de/de/ice/ice-2/projekte/h2-atlas-africa), funded by the German Federal Ministry of Research, Technology, and Space (BMFTR).
+
+
+
+
 
 
 
