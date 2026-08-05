@@ -18,7 +18,7 @@ dependencies:
   - psutil >=5.8.0,<=7.2.2
   - structlog <=26.1.0
   - rich <=15.0.0
-  - pandas-stubs <=3.0.3.260530
+  - pandas-stubs <=3.0.5.260730
   - scipy-stubs <=1.18.0.1
   - requests <=2.34.2
   # development dependencies
