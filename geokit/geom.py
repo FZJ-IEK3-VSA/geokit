@@ -1965,20 +1965,37 @@ def fixOutOfBoundsGeoms(geom, how="shift"):
     return geom_fixed
 
 
-def getCentroid(geom: ogr.Geometry) -> ogr.Geometry:
+def getCentroid(geom: ogr.Geometry, ignore_vertical: bool = False) -> ogr.Geometry:
     """Get the centroid of a geometry. If the geometry is a point, the point itself is returned.
 
     Parameters
     ----------
     geom : ogr.Geometry
         The geometry for which to calculate the centroid.
+    ignore_vertical : bool, optional
+        The vertical component will be ignored and a centroid
+        with z=0 will be returned if True. Otherwise an error
+        will be raised as osgeo.ogr.Geometry.Centroid() cannot
+        handle 3D centroids. By default False.
 
     Returns
     -------
     ogr.Geometry
         The centroid of the input geometry.
     """
+    # for 3D geometries, currently only z=0 is supported (osgeo.ogr.Geometry.Centroid() ignores z-axis)
+    if geom.Is3D():
+        _, _, _, _, min_z, max_z = geom.GetEnvelope3D()
+        if (min_z != 0 or max_z != 0) and not ignore_vertical:
+            raise GeoKitGeomError(
+                "z component is not zero but ignore_vertical is False."
+            )
+
     srs = geom.GetSpatialReference()
     centroid = geom.Centroid()
+
+    # preserve dimensionality of the input geometry
+    centroid.Set3D(geom.Is3D())
+
     centroid.AssignSpatialReference(srs)
     return centroid
