@@ -664,5 +664,4 @@ def test_getCentroid():
     # must work when ignore_vertical is True though
     centroid = geom.getCentroid(geom_3d_nonzero, ignore_vertical=True)
     assert centroid.GetCoordinateDimension() == 3
-    assert centroid.GetZ() == 0 # vertical is ignored and set to zero
-    
+    assert centroid.GetZ() == 0  # vertical is ignored and set to zero
