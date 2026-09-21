@@ -632,3 +632,32 @@ def test_applyBuffer():
     # now make sure that it fails when the geom would expand over the pole with e.g. 20kms buffer
     with pytest.raises(GeoKitGeomError):
         buf_north_clip_LAEA = geom.applyBuffer(geom=testpoint_north, buffer=20000, srs="laea", split="clip")
+
+
+def test_getCentroid():
+    _srs = srs.loadSRS(4326)
+    # generate 2D and 3D geometries via OGR
+    geom_2d = ogr.CreateGeometryFromWkt("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))")
+    geom_2d.AssignSpatialReference(_srs)
+
+    geom_3d = ogr.CreateGeometryFromWkt("POLYGON Z ((0 0 0, 2 0 0, 2 2 0, 0 2 0, 0 0 0))")
+    geom_3d.AssignSpatialReference(_srs)
+
+    for input_geom, ndim in [(geom_2d, 2), (geom_3d, 3)]:
+        centroid = geom.getCentroid(input_geom)
+
+        assert centroid.GetCoordinateDimension() == ndim
+        assert centroid.GetX() == 1
+        assert centroid.GetY() == 1
+
+        if ndim == 3:
+            assert centroid.GetZ() == 0
+
+        assert centroid.GetSpatialReference().IsSame(input_geom.GetSpatialReference())
+
+    # 3D geometries with non-zero z coordinates are not supported
+    geom_3d_nonzero = ogr.CreateGeometryFromWkt("POLYGON Z ((0 0 1, 2 0 1, 2 2 1, 0 2 1, 0 0 1))")
+    geom_3d_nonzero.AssignSpatialReference(_srs)
+
+    with pytest.raises(GeoKitGeomError):
+        geom.getCentroid(geom_3d_nonzero)
