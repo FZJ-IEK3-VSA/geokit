@@ -658,6 +658,11 @@ def test_getCentroid():
     # 3D geometries with non-zero z coordinates are not supported
     geom_3d_nonzero = ogr.CreateGeometryFromWkt("POLYGON Z ((0 0 1, 2 0 1, 2 2 1, 0 2 1, 0 0 1))")
     geom_3d_nonzero.AssignSpatialReference(_srs)
-
+    # must fail by default
     with pytest.raises(GeoKitGeomError):
         geom.getCentroid(geom_3d_nonzero)
+    # must work when ignore_vertical is True though
+    centroid = geom.getCentroid(geom_3d_nonzero, ignore_vertical=True)
+    assert centroid.GetCoordinateDimension() == 3
+    assert centroid.GetZ() == 0 # vertical is ignored and set to zero
+    
