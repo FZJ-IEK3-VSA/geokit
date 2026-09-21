@@ -1987,9 +1987,7 @@ def getCentroid(geom: ogr.Geometry, ignore_vertical: bool = False) -> ogr.Geomet
     if geom.Is3D():
         _, _, _, _, min_z, max_z = geom.GetEnvelope3D()
         if (min_z != 0 or max_z != 0) and not ignore_vertical:
-            raise GeoKitGeomError(
-                "z component is not zero but ignore_vertical is False."
-            )
+            raise GeoKitGeomError("z component is not zero but ignore_vertical is False.")
 
     srs = geom.GetSpatialReference()
     centroid = geom.Centroid()
