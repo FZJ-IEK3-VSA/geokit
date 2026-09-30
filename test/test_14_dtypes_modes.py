@@ -204,6 +204,7 @@ def test_mode_matrix(case, mode, tmp_path):
 
 @XFAIL
 def test_explicit_narrower_float_warns():
+    """An explicit dtype narrower than the source is used, with a warning."""
     src = gdal_raster(np.array([[0.1, 0.2]], np.float64), gdal.GDT_Float64)
     with pytest.warns(UserWarning, match="dtype"):
         w = gk.raster.warp(src, dtype="Float32", resampleAlg="near")
@@ -211,7 +212,7 @@ def test_explicit_narrower_float_warns():
 
 
 def test_explicit_dtype_with_scalars_that_fit_is_silent():
-    # holds today and must keep holding: an explicit type that fits everything is used as is
+    """An explicit dtype that holds every scalar is used as is, silently; this holds today and must keep holding."""
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=UserWarning)
         r = gk.raster.createRaster(dtype="UInt16", noData=65535, fill=1, **BOUNDS)
@@ -221,13 +222,14 @@ def test_explicit_dtype_with_scalars_that_fit_is_silent():
 
 @XFAIL
 def test_smallest_keeps_nodata_representable():
-    # values fit Byte, but noData=-1 needs a signed type: Int16, never Int8
+    """'smallest' shrinks to a type that still holds noData: values fit Byte, noData=-1 needs Int16, never Int8."""
     r = gk.raster.createRaster(data=np.ones((10, 10), np.int32), noData=-1, dtype="smallest", **BOUNDS)
     assert band_type(r) == "Int16"
 
 
 @XFAIL
 def test_bool_dtype_is_byte():
+    """dtype=bool and dtype='bool' give Byte in createRaster and quickRaster."""
     r = gk.raster.createRaster(dtype=bool, **BOUNDS)
     assert band_type(r) == "Byte"
     q = gk.util.quickRaster(bounds=(0, 0, 10, 10), srs=_srs(4326), dx=1, dy=1, dtype="bool")
