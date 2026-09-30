@@ -310,10 +310,14 @@ def KernelProcessor(size, edgeValue=0, outputType=None, passIndex=False):
 
             # make a padded version of the matrix
 
-            # paddedMatrix = (
-            #     np.ones((yN + 2 * size, xN + 2 * size),) * edgeValue
-            # )
-            paddedMatrix = np.full(shape=(yN + 2 * size, xN + 2 * size), fill_value=edgeValue)
+            # The padding must hold both the matrix and the edge value: an integer edge value on a
+            # float matrix must not truncate the floats, a negative one on uint8 must not wrap
+            edgeValueDtype = np.min_scalar_type(edgeValue)
+            paddingDtype = np.promote_types(matrix.dtype, edgeValueDtype)
+            if paddingDtype == np.float16:  # not a useful working type
+                paddingDtype = np.dtype(np.float32)
+            paddedShape = (yN + 2 * size, xN + 2 * size)
+            paddedMatrix = np.full(shape=paddedShape, fill_value=edgeValue, dtype=paddingDtype)
             paddedMatrix[size:-size, size:-size] = matrix
 
             # apply kernel to each pixel
