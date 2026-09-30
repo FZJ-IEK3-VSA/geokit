@@ -259,14 +259,12 @@ def test_D16_rasterize_add_overflow():
     assert M(r).max() == 200
 
 
-@xfail("D17: gradient of a UInt16 DEM wraps around")
 def test_D17_gradient_unsigned():
     dem = np.array([[100, 101, 102, 103]] * 4, np.uint16)
     g = gk.raster.gradient(gdal_raster(dem, gdal.GDT_UInt16), mode="east-west", asMatrix=True)[:, 1:-1]
     np.testing.assert_allclose(g, -0.01)
 
 
-@xfail("incidental: gradient(mode='ew') raises UnboundLocalError")
 def test_gradient_ew_mode():
     dem = np.array([[100.0, 101.0, 102.0, 103.0]] * 4)
     ew = gk.raster.gradient(gdal_raster(dem, gdal.GDT_Float64), mode="ew", asMatrix=True)
@@ -274,7 +272,6 @@ def test_gradient_ew_mode():
     np.testing.assert_array_equal(ew, full)
 
 
-@xfail("D18: KernelProcessor pads with an integer array and truncates floats")
 def test_D18_kernel_processor_float_padding():
     mat = np.array([[0.5, 1.5], [2.5, 3.5]])
     out = gk.util.KernelProcessor(1, edgeValue=0)(lambda m: m[1, 1])(mat)
@@ -377,22 +374,20 @@ def _scaled_raster():
     return gdal_raster(np.array([[-9999, 100, 200]], np.int16), gdal.GDT_Int16, noData=-9999, scale=0.1)
 
 
-@xfail("D23: extractMatrix(autocorrect=True) compares noData after scaling")
 def test_D23_extractMatrix_autocorrect_scaled():
     out = M(_scaled_raster(), autocorrect=True)
     assert np.isnan(out[0, 0])
     np.testing.assert_allclose(out[0, 1:], [10.0, 20.0])
 
 
-@xfail("D23: extractValues compares noData after scaling")
 def test_D23_extractValues_scaled_nodata():
     src = _scaled_raster()
     got = gk.raster.extractValues(src, [(50, 50), (150, 50)], pointSRS=3035)
+    assert got.inBounds.all()  # the NaN below comes from noData masking, not from an out-of-bounds read
     assert np.isnan(got.data[0])
     assert np.isclose(got.data[1], 10.0)
 
 
-@xfail("D24: rasterStats treats scaled noData as data")
 def test_D24_rasterStats_scaled():
     stats = gk.raster.rasterStats(_scaled_raster())
     assert stats.nobs == 2
@@ -400,7 +395,6 @@ def test_D24_rasterStats_scaled():
 
 
 @pytest.mark.parametrize("noData", [-1, np.nan], ids=["-1", "nan"])
-@xfail("D25: indicateValues writes noData into a bool array and indicates every noData pixel")
 def test_D25_indicateValues_nodata_not_indicated(noData):
     half = np.full((10, 10), 5.0, np.float32)
     half[:, :5] = np.nan
@@ -414,7 +408,6 @@ def test_D25_indicateValues_nodata_not_indicated(noData):
     assert (ind[~is_nodata] == 1).sum() == 50
 
 
-@xfail("D26: applyMask wraps a NumPy-integer noData into uint8")
 def test_D26_applyMask_numpy_int_nodata():
     tri = gk.RegionMask.fromGeom(
         gk.geom.polygon([(0, 0), (1000, 0), (0, 1000), (0, 0)], srs=3035), pixelRes=100, srs=3035

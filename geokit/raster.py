@@ -498,6 +498,20 @@ def saveRasterAsTif(source: gdal.Dataset, output: str, **kwargs):
 
 ####################################################################
 # extract the raster as a matrix
+def _noDataMask(data: np.ndarray, noData) -> np.ndarray | None:
+    """Boolean mask of the pixels equal to ``noData``.
+
+    Must be computed on the *raw* band values, before scale and offset are applied, because the
+    noData value of a band refers to the stored values. A NaN noData value is matched with
+    ``numpy.isnan``. Returns None when ``noData`` is None.
+    """
+    if noData is None:
+        return None
+    if np.isnan(noData):
+        return np.isnan(data)
+    return data == noData
+
+
 def extractMatrix(
     source: load_raster_input,
     bounds=None,
@@ -610,8 +624,11 @@ def extractMatrix(
     # get Data
     if maskBand:
         data = mb.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+        noDataMask = None  # a mask band has no noData value of its own
     else:
         data = sourceBand.ReadAsArray(xoff=xoff, yoff=yoff, win_xsize=xwin, win_ysize=ywin)
+        # noData refers to the stored values, so find it before scale and offset are applied
+        noDataMask = _noDataMask(data, sourceBand.GetNoDataValue()) if autocorrect else None
         if dsInfo.scale is not None and dsInfo.scale != 1.0:
             data = data * dsInfo.scale
         if dsInfo.offset is not None and dsInfo.offset != 0.0:
@@ -619,9 +636,9 @@ def extractMatrix(
 
     # Correct 'nodata' values
     if autocorrect:
-        noData = sourceBand.GetNoDataValue()
         data = data.astype(np.float64)
-        data[data == noData] = np.nan
+        if noDataMask is not None:
+            data[noDataMask] = np.nan
 
     # make sure we are returning data in the 'flipped-y' orientation
     if not isFlipped(source):
@@ -668,7 +685,8 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
     if cutline is not None:
         source = warp(source, cutline=cutline, noData=ignoreValue, **kwargs)
 
-    rawData = extractMatrix(source)
+    # Read the stored values: noData and ignoreValue refer to them, not to the scaled values
+    rawData = source.GetRasterBand(1).ReadAsArray()
     dataInfo = rasterInfo(source)
 
     # exclude nodata and ignore values
@@ -677,16 +695,18 @@ def rasterStats(source, cutline=None, ignoreValue=None, **kwargs):
     if ignoreValue is not None:
         np.logical_and(rawData != ignoreValue, sel, sel)
 
-    if dataInfo.noData is not None:
-        np.logical_and(rawData != dataInfo.noData, sel, sel)
+    noDataMask = _noDataMask(rawData, dataInfo.noData)
+    if noDataMask is not None:
+        np.logical_and(~noDataMask, sel, sel)
 
-    # compute statistics
-    data = rawData[sel].flatten()
-    # scipy>=1.17 casts the element count to the input array's dtype when
-    # computing the variance, which overflows for narrow integer types (e.g.
-    # int8). Statistics are floating point anyway, so promote integer data.
-    if np.issubdtype(data.dtype, np.integer):
-        data = data.astype(np.float64)
+    # compute statistics in float64: scipy>=1.17 casts the element count to the
+    # input array's dtype when computing the variance, which overflows for narrow
+    # integer types (e.g. int8), and scale/offset produce floats anyway
+    data = rawData[sel].astype(np.float64)
+    if dataInfo.scale is not None and dataInfo.scale != 1.0:
+        data = data * dataInfo.scale
+    if dataInfo.offset is not None and dataInfo.offset != 0.0:
+        data = data + dataInfo.offset
     return describe(data)
 
 
@@ -772,8 +792,8 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
             yFactor = factor
             xFactor = factor
 
-    # Calculate gradient
-    arr = extractMatrix(source)
+    # Calculate gradient in float64: differences of unsigned integers would wrap around
+    arr = extractMatrix(source).astype(np.float64)
 
     if mode in ["north-south", "ns", "total", "slope", "dir", "aspect"]:
         ns = np.zeros(arr.shape)
@@ -781,7 +801,7 @@ def gradient(source, mode="total", factor=1, asMatrix=False, **kwargs):
         if mode in ["north-south", "ns"]:
             output = ns
 
-    if mode in ["east-west", "total", "slope", "dir", "aspect"]:
+    if mode in ["east-west", "ew", "total", "slope", "dir", "aspect"]:
         ew = np.zeros(arr.shape)
         ew[:, 1:-1] = (arr[:, :-2] - arr[:, 2:]) / (2 * sourceInfo.dx * xFactor)
         if mode in ["east-west", "ew"]:
@@ -1339,23 +1359,22 @@ def extractValues(
             else:
                 # Open and read from raster
                 data = band.ReadAsArray(xoff=xi, yoff=yi, win_xsize=window, win_ysize=window)
+
+                # Look for nodata on the stored values, before scale and offset are applied
+                nodata = _noDataMask(data, _info.noData)
+
                 if (_info.scale != None) and (_info.scale != 1.0):
                     data = data * _info.scale
                 if (_info.offset != None) and (_info.offset != 0.0):
                     data = data + _info.offset
 
-                # Look for nodata
-                if _info.noData is not None:
-                    nodata = data == _info.noData
-                    if nodata.any():
-                        if noDataOkay:
-                            # data will neaed to be a float type to represent a nodata value
-                            data = data.astype(np.float64)
-                            data[nodata] = np.nan
-                        else:
-                            raise GeoKitRasterError(
-                                "No data values found in extractValues with 'noDataOkay' set to False"
-                            )
+                if nodata is not None and nodata.any():
+                    if noDataOkay:
+                        # data will neaed to be a float type to represent a nodata value
+                        data = data.astype(np.float64)
+                        data[nodata] = np.nan
+                    else:
+                        raise GeoKitRasterError("No data values found in extractValues with 'noDataOkay' set to False")
 
                 # flip if not in the 'flipped-y' orientation
                 if not _info.yAtTop:
