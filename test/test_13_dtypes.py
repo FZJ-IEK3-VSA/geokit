@@ -549,7 +549,6 @@ def scaled_int16_raster_with_nodata():
     return gdal_raster([[-9999, 100, 200]], np.int16, gdal.GDT_Int16, noData=-9999, scale=0.1)
 
 
-@pending("D23: extractMatrix(autocorrect=True) compares noData after scaling")
 @pins("D23")
 def test_D23_extractMatrix_masks_nodata_before_scaling():
     """The noData mask of extractMatrix(autocorrect=True) is built on the stored values, before the scale."""
@@ -559,7 +558,6 @@ def test_D23_extractMatrix_masks_nodata_before_scaling():
     np.testing.assert_allclose(matrix[0, 1:], [10.0, 20.0])
 
 
-@pending("D23: extractValues compares noData after scaling")
 @pins("D23")
 def test_D23_extractValues_masks_nodata_before_scaling():
     """The noData mask of extractValues is built on the stored values, before the scale."""
@@ -569,7 +567,6 @@ def test_D23_extractValues_masks_nodata_before_scaling():
     assert np.isclose(extracted.data[1], 10.0)
 
 
-@pending("D23: interpolateValues compares noData after scaling")
 @pins("D23")
 def test_D23_interpolateValues_masks_nodata_before_scaling():
     """The noData mask of interpolateValues is built on the stored values, before the scale."""
@@ -581,7 +578,6 @@ def test_D23_interpolateValues_masks_nodata_before_scaling():
     assert np.isclose(interpolated[1], 10.0)
 
 
-@pending("D24: rasterStats treats scaled noData as data")
 @pins("D24")
 def test_D24_rasterStats_leaves_out_scaled_nodata():
     """The statistics of rasterStats leave out the noData pixels of a scaled raster."""
@@ -591,7 +587,6 @@ def test_D24_rasterStats_leaves_out_scaled_nodata():
     assert np.isclose(stats.mean, 15.0)
 
 
-@pending("D17: gradient of a UInt16 DEM wraps around")
 @pins("D17")
 def test_D17_gradient_of_unsigned_dem():
     """The gradient of a UInt16 elevation model is computed in float and does not wrap around."""
@@ -604,7 +599,6 @@ def test_D17_gradient_of_unsigned_dem():
     np.testing.assert_allclose(east_west_gradient[:, 1:-1], -0.01)
 
 
-@pending("found on the way: gradient(mode='ew') raises UnboundLocalError")
 def test_gradient_ew_is_east_west():
     """The gradient with mode='ew' is the same as with mode='east-west'."""
     dem_raster = gdal_raster([[100, 101, 102, 103]] * 4, np.float64, gdal.GDT_Float64)
@@ -615,7 +609,6 @@ def test_gradient_ew_is_east_west():
     np.testing.assert_array_equal(short_mode_gradient, long_mode_gradient)
 
 
-@pending("D18: KernelProcessor pads with an integer array and truncates floats")
 @pins("D18")
 def test_D18_kernel_processor_keeps_floats():
     """KernelProcessor pads in a type that holds the matrix, so an integer edgeValue does not truncate floats."""
@@ -633,7 +626,6 @@ def test_D18_kernel_processor_keeps_floats():
 
 
 @pytest.mark.parametrize("noData", [-1, np.nan], ids=["-1", "nan"])
-@pending("D25: indicateValues writes noData into a bool array and indicates every noData pixel")
 @pins("D25")
 def test_D25_indicateValues_does_not_indicate_nodata(noData):
     """NoData pixels of the source are not indicated by indicateValues, for an integer and a NaN noData."""
@@ -653,7 +645,6 @@ def test_D25_indicateValues_does_not_indicate_nodata(noData):
     assert (indicated[~is_nodata] == 1).sum() == 50
 
 
-@pending("D26: applyMask wraps a NumPy-integer noData into uint8")
 @pins("D26")
 def test_D26_applyMask_widens_for_nodata():
     """A uint8 matrix is widened by applyMask, so a NumPy-integer noData of -1 is stored and not wrapped to 255."""
