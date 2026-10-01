@@ -331,22 +331,10 @@ EXPLICIT_CASES = {
 
 # Rows of the two tables that are not fixed on this branch, with the reason of their xfail(strict=True) mark. The PR
 # that fixes a row deletes its line.
-PENDING = {
-    # fixed by #416
-    "rasterMosaic_byte_200": "D5: rasterMosaic of a Byte source clips 200 to 127",
-    "rasterMosaic_byte_and_int16": "rasterMosaic takes the type of the first source only",
-    "combineSimilarRasters_byte": "D19: combineSimilarRasters turns Byte into Int8",
-    "combineSimilarRasters_int32_3000_7": "combineSimilarRasters has no dtype parameter",
-    "combineSimilarRasters-Float32": "combineSimilarRasters has no dtype parameter",
-    "combineSimilarRasters-np.int16": "combineSimilarRasters has no dtype parameter",
-}
+PENDING = {}
 
 # Pending rows of MODE_CASES whose default call already gives the expected type and values
-DEFAULT_CALL_HOLDS = {
-    "rasterMosaic_byte_200",
-    "combineSimilarRasters_byte",
-    "combineSimilarRasters_int32_3000_7",
-}
+DEFAULT_CALL_HOLDS = set()
 
 
 def pending_mark(name, mode=None):
@@ -439,7 +427,6 @@ def test_D27_warp_reads_no_statistics(tmp_path):
     assert list(tmp_path.glob("*.aux.xml")) == []
 
 
-@pending("D27: checkSimilarRasters and combineSimilarRasters compute statistics of their inputs")
 @pins("D27")
 def test_D27_checkSimilarRasters_and_combineSimilarRasters_read_no_statistics(tmp_path):
     """No .aux.xml file appears next to the inputs of checkSimilarRasters and combineSimilarRasters."""

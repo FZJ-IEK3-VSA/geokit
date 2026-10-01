@@ -2636,8 +2636,13 @@ _RESAMPLING_THAT_KEEPS_THE_VALUES = ("near", "mode", "min", "max", "med", "q1", 
 _RESAMPLING_WITH_FRACTIONAL_RESULTS = ("bilinear", "average", "cubic", "cubicspline", "lanczos", "rms")
 
 
-def _warp_rule(resampleAlg: str) -> DTYPES.DtypeRule:
-    """The effect of a resampling algorithm on the value range, which decides the output type (ADR 3)."""
+def resamplingRule(resampleAlg: str) -> DTYPES.DtypeRule:
+    """Return the effect of a resampling algorithm on the value range (ADR 3).
+
+    It decides the output data type of warp and of the mosaics: near, mode, min, max, med, q1 and q3 keep the
+    values (subset); bilinear, average, cubic, cubicspline, lanczos and rms give fractional results; sum adds
+    values up.
+    """
     algorithm = str(resampleAlg).lower()
     if algorithm in _RESAMPLING_THAT_KEEPS_THE_VALUES:
         return DTYPES.DtypeRule.SUBSET
@@ -2876,7 +2881,7 @@ def warp(
         )
     resolved = DTYPES.resolve_dtype(
         [dsInfo.numpy_dtype],
-        _warp_rule(resampleAlg),
+        resamplingRule(resampleAlg),
         scalars={"noData": noDataRead},
         dtype=dtype,
         context="warp",

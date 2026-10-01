@@ -8,16 +8,17 @@ import numpy as np
 from osgeo import gdal
 
 from geokit.regionmask import *
+from geokit import dtypes as DTYPES
+from geokit.data_types import dtype_input
 from geokit.raster import (
     RasterInfo,
-    createRaster,
+    _create_raster,
     extractMatrix,
     loadRaster,
     rasterInfo,
 )
 from geokit.util import nodata_equal
-from geokit.error import GeoKitError
-from geokit.c_data_type_handler import MinimumCDataTypeHandler
+from geokit.error import GeoKitDataTypeError, GeoKitError
 
 
 def checkSimilarRasters(
@@ -37,7 +38,8 @@ def checkSimilarRasters(
     Returns
     -------
     output datasets: list
-        List of osgeo.gdal.Datasets with similar contexts.
+        List of osgeo.gdal.Datasets with similar contexts. Their data types may differ;
+        combineSimilarRasters promotes them. No pixel values are read.
     """
     assert isinstance(rtol, (int, float)) and rtol >= 0, f"rtol must be a float or int >= 0"
     # ensure we have a list of raster datasets
@@ -63,7 +65,7 @@ def checkSimilarRasters(
     datasets = _datasets
 
     # get all raster infos
-    infoDataset = [rasterInfo(sourceDS=d, compute_statistics=True) for d in datasets]
+    infoDataset = [rasterInfo(sourceDS=d) for d in datasets]
     # check all relevant variables
     for rInfo in infoDataset[1:]:
         # same srs is required
@@ -95,21 +97,26 @@ def checkSimilarRasters(
         if not nodata_equal(infoDataset[0].noData, rInfo.noData):
             raise GeoKitError("noData mismatch between datasets.")
 
-    # make sure the datatypes are the same or can be combined
-    list_of_datatypes_in_raster = [rInfo.data_type_name_str for rInfo in infoDataset]
-    list_of_minimum_values_in_raster = [rInfo.minimum_value for rInfo in infoDataset]
-    list_of_maximum_values_in_raster = [rInfo.maximum_value for rInfo in infoDataset]
-    if rtol == 0 and not len(set(list_of_datatypes_in_raster)):
-        # no tolerance allowed - assume dtypes must also match exactly
-        raise TypeError(f"dtypes or rasters differ but rtol is zero.")
-    elif rtol > 0:
-        # accept different dtypes as long as they can be combined into one
-        list_of_numbers_to_consider = [*list_of_minimum_values_in_raster, *list_of_maximum_values_in_raster]
-        MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-            list_of_numbers=list_of_numbers_to_consider, minimum_gdal_type_list=list_of_datatypes_in_raster
-        )  # fail if no common dtype
+    # every raster needs a data type GeoKit knows; the types may differ, combineSimilarRasters promotes them
+    for rInfo in infoDataset:
+        if rInfo.numpy_dtype is None:
+            raise GeoKitDataTypeError(
+                f"checkSimilarRasters: {rInfo.source} has the pixel type {rInfo.data_type_name_str}, which GeoKit "
+                f"does not support."
+            )
     # return list of preloaded, similar datasets
     return datasets
+
+
+def _smallestDtypeOfTheInputs(datasets, noData) -> np.dtype:
+    """The narrowest type that stores every value of every input and the noData value ("smallest").
+
+    The output of combineSimilarRasters is written piece by piece, so the inputs are read instead (ADR 1).
+    """
+    smallest_dtypes = [DTYPES.smallest_dtype_for_dataset(dataset) for dataset in datasets]
+    if noData is not None:
+        smallest_dtypes.append(DTYPES.dtype_for_value(noData))
+    return DTYPES.promote_dtypes(smallest_dtypes)
 
 
 def combineSimilarRasters(
@@ -119,6 +126,7 @@ def combineSimilarRasters(
     verbose=True,
     updateMeta=False,
     allowNumericMismatch=False,
+    dtype: dtype_input = None,
     **kwargs,
 ):
     """
@@ -147,6 +155,24 @@ def combineSimilarRasters(
     allowNumericMismatch : bool, optional
         If True, minor deviations in raster context will be ignored/corrected.
         By default False, i.e. only exactly similar rasters will be combined.
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        The inputs of the choice are the data types of all input rasters, also with a
+        combiningFunc: a function that produces values the promoted input type cannot
+        hold should get an explicit dtype. Under "smallest" the inputs are read once,
+        because the output is written piece by piece.
     **kwargs
         Will be passed on to geokit.raster.createRaster().
 
@@ -182,26 +208,10 @@ def combineSimilarRasters(
     # GET REFERENCE CONTEXT FOR THE OUTPUT RASTER
 
     # determine info for all datasets
-    raster_info_list = [rasterInfo(sourceDS=d, compute_statistics=True) for d in datasets]
+    raster_info_list = [rasterInfo(sourceDS=d) for d in datasets]
 
     # get reference srs - are all the same thanks to checkSimilarRasters
     srs_ref = raster_info_list[0].srs
-
-    # get the unique actual dtypes in input rasters
-    data_type_list = []
-    minimum_and_maximum_values = []
-    for current_raster_info in raster_info_list:
-        if current_raster_info.dtype is None:
-            raise GeoKitError("Input raster has no dtype.")
-        data_type_list.append(current_raster_info.data_type_name_str)
-        minimum_and_maximum_values.append(current_raster_info.minimum_value)
-        minimum_and_maximum_values.append(current_raster_info.maximum_value)
-
-    # now get the most lightweight commonly usable dtype
-    gdal_data_type_as_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-        list_of_numbers=minimum_and_maximum_values, minimum_gdal_type_list=data_type_list
-    )
-    # get_common_dtype(dtypes=dtypes, fallback=None)
 
     # get the reference resolution in x and y dir as the most commonly used value
     dx_ref = statistics.mode([_i.pixelWidth for _i in raster_info_list])
@@ -270,14 +280,32 @@ def combineSimilarRasters(
         assert len(noDataSet) == 1  # make sure, is enforced by checkSimilarRasters
         noData_ref = noDataSet.pop()
 
+    # Choose the data type once (ADR 6): the promotion of all input types, widened for the noData value
+    input_dtypes = [raster_info.numpy_dtype for raster_info in raster_info_list]
+    if combiningFunc is None:
+        rule = DTYPES.DtypeRule.UNION
+    else:
+        rule = DTYPES.DtypeRule.USER_FUNCTION
+    resolved = DTYPES.resolve_dtype(
+        input_dtypes,
+        rule,
+        scalars={"noData": noData_ref},
+        dtype=dtype,
+        context="combineSimilarRasters",
+    )
+    if resolved.shrink_output:
+        output_dtype = _smallestDtypeOfTheInputs(datasets, noData_ref)
+    else:
+        output_dtype = resolved.dtype
+
     # Maybe create a new output dataset
     if isinstance(output, str):
         if not os.path.isfile(output):
             # we will need to create a output source
-            createRaster(
+            _create_raster(
                 bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
                 output=output,
-                dtype=gdal_data_type_as_string,
+                dtype=output_dtype,
                 pixelWidth=dx_ref,
                 pixelHeight=dy_ref,
                 noData=noData_ref,
@@ -291,9 +319,9 @@ def combineSimilarRasters(
             )
     elif output is None:
         # create raster in memory
-        outputDS = createRaster(
+        outputDS = _create_raster(
             bounds=(dataXMin, dataYMin, dataXMax, dataYMax),
-            dtype=gdal_data_type_as_string,
+            dtype=output_dtype,
             pixelWidth=dx_ref,
             pixelHeight=dy_ref,
             noData=noData_ref,
