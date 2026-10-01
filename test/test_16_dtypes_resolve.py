@@ -12,7 +12,7 @@ import pytest
 from osgeo import gdal
 
 from geokit import dtypes
-from geokit.dtypes import Rule
+from geokit.dtypes import DtypeRule
 from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
 
 
@@ -47,7 +47,7 @@ def test_dtype_mode(dtype, expected):
 def test_shared_dtype_docstring_names_the_modes():
     """The docstring block that every raster-writing function will reuse documents the three modes."""
     assert dtypes.DTYPE_PARAMETER_DOCSTRING.startswith("dtype : ")
-    for mode in dtypes.MODES:
+    for mode in dtypes.DTYPE_MODES:
         assert f'"{mode}"' in dtypes.DTYPE_PARAMETER_DOCSTRING
 
 
@@ -76,7 +76,7 @@ def test_auto_widens_until_every_scalar_fits(input_dtype, scalar, expected):
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", GeoKitDataTypeWarning)
-        resolved = dtypes.resolve_dtype(input_dtypes, Rule.IDENTITY, scalars={"noData": scalar})
+        resolved = dtypes.resolve_dtype(input_dtypes, DtypeRule.IDENTITY, scalars={"noData": scalar})
 
     assert gdal_name(resolved.dtype) == expected
     assert resolved.mode == "auto"
@@ -87,7 +87,7 @@ def test_auto_widens_until_every_scalar_fits(input_dtype, scalar, expected):
 def test_auto_warns_when_a_64_bit_integer_type_must_become_float(input_dtype, scalar):
     """Int64 with a NaN noData, or UInt64 with a negative one, gives Float64 and a warning that names dtype."""
     with pytest.warns(GeoKitDataTypeWarning, match="dtype"):
-        resolved = dtypes.resolve_dtype([input_dtype], Rule.IDENTITY, scalars={"noData": scalar}, context="rasterize")
+        resolved = dtypes.resolve_dtype([input_dtype], DtypeRule.IDENTITY, scalars={"noData": scalar}, context="rasterize")
 
     assert gdal_name(resolved.dtype) == "Float64"
 
@@ -110,25 +110,25 @@ def test_none_scalars_are_skipped_and_non_numbers_rejected():
 @pytest.mark.parametrize(
     "rule, input_dtypes, expected",
     [
-        (Rule.SUBSET, ["Byte"], "Byte"),
-        (Rule.SUBSET, ["UInt16"], "UInt16"),
-        (Rule.IDENTITY, ["Int64"], "Int64"),
-        (Rule.UNION, ["Byte", "Int16"], "Int16"),
-        (Rule.UNION, ["Byte", "Float32"], "Float32"),
-        (Rule.FRACTIONAL, ["Byte"], "Float32"),
-        (Rule.FRACTIONAL, ["Int8"], "Float32"),
-        (Rule.FRACTIONAL, ["Int16"], "Float32"),
-        (Rule.FRACTIONAL, ["UInt16"], "Float32"),
-        (Rule.FRACTIONAL, ["Float32"], "Float32"),
-        (Rule.FRACTIONAL, ["Int32"], "Float64"),
-        (Rule.FRACTIONAL, ["UInt32"], "Float64"),
-        (Rule.FRACTIONAL, ["Int64"], "Float64"),
-        (Rule.FRACTIONAL, ["Float64"], "Float64"),
-        (Rule.SUM, ["Byte"], "Float64"),
-        (Rule.SUM, ["Float32"], "Float64"),
-        (Rule.DERIVATIVE, ["UInt16"], "Float64"),
-        (Rule.USER_FUNCTION, ["Float32"], "Float32"),
-        (Rule.USER_FUNCTION, ["UInt16"], "UInt16"),
+        (DtypeRule.SUBSET, ["Byte"], "Byte"),
+        (DtypeRule.SUBSET, ["UInt16"], "UInt16"),
+        (DtypeRule.IDENTITY, ["Int64"], "Int64"),
+        (DtypeRule.UNION, ["Byte", "Int16"], "Int16"),
+        (DtypeRule.UNION, ["Byte", "Float32"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["Byte"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["Int8"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["Int16"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["UInt16"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["Float32"], "Float32"),
+        (DtypeRule.FRACTIONAL, ["Int32"], "Float64"),
+        (DtypeRule.FRACTIONAL, ["UInt32"], "Float64"),
+        (DtypeRule.FRACTIONAL, ["Int64"], "Float64"),
+        (DtypeRule.FRACTIONAL, ["Float64"], "Float64"),
+        (DtypeRule.SUM, ["Byte"], "Float64"),
+        (DtypeRule.SUM, ["Float32"], "Float64"),
+        (DtypeRule.DERIVATIVE, ["UInt16"], "Float64"),
+        (DtypeRule.USER_FUNCTION, ["Float32"], "Float32"),
+        (DtypeRule.USER_FUNCTION, ["UInt16"], "UInt16"),
     ],
     ids=str,
 )
@@ -156,7 +156,7 @@ def test_auto_applies_the_rule_table_of_adr_3(rule, input_dtypes, expected):
 )
 def test_sum_of_burns_holds_count_times_the_burn(input_dtypes, input_values, sum_count, expected):
     """rasterize(add=True) gets the narrowest integer type for count times the burn value or the field range."""
-    resolved = dtypes.resolve_dtype(input_dtypes, Rule.SUM_OF_BURNS, input_values=input_values, sum_count=sum_count)
+    resolved = dtypes.resolve_dtype(input_dtypes, DtypeRule.SUM_OF_BURNS, input_values=input_values, sum_count=sum_count)
 
     assert gdal_name(resolved.dtype) == expected
 
@@ -180,10 +180,10 @@ def test_a_constant_burn_value_is_an_input_of_its_smallest_type(value, expected)
 @pytest.mark.parametrize(
     "rule, input_dtypes, expected",
     [
-        (Rule.FRACTIONAL, ["Byte"], "Byte"),
-        (Rule.SUM, ["Byte"], "Byte"),
-        (Rule.UNION, ["Byte", "Int16"], "Int16"),
-        (Rule.IDENTITY, ["Float64"], "Float64"),
+        (DtypeRule.FRACTIONAL, ["Byte"], "Byte"),
+        (DtypeRule.SUM, ["Byte"], "Byte"),
+        (DtypeRule.UNION, ["Byte", "Int16"], "Int16"),
+        (DtypeRule.IDENTITY, ["Float64"], "Float64"),
     ],
     ids=str,
 )
@@ -207,7 +207,7 @@ def test_preserve_input_raises_for_a_scalar_the_input_type_cannot_store(input_dt
 
 def test_smallest_resolves_like_auto_and_asks_for_a_shrink():
     """The smallest mode chooses the auto type for the operation and tells the caller to shrink the output."""
-    resolved = dtypes.resolve_dtype(["Byte"], Rule.FRACTIONAL, dtype="smallest")
+    resolved = dtypes.resolve_dtype(["Byte"], DtypeRule.FRACTIONAL, dtype="smallest")
 
     assert gdal_name(resolved.dtype) == "Float32"
     assert resolved.mode == "smallest"
@@ -222,12 +222,12 @@ def test_smallest_resolves_like_auto_and_asks_for_a_shrink():
 @pytest.mark.parametrize(
     "explicit, input_dtypes, rule, expected",
     [
-        ("Float32", ["Float64"], Rule.SUBSET, "Float32"),
-        ("Byte", ["Byte"], Rule.SUM, "Byte"),
-        ("Int16", ["Byte"], Rule.FRACTIONAL, "Int16"),
-        (np.uint16, [], Rule.IDENTITY, "UInt16"),
-        ("GDT_Byte", ["Float64"], Rule.IDENTITY, "Byte"),
-        (bool, [], Rule.IDENTITY, "Byte"),
+        ("Float32", ["Float64"], DtypeRule.SUBSET, "Float32"),
+        ("Byte", ["Byte"], DtypeRule.SUM, "Byte"),
+        ("Int16", ["Byte"], DtypeRule.FRACTIONAL, "Int16"),
+        (np.uint16, [], DtypeRule.IDENTITY, "UInt16"),
+        ("GDT_Byte", ["Float64"], DtypeRule.IDENTITY, "Byte"),
+        (bool, [], DtypeRule.IDENTITY, "Byte"),
     ],
     ids=str,
 )

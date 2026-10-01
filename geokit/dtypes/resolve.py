@@ -15,7 +15,7 @@ import numpy as np
 
 from geokit.dtypes.conversions import (
     DTYPES_EXACT_IN_FLOAT32,
-    MODES,
+    DTYPE_MODES,
     can_hold,
     describe_range,
     dtype_for_integer_range,
@@ -30,7 +30,7 @@ from geokit.dtypes.conversions import (
 from geokit.dtypes.options import issue_warning
 from geokit.error import GeoKitDataTypeError
 
-__all__ = ["DTYPE_PARAMETER_DOCSTRING", "MODES", "ResolvedDtype", "Rule", "dtype_mode", "resolve_dtype"]
+__all__ = ["DTYPE_MODES", "DTYPE_PARAMETER_DOCSTRING", "DtypeRule", "ResolvedDtype", "dtype_mode", "resolve_dtype"]
 
 DTYPE_PARAMETER_DOCSTRING = """dtype : str, numpy.dtype, type or None, optional
     The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
@@ -55,12 +55,12 @@ def dtype_mode(dtype) -> str:
         return "auto"
     if isinstance(dtype, str):
         lowered = dtype.strip().lower()
-        if lowered in MODES:
+        if lowered in DTYPE_MODES:
             return lowered
     return "explicit"
 
 
-class Rule(Enum):
+class DtypeRule(Enum):
     """The effect of an operation on the value range, which decides the type under ``"auto"``.
 
     ``SUBSET`` (``warp`` with ``near``, ``mode``, ``min``, ``max``, ``med``, ``q1``, ``q3``), ``IDENTITY``
@@ -107,7 +107,7 @@ class ResolvedDtype:
 
 def resolve_dtype(
     input_dtypes: Iterable = (),
-    rule: Rule = Rule.IDENTITY,
+    rule: DtypeRule = DtypeRule.IDENTITY,
     *,
     input_values: Iterable = (),
     scalars: Mapping[str, object] | None = None,
@@ -121,7 +121,7 @@ def resolve_dtype(
     ----------
     input_dtypes : iterable of types
         The types of the inputs, for example the band types of the source rasters.
-    rule : Rule
+    rule : DtypeRule
         The effect of the operation on the value range.
     input_values : iterable of numbers
         Inputs whose exact value is known in advance, such as a constant burn value. Each counts as an input
@@ -133,7 +133,7 @@ def resolve_dtype(
     dtype : the ``dtype`` argument of the public function
         ``None`` or ``"auto"``, ``"preserve_input"``, ``"smallest"``, or an explicit type.
     sum_count : int
-        For ``Rule.SUM_OF_BURNS``: how many burns can add up in one pixel (the feature count).
+        For ``DtypeRule.SUM_OF_BURNS``: how many burns can add up in one pixel (the feature count).
     context : str
         The name of the public function, for messages.
 
@@ -184,17 +184,17 @@ def _promote_inputs(input_dtypes: Iterable, input_values: Iterable) -> np.dtype 
 
 
 def _apply_rule(
-    promoted_input: np.dtype, rule: Rule, input_dtypes: Iterable, input_values: Iterable, sum_count: int
+    promoted_input: np.dtype, rule: DtypeRule, input_dtypes: Iterable, input_values: Iterable, sum_count: int
 ) -> np.dtype:
-    if rule in (Rule.SUBSET, Rule.IDENTITY, Rule.UNION, Rule.USER_FUNCTION):
+    if rule in (DtypeRule.SUBSET, DtypeRule.IDENTITY, DtypeRule.UNION, DtypeRule.USER_FUNCTION):
         return promoted_input
-    if rule == Rule.FRACTIONAL:
+    if rule == DtypeRule.FRACTIONAL:
         if promoted_input in DTYPES_EXACT_IN_FLOAT32:
             return np.dtype(np.float32)
         return np.dtype(np.float64)
-    if rule in (Rule.SUM, Rule.DERIVATIVE):
+    if rule in (DtypeRule.SUM, DtypeRule.DERIVATIVE):
         return np.dtype(np.float64)
-    if rule == Rule.SUM_OF_BURNS:
+    if rule == DtypeRule.SUM_OF_BURNS:
         return _dtype_for_sum_of_burns(input_dtypes, input_values, sum_count)
     raise GeoKitDataTypeError(f"Unknown rule {rule!r}.")
 

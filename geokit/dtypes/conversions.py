@@ -17,7 +17,7 @@ from geokit.error import GeoKitDataTypeError
 
 __all__ = [
     "DTYPES_EXACT_IN_FLOAT32",
-    "MODES",
+    "DTYPE_MODES",
     "can_hold",
     "describe_range",
     "dtype_for_integer_range",
@@ -33,7 +33,7 @@ __all__ = [
     "to_ogr_field",
 ]
 
-MODES = ("auto", "preserve_input", "smallest")
+DTYPE_MODES = ("auto", "preserve_input", "smallest")
 """The strings that select a mode of the ``dtype`` parameter. They are modes, not types, so ``to_dtype`` rejects them."""
 
 
@@ -104,13 +104,13 @@ def to_dtype(dtype) -> np.dtype | None:
         return _supported_dtype(numpy_dtype, spelling=dtype.__name__)
     raise GeoKitDataTypeError(
         f'dtype={dtype!r} is not a type. Pass a GDAL name such as "Byte", a NumPy dtype, or one of the modes '
-        f"{', '.join(repr(mode) for mode in MODES)}."
+        f"{', '.join(repr(mode) for mode in DTYPE_MODES)}."
     )
 
 
 def _dtype_from_name(name: str) -> np.dtype:
     lowered = name.strip().lower()
-    if lowered in MODES:
+    if lowered in DTYPE_MODES:
         raise GeoKitDataTypeError(
             f'dtype="{name}" is a mode, not a type. It is valid only for functions that choose the type '
             f"themselves, not for a helper that takes a final type."
