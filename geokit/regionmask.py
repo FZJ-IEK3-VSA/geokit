@@ -25,7 +25,6 @@ from geokit.extent import Extent
 from geokit.data_types import (
     dtype_input,
     AxHands,
-    geokit_c_data_types_literal,
     load_raster_input,
     load_vector_input,
     numeric,

@@ -317,3 +317,35 @@ gdal_resample_alogorithms_literal = Literal[
     "q3",
     "sum",
 ]
+
+
+# The type aliases of the former data-type handler are deprecated (ADR 7): the dtype parameter of the raster
+# functions takes dtype_input, and geokit.dtypes converts and chooses types. The aliases stay reachable through
+# __getattr__, which warns, until they are removed.
+_DEPRECATED_TYPE_ALIASES = {
+    "integer_data_types_literal": integer_data_types_literal,
+    "float_data_types_literal": float_data_types_literal,
+    "numpy_data_types_list_literal": numpy_data_types_list_literal,
+    "gdal_c_raster_data_types_literal": gdal_c_raster_data_types_literal,
+    "float_data_types_with_abbreviations_literal": float_data_types_with_abbreviations_literal,
+    "integer_data_types_with_abbreviations_literal": integer_data_types_with_abbreviations_literal,
+    "gdal_c_raster_data_types_with_abbreviations_literal": gdal_c_raster_data_types_with_abbreviations_literal,
+    "geokit_c_data_types_literal": geokit_c_data_types_literal,
+    "gdal_abbreviation_mapper_dict": gdal_abbreviation_mapper_dict,
+}
+for _alias_name in _DEPRECATED_TYPE_ALIASES:
+    del globals()[_alias_name]
+
+
+def __getattr__(name: str):
+    """Resolve a deprecated type alias of the former data-type handler, with a FutureWarning."""
+    if name in _DEPRECATED_TYPE_ALIASES:
+        warnings.warn(
+            f"geokit.data_types.{name} is deprecated and will be removed in a later release. The dtype parameter "
+            f"of the raster functions takes dtype_input (any spelling that geokit.dtypes.to_dtype accepts, or a "
+            f"mode), and geokit.dtypes converts and chooses types.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return _DEPRECATED_TYPE_ALIASES[name]
+    raise AttributeError(f"module 'geokit.data_types' has no attribute '{name}'")

@@ -23,7 +23,6 @@ from geokit.data_types import (
     load_raster_input,
     numeric,
     srs_input,
-    geokit_c_data_types_literal,
     gdal_resample_alogorithms_literal,
 )
 from geokit.error import GeoKitDataTypeError, GeoKitExtentError
@@ -578,7 +577,9 @@ class Extent(object):
             extent edges will be matching min/max longitude of shape.
 
         dtype : Type or np.dtype
-            The final data type of the boundary values
+            The Python type the boundary values are converted to, for example int
+            * This is not the data type of a raster; for that see the dtype parameter of
+              geokit.raster.createRaster
 
         Returns
         -------
