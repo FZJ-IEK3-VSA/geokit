@@ -837,14 +837,20 @@ class RegionMask(object):
             The factor by which to divide the RegionMask's native resolution
             * This is useful if you need to represent very fine details
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Options are: 'near', 'bilinear', 'cubic', 'average', 'mode', 'max', 'min'
-            * Knowing which option to use can have significant impacts!
-                When indicating from a low resolution raster (relative to the region mask),
-                then it is best to use one of 'near', 'bilinear', or 'cubic'. However,
-                when indicating from a high resolution raster file (again, relative to the region
-                mask) then one of 'average', 'mode', 'max', or 'min' is likely better.
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            When indicating from a raster of lower resolution than the RegionMask, "near",
+            "bilinear" or "cubic" work best; from a raster of higher resolution, "average",
+            "mode", "max" or "min".
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
@@ -1703,11 +1709,17 @@ class RegionMask(object):
         output : str; optional
             A path to an output file to write to
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Knowing which option to use can have significant impacts!
-            * Options are: 'near', 'bilinear', 'cubic', 'average', 'mode', 'max', 'min',
-              'med', 'q1', 'q3', 'sum'
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
         resolutionDiv : int
             The factor by which to divide the RegionMask's native resolution
@@ -1998,11 +2010,17 @@ class RegionMask(object):
             * If False, only warp to the RegionMask's boundaries, but keep its
               srs and resolution intact
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Knowing which option to use can have significant impacts!
-            * Options are: 'near', 'bilinear', 'cubic', 'average', 'mode', 'max', 'min',
-              'med', 'q1', 'q3', 'sum'
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
         warpArgs : dict; optional
             Arguments to apply to the warping step
