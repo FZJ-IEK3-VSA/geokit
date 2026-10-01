@@ -87,7 +87,9 @@ def test_auto_widens_until_every_scalar_fits(input_dtype, scalar, expected):
 def test_auto_warns_when_a_64_bit_integer_type_must_become_float(input_dtype, scalar):
     """Int64 with a NaN noData, or UInt64 with a negative one, gives Float64 and a warning that names dtype."""
     with pytest.warns(GeoKitDataTypeWarning, match="dtype"):
-        resolved = dtypes.resolve_dtype([input_dtype], DtypeRule.IDENTITY, scalars={"noData": scalar}, context="rasterize")
+        resolved = dtypes.resolve_dtype(
+            [input_dtype], DtypeRule.IDENTITY, scalars={"noData": scalar}, context="rasterize"
+        )
 
     assert gdal_name(resolved.dtype) == "Float64"
 
@@ -156,7 +158,9 @@ def test_auto_applies_the_rule_table_of_adr_3(rule, input_dtypes, expected):
 )
 def test_sum_of_burns_holds_count_times_the_burn(input_dtypes, input_values, sum_count, expected):
     """rasterize(add=True) gets the narrowest integer type for count times the burn value or the field range."""
-    resolved = dtypes.resolve_dtype(input_dtypes, DtypeRule.SUM_OF_BURNS, input_values=input_values, sum_count=sum_count)
+    resolved = dtypes.resolve_dtype(
+        input_dtypes, DtypeRule.SUM_OF_BURNS, input_values=input_values, sum_count=sum_count
+    )
 
     assert gdal_name(resolved.dtype) == expected
 
