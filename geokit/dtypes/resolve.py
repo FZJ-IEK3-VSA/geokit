@@ -164,6 +164,7 @@ def resolve_dtype(
 
 
 def _numeric_scalars(scalars: Mapping[str, object] | None) -> dict[str, object]:
+    """Return the scalars with a value, checked to be numbers."""
     if scalars is None:
         return {}
     named_scalars = {}
@@ -177,6 +178,7 @@ def _numeric_scalars(scalars: Mapping[str, object] | None) -> dict[str, object]:
 
 
 def _promote_inputs(input_dtypes: Iterable, input_values: Iterable) -> np.dtype | None:
+    """Return the promoted type of the input types and values, or None when there are neither."""
     dtypes_of_inputs = [to_dtype(input_dtype) for input_dtype in input_dtypes]
     for value in input_values:
         dtypes_of_inputs.append(dtype_for_value(value))
@@ -186,6 +188,7 @@ def _promote_inputs(input_dtypes: Iterable, input_values: Iterable) -> np.dtype 
 def _apply_rule(
     promoted_input: np.dtype, rule: DtypeRule, input_dtypes: Iterable, input_values: Iterable, sum_count: int
 ) -> np.dtype:
+    """Return the output type that ``rule`` gives for the promoted input type."""
     if rule in (DtypeRule.SUBSET, DtypeRule.IDENTITY, DtypeRule.UNION, DtypeRule.USER_FUNCTION):
         return promoted_input
     if rule == DtypeRule.FRACTIONAL:
@@ -214,12 +217,14 @@ def _dtype_for_sum_of_burns(input_dtypes: Iterable, input_values: Iterable, sum_
 
 
 def _times(value, count: int):
+    """Return ``value`` multiplied by ``count``, as an int when ``value`` is a whole number."""
     if is_whole_number(value):
         return int(value) * count
     return float(value) * count
 
 
 def _dtype_for_summed_range(input_dtype: np.dtype, count: int) -> np.dtype:
+    """Return the type that holds ``count`` copies of the full range of ``input_dtype``."""
     if input_dtype.kind == "f":  # "f" = floating point
         return np.dtype(np.float64)
     limits = np.iinfo(input_dtype)
@@ -250,6 +255,7 @@ def _widen_for_scalars(chosen: np.dtype, named_scalars: Mapping[str, object], co
 
 
 def _require_scalars_fit(chosen: np.dtype, named_scalars: Mapping[str, object], mode: str, context: str) -> None:
+    """Raise a ``GeoKitDataTypeError`` for the first scalar that does not fit ``chosen``."""
     for scalar_name, value in named_scalars.items():
         if can_hold(chosen, value):
             continue
@@ -259,6 +265,7 @@ def _require_scalars_fit(chosen: np.dtype, named_scalars: Mapping[str, object], 
 def _scalar_does_not_fit_error(
     chosen: np.dtype, scalar_name: str, value, mode: str, context: str
 ) -> GeoKitDataTypeError:
+    """Build the error for a scalar that ``chosen`` cannot hold."""
     type_description = f"{gdal_type_name(chosen)} ({describe_range(chosen)})"
     if mode == "explicit":
         where = f"the requested dtype {type_description}"
@@ -273,6 +280,7 @@ def _scalar_does_not_fit_error(
 
 
 def _prefix(context: str) -> str:
+    """Return ``"context: "`` for an error or warning message, or an empty string when there is no context."""
     if context:
         return f"{context}: "
     return ""

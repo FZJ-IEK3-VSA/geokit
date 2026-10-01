@@ -35,6 +35,7 @@ _EMPTY_SUMMARY = _ValueSummary(None, None, True, True, False)
 
 
 def _summarize_values(values: np.ndarray, no_data) -> _ValueSummary:
+    """Summarise ``values``, with ``no_data`` removed, for ``_smallest_dtype``."""
     flat_values = np.asarray(values).ravel()
     flat_values = _without_no_data(flat_values, no_data)
     if flat_values.size == 0:
@@ -61,6 +62,7 @@ def _summarize_values(values: np.ndarray, no_data) -> _ValueSummary:
 
 
 def _without_no_data(flat_values: np.ndarray, no_data) -> np.ndarray:
+    """Return ``flat_values`` with every occurrence of ``no_data`` removed."""
     if no_data is None:
         return flat_values
     if is_whole_number(no_data) or flat_values.dtype.kind in "iu":  # "i"/"u" = signed/unsigned integer
@@ -71,6 +73,7 @@ def _without_no_data(flat_values: np.ndarray, no_data) -> np.ndarray:
 
 
 def _merge_summaries(first: _ValueSummary, second: _ValueSummary) -> _ValueSummary:
+    """Return the summary of two blocks of values summarised separately."""
     seen_minima = [value for value in (first.minimum, second.minimum) if value is not None]
     seen_maxima = [value for value in (first.maximum, second.maximum) if value is not None]
     return _ValueSummary(
@@ -129,6 +132,7 @@ def smallest_dtype_for_dataset(dataset: gdal.Dataset, rows_per_block: int | None
 
 
 def _read_in_row_blocks(band: gdal.Band, rows_per_block: int | None) -> Iterator[np.ndarray]:
+    """Yield ``band`` as row blocks of about 64 MiB each, or of ``rows_per_block`` rows when given."""
     if rows_per_block is None:
         bytes_per_row = band.XSize * from_band(band).itemsize
         rows_per_block = max(1, (64 * 2**20) // max(bytes_per_row, 1))
