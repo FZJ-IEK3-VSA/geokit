@@ -610,7 +610,6 @@ def first_field_value(column):
     return vector.GetLayer().GetNextFeature().GetField("v")
 
 
-@pending("D20: createVector clips a uint32 above 2**31 - 1")
 @pins("D20")
 def test_D20_createVector_keeps_uint32_above_2_31():
     """A uint32 value above 2**31 - 1 survives createVector."""
@@ -622,7 +621,6 @@ def test_D20_createVector_keeps_uint32_above_2_31():
     [(np.array([5], np.uint64), 5), (np.array([1.5], np.float16), 1.5), (pd.array([True], dtype="boolean"), 1)],
     ids=["uint64", "float16", "pandas-boolean"],
 )
-@pending("D20: createVector writes uint64, float16 and pandas boolean columns as strings")
 @pins("D20")
 def test_D20_createVector_writes_numeric_columns_as_numbers(column, expected):
     """Columns of uint64, float16 and pandas boolean become numeric fields in createVector, not strings."""
@@ -632,7 +630,6 @@ def test_D20_createVector_writes_numeric_columns_as_numbers(column, expected):
     assert field_value == expected
 
 
-@pending("D21: polygonizeRaster clips UInt32 above 2**31 - 1")
 @pins("D21")
 def test_D21_polygonizeRaster_keeps_uint32_above_2_31():
     """UInt32 values above 2**31 - 1 survive polygonizeRaster."""
@@ -641,7 +638,6 @@ def test_D21_polygonizeRaster_keeps_uint32_above_2_31():
     assert list(geokit.raster.polygonizeRaster(uint32_raster)["value"]) == [3_000_000_000]
 
 
-@pending("D21: polygonizeRaster truncates float rasters and merges their areas")
 @pins("D21")
 def test_D21_polygonizeRaster_rejects_float_rasters():
     """A float raster is rejected by polygonizeRaster instead of truncating 1.7 and 2.4 and merging their areas."""
@@ -653,7 +649,6 @@ def test_D21_polygonizeRaster_rejects_float_rasters():
         geokit.raster.polygonizeRaster(float_raster)
 
 
-@pending("D22: polygonizeMatrix always uses an Int32 band")
 @pins("D22")
 def test_D22_polygonizeMatrix_keeps_uint32_above_2_31():
     """Values above 2**31 - 1 in a uint32 matrix survive polygonizeMatrix."""

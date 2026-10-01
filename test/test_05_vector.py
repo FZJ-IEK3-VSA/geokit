@@ -583,6 +583,95 @@ def test_rasterize():
     assert np.isclose(np.nanmean(mat), 2004.96384743)
 
 
+@pytest.mark.parametrize(
+    "given, expected",
+    [
+        ("uint32", "OFTInteger64"),
+        ("int64", "OFTInteger64"),
+        ("uint64", "OFTInteger64"),
+        ("int16", "OFTInteger"),
+        ("float16", "OFTReal"),
+        ("boolean", "OFTInteger"),
+        ("Int64", "OFTInteger64"),
+        ("string", "OFTString"),
+        ("Real", "OFTReal"),
+        (ogr.OFTInteger64, "OFTInteger64"),
+        (pd.BooleanDtype(), "OFTInteger"),
+        (np.array([1.5]), "OFTReal"),
+        (np.uint32, "OFTInteger64"),
+    ],
+    ids=str,
+)
+def test_ogrType_follows_the_field_table_of_adr_9(given, expected):
+    """NumPy, pandas and Python types map to the OGR field of ADR 9; OGR names and constants pass through."""
+    assert vector.ogrType(given) == expected
+
+
+def test_ogrType_rejects_unknown_type_names():
+    """A string that is neither an OGR field type nor a type name raises GeoKitDataTypeError."""
+    with pytest.raises(GeoKitDataTypeError):
+        vector.ogrType("no_such_type")
+
+
+NUMPY_FIELD_TYPES = [
+    "int8",
+    "uint8",
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "int64",
+    "uint64",
+    "float16",
+    "float32",
+    "float64",
+]
+
+
+@pytest.mark.parametrize("numpy_type", NUMPY_FIELD_TYPES)
+def test_createVector_extractFeatures_round_trip_keeps_values(numpy_type):
+    """Every NumPy integer and float column survives createVector and extractFeatures with its values."""
+    dtype = np.dtype(numpy_type)
+    if dtype.kind == "f":
+        values = np.array([0.5, 1.5, -2.5], dtype)
+    else:
+        highest_value = min(int(np.iinfo(dtype).max), 2**62)
+        values = np.array([0, 1, highest_value], dtype)
+    points = [geom.point(6.1 + 0.1 * i, 50.1, srs=4326) for i in range(3)]
+
+    vector_source = vector.createVector(pd.DataFrame({"geom": points, "v": values}))
+    extracted = vector.extractFeatures(vector_source)
+
+    np.testing.assert_array_equal(np.asarray(extracted["v"], dtype=np.float64), values.astype(np.float64))
+
+
+def test_createVector_writes_missing_values_as_null():
+    """None, NaN and pandas NA become NULL fields instead of 0, "nan" or an error."""
+    points = [geom.point(6.1, 50.1, srs=4326), geom.point(6.2, 50.1, srs=4326)]
+    attributes = pd.DataFrame(
+        {
+            "geom": points,
+            "count": pd.array([7, None], dtype="Int64"),
+            "share": [0.5, np.nan],
+            "name": ["a", None],
+        }
+    )
+
+    vector_source = vector.createVector(attributes)
+
+    second_feature = vector_source.GetLayer().GetFeature(1)
+    for field_name in ["count", "share", "name"]:
+        assert second_feature.IsFieldNull(field_name), field_name
+
+
+def test_createVector_rejects_integer_values_the_field_cannot_hold():
+    """A uint64 value above 2**63 - 1 does not fit an Integer64 field and raises instead of being clipped."""
+    attributes = pd.DataFrame({"geom": [geom.point(6.1, 50.1, srs=4326)], "v": np.array([2**63], np.uint64)})
+
+    with pytest.raises(GeoKitDataTypeError, match="Integer64"):
+        vector.createVector(attributes)
+
+
 def test_rasterize_rejects_a_text_attribute():
     """Burning a String field raises GeoKitDataTypeError, and an unknown attribute raises GeoKitVectorError."""
     attributes = pd.DataFrame({"geom": [geom.point(6.1, 50.1, srs=4326)], "name": ["a"]})

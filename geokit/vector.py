@@ -99,58 +99,42 @@ def loopFeatures(source: load_vector_input):
 
 
 # OGR type map
-_ogrIntToType = dict((v, k) for k, v in filter(lambda x: "OFT" in x[0], gdal.__dict__.items()))
-_ogrStrToType = {
-    "bool": "OFTInteger",
-    "int8": "OFTInteger",
-    "int16": "OFTInteger",
-    "int32": "OFTInteger",
-    "int64": "OFTInteger64",
-    "uint8": "OFTInteger",
-    "uint16": "OFTInteger",
-    "uint32": "OFTInteger",
-    "float32": "OFTReal",
-    "float64": "OFTReal",
-    "string": "OFTString",
-    "Object": "OFTString",
-}
+# OGR field type constant -> its name, for example ogr.OFTInteger64 -> "OFTInteger64"
+_ogrIntToType = {value: name for name, value in vars(ogr).items() if name.startswith("OFT") and isinstance(value, int)}
 
 
-def ogrType(s):
-    """Tries to determine the corresponding OGR type according to the input."""
+def ogrType(s) -> str:
+    """Return the OGR field type name ("OFTInteger", "OFTInteger64", "OFTReal", "OFTString") for a type.
+
+    Accepts OGR names with or without the ``OFT`` prefix, OGR constants, NumPy and pandas dtypes and their
+    names, Python types, NumPy scalars and arrays, pandas Series and other iterables (by their first element).
+    NumPy, pandas and Python types are mapped by ``geokit.dtypes.to_ogr_field`` (ADR 9): integers up to 32 bits
+    give ``OFTInteger``; ``uint32``, ``int64`` and ``uint64`` give ``OFTInteger64``; floats give ``OFTReal``;
+    strings and objects give ``OFTString``.
+    """
     if isinstance(s, str):
         if hasattr(ogr, s):
             return s
-        elif s.lower() in _ogrStrToType:
-            return _ogrStrToType[s.lower()]
-        elif hasattr(ogr, "OFT%s" % s):
-            return "OFT%s" % s
-        return "OFTString"
-
-    elif s is str:
-        return "OFTString"
-    elif isinstance(s, pd.api.extensions.ExtensionDtype):
-        # pandas >=3.0 infers string columns as StringDtype (and nullable
-        # Int64/Float64/boolean) instead of the numpy 'object' dtype. These
-        # are ExtensionDtypes, not np.dtype, so map them via their name
-        # (e.g. 'string' -> OFTString, 'Int64' -> OFTInteger64).
-        return ogrType(s.name)
-    elif isinstance(s, np.dtype):
-        return ogrType(str(s))
-    elif isinstance(s, np.generic):
-        return ogrType(s.dtype)
-    elif s is bool:
+        if hasattr(ogr, "OFT" + s):
+            return "OFT" + s
+        try:
+            pandas_or_numpy_dtype = pd.api.types.pandas_dtype(s)
+        except TypeError:
+            raise GeoKitDataTypeError(f"ogrType: '{s}' is neither an OGR field type nor a known type name.") from None
+        return _ogrIntToType[DTYPES.to_ogr_field(pandas_or_numpy_dtype)]
+    if isinstance(s, bool):
         return "OFTInteger"
-    elif s is int:
-        return "OFTInteger64"
-    elif isinstance(s, int):
-        return _ogrIntToType[s]
-    elif s is float:
+    if isinstance(s, int):
+        return _ogrIntToType[s]  # an OGR field type constant
+    if isinstance(s, float):
         return "OFTReal"
-    elif isinstance(s, Iterable):
+    if isinstance(s, (np.ndarray, pd.Series)):
+        return ogrType(s.dtype)
+    if isinstance(s, np.generic):
+        return ogrType(s.dtype)
+    if isinstance(s, Iterable):
         return ogrType(s[0])
-
-    raise ValueError("OGR type could not be determined")
+    return _ogrIntToType[DTYPES.to_ogr_field(s)]
 
 
 # Mapping of geometry names to their OGR wkb type, used to resolve a
@@ -989,6 +973,28 @@ def extractAndClipFeatures(
 
 ####################################################################
 # Create a vector
+_INTEGER_FIELD_LIMITS = {"OFTInteger": (-(2**31), 2**31 - 1), "OFTInteger64": (-(2**63), 2**63 - 1)}
+
+
+def _fieldValueForOgr(field_type_name: str, raw_value, field_name: str):
+    """Cast a column value to what the OGR field stores; None stands for a missing value, written as NULL."""
+    if raw_value is None or pd.isna(raw_value):
+        return None
+    if field_type_name == "OFTString":
+        return str(raw_value)
+    if field_type_name in _INTEGER_FIELD_LIMITS:
+        whole_number = int(raw_value)
+        lowest, highest = _INTEGER_FIELD_LIMITS[field_type_name]
+        if not lowest <= whole_number <= highest:
+            raise GeoKitDataTypeError(
+                f"createVector: the value {whole_number} of field '{field_name}' does not fit an "
+                f"{field_type_name[3:]} field (range {lowest} to {highest}). Request a wider field with fieldDef, "
+                f"or store the values as Real."
+            )
+        return whole_number
+    return float(raw_value)
+
+
 def createVector(
     geoms: ogr.Geometry | str | pd.Series | pd.DataFrame | np.ndarray | list[ogr.Geometry | str],
     output: str | None = None,
@@ -1049,6 +1055,8 @@ def createVector(
         * The length of each column/list MUST match the number of geometries
         * All values in a single column/list must share the same type
             - Options are int, float, or str
+        * Missing values (None, NaN, pandas NA) are written as NULL
+        * An integer value that its field cannot hold raises a GeoKitDataTypeError
 
     fieldDef : dict; optional
         A dictionary specifying the datatype of each attribute when written into
@@ -1284,18 +1292,11 @@ def createVector(
             # Fill the attributes, if required
             if not fieldVals is None:
                 for fieldName, value in fieldVals.items():
-                    _type = fieldDef[fieldName]
-
-                    # cast to basic type
-                    if _type == "OFTString":
-                        val = str(value.iloc[gi])
-                    elif _type == "OFTInteger" or _type == "OFTInteger64":
-                        val = int(value.iloc[gi])
+                    field_value = _fieldValueForOgr(fieldDef[fieldName], value.iloc[gi], str(fieldName))
+                    if field_value is None:
+                        feature.SetFieldNull(str(fieldName))
                     else:
-                        val = float(value.iloc[gi])
-
-                    # Write to feature
-                    feature.SetField(str(fieldName), val)
+                        feature.SetField(str(fieldName), field_value)
 
             # Set the Geometry
             feature.SetGeometry(geoms[gi])

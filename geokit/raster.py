@@ -2380,7 +2380,8 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to polygonize
-        * The Datatype MUST be of boolean of integer type
+        * Must be a boolean or integer raster; a float raster raises a GeoKitDataTypeError,
+          because polygonizing would truncate its values and merge their areas
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the polygons to create
@@ -2410,6 +2411,15 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     if srs is None:
         srs = SRS.loadSRS(source.GetProjectionRef())
 
+    # The field takes its type from the band (ADR 9); a float band has no areas of equal values to polygonize
+    band_dtype = DTYPES.from_band(band)
+    if band_dtype.kind == "f":
+        raise GeoKitDataTypeError(
+            f"polygonizeRaster: the raster has the data type {DTYPES.gdal_type_name(band_dtype)}. Polygonizing "
+            f"needs an integer raster whose equal values form the areas; a float raster would be truncated and "
+            f"its areas merged. Create an integer raster first, for example with mutateRaster and an explicit dtype."
+        )
+
     # Do polygonize
     vecDS = gdal.GetDriverByName("Memory").Create("", 0, 0, 0, gdal.GDT_Unknown)
     vecLyr = vecDS.CreateLayer("mem", srs=srs)
@@ -2417,7 +2427,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
     # vecLyr = vecDS.CreateLayer("layer",srs=srs)
 
-    vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
+    vecField = ogr.FieldDefn("DN", DTYPES.to_ogr_field(band_dtype))  # Integer64 for UInt32 and 64-bit bands
     vecLyr.CreateField(vecField)
 
     # Polygonize geometry
