@@ -372,6 +372,20 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
+def test_RegionMask_indicateValues_dtype_and_deprecated_warpDType():
+    """The dtype parameter sets the type of the warped indication; warpDType still works but warns."""
+    rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
+
+    with_dtype = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), dtype="float64", multiProcess=False)
+    with pytest.warns(FutureWarning, match="warpDType"):
+        with_warp_dtype = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), warpDType="float64", multiProcess=False)
+    nearest = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), resampleAlg="near", multiProcess=False)
+
+    assert with_dtype.dtype == np.float64
+    assert (with_dtype == with_warp_dtype).all()
+    assert nearest.dtype == np.uint8  # the indication is a Byte raster and near keeps it
+
+
 def test_RegionMask_indicateFeatures():
     if platform == "linux" or platform == "linux2":
         multiProcess = True

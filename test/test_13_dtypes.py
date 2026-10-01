@@ -15,6 +15,7 @@ case passes, so the marks cannot go stale.
 
 import inspect
 import warnings
+from typing import get_args
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ from osgeo import gdal, ogr
 from typeguard import suppress_type_checks
 
 import geokit
+from geokit.data_types import gdal_resample_alogorithms_literal
 from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
 from test.gdal_builders import (
     band_type_name,
@@ -701,6 +703,27 @@ def test_raster_writers_share_the_dtype_docstring_block():
     ]
     for writer in raster_writers:
         assert geokit.dtypes.DTYPE_PARAMETER_DOCSTRING in inspect.getdoc(writer), writer.__name__
+
+
+def test_resampling_functions_share_the_resample_alg_docstring_block():
+    """Every function that documents resampleAlg carries the shared block of geokit.raster word for word."""
+    resampling_functions = [
+        geokit.raster.warp,
+        geokit.raster.drawRaster,
+        geokit.Extent.mutateRaster,
+        geokit.Extent.rasterMosaic,
+        geokit.RegionMask.indicateValues,
+        geokit.RegionMask.warp,
+        geokit.RegionMask.mutateRaster,
+    ]
+    for function in resampling_functions:
+        assert geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING in inspect.getdoc(function), function.__qualname__
+
+
+def test_resample_alg_docstring_block_lists_every_algorithm():
+    """The shared block names every algorithm of the resampleAlg type, so the two cannot drift apart."""
+    for algorithm in get_args(gdal_resample_alogorithms_literal):
+        assert f'"{algorithm}"' in geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING, algorithm
 
 
 # ----------------------------------------------------------------------------------------------
