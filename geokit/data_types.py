@@ -31,6 +31,10 @@ load_vector_input = Union[str, pathlib.Path, gdal.Dataset, osgeo.ogr.Layer]
 
 srs_input = Union[gdal.osr.SpatialReference, int, str]
 
+# The dtype parameter of the functions that write a raster: a mode string ("auto", "preserve_input",
+# "smallest"), a GDAL or NumPy type name, a numpy.dtype, a NumPy or Python type, or None (see geokit.dtypes)
+dtype_input = Union[str, np.dtype, type, None]
+
 # supported gdal raster data types can be found here:
 # https://gdal.org/en/stable/user/raster_data_model.html
 

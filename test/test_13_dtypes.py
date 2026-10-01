@@ -13,6 +13,7 @@ The PR that fixes it deletes its line in PENDING, or its @pending mark. A strict
 case passes, so the marks cannot go stale.
 """
 
+import inspect
 import warnings
 
 import numpy as np
@@ -331,32 +332,6 @@ EXPLICIT_CASES = {
 # Rows of the two tables that are not fixed on this branch, with the reason of their xfail(strict=True) mark. The PR
 # that fixes a row deletes its line.
 PENDING = {
-    # fixed by #411
-    "createRaster_empty": "createRaster gives Int8 for a raster made from nothing",
-    "createRaster_int64_0_to_5": "createRaster does not take the dtype modes",
-    "createRaster_uint8_nodata_-1": "createRaster does not take the dtype modes",
-    "createRaster_above_2**24_nodata_0.5": "D9: integers above 2**24 with a fractional noData go to Float32",
-    "createRaster_nodata_without_data": "M6: createRaster(noData=x) without fill or data fills with 0",
-    "createRasterLike_float32": "D6: createRasterLike does not copy the data type",
-    "saveRasterAsTif_byte": "D4: saveRasterAsTif writes a Byte raster as Int8",
-    "saveRasterAsTif_float64_whole": "saveRasterAsTif does not take the dtype modes",
-    "mutateRaster_halve": "mutateRaster does not take the dtype modes",
-    "mutateRaster_uint8_200": "M11: mutateRaster clips uint8 output of 200 to 127",
-    "mutateRaster_uint16_40000": "M11: mutateRaster clips uint16 output of 40000 to 32767",
-    "createRaster-Byte": "D3: an explicit unsigned type becomes signed",
-    "createRaster-UInt16": "D3: an explicit unsigned type becomes signed",
-    "createRaster-UInt32": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-Byte": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-UInt16": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-UInt32": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-np.float32": "D7: quickRaster raises for a dtype that is not a string",
-    "createRaster-np.float32": "D7: a dtype that is not a string is ignored",
-    "createRaster-float": "D7: a dtype that is not a string is ignored",
-    "createRaster-np.dtype-uint16": "D7: a dtype that is not a string is ignored",
-    "createRaster-bool": "dtype=bool gives Int8",
-    "quickRaster-bool": "dtype='bool' gives Int8",
-    "createRaster-noData-out-of-range": "D10: an explicit dtype that cannot hold noData is widened silently",
-    "mutateRaster-bool": "D28: dtype='bool' gives Int8",
     # fixed by #412
     "rasterize_1": "rasterize(value=1) gives Int8",
     "rasterize_200": "D2: rasterize(value=200) burns 127 into Int8",
@@ -392,11 +367,13 @@ PENDING = {
 
 # Pending rows of MODE_CASES whose default call already gives the expected type and values
 DEFAULT_CALL_HOLDS = {
-    "createRaster_int64_0_to_5",
-    "saveRasterAsTif_float64_whole",
-    "mutateRaster_halve",
+    "rasterize_200",
+    "rasterize_40000",
+    "rasterize_2**31",
     "rasterize_-1",
     "rasterize_int64_field",
+    "rasterMosaic_byte_200",
+    "combineSimilarRasters_byte",
     "combineSimilarRasters_int32_3000_7",
 }
 
@@ -459,7 +436,6 @@ def test_explicit_case(name, tmp_path):
         check_values(geokit.raster.extractMatrix(raster))
 
 
-@pending("ADR 2: a bare integer dtype is not rejected")
 def test_bare_integer_dtype_is_rejected(tmp_path):
     """A bare integer such as gdal.GDT_Float32 raises an error that names the string spelling (ADR 2, #396)."""
     # typeguard, which the test suite runs, would reject the integer at the annotation before GeoKit's own check
@@ -510,7 +486,6 @@ def test_D27_checkSimilarRasters_and_combineSimilarRasters_read_no_statistics(tm
     assert list(tmp_path.glob("right.tif.aux.xml")) == []
 
 
-@pending("D4: saveRasterAsTif loses scale and offset")
 @pins("D4")
 def test_D4_saveRasterAsTif_keeps_scale_offset_and_nodata(tmp_path):
     """The copy written by saveRasterAsTif keeps the stored values, scale, offset and noData of the source."""
@@ -756,6 +731,22 @@ def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
         "f": np.dtype("float64"),
         "s": None,
     }
+
+
+# ----------------------------------------------------------------------------------------------
+# shared docstring blocks
+
+
+def test_raster_writers_share_the_dtype_docstring_block():
+    """The dtype parameter of every raster writer is documented by the shared block of ADR 1, word for word."""
+    raster_writers = [
+        geokit.raster.createRaster,
+        geokit.raster.createRasterLike,
+        geokit.raster.saveRasterAsTif,
+        geokit.raster.mutateRaster,
+    ]
+    for writer in raster_writers:
+        assert geokit.dtypes.DTYPE_PARAMETER_DOCSTRING in inspect.getdoc(writer), writer.__name__
 
 
 # ----------------------------------------------------------------------------------------------
