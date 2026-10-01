@@ -381,11 +381,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "D27_checkSimilarRasters":                                "PR 7",
-    "D27_combineSimilarRasters":                              "PR 7",
-    "M13_rasterMosaic_byte_then_int16_1000":                  "PR 7",
-    "M14_combineSimilarRasters_Float32":                      "PR 7",
-    "M14_combineSimilarRasters_np.int16":                     "PR 7",
     "M15_Extent.mutateRaster_Int16":                          "PR 8",
     "M15_Extent.mutateRaster_preserve_input":                 "PR 8",
     "M15_Extent.mutateRaster_preserve_input_with_processor":  "PR 8",
@@ -405,8 +400,6 @@ PENDING = {
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
 # request deletes the lines of its functions.
 WITHOUT_MODES = {
-    "combineSimilarRasters":                                  "PR 7",
-    "rasterMosaic":                                           "PR 7",
     "RegionMask.indicateValues":                              "PR 8",
 }
 # fmt: on
