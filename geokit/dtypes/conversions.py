@@ -135,13 +135,13 @@ def _dtype_from_name(name: str) -> np.dtype:
 
 def _supported_dtype(numpy_dtype: np.dtype, spelling: str) -> np.dtype:
     """Normalise a NumPy dtype to one that a GDAL band of the installed GDAL can store."""
-    if numpy_dtype.kind == "b":
+    if numpy_dtype.kind == "b":  # "b" = boolean
         return np.dtype(np.uint8)
     if numpy_dtype == np.float16:
         return np.dtype(np.float32)
-    if numpy_dtype.kind == "c":
+    if numpy_dtype.kind == "c":  # "c" = complex floating point
         raise GeoKitDataTypeError(f"dtype={spelling}: complex types are not supported.")
-    if numpy_dtype.kind not in "iuf":
+    if numpy_dtype.kind not in "iuf":  # "i"/"u"/"f" = signed/unsigned integer, floating point
         raise GeoKitDataTypeError(
             f"dtype={spelling} cannot be stored in a raster band. GeoKit supports integer and float types."
         )
@@ -249,16 +249,16 @@ def to_ogr_field(dtype) -> int:
             numpy_dtype = np.dtype(dtype)
         except TypeError:
             raise GeoKitDataTypeError(f"{dtype!r} is not a type that an OGR field can store.") from None
-    if numpy_dtype.kind == "b":
+    if numpy_dtype.kind == "b":  # "b" = boolean
         return ogr.OFTInteger
-    if numpy_dtype.kind in "iu":
+    if numpy_dtype.kind in "iu":  # "i"/"u" = signed/unsigned integer
         is_wider_than_int32 = numpy_dtype.itemsize > 4 or numpy_dtype == np.uint32
         if is_wider_than_int32:
             return ogr.OFTInteger64
         return ogr.OFTInteger
-    if numpy_dtype.kind == "f":
+    if numpy_dtype.kind == "f":  # "f" = floating point
         return ogr.OFTReal
-    if numpy_dtype.kind == "c":
+    if numpy_dtype.kind == "c":  # "c" = complex floating point
         raise GeoKitDataTypeError("Complex values cannot be stored in an OGR field.")
     return ogr.OFTString
 
@@ -323,12 +323,12 @@ def can_hold(dtype, value) -> bool:
         return False
     if is_whole_number(value):
         whole_number = int(value)
-        if numpy_dtype.kind in "iu":
+        if numpy_dtype.kind in "iu":  # "i" signed / "u" unsigned integer kinds
             limits = np.iinfo(numpy_dtype)
             return limits.min <= whole_number <= limits.max
         return abs(whole_number) <= _LARGEST_EXACT_WHOLE_NUMBER_BY_FLOAT_DTYPE[numpy_dtype]
     as_float = float(value)
-    if numpy_dtype.kind != "f":
+    if numpy_dtype.kind != "f":  # "f" = floating point
         return False
     if math.isnan(as_float) or math.isinf(as_float):
         return True
@@ -386,7 +386,7 @@ def promote_dtypes(dtypes: Iterable) -> np.dtype | None:
 def describe_range(dtype) -> str:
     """Describe what a type stores exactly, for messages: the integer range, or the largest exact whole number."""
     numpy_dtype = to_dtype(dtype)
-    if numpy_dtype.kind in "iu":
+    if numpy_dtype.kind in "iu":  # "i"/"u" = signed/unsigned integer
         limits = np.iinfo(numpy_dtype)
         return f"range {limits.min} to {limits.max}"
     largest_whole_number = _LARGEST_EXACT_WHOLE_NUMBER_BY_FLOAT_DTYPE[numpy_dtype]
