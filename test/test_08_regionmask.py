@@ -535,29 +535,30 @@ def test_RegionMask_warp():
     # basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
 
-    assert warped_1.dtype == np.int8
+    # the default resampler, bilinear, gives Float32 with the exact interpolated values (ADR 1)
+    assert warped_1.dtype == np.float32
     assert warped_1.shape == rm_3035.mask.shape
-    assert np.isclose(warped_1.sum(), 88128)
-    assert np.isclose(warped_1.std(), 9.400516136589552)
+    assert np.isclose(warped_1.sum(), 88128.0)
+    assert np.isclose(warped_1.std(), 9.400516510009766)
     # rm_3035.createRaster(data=warped_1, output=result("regionMask_warp_1.tif"), overwrite=True)
 
     # basic warp Raster (FLIP CHECK!)
     warped_1f = rm_3035.warp(CLC_FLIPCHECK_PATH)
 
-    assert warped_1f.dtype == np.int8
+    assert warped_1f.dtype == np.float32
     assert warped_1f.shape == rm_3035.mask.shape
-    assert np.isclose(warped_1f.sum(), 88128)
-    assert np.isclose(warped_1f.std(), 9.400516136589552)
+    assert np.isclose(warped_1f.sum(), 88128.0)
+    assert np.isclose(warped_1f.std(), 9.400516510009766)
     # rm_3035.createRaster(data=warped_1f, output=result("regionMask_warp_1f.tif"), overwrite=True)
 
     assert (warped_1 == warped_1f).all()
 
     # basic warp Raster with srs change
     warped_2 = rm.warp(CLC_RASTER_PATH)
-    assert warped_2.dtype == np.int8
+    assert warped_2.dtype == np.float32
     assert warped_2.shape == rm.mask.shape
-    assert np.isclose(warped_2.sum(), 449627)
-    assert np.isclose(warped_2.std(), 9.07520801659)
+    assert np.isclose(warped_2.sum(), 449635.375)
+    assert np.isclose(warped_2.std(), 9.073217391967773)
     # rm.createRaster(data=warped_2, output=result("regionMask_warp_2.tif"), overwrite=True)
 
     # Define resample alg and output type
@@ -572,7 +573,7 @@ def test_RegionMask_warp():
     # define a resolution div
     warped_4 = rm.warp(CLC_RASTER_PATH, resolutionDiv=5, resampleAlg="near", noData=0)
 
-    assert warped_4.dtype == np.int8
+    assert warped_4.dtype == np.uint8  # near keeps the Byte type of the source (ADR 5)
     assert warped_4.shape == (rm.mask.shape[0] * 5, rm.mask.shape[1] * 5)
     assert np.isclose(warped_4.sum(), 11240881)
     assert np.isclose(warped_4.std(), 9.37633272361)

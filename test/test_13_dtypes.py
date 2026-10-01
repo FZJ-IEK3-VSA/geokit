@@ -332,15 +332,6 @@ EXPLICIT_CASES = {
 # Rows of the two tables that are not fixed on this branch, with the reason of their xfail(strict=True) mark. The PR
 # that fixes a row deletes its line.
 PENDING = {
-    # fixed by #414
-    "warp_byte_near": "M1: warp(near) of a Byte raster gives Int8",
-    "warp_byte_average": "D12: warp(average) of a 0/1 mask stores 0.75 as 1",
-    "warp_byte_default_bilinear": "warp chooses its type from statistics, not from the resampling",
-    "warp_byte_cubic_overshoot": "D13: warp(cubic) clips the overshoot to the Byte range",
-    "warp_byte_sum_16_times_200": "D14: warp(sum) into Byte clips 3200 to 255",
-    "warp_int32_average": "warp chooses its type from statistics, not from the resampling",
-    "warp_int32_nan_nodata": "D8: warp of Int32 with a NaN noData gives Float32",
-    "warp-Float32-of-a-Float64-source": "D11: warp(dtype='Float32') of a Float64 source gives Float64",
     # fixed by #416
     "rasterMosaic_byte_200": "D5: rasterMosaic of a Byte source clips 200 to 127",
     "rasterMosaic_byte_and_int16": "rasterMosaic takes the type of the first source only",
@@ -427,7 +418,6 @@ def test_bare_integer_dtype_is_rejected(tmp_path):
 # tests outside the two tables
 
 
-@pending("D15: a reprojection creates unflagged zero pixels silently")
 @pins("D15")
 def test_D15_warp_warns_about_created_pixels():
     """A reprojection without noData warns that the created pixels hold 0 and are not flagged."""
@@ -439,7 +429,6 @@ def test_D15_warp_warns_about_created_pixels():
     assert (geokit.raster.extractMatrix(warped) == 0).any()
 
 
-@pending("D27: warp computes statistics of its source")
 @pins("D27")
 def test_D27_warp_reads_no_statistics(tmp_path):
     """No .aux.xml file appears next to the source of warp, because it computes no statistics."""
