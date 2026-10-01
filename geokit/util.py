@@ -25,7 +25,8 @@ from osgeo import gdal, ogr, osr
 from scipy.interpolate import RectBivariateSpline
 from scipy.stats import describe
 
-from geokit.c_data_type_handler import MinimumCDataTypeHandler
+from geokit import dtypes as DTYPES
+from geokit.data_types import dtype_input
 from geokit.data_types import AxHands, numeric, srs_input, geokit_c_data_types_literal
 from geokit.error import GeoKitError
 
@@ -468,7 +469,7 @@ def quickRaster(
     srs: osr.SpatialReference | None,
     dx: numeric,
     dy: numeric,
-    dtype: geokit_c_data_types_literal | None = None,
+    dtype: dtype_input = None,
     noData: None | numeric | bool = None,
     data: np.ndarray | None = None,
     scale: numeric | None = None,
@@ -487,8 +488,10 @@ def quickRaster(
         The pixel width in x direction.
     dy : numeric
         The pixel height in y direction.
-    dtype : geokit_c_data_types_literal | None, optional
-        The GDAL C datatype to use for the raster band. by default None
+    dtype : str, numpy.dtype or type, optional
+        The type of the raster band, in any spelling that geokit.dtypes.to_dtype accepts, or one of the
+        modes "auto", "preserve_input" and "smallest". A type is used as given; the caller chooses it.
+        None means the type of ``data`` widened for ``noData``, or Byte without data.
     noData : None | numeric | bool, optional
         The value to use for no data in the raster band, by default None
     data : np.ndarray | None, optional
@@ -514,24 +517,23 @@ def quickRaster(
 
     # Open the driver
     driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-    # dtype = getattr(gdal, dtype) if isinstance(dtype, str) else dtype
-    list_of_scalars = []
-    if noData is None:
-        pass
+    # A given dtype is converted and used as it is (ADR 6). Without one, the type is chosen as under
+    # "auto" from the data and the noData value.
+    if data is None:
+        input_dtypes = []
     else:
-        list_of_scalars.append(noData)
-
-    list_of_datatype_strings = []
-    if dtype is None:
-        list_of_gdal_data_type_strings = []
-    else:
-        list_of_gdal_data_type_strings = [dtype]
-    dtype_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-        list_of_numbers=list_of_scalars,
-        minimum_gdal_type_list=list_of_gdal_data_type_strings,
-        # user_defined_minimum_gdal_type=dtype,
+        input_dtypes = [data.dtype]
+    resolved = DTYPES.resolve_dtype(
+        input_dtypes,
+        scalars={"noData": noData},
+        dtype=dtype,
+        context="quickRaster",
     )
-    list_of_datatype_strings.append(dtype)
+    if resolved.shrink_output and data is not None:
+        band_dtype = DTYPES.smallest_dtype_for_array(data, noData)
+    else:
+        band_dtype = resolved.dtype
+    dtype_constant = DTYPES.to_gdal(band_dtype)
     raster: gdal.Dataset = driver.Create("", cols, rows, 1, dtype_constant)
 
     if raster is None:

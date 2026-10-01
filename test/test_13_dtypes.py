@@ -20,6 +20,7 @@ Each pull request deletes its lines from the two lists, so its test diff shows w
 run as soon as its case passes, so the lists cannot go stale.
 """
 
+import inspect
 import pathlib
 import re
 import warnings
@@ -380,37 +381,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "D2_rasterize_200":                                       "PR 4",
-    "D3_createRaster_Byte":                                   "PR 4",
-    "D3_createRaster_UInt16":                                 "PR 4",
-    "D3_createRaster_UInt32":                                 "PR 4",
-    "D3_quickRaster_Byte":                                    "PR 4",
-    "D3_quickRaster_UInt16":                                  "PR 4",
-    "D3_quickRaster_UInt32":                                  "PR 4",
-    "D4_saveRasterAsTif_byte":                                "PR 4",
-    "D4_saveRasterAsTif_scale_offset_nodata":                 "PR 4",
-    "D5_rasterMosaic_byte_200":                               "PR 4",
-    "D6_createRasterLike_float32":                            "PR 4",
-    "D7_createRaster_float":                                  "PR 4",
-    "D7_createRaster_np.dtype_uint16":                        "PR 4",
-    "D7_createRaster_np.float32":                             "PR 4",
-    "D7_quickRaster_np.float32":                              "PR 4",
-    "D9_createRaster_above_2**24_nodata_0.5":                 "PR 4",
-    "D9_createRaster_fill_12.34":                             "PR 4",
-    "D10_createRaster_noData_out_of_range":                   "PR 4",
-    "D19_combineSimilarRasters_byte":                         "PR 4",
-    "D28_createRaster_bool":                                  "PR 4",
-    "D28_createRaster_bool_data":                             "PR 4",
-    "D28_mutateRaster_bool":                                  "PR 4",
-    "D28_quickRaster_bool":                                   "PR 4",
-    "M2_rasterize_2**31":                                     "PR 4",
-    "M2_rasterize_40000":                                     "PR 4",
-    "M4_RegionMask.createRaster":                             "PR 4",
-    "M4_createRaster_empty":                                  "PR 4",
-    "M6_createRaster_nodata_without_data":                    "PR 4",
-    "M11_mutateRaster_uint16_40000":                          "PR 4",
-    "M11_mutateRaster_uint8_200":                             "PR 4",
-    "M12_createRaster_bare_integer":                          "PR 4",
     "D1_rasterize_int32_field":                               "PR 5",
     "D1_rasterize_real_field_float32_exact":                  "PR 5",
     "D1_rasterize_real_field_of_396":                         "PR 5",
@@ -459,11 +429,6 @@ PENDING = {
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
 # request deletes the lines of its functions.
 WITHOUT_MODES = {
-    "createRaster":                                           "PR 4",
-    "createRasterLike":                                       "PR 4",
-    "mutateRaster":                                           "PR 4",
-    "quickRaster":                                            "PR 4",
-    "saveRasterAsTif":                                        "PR 4",
     "rasterize":                                              "PR 5",
     "warp":                                                   "PR 6",
     "combineSimilarRasters":                                  "PR 7",
@@ -953,6 +918,30 @@ def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
         "f": np.dtype("float64"),
         "s": None,
     }
+
+
+# ----------------------------------------------------------------------------------------------
+# shared docstring blocks and deprecated names
+
+
+def test_raster_writers_share_the_dtype_docstring_block():
+    """The dtype parameter of every raster writer is documented by the shared block of ADR 1, word for word."""
+    raster_writers = [
+        geokit.raster.createRaster,
+        geokit.raster.createRasterLike,
+        geokit.raster.saveRasterAsTif,
+        geokit.raster.mutateRaster,
+    ]
+    for writer in raster_writers:
+        assert geokit.dtypes.DTYPE_PARAMETER_DOCSTRING in inspect.getdoc(writer), writer.__name__
+
+
+def test_createRasterLike_data_type_as_string_is_deprecated():
+    """The data_type_as_string parameter of createRasterLike still works and warns in favour of dtype."""
+    with pytest.warns(FutureWarning, match="dtype"):
+        copied_raster = geokit.raster.createRasterLike(byte_ones(), data_type_as_string="Int16")
+
+    assert band_type_name(copied_raster) == "Int16"
 
 
 # ----------------------------------------------------------------------------------------------

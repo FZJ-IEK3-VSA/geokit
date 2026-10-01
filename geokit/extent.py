@@ -16,6 +16,7 @@ from geokit import util as UTIL
 from geokit import vector as VECTOR
 from geokit.location import Location, LocationSet
 from geokit.data_types import (
+    dtype_input,
     TransformedPointsXY,
     TransformedPointsXYZ,
     load_raster_input,
@@ -1044,7 +1045,7 @@ class Extent(object):
         self,
         dx: numeric,
         dy: numeric,
-        dtype: geokit_c_data_types_literal | None = None,
+        dtype: dtype_input = None,
         noData: numeric | None | bool = None,
         data: np.ndarray | None = None,
         scale: numeric | None = None,

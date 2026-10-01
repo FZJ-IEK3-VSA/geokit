@@ -501,7 +501,6 @@ def test_RegionMask_createRaster():
     assert np.isclose(dsInfo.yMin, 50.70)
     assert np.isclose(dsInfo.yMax, 50.80)
     assert dsInfo.srs.IsSame(EPSG4326)
-    assert dsInfo.dtype == gdal.GDT_Int8
 
     # Fill a raster with mask data
     out2 = result("rasterMast_createRaster_2.tif")
