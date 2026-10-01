@@ -585,7 +585,6 @@ def test_RegionMask_rasterize():
     # simple rasterize
     rasterize_1 = rm.rasterize(AACHEN_ZONES)
 
-    assert rasterize_1.dtype == np.int8
     assert rasterize_1.shape == rm.mask.shape
     assert np.isclose(rasterize_1.sum(), 47191)
     assert np.isclose(rasterize_1.std(), 0.42181050527)
@@ -594,9 +593,8 @@ def test_RegionMask_rasterize():
     # attribute rasterizing
     rasterize_2 = rm.rasterize(AACHEN_ZONES, value="YEAR", dtype="int16")
 
-    # The datatype could be stored as int16, but is stored as int64 in the aachen_zones shapefile
-    # Its not reduced automatically.
-    assert rasterize_2.dtype == np.int64
+    # An explicit dtype is used as given (M3 in #405): the Integer64 field is burned into int16
+    assert rasterize_2.dtype == np.int16
     assert rasterize_2.shape == rm.mask.shape
     assert np.isclose(rasterize_2.sum(), 94219640)
     assert np.isclose(rasterize_2.std(), 842.177748527)

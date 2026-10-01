@@ -3,13 +3,14 @@ from os.path import dirname, join
 import json
 import pathlib
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
 from geokit.get_test_data import get_test_data
-from geokit.error import GeoKitError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitError, GeoKitVectorError
 from test.helpers import *
 
 # ogrType
@@ -580,6 +581,21 @@ def test_rasterize():
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
     assert np.isclose(np.nanmean(mat), 2004.96384743)
+
+
+@pytest.mark.parametrize(
+    "attribute, error, message",
+    [("name", GeoKitDataTypeError, "String"), ("missing", GeoKitVectorError, "no attribute")],
+    ids=["String-field", "missing-attribute"],
+)
+def test_rasterize_rejects_an_attribute_it_cannot_burn(attribute, error, message):
+    """A String field raises GeoKitDataTypeError (ADR 9), and an attribute the vector lacks GeoKitVectorError."""
+    attributes = pd.DataFrame({"geom": [geom.point(6.1, 50.1, srs=4326)], "name": ["a"]})
+    point_vector = vector.createVector(attributes)
+    grid = dict(pixelWidth=0.5, pixelHeight=0.5, srs=4326, bounds=(5, 50, 8, 53))
+
+    with pytest.raises(error, match=message):
+        vector.rasterize(point_vector, value=attribute, **grid)
 
 
 def test_createGeoDataFrame():
