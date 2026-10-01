@@ -315,8 +315,8 @@ def can_hold(dtype, value) -> bool:
 
     Whole numbers (also whole floats such as ``3.0``) fit an integer type within its range and a float type up
     to the largest whole number it stores exactly (2**24 for ``float32``, 2**53 for ``float64``). NaN and
-    infinity fit every float type. A fractional value fits ``float32`` only if the round trip through
-    ``float32`` is exact.
+    infinity fit every float type. A fractional value fits a float type within its range; it is stored with
+    the precision of that type, as every float value is.
     """
     numpy_dtype = to_dtype(dtype)
     if numpy_dtype is None or not is_number(value):
@@ -332,10 +332,8 @@ def can_hold(dtype, value) -> bool:
         return False
     if math.isnan(as_float) or math.isinf(as_float):
         return True
-    if numpy_dtype == np.float32:
-        round_trip = float(np.float32(as_float))
-        return round_trip == as_float
-    return True
+    largest_finite_value = float(np.finfo(numpy_dtype).max)
+    return abs(as_float) <= largest_finite_value
 
 
 def dtype_for_value(value) -> np.dtype:

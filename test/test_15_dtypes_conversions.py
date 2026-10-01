@@ -262,7 +262,9 @@ def test_is_whole_number(value, expected):
         ("Int64", 2**63, False),
         ("UInt64", 2**64 - 1, True),
         ("Float32", 0.5, True),
-        ("Float32", 0.1, False),
+        ("Float32", 0.1, True),
+        ("Float32", 12.34, True),
+        ("Float32", 1e39, False),
         ("Float32", np.nan, True),
         ("Float32", np.inf, True),
         ("Float32", 2**24, True),
@@ -278,7 +280,7 @@ def test_is_whole_number(value, expected):
     ids=str,
 )
 def test_can_hold_means_stored_exactly(dtype, value, expected):
-    """A value fits a type only if it can be stored exactly: range for integers, precision for floats."""
+    """A value fits a type if it can be stored: the range for integers and fractions, exactness for whole numbers in floats."""
     assert dtypes.can_hold(dtype, value) is expected
 
 
