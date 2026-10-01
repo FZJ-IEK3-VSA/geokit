@@ -16,10 +16,6 @@ from osgeo import gdal, ogr, osr
 from osgeo.gdal import Driver
 from scipy.interpolate import RectBivariateSpline
 
-from geokit.c_data_type_handler import (
-    MinimumCDataTypeHandler,
-    geokit_c_data_types_literal,
-)
 from geokit import geom as GEOM
 from geokit import srs as SRS
 from geokit import util as UTIL

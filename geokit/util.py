@@ -27,7 +27,7 @@ from scipy.stats import describe
 
 from geokit import dtypes as DTYPES
 from geokit.data_types import dtype_input
-from geokit.data_types import AxHands, numeric, srs_input, geokit_c_data_types_literal
+from geokit.data_types import AxHands, numeric, srs_input
 from geokit.error import GeoKitError
 
 ######################################################################################
