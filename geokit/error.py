@@ -46,6 +46,21 @@ class GeoKitCDataError(GeoKitError):
     pass
 
 
+class GeoKitDataTypeError(GeoKitError):
+    """A data-type request that GeoKit cannot carry out.
+
+    Raised for a bare integer or an unsupported type passed as ``dtype``, and for a noData, fill or burn value
+    that the chosen type cannot store. See ``geokit.dtypes``.
+    """
+
+
+class GeoKitDataTypeWarning(UserWarning):
+    """A data-type check found a possible loss: precision above 2**53, or pixels created without a noData value.
+
+    ``geokit.dtypes.set_options(checks=False)`` turns these warnings off.
+    """
+
+
 class GeokitMultiProcessingWarning(Warning):
     multiProcessingWarningMessage = (
         "Multiprocessing has been set to 'False' because it is not available for Windows or Mac."

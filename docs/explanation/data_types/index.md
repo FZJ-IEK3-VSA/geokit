@@ -22,8 +22,7 @@ were considered.
 - **Issue #396** reported a float attribute that `rasterize` burned into an `Int16` raster, so 9.3 became 9.
   A sweep of every GeoKit function then found 29 data-type defects, and a review of that sweep added 11
   findings. They are listed in [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405), the umbrella issue of
-  the fix. Each defect has a regression test in `test/test_13_dtypes_regression.py` whose name starts with
-  the defect ID.
+  the fix. `test/test_13_dtypes.py` pins every entry of the catalogue.
 
 Several of the decisions below restore the behaviour before v1.7.1. They do not introduce it.
 
@@ -68,7 +67,7 @@ The sweep traced the defects to six causes:
 | [4](adr_04_nodata_fill_and_burn_values.md) | Every noData, fill and burn value that GeoKit writes must fit the output type. Integer data with a NaN noData becomes `Float64`. |
 | [5](adr_05_signed_and_unsigned.md) | Where GeoKit chooses an integer width, `Byte` comes before `Int8`, and at 16 bits and wider the signed type comes before the unsigned one. |
 | [6](adr_06_resolve_once.md) | The type is chosen once per public call. Internal helpers only convert it. |
-| [7](adr_07_numpy_dtype_inside.md) | Inside GeoKit a type is always a `numpy.dtype`. GDAL, OGR and pandas types are converted at the edges, in one module. |
+| [7](adr_07_numpy_dtype_inside.md) | Inside GeoKit a type is always a `numpy.dtype`. GDAL, OGR and pandas types are converted at the edges, in one package. |
 | [8](adr_08_values_in_numpy.md) | A value is never written into a NumPy array that cannot hold it. GeoKit's own arithmetic runs in `float64`. |
 | [9](adr_09_vector_field_types.md) | OGR field types follow from the dtype, including 64-bit and unsigned integers. `polygonizeRaster` rejects float rasters. |
 | [10](adr_10_turning_checks_off.md) | A central option, `geokit.dtypes.set_options(checks=False)`, turns the remaining data-type warnings off. The type and the errors stay the same. |

@@ -64,10 +64,10 @@ dtype="Int32", or dtype="auto" to let GeoKit choose.
 
 - An explicit type behaves as it did up to v1.7.0. Most of the changes are restorations.
 - Two new errors appear where GeoKit used to continue silently: a type that cannot hold the noData value, and
-  a bare GDAL constant such as `dtype=gdal.GDT_Float32`. Both are listed in the changelog when they ship.
-- The C data types example describes `dtype` as a minimum. It is rewritten when the modes ship.
+  a bare GDAL constant such as `dtype=gdal.GDT_Float32`. The release notes list both.
+- The C data types example, which describes `dtype` as a minimum, has to be rewritten around the modes.
 - `Extent.fit(unit, dtype=None)` uses a parameter of the same name for something else: rounding the bounds.
-  Its docstring will point this out.
+  Its docstring has to say so.
 
 ## Alternatives considered
 

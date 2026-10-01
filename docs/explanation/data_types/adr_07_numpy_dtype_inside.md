@@ -23,8 +23,8 @@ own mapping between these vocabularies.
 
 ## Decision
 
-Inside GeoKit, a type is always a `numpy.dtype`. Conversions happen only at the edges, in one new module,
-`geokit/dtypes.py`, which replaces `geokit/c_data_type_handler.py`:
+Inside GeoKit, a type is always a `numpy.dtype`. Conversions happen only at the edges, in one new package,
+`geokit.dtypes`, which replaces `geokit/c_data_type_handler.py`:
 
 | Function | Converts |
 |---|---|

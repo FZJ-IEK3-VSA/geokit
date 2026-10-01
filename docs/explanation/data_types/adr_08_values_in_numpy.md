@@ -35,6 +35,7 @@ These rules do not depend on the `dtype` modes. They only correct values, so the
 ## Consequences
 
 - `applyMask` of a `uint8` array with `noData=-1` returns an `int16` array instead of a `uint8` array.
-- The processor of `indicateValues` returns `uint8` without noData and `float32` with noData, instead of `bool`.
+- The processor of `indicateValues` returns `uint8` without noData, and otherwise the narrowest type that holds
+  the noData value, instead of `bool`.
 - `rasterStats` of a scaled raster with noData reports fewer observations and a different mean. The old
   numbers included the noData pixels.
