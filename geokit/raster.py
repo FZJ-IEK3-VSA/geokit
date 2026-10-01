@@ -219,12 +219,14 @@ def createRaster(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Must fit the data type of the raster: an explicit ``dtype`` that cannot
+          store it raises a GeoKitDataTypeError, an automatic one is widened
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Must fit the data type of the raster, like noData
+        * Without fill and data the raster starts as noData, or as 0 if no noData
+          is given
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
@@ -242,13 +244,11 @@ def createRaster(
 
     scale : numeric; optional
         The scaling value given to apply to all values
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Stored as metadata of the band; it does not change the data type
 
     offset : numeric; optional
         The offset value given to apply to all values
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Stored as metadata of the band; it does not change the data type
 
     raster_band_index: int, defaults to 1
         Determines which band is written to in the output raster dataset.
@@ -298,9 +298,9 @@ def _resolve_dtype_for_new_raster(
     context: str,
     source_dtype: np.dtype | None = None,
 ) -> np.dtype:
-    """Choose the type of a raster that is created from ``data`` or filled with ``fill`` (identity rule).
+    """Choose the data type of a raster that is created from ``data`` or filled with ``fill`` (identity rule).
 
-    The inputs are the type of the source raster, if there is one, and the type of ``data``. Under
+    The inputs are the data type of the source raster, if there is one, and the data type of ``data``. Under
     ``"smallest"`` the values that will be written (``data``, else ``fill``) and the noData value decide.
     """
     input_dtypes = []
@@ -345,10 +345,11 @@ def _create_raster(
     creationOptions: dict | None = None,
     raster_band_index: int = 1,
 ) -> gdal.Dataset | str:
-    """Create the raster with a type that has already been chosen (``createRaster`` without the choice).
+    """Create the raster with a data type that has already been chosen (``createRaster`` without the choice).
 
-    ``dtype`` is converted with ``geokit.dtypes.to_gdal`` and used as given. The public functions choose it
-    once with ``geokit.dtypes.resolve_dtype`` before they call this helper (ADR 6). All other parameters are
+    The data type given as ``dtype`` is converted with ``geokit.dtypes.to_gdal`` and used as it is. The public
+    functions choose it once with ``geokit.dtypes.resolve_dtype`` before they call this helper (ADR 6). All
+    other parameters are
     those of ``createRaster``.
     """
     data_type_constant = DTYPES.to_gdal(dtype)
@@ -493,7 +494,7 @@ def createRasterLike(
     call to rasterInfo() ).
 
     * This copies all characteristics of the given raster, including: bounds,
-      pixelWidth, pixelHeight, dtype, srs, noData, and meta.
+      pixelWidth, pixelHeight, data type, srs, noData, and meta.
     * Any keyword argument which is given will override values found in the
       source
 
@@ -521,7 +522,7 @@ def createRasterLike(
           the results, so the same losses as under "preserve_input" can occur without a warning.
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
-        Without a ``dtype`` the type of the source is kept.
+        If ``dtype`` is not given, the data type of the source is kept.
     **kwargs
         Passed on to createRaster.
     """
@@ -582,7 +583,7 @@ def createRasterLike(
 
 
 def saveRasterAsTif(source: load_raster_input, output: str, dtype: dtype_input = None, **kwargs):
-    """Write a raster to a GeoTiff file on disk as an exact copy: values, type, scale, offset and noData.
+    """Write a raster to a GeoTiff file on disk as an exact copy: values, data type, scale, offset and noData.
 
     Parameters
     ----------
@@ -604,7 +605,7 @@ def saveRasterAsTif(source: load_raster_input, output: str, dtype: dtype_input =
           the results, so the same losses as under "preserve_input" can occur without a warning.
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
-        Without a ``dtype`` the type of the source is kept.
+        If ``dtype`` is not given, the data type of the source is kept.
     **kwargs
         Passed on to createRaster, for example ``compress`` or ``meta``.
 
@@ -1824,8 +1825,8 @@ def mutateRaster(
         The function performing the mutation of the raster's data
         * The function will take single argument (a 2D numpy.ndarray)
         * The function must return a numpy.ndarray of the same size as the input
-        * The type of the returned array decides the type of the output raster
-          under the default dtype; bool becomes Byte
+        * The data type of the returned array decides the data type of the output
+          raster if ``dtype`` is not given; bool becomes Byte
         * See example below for more info
 
     bounds: tuple or Extent
@@ -1869,7 +1870,7 @@ def mutateRaster(
           the results, so the same losses as under "preserve_input" can occur without a warning.
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
-        Under "preserve_input" the processed values are cast to the type of the source raster.
+        Under "preserve_input" the processed values are cast to the data type of the source raster.
 
     **kwargs:
         * All kwargs are passed on to a call to createRaster()

@@ -489,9 +489,10 @@ def quickRaster(
     dy : numeric
         The pixel height in y direction.
     dtype : str, numpy.dtype or type, optional
-        The type of the raster band, in any spelling that geokit.dtypes.to_dtype accepts, or one of the
-        modes "auto", "preserve_input" and "smallest". A type is used as given; the caller chooses it.
-        None means the type of ``data`` widened for ``noData``, or Byte without data.
+        The data type of the raster band, in any spelling that geokit.dtypes.to_dtype accepts, or one of
+        the modes "auto", "preserve_input" and "smallest". A data type is used as it is; the caller
+        chooses it. None means the data type of ``data``, widened so that ``noData`` fits, or Byte without
+        data.
     noData : None | numeric | bool, optional
         The value to use for no data in the raster band, by default None
     data : np.ndarray | None, optional
@@ -517,8 +518,8 @@ def quickRaster(
 
     # Open the driver
     driver: gdal.Driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-    # A given dtype is converted and used as it is (ADR 6). Without one, the type is chosen as under
-    # "auto" from the data and the noData value.
+    # A data type given as dtype is converted and used as it is (ADR 6). Without one, the data type is
+    # chosen as under "auto" from the data and the noData value.
     if data is None:
         input_dtypes = []
     else:
