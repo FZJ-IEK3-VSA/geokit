@@ -547,6 +547,14 @@ def extractMatrix(
         The srs of the 'bounds' argument
         * This is ignored if the 'bounds' argument is an Extent object or is None
 
+    maskBand : bool; optional
+        If True, read the dataset's GDAL mask band instead of band 1's data
+        * The mask band is a per-pixel validity array derived by GDAL from the
+          source's noData value, an alpha channel, or an explicit mask, where
+          0 means invalid/no-data and 255 means valid
+        * A mask band has no noData value of its own, so 'autocorrect' has no
+          effect when this is True
+
     autocorrect : bool; optional
         If True, the matrix will search for no data values and change them to
         numpy.nan
