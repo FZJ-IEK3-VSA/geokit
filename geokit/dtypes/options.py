@@ -15,21 +15,23 @@ from dataclasses import dataclass, replace
 
 from geokit.error import GeoKitDataTypeWarning
 
-__all__ = ["Options", "get_options", "issue_warning", "options", "set_options"]
+__all__ = ["DtypeOptions", "get_options", "issue_warning", "options", "set_options"]
 
 
 @dataclass(frozen=True)
-class Options:
+class DtypeOptions:
     """The data-type options. ``checks`` turns the ``GeoKitDataTypeWarning`` warnings on or off."""
 
     checks: bool = True
 
 
-_process_wide_options = Options()
-_context_options: contextvars.ContextVar[Options | None] = contextvars.ContextVar("geokit_dtypes_options", default=None)
+_process_wide_options = DtypeOptions()
+_context_options: contextvars.ContextVar[DtypeOptions | None] = contextvars.ContextVar(
+    "geokit_dtypes_options", default=None
+)
 
 
-def get_options() -> Options:
+def get_options() -> DtypeOptions:
     """Return the options in effect: those of the innermost :func:`options` block, else the process-wide ones."""
     context_options = _context_options.get()
     if context_options is not None:
@@ -49,7 +51,7 @@ def set_options(*, checks: bool | None = None) -> None:
 
 
 @contextlib.contextmanager
-def options(*, checks: bool | None = None) -> Iterator[Options]:
+def options(*, checks: bool | None = None) -> Iterator[DtypeOptions]:
     """Change the data-type options inside a ``with`` block only, and restore them afterwards.
 
     The change is local to the current thread (it uses a ``contextvars.ContextVar``).

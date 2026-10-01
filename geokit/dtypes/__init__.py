@@ -22,7 +22,7 @@ from geokit.dtypes.conversions import (
     to_gdal,
     to_ogr_field,
 )
-from geokit.dtypes.options import Options, get_options, issue_warning, options, set_options
+from geokit.dtypes.options import DtypeOptions, get_options, issue_warning, options, set_options
 from geokit.dtypes.resolve import DTYPE_PARAMETER_DOCSTRING, DtypeRule, ResolvedDtype, dtype_mode, resolve_dtype
 from geokit.dtypes.smallest import shrink_dataset, smallest_dtype_for_array, smallest_dtype_for_dataset
 from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
@@ -30,10 +30,10 @@ from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
 __all__ = [
     "DTYPE_MODES",
     "DTYPE_PARAMETER_DOCSTRING",
+    "DtypeOptions",
     "DtypeRule",
     "GeoKitDataTypeError",
     "GeoKitDataTypeWarning",
-    "Options",
     "ResolvedDtype",
     "can_hold",
     "dtype_for_value",
