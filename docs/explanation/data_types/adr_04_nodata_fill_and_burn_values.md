@@ -9,8 +9,8 @@ GeoKit writes some values itself: the noData value, the fill value of a new rast
 `rasterize`. The output type has to hold them. The handler gets this wrong in three ways:
 
 - It widens an integer type with a NaN noData to `Float32`, whatever the integer width. `float32` holds whole
-  numbers exactly only up to 2²⁴, so integer IDs change: 123 456 789 becomes 123 456 792 (D8 in the
-  [defect catalogue](defects.md)).
+  numbers exactly only up to 2²⁴, so integer IDs change: 123 456 789 becomes 123 456 792 (D8 in
+  [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405)).
 - It picks the float width by range, not by precision. `np.min_scalar_type(0.1)` is `float16`, so a burn value
   of 0.1 ends up in `Float32` (D9).
 - An explicit type that cannot hold the noData value is widened without notice (D10).

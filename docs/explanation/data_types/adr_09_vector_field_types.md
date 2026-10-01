@@ -8,7 +8,8 @@
 OGR stores attributes in typed fields: `Integer` (32-bit signed), `Integer64`, `Real` (64-bit float),
 `String` and a few others. OGR has no unsigned and no 8-bit or 16-bit field types; optional subtypes such as
 `Boolean`, `Int16` and `Float32` narrow a field further. GeoKit crosses between these fields and raster or
-NumPy types in several places, and loses values there (entries from the [defect catalogue](defects.md)):
+NumPy types in several places, and loses values there (entries from the defect catalogue in
+[#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405)):
 
 - `createVector` writes a `uint32` column into an `Integer` field, so 3 000 000 000 becomes 2 147 483 647.
   `uint64`, `float16` and pandas `boolean` columns silently become `String` fields (D20).

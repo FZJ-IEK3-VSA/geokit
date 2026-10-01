@@ -37,8 +37,9 @@ The `dtype` parameter of every function that writes a raster takes one of these 
 3. Widen the type until every noData, fill and burn value fits
    ([ADR 4](adr_04_nodata_fill_and_burn_values.md)).
 
-Where GeoKit chooses an integer width, it follows the order of [ADR 5](adr_05_signed_and_unsigned.md). If no type can hold the values without loss, for
-example `Int64` data with a NaN noData, the result is `Float64` with a warning.
+Where GeoKit chooses an integer width, it follows the order of [ADR 5](adr_05_signed_and_unsigned.md). If no
+type can hold the values without loss, for example `Int64` data with a NaN noData, the result is `Float64`
+with a warning.
 
 ### `"preserve_input"`
 

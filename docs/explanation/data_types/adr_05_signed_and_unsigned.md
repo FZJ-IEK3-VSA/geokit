@@ -9,7 +9,8 @@
 So these calls return `Int8` today:
 
 - `createRaster()` without arguments, and `rasterize(value=1)`
-- `RegionMask.createRaster()` and `RegionMask.rasterize()` (M4 in the [defect catalogue](defects.md))
+- `RegionMask.createRaster()` and `RegionMask.rasterize()` (M4 in
+  [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405))
 - `mutateRaster(dtype="bool")` and `RegionMask.indicateValueToGeoms` (D28)
 - `warp` with `near` of any `Byte` raster whose maximum is at most 127 (M1)
 

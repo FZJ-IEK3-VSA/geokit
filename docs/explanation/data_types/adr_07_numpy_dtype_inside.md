@@ -16,10 +16,10 @@ constants of GDAL and OGR overlap:
 | 12 | `OFTInteger64` | `GDT_UInt64` |
 
 `vectorInfo` passes OGR field constants to `gdal.GetDataTypeName`. It reports a `Real` field as `"UInt16"`, an
-`Integer64` field as `"UInt64"` and an `Integer` field as `"Unknown"` (M8 in the
-[defect catalogue](defects.md)). `rasterize` then burns float attributes into `Int16` and raises for integer
-attributes. This is issue #396 (D1). About ten places in GeoKit hold their own mapping between these
-vocabularies.
+`Integer64` field as `"UInt64"` and an `Integer` field as `"Unknown"` (M8 in
+[#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405)). `rasterize` then burns float attributes into
+`Int16` and raises for integer attributes. This is issue #396 (D1). About ten places in GeoKit hold their
+own mapping between these vocabularies.
 
 ## Decision
 

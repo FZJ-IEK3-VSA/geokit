@@ -6,7 +6,8 @@
 minimum and maximum of the input. It never sees the operation. So it never widens the type when the operation
 widens the values:
 
-- A sum of 16 pixels of 200 is stored as 255 in a `Byte` raster (D14 in the [defect catalogue](defects.md)).
+- A sum of 16 pixels of 200 is stored as 255 in a `Byte` raster (D14 in
+  [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405)).
 - `rasterize(add=True)` of two overlapping features of 100 stores 127 instead of 200 (D16).
 - Cubic resampling overshoots the input range, and the overshoot is clipped (D13).
 - Averaging a 0/1 mask stores 0.75 as 1 (D12).

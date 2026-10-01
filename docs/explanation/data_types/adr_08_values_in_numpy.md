@@ -6,7 +6,7 @@
 ## Context
 
 Several GeoKit functions work on NumPy arrays and lose values because of the array's dtype. The entries are in
-the [defect catalogue](defects.md):
+the defect catalogue in [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405):
 
 - `extractMatrix(autocorrect=True)`, `extractValues`, `interpolateValues` and `rasterStats` apply scale and
   offset before they compare with the noData value. The comparison then never matches, so noData pixels of

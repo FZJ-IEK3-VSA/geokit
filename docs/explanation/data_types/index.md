@@ -21,7 +21,9 @@ were considered.
   but broke the meaning of an explicit `dtype`.
 - **Issue #396** reported a float attribute that `rasterize` burned into an `Int16` raster, so 9.3 became 9.
   A sweep of every GeoKit function then found 29 data-type defects, and a review of that sweep added 11
-  findings. They are listed in the [defect catalogue](defects.md).
+  findings. They are listed in [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405), the umbrella issue of
+  the fix. Each defect has a regression test in `test/test_13_dtypes_regression.py` whose name starts with
+  the defect ID.
 
 Several of the decisions below restore the behaviour before v1.7.1. They do not introduce it.
 

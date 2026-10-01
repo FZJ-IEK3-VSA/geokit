@@ -1,6 +1,6 @@
 """Regression tests for the data-type defects of issue #396.
 
-The defects are listed in the defect catalogue, ``docs/explanation/data_types/defects.md``. Test names
+The defects are listed in the defect catalogue of GitHub issue #405. Test names
 and xfail reasons start with the catalogue ID (D1-D28, M1-M11). Every test asserts *values*, not only
 types.
 
@@ -123,7 +123,6 @@ TEN_BY_TEN_DEGREE_GRID_KWARGS = dict(bounds=(0, 0, 10, 10), pixelWidth=1, pixelH
 def square_polygon(x_min: float, size: float = 1000.0) -> ogr.Geometry:
     corners = [(x_min, 0), (x_min + size, 0), (x_min + size, size), (x_min, size), (x_min, 0)]
     return geokit.geom.polygon(corners, srs=3035)
-
 
 
 # ----------------------------------------------------------------------------------------------
@@ -657,7 +656,9 @@ def test_D25_indicateValues_nodata_not_indicated(noData):
     )
     region_mask = geokit.RegionMask.fromGeom(geokit.geom.box(0, 0, 1000, 1000, srs=3035), pixelRes=100, srs=3035)
 
-    indicator = region_mask.indicateValues(source_raster, value="[0-10]", noData=noData, applyMask=False, multiProcess=False)
+    indicator = region_mask.indicateValues(
+        source_raster, value="[0-10]", noData=noData, applyMask=False, multiProcess=False
+    )
 
     if np.isnan(noData):
         is_nodata = np.isnan(indicator)
@@ -696,9 +697,7 @@ def test_M6_createRaster_nodata_fill():
 @xfail_until_fixed("M8: vectorInfo reports GDAL names of OGR constants")
 def test_M8_vectorInfo_field_type_names():
     """The field type names reported by vectorInfo are OGR names, not GDAL names of the OGR constants."""
-    attributes = pd.DataFrame(
-        {"geom": GEOM_THREE_POINTS, "i": [1, 2, 3], "f": [0.5, 1.5, 2.5], "s": ["a", "b", "c"]}
-    )
+    attributes = pd.DataFrame({"geom": GEOM_THREE_POINTS, "i": [1, 2, 3], "f": [0.5, 1.5, 2.5], "s": ["a", "b", "c"]})
     point_vector = geokit.vector.createVector(attributes)
 
     info = geokit.vector.vectorInfo(point_vector)
@@ -718,5 +717,3 @@ def test_M4_regionmask_byte():
     assert band_type_name(created_raster) == "Byte"
     assert rasterized_matrix.dtype == np.uint8
     assert rasterized_matrix.max() == 1
-
-

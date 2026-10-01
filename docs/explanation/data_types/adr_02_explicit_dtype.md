@@ -7,7 +7,8 @@
 
 Since v1.7.1, an explicit `dtype` has acted as a lower bound, not as the type to use:
 
-- `createRaster(dtype="UInt16", noData=-1)` silently returns `Int16` (D10 in the [defect catalogue](defects.md)).
+- `createRaster(dtype="UInt16", noData=-1)` silently returns `Int16` (D10 in
+  [#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405)).
 - `createRaster(dtype="Byte")` and `rasterize(value=1, dtype="Byte")` return `Int8`, and `dtype="UInt16"`
   returns `Int16` (D3, M3).
 - `warp(dtype="Float32")` on a `Float64` source returns `Float64` with a warning (D11).

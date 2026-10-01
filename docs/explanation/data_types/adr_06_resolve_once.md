@@ -10,7 +10,8 @@ it to `quickRaster` or `createRaster`. Those run the handler again, now without 
 first choice. The handler's lookup is keyed by bit width, so signed and unsigned types of the same width
 collide. The second pass therefore turns `Byte` into `Int8`, `UInt16` into `Int16` and `UInt32` into `Int32`.
 
-This is the mechanism behind many entries of the [defect catalogue](defects.md):
+This is the mechanism behind many entries of the defect catalogue in
+[#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405):
 
 - `rasterize(value=200)` burns 127; `rasterize(value=40000)` burns 32 767 (D2, M2).
 - `Extent.rasterMosaic` and `combineSimilarRasters` turn `Byte` inputs into `Int8` (D5, D19).
