@@ -39,9 +39,9 @@ def _summarize_values(values: np.ndarray, no_data) -> _ValueSummary:
     flat_values = _without_no_data(flat_values, no_data)
     if flat_values.size == 0:
         return _EMPTY_SUMMARY
-    if flat_values.dtype.kind == "b":
+    if flat_values.dtype.kind == "b":  # "b" = boolean
         flat_values = flat_values.astype(np.uint8)
-    if flat_values.dtype.kind in "iu":
+    if flat_values.dtype.kind in "iu":  # "i"/"u" = signed/unsigned integer
         minimum = int(flat_values.min())
         maximum = int(flat_values.max())
         exact_in_float32 = max(abs(minimum), abs(maximum)) <= 2**24
@@ -63,7 +63,7 @@ def _summarize_values(values: np.ndarray, no_data) -> _ValueSummary:
 def _without_no_data(flat_values: np.ndarray, no_data) -> np.ndarray:
     if no_data is None:
         return flat_values
-    if is_whole_number(no_data) or flat_values.dtype.kind in "iu":
+    if is_whole_number(no_data) or flat_values.dtype.kind in "iu":  # "i"/"u" = signed/unsigned integer
         return flat_values[flat_values != no_data]
     if math.isnan(float(no_data)):
         return flat_values[~np.isnan(flat_values)]

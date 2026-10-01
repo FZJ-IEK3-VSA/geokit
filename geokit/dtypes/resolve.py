@@ -220,7 +220,7 @@ def _times(value, count: int):
 
 
 def _dtype_for_summed_range(input_dtype: np.dtype, count: int) -> np.dtype:
-    if input_dtype.kind == "f":
+    if input_dtype.kind == "f":  # "f" = floating point
         return np.dtype(np.float64)
     limits = np.iinfo(input_dtype)
     low = min(int(limits.min) * count, 0)
@@ -237,6 +237,7 @@ def _widen_for_scalars(chosen: np.dtype, named_scalars: Mapping[str, object], co
         if can_hold(chosen, value):
             continue
         widened = promote_dtypes([chosen, dtype_for_value(value)])
+        # "i"/"u" = signed/unsigned integer kinds, "f" = floating point
         loses_whole_numbers = chosen.kind in "iu" and chosen.itemsize == 8 and widened.kind == "f"
         if loses_whole_numbers:
             issue_warning(
