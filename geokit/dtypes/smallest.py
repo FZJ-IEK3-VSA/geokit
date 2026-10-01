@@ -15,7 +15,14 @@ from dataclasses import dataclass
 import numpy as np
 from osgeo import gdal
 
-from geokit.dtypes.conversions import can_hold, dtype_for_integer_range, from_band, is_whole_number, to_gdal
+from geokit.dtypes.conversions import (
+    can_hold,
+    dtype_for_integer_range,
+    from_band,
+    is_whole_number,
+    to_dtype,
+    to_gdal,
+)
 
 __all__ = ["shrink_dataset", "smallest_dtype_for_array", "smallest_dtype_for_dataset"]
 
@@ -85,9 +92,17 @@ def _merge_summaries(first: _ValueSummary, second: _ValueSummary) -> _ValueSumma
     )
 
 
-def _smallest_dtype(summary: _ValueSummary, no_data) -> np.dtype:
-    """Return the smallest type that stores every summarised value and the noData value exactly."""
+def _smallest_dtype(summary: _ValueSummary, no_data, current_dtype: np.dtype) -> np.dtype:
+    """Return the smallest type that stores every summarised value and the noData value exactly.
+
+    ``current_dtype`` is the type the output has now. Whole numbers with a NaN noData keep it, because no
+    integer type stores NaN and a narrower float type would not add anything to whole numbers.
+    """
     no_data_is_nan = no_data is not None and not is_whole_number(no_data) and math.isnan(float(no_data))
+    if summary.all_whole_numbers and no_data_is_nan:
+        if current_dtype.kind == "f":
+            return current_dtype
+        return np.dtype(np.float64)
     no_data_is_whole = no_data is None or is_whole_number(no_data)
     can_be_integer = summary.all_whole_numbers and not summary.any_not_finite and no_data_is_whole
     if can_be_integer:
@@ -109,11 +124,12 @@ def smallest_dtype_for_array(values: np.ndarray, no_data=None) -> np.dtype:
 
     Whole numbers, also whole numbers stored as floats, go to the first integer type of the order of choice
     that holds every value and the noData value. Other values go to ``float32`` if every value is exact in
-    ``float32``, and otherwise to ``float64``. Whole numbers with a NaN noData stay float, because no integer
-    type stores NaN.
+    ``float32``, and otherwise to ``float64``. Whole numbers with a NaN noData keep the float type of
+    ``values``, because no integer type stores NaN.
     """
     summary = _summarize_values(values, no_data)
-    return _smallest_dtype(summary, no_data)
+    current_dtype = to_dtype(np.asarray(values).dtype)
+    return _smallest_dtype(summary, no_data, current_dtype)
 
 
 def smallest_dtype_for_dataset(dataset: gdal.Dataset, rows_per_block: int | None = None) -> np.dtype:
@@ -128,7 +144,7 @@ def smallest_dtype_for_dataset(dataset: gdal.Dataset, rows_per_block: int | None
         for block in _read_in_row_blocks(band, rows_per_block):
             block_summary = _summarize_values(block, no_data)
             summary = _merge_summaries(summary, block_summary)
-    return _smallest_dtype(summary, no_data)
+    return _smallest_dtype(summary, no_data, from_band(dataset))
 
 
 def _read_in_row_blocks(band: gdal.Band, rows_per_block: int | None) -> Iterator[np.ndarray]:
