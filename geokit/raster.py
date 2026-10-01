@@ -2231,7 +2231,17 @@ def drawRaster(
         Replaces all previous noData values with this value in the output raster.
 
     resampleAlg : str, optional
-        The resampleAlg passed on to a call of warp() if needed, by default "med"
+        The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+        not line up. Which one is right depends on the data:
+
+        - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+          values. The output keeps the data type of the source, and categorical data such as land
+          cover stays categorical.
+        - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+          average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+          Float64; use them for continuous data such as elevation.
+        - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+        Passed on to warp when the raster has to be warped before it is drawn.
 
     **kwargs : Passed on to a call to warp()
         * Determines how the warping is carried out
@@ -2636,6 +2646,24 @@ _RESAMPLING_THAT_KEEPS_THE_VALUES = ("near", "mode", "min", "max", "med", "q1", 
 _RESAMPLING_WITH_FRACTIONAL_RESULTS = ("bilinear", "average", "cubic", "cubicspline", "lanczos", "rms")
 
 
+def _quoted_names(names: tuple[str, ...]) -> str:
+    return ", ".join(f'"{name}"' for name in names)
+
+
+RESAMPLE_ALG_PARAMETER_DOCSTRING = f"""resampleAlg : str, optional
+    The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+    not line up. Which one is right depends on the data:
+
+    - {_quoted_names(_RESAMPLING_THAT_KEEPS_THE_VALUES)} pick one of the source
+      values. The output keeps the data type of the source, and categorical data such as land
+      cover stays categorical.
+    - {_quoted_names(_RESAMPLING_WITH_FRACTIONAL_RESULTS)} interpolate or
+      average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+      Float64; use them for continuous data such as elevation.
+    - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64."""
+"""The docstring block of the resampleAlg parameter, shared by every function that resamples."""
+
+
 def resamplingRule(resampleAlg: str) -> DTYPES.DtypeRule:
     """Return the effect of a resampling algorithm on the value range (ADR 3).
 
@@ -2733,12 +2761,17 @@ def warp(
         The srs of the resulting raster
           * If not given, the raster's internal srs is assumed
 
-    resampleAlg : str; optional
-        The resampling algorithm to use when translating pixel values
-        * Knowing which option to use can have significant impacts!
-        * Options are: near , bilinear, cubic,
-        cubicspline, lanczos, average, rms, mode,
-        max, min, med, Q1, Q3, sum
+    resampleAlg : str, optional
+        The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+        not line up. Which one is right depends on the data:
+
+        - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+          values. The output keeps the data type of the source, and categorical data such as land
+          cover stays categorical.
+        - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+          average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+          Float64; use them for continuous data such as elevation.
+        - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too

@@ -1339,9 +1339,17 @@ class Extent(object):
               boolean is okay)
             * See example in geokit.raster.mutateRaster for more info
 
-        resampleAlg : str; optional
-            The resampling algorithm to use while warping
-            * Knowing which option to use can have significant impacts!
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
         **kwargs:
             All other keyword arguments are passed to geokit.vector.mutateVector
@@ -1644,9 +1652,18 @@ class Extent(object):
         sources : list, or something acceptable to gk.Extent.filterSources
             The sources to add together over the invoking Extent
 
-        resampleAlg : str; optional
-            The resampling algorithm gdal.Warp uses to put the sources onto the grid of the
-            first source, by default 'near'
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            The sources are put onto the grid of the first source.
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
