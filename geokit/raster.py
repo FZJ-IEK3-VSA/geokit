@@ -34,7 +34,8 @@ from geokit.data_types import (
     AxHands,
     gdal_resample_alogorithms_literal,
 )
-from geokit.error import GeoKitGeomError, GeoKitRasterError
+from geokit import dtypes as DTYPES
+from geokit.error import GeoKitDataTypeError, GeoKitGeomError, GeoKitRasterError
 
 if "win" in sys.platform:
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -821,6 +822,14 @@ def isFlipped(source):
         return False
 
 
+def _numpy_dtype_of_band(band: gdal.Band) -> np.dtype | None:
+    """The pixel type of a band as a numpy.dtype, or None for a type GeoKit does not support (complex types)."""
+    try:
+        return DTYPES.from_band(band)
+    except GeoKitDataTypeError:
+        return None
+
+
 def rasterInfo(sourceDS: load_raster_input, compute_statistics: bool = False) -> RasterInfo:
     """Returns a named tuple containing information relating to the input raster.
 
@@ -871,6 +880,7 @@ def rasterInfo(sourceDS: load_raster_input, compute_statistics: bool = False) ->
     # Is required to get the maximum and minimum value of the raster data
 
     output["dtype"] = sourceBand.DataType
+    output["numpy_dtype"] = _numpy_dtype_of_band(sourceBand)
     output["noData"] = sourceBand.GetNoDataValue()
     output["scale"] = sourceBand.GetScale()
     output["offset"] = sourceBand.GetOffset()
