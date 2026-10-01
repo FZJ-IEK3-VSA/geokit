@@ -1,4 +1,5 @@
 import pathlib
+import warnings
 from typing import Literal, NamedTuple, Union, get_args
 
 import matplotlib.colorbar
@@ -83,8 +84,7 @@ class RasterInfo(NamedTuple):
     numpy_dtype: np.dtype | None = None
 
 
-# vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
-class vecInfo(NamedTuple):
+class _VecInfoFields(NamedTuple):
     srs: osr.SpatialReference | None
     bounds: tuple[numeric, numeric, numeric, numeric]
     xMin: numeric
@@ -94,8 +94,35 @@ class vecInfo(NamedTuple):
     count: int
     attributes: list[str]
     source: str
+    # The OGR field type constant (ogr.OFT*) of each attribute
     attribute_data_types_constant: dict[str, int]
+    # The OGR field type name of each attribute; deprecated, see vecInfo
     attribute_data_types_str: dict[str, str]
+    # The data type of each attribute as a numpy.dtype (see geokit.dtypes); None for a non-numeric field
+    attribute_dtypes: dict[str, np.dtype | None]
+
+
+class vecInfo(_VecInfoFields):
+    """The result of vectorInfo: srs, bounds, feature count, attribute names and the field types.
+
+    ``attribute_dtypes`` holds the data type of each field as a ``numpy.dtype`` (``None`` for a non-numeric
+    field) and ``attribute_data_types_constant`` the OGR field type constants. ``attribute_data_types_str``,
+    the OGR field type names, is deprecated in favour of ``attribute_dtypes``.
+    """
+
+    __slots__ = ()
+
+    @property
+    def attribute_data_types_str(self) -> dict[str, str]:
+        """Deprecated: the OGR field type name of each attribute. Use ``attribute_dtypes``."""
+        warnings.warn(
+            "vecInfo.attribute_data_types_str is deprecated and will be removed in a later release. Use "
+            "attribute_dtypes, which holds the data type of each field as a numpy.dtype.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        field_index = self._fields.index("attribute_data_types_str")
+        return tuple.__getitem__(self, field_index)
 
 
 class ptValue(NamedTuple):

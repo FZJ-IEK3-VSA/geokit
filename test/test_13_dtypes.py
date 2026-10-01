@@ -332,21 +332,6 @@ EXPLICIT_CASES = {
 # Rows of the two tables that are not fixed on this branch, with the reason of their xfail(strict=True) mark. The PR
 # that fixes a row deletes its line.
 PENDING = {
-    # fixed by #412
-    "rasterize_1": "rasterize(value=1) gives Int8",
-    "rasterize_200": "D2: rasterize(value=200) burns 127 into Int8",
-    "rasterize_40000": "M2: rasterize(value=40000) burns 32767 into Int16",
-    "rasterize_2**31": "M2: rasterize(value=2**31) burns 2147483647 into Int32",
-    "rasterize_-1": "rasterize does not take the dtype modes",
-    "rasterize_0.1": "D9: rasterize(value=0.1) burns into Float32",
-    "rasterize_add_100_three_squares": "D16: rasterize(add=True) overflows Int8",
-    "rasterize_int32_field": "D1: rasterize raises for an Integer field",
-    "rasterize_int64_field": "M5: rasterize gives Int64 for an Integer64 field only by coincidence",
-    "rasterize_real_field_of_396": "D1: rasterize burns a Real field into Int16 (#396)",
-    "rasterize_real_field_float32_exact": "D1: rasterize burns a Real field into Int16 (#396)",
-    "rasterize_int64_field_nan_nodata": "D8: Int64 IDs with a NaN noData go to Float32 and lose precision",
-    "rasterize-Byte": "M3: rasterize(value=1, dtype='Byte') gives Int8",
-    "rasterize-np.float32": "D7: rasterize ignores a dtype that is not a string",
     # fixed by #414
     "warp_byte_near": "M1: warp(near) of a Byte raster gives Int8",
     "warp_byte_average": "D12: warp(average) of a 0/1 mask stores 0.75 as 1",
@@ -367,11 +352,6 @@ PENDING = {
 
 # Pending rows of MODE_CASES whose default call already gives the expected type and values
 DEFAULT_CALL_HOLDS = {
-    "rasterize_200",
-    "rasterize_40000",
-    "rasterize_2**31",
-    "rasterize_-1",
-    "rasterize_int64_field",
     "rasterMosaic_byte_200",
     "combineSimilarRasters_byte",
     "combineSimilarRasters_int32_3000_7",
@@ -501,7 +481,6 @@ def test_D4_saveRasterAsTif_keeps_scale_offset_and_nodata(tmp_path):
     np.testing.assert_array_equal(saved_band.ReadAsArray(), [[-9999, 100, 200]])
 
 
-@pending("M4: RegionMask.createRaster gives Int8 and RegionMask.rasterize int8")
 @pins("M4")
 def test_M4_regionmask_gives_byte():
     """RegionMask.createRaster gives a Byte band and RegionMask.rasterize a uint8 matrix."""
@@ -705,7 +684,6 @@ def test_D22_polygonizeMatrix_keeps_uint32_above_2_31():
     assert list(geokit.geom.polygonizeMatrix(uint32_matrix)["value"]) == [3_000_000_000]
 
 
-@pending("M8: vectorInfo reports GDAL names of OGR constants")
 @pins("M8")
 def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
     """The field type names of vectorInfo are OGR names, deprecated in favour of the dtypes of attribute_dtypes."""

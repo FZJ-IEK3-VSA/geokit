@@ -3,13 +3,14 @@ from os.path import dirname, join
 import json
 import pathlib
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
 from geokit.get_test_data import get_test_data
-from geokit.error import GeoKitError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitError, GeoKitVectorError
 from test.helpers import *
 
 # ogrType
@@ -580,6 +581,18 @@ def test_rasterize():
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
     assert np.isclose(np.nanmean(mat), 2004.96384743)
+
+
+def test_rasterize_rejects_a_text_attribute():
+    """Burning a String field raises GeoKitDataTypeError, and an unknown attribute raises GeoKitVectorError."""
+    attributes = pd.DataFrame({"geom": [geom.point(6.1, 50.1, srs=4326)], "name": ["a"]})
+    point_vector = vector.createVector(attributes)
+    grid = dict(pixelWidth=0.5, pixelHeight=0.5, srs=4326, bounds=(5, 50, 8, 53))
+
+    with pytest.raises(GeoKitDataTypeError, match="String"):
+        vector.rasterize(point_vector, value="name", **grid)
+    with pytest.raises(GeoKitVectorError, match="no attribute"):
+        vector.rasterize(point_vector, value="missing", **grid)
 
 
 def test_createGeoDataFrame():
