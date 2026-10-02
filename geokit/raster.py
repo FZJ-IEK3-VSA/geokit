@@ -297,11 +297,14 @@ def _resolve_dtype_for_new_raster(
     fill: numeric | None,
     context: str,
     source_dtype: np.dtype | None = None,
+    noData_from_the_source: bool = False,
 ) -> np.dtype:
     """Choose the data type of a raster that is created from ``data`` or filled with ``fill`` (identity rule).
 
     The inputs are the data type of the source raster, if there is one, and the data type of ``data``. Under
     ``"smallest"`` the values that will be written (``data``, else ``fill``) and the noData value decide.
+    ``noData_from_the_source`` marks a noData value that the public function keeps from its source and has no
+    parameter for, so that an error suggests only another type.
     """
     input_dtypes = []
     if source_dtype is not None:
@@ -309,10 +312,14 @@ def _resolve_dtype_for_new_raster(
     if data is not None:
         input_dtypes.append(data.dtype)
 
+    scalars_from_the_source = ()
+    if noData_from_the_source:
+        scalars_from_the_source = ("noData",)
     resolved = DTYPES.resolve_dtype(
         input_dtypes,
         DTYPES.DtypeRule.IDENTITY,
         scalars={"noData": noData, "fill": fill},
+        scalars_from_the_source=scalars_from_the_source,
         dtype=dtype,
         context=context,
     )
@@ -606,7 +613,8 @@ def saveRasterAsTif(source: load_raster_input, output: str, dtype: dtype_input =
           the results, so the same losses as under "preserve_input" can occur without a warning.
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
-        If ``dtype`` is not given, the data type of the source is kept.
+        If ``dtype`` is not given, the data type of the source is kept. The copy keeps the noData value
+        of the source, so a fixed type has to store it.
     **kwargs
         Passed on to createRaster, for example ``compress`` or ``meta``.
 
@@ -640,6 +648,7 @@ def saveRasterAsTif(source: load_raster_input, output: str, dtype: dtype_input =
         fill=None,
         context="saveRasterAsTif",
         source_dtype=source_info.numpy_dtype,
+        noData_from_the_source=True,
     )
     scale = kwargs.pop("scale", source_info.scale)
     offset = kwargs.pop("offset", source_info.offset)

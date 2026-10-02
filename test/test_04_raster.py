@@ -9,8 +9,9 @@ from osgeo import gdal
 
 import geokit.raster
 from geokit import geom, raster, util
-from geokit.error import GeoKitRasterError
+from geokit.error import GeoKitDataTypeError, GeoKitRasterError
 from geokit.location import Location, LocationSet
+from test.gdal_builders import create_gdal_raster
 from test.helpers import *  # NUMPY_FLOAT_ARRAY, CLC_RASTER_PATH, result
 from test.test_case_creator import (
     TEST_CASE_NAMES,
@@ -470,6 +471,16 @@ def test_saveRasterAsTif():
 
     newdata = raster.extractMatrix(result("saveRasterAsTif.tif"))
     assert np.isclose(data, newdata).all()
+
+
+def test_saveRasterAsTif_suggests_only_a_type_for_the_nodata_of_the_source(tmp_path):
+    """A dtype that cannot store the source's noData raises an error that suggests a type, not another noData."""
+    source = create_gdal_raster(np.array([[-9999, 0, 5, 7]], np.int16), gdal.GDT_Int16, noData=-9999)
+
+    with pytest.raises(GeoKitDataTypeError, match='dtype="Int16"') as raised:
+        raster.saveRasterAsTif(source, str(tmp_path / "saved.tif"), dtype="Byte")
+
+    assert "value that fits" not in str(raised.value)
 
 
 def test_rasterStats():
