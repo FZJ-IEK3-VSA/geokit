@@ -41,6 +41,33 @@ def usage():
 MaskAndExtent = namedtuple("MaskAndExtent", "mask extent id")
 
 
+def _dtypeThatHolds(dtype: np.dtype, value) -> np.dtype:
+    """The narrowest NumPy dtype, at least ``dtype``, that can store ``value``.
+
+    Floats (including NaN) always give float64, as before. Integers that do not fit ``dtype``
+    (e.g. -1 in a uint8 matrix) widen it, so the value is never wrapped or truncated silently.
+    """
+    valueDtype = np.asarray(value).dtype
+    if np.issubdtype(valueDtype, np.floating):
+        return np.dtype(np.float64)
+    if not np.issubdtype(valueDtype, np.integer):  # bool
+        return dtype
+
+    integerValue = int(value)
+    if dtype == np.bool_:
+        valueFits = integerValue in (0, 1)
+    elif np.issubdtype(dtype, np.integer):
+        dtypeLimits = np.iinfo(dtype)
+        valueFits = dtypeLimits.min <= integerValue <= dtypeLimits.max
+    else:  # float matrices hold any integer noData
+        valueFits = True
+
+    if valueFits:
+        return dtype
+    smallestDtypeForValue = np.min_scalar_type(integerValue)
+    return np.promote_types(dtype, smallestDtypeForValue)
+
+
 class RegionMask(object):
     """The RegionMask object represents a given region and exposes methods allowing
     for easy manipulation of geospatial data around that region.
@@ -630,9 +657,11 @@ class RegionMask(object):
         if noData is None:
             noData = 0
 
-        # set matrix datatype to float if float noData value (like e.g. nan) is passed
-        if isinstance(noData, float):
-            mat = mat.astype(np.float64)
+        # make sure the matrix can store the noData value: a float noData (like e.g. nan) needs a
+        # float matrix, an integer outside the matrix's range (like -1 in uint8) a wider integer type
+        dtypeThatHoldsNoData = _dtypeThatHolds(mat.dtype, noData)
+        if dtypeThatHoldsNoData != mat.dtype:
+            mat = mat.astype(dtypeThatHoldsNoData)
 
         # Get size
         Y, X = mat.shape
@@ -946,8 +975,10 @@ class RegionMask(object):
             # make processor
             def processor(data):
                 # Find nan values, maybe
-                if not noData is None:
-                    nodat = np.isnan(data)
+                if noData is None:
+                    noDataPixels = None
+                else:
+                    noDataPixels = np.isnan(data)
 
                 # Indicate value elements
                 output = np.zeros(data.shape, dtype="bool")
@@ -983,12 +1014,26 @@ class RegionMask(object):
 
                     np.logical_or(update_sel, output, output)
 
-                # Fill nan values, maybe
-                if noData is not None:
-                    output[nodat] = noData
+                # The indication becomes a raster band: return uint8, or a type that can also hold
+                # the noData value. Writing noData into a bool array would turn it into True.
+                if noData is None:
+                    return output.astype(np.uint8)
+
+                noDataDtype = np.asarray(noData).dtype
+                if np.issubdtype(noDataDtype, np.floating):
+                    noDataIsExactInFloat32 = np.isnan(noData) or np.float32(noData) == noData
+                    if noDataIsExactInFloat32:
+                        indicationDtype = np.dtype(np.float32)
+                    else:
+                        indicationDtype = np.dtype(np.float64)
+                else:
+                    smallestDtypeForNoData = np.min_scalar_type(int(noData))
+                    indicationDtype = np.promote_types(np.uint8, smallestDtypeForNoData)
+                indicated = output.astype(indicationDtype)
+                indicated[noDataPixels] = noData
 
                 # Done!
-                return output
+                return indicated
 
             # Do processing
             newDS = self.extent.mutateRaster(
@@ -1040,6 +1085,15 @@ class RegionMask(object):
                     noData=noData,
                 )
                 return
+
+            # Remember the source's noData pixels; the threshold applied below must not turn them
+            # into 0 (a buffer replaces 'final' by a new rasterization, so this only applies without one)
+            if noData is None:
+                noDataPixels = None
+            elif np.isnan(noData):
+                noDataPixels = np.isnan(final)
+            else:
+                noDataPixels = final == noData
 
             # Apply a buffer if requested
             if not buffer is None:
@@ -1121,9 +1175,12 @@ class RegionMask(object):
                     )
                     return
 
-            # apply a threshold in case of funky warping issues
+            # apply a threshold in case of funky warping issues, but keep the source's noData pixels
+            # (without a buffer 'final' still has the warped grid, so 'noDataPixels' applies to it)
             final[final > 1.0] = 1
             final[final < 0.0] = 0
+            if noDataPixels is not None and buffer is None:
+                final[noDataPixels] = noData
 
             # Make sure we have the mask's shape
 

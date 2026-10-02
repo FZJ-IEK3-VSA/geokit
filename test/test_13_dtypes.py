@@ -370,16 +370,6 @@ EXPLICIT_CASES = {
 # Catalogue cases of #405 that this branch does not fix, with the pull request that fixes them. That pull request
 # deletes the lines of its cases.
 PENDING = {
-    "D17_gradient_unsigned_dem":                              "PR 2",
-    "D18_KernelProcessor_float_matrix":                       "PR 2",
-    "D23_extractMatrix":                                      "PR 2",
-    "D23_extractValues":                                      "PR 2",
-    "D23_interpolateValues":                                  "PR 2",
-    "D24_rasterStats":                                        "PR 2",
-    "D25_indicateValues_nodata_-1":                           "PR 2",
-    "D25_indicateValues_nodata_nan":                          "PR 2",
-    "D26_applyMask":                                          "PR 2",
-    "gradient_mode_ew":                                       "PR 2",
     "D2_rasterize_200":                                       "PR 4",
     "D3_createRaster_Byte":                                   "PR 4",
     "D3_createRaster_UInt16":                                 "PR 4",
