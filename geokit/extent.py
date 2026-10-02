@@ -1297,7 +1297,7 @@ class Extent(object):
         matchContext: bool = False,
         warpArgs: dict | None = None,
         processor: Callable | None = None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **mutateArgs,
     ):
         """Convenience function for geokit.raster.mutateRaster which automatically
@@ -1339,12 +1339,24 @@ class Extent(object):
               boolean is okay)
             * See example in geokit.raster.mutateRaster for more info
 
-        resampleAlg : str; optional
-            The resampling algorithm to use while warping
-            * Knowing which option to use can have significant impacts!
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
 
-        **kwargs:
-            All other keyword arguments are passed to geokit.vector.mutateVector
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+
+        **mutateArgs:
+            All other keyword arguments are passed to geokit.raster.mutateRaster, or to the warp if there is no
+            processor. This includes dtype, which applies to the returned raster; under "preserve_input" it
+            keeps the data type of ``source``.
 
         Returns
         -------
@@ -1354,10 +1366,21 @@ class Extent(object):
         if warpArgs is None:
             warpArgs = {}
 
+        # dtype applies to the raster this function returns (ADR 6): the warp writes it if there is no processor,
+        # otherwise mutateRaster does. "preserve_input" means the data type of the given source, not the one of
+        # the warped intermediate.
+        source = RASTER.loadRaster(source)
+        dtype = mutateArgs.pop("dtype", None)
+        if DTYPES.dtype_mode(dtype) == "preserve_input":
+            dtype = DTYPES.from_band(source.GetRasterBand(1))
+
         if processor is None:  # We won't do a mutation without a processor, since everything else
             # can be handled by Warp. Therefore we pass on any 'output' that is
             # given to the warping stage, unless one was already given
             warpArgs["output"] = warpArgs.get("output", mutateArgs.get("output", None))
+            warpArgs.setdefault("dtype", dtype)
+        else:
+            mutateArgs["dtype"] = dtype
 
         # Warp the source
         # TODO: Should the warping be updated to use Extent.clipRaster???
@@ -1644,10 +1667,21 @@ class Extent(object):
         sources : list, or something acceptable to gk.Extent.filterSources
             The sources to add together over the invoking Extent
 
-        resampleAlg : str; optional
-            The resampling algorithm gdal.Warp uses to put the sources onto the grid of the
-            first source, by default 'near'. "auto" uses "near" if the promoted data type of
-            all sources is an integer type and "bilinear" if it is a float type.
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            The sources are put onto the grid of the first source. "auto" follows the promoted
+            data type of all sources.
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds

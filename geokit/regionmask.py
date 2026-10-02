@@ -15,6 +15,7 @@ from osgeo import gdal, ogr, osr
 
 from geokit.error import checkMultiProcessingAvailability
 from geokit import geom as GEOM
+from geokit import dtypes as DTYPES
 from geokit import raster as RASTER
 from geokit import srs as SRS
 from geokit import util as UTIL
@@ -23,6 +24,7 @@ from geokit import vector as VECTOR
 # from .location import Location, LocationSet
 from geokit.extent import Extent
 from geokit.data_types import (
+    dtype_input,
     AxHands,
     geokit_c_data_types_literal,
     load_raster_input,
@@ -685,7 +687,28 @@ class RegionMask(object):
         return output
 
     def indicateValueToGeoms(self, source, value, contours=False, transformGeoms=True):
-        """TODO: UPDATE ME."""
+        """Return the geometries of the pixels of ``source`` that hold ``value``.
+
+        Parameters
+        ----------
+        source : Anything acceptable to geokit.raster.loadRaster()
+            The raster to indicate from
+
+        value : numeric or (low, high)
+            The exact value to accept, or the inclusive range to accept
+
+        contours : bool; optional
+            If True, the geometries are built from contours instead of from polygonized pixels
+
+        transformGeoms : bool; optional
+            If True, the geometries are transformed to the RegionMask's srs
+
+        Returns
+        -------
+        list of ogr.Geometry
+            The indicated areas; empty when nothing is indicated. The indication raster is a
+            Byte raster of 0 and 1.
+        """
         # Unpack value
         if isinstance(value, tuple):
             valueMin, valueMax = value
@@ -743,10 +766,11 @@ class RegionMask(object):
         resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
         bufferMethod: Literal["area", "contour"] = "area",
         preBufferSimplification=None,
-        warpDType: geokit_c_data_types_literal | None = None,
+        dtype: dtype_input = None,
         prunePatchSize: numeric = 0,
         threshold: numeric = 0.5,
         multiProcess: bool = True,
+        warpDType: dtype_input = None,
         **kwargs,
     ):
         """
@@ -814,28 +838,44 @@ class RegionMask(object):
             The factor by which to divide the RegionMask's native resolution
             * This is useful if you need to represent very fine details
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Options are: 'near', 'bilinear', 'cubic', 'average', 'mode', 'max', 'min'
-            * Knowing which option to use can have significant impacts!
-                When indicating from a low resolution raster (relative to the region mask),
-                then it is best to use one of 'near', 'bilinear', or 'cubic'. However,
-                when indicating from a high resolution raster file (again, relative to the region
-                mask) then one of 'average', 'mode', 'max', or 'min' is likely better.
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            When indicating from a raster of lower resolution than the RegionMask, "near",
+            "bilinear" or "cubic" work best; from a raster of higher resolution, "average",
+            "mode", "max" or "min". The default is "bilinear", because the warped indication
+            holds fractions that threshold compares.
+
+        dtype : str, numpy.dtype, type or None, optional
+            The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+            every value the operation can produce.
+
+            - "auto": a type that holds every possible result, chosen from the input types and the operation.
+            - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+              type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+              lost, without a warning.
+            - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+              output once.
+            - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+              the results, so the same losses as under "preserve_input" can occur without a warning.
+
+            A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+            The raster that is warped is the indication, a Byte raster of 0 and 1 (and noData),
+            so the choice follows resampleAlg as in geokit.raster.warp: near, mode, max and min
+            keep Byte; bilinear, cubic and average give Float32 fractions.
 
         warpDType : str or None; optional
-            If given, this controls the raster datatype of the warped indication matrix.
-            If not given, then a default datatype is assumed based off `resampleAlg`:
-
-               reampleAlg : assumed dtype
-               --------------------------
-                   'near' : 'uint8'
-               'bilinear' : 'float32'
-                  'cubic' : 'float32'
-                'average' : 'float32'
-                   'mode' : 'uint8'
-                    'max' : 'uint8'
-                    'min' : 'uint8'
+            Deprecated alias of dtype; a FutureWarning is issued.
 
         forceMaskShape : bool
             If True, forces the returned matrix to have the same dimension as
@@ -847,13 +887,6 @@ class RegionMask(object):
 
         noData : numeric
             The noData value to use when applying the mask
-
-        geomsFromContours: bool
-            If True, then geometries will be constructed from the function
-            geokit.RegionMask.contoursFromMatrix, as opposed to using
-            geokit.RegionMask.polygonizeMask.
-            - This will result in simpler geometries which are easier to grow,
-              but which do not strictly follow the edges of the indicated pixels
 
         bufferMethod : str; optional
             An indicator determining the method to use when buffereing
@@ -904,6 +937,14 @@ class RegionMask(object):
         -------
         numpy.ndarray
         """
+        if warpDType is not None:
+            warn(
+                "The keyword 'warpDType' of indicateValues is deprecated and will be removed in a later release. "
+                "Use 'dtype' instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            dtype = warpDType
 
         def _indicateValues(
             source: load_raster_input,
@@ -916,7 +957,7 @@ class RegionMask(object):
             resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
             bufferMethod="area",
             preBufferSimplification=None,
-            warpDType=None,
+            dtype=None,
             prunePatchSize=0,
             threshold=0.5,
             resultsCollector=None,
@@ -999,29 +1040,10 @@ class RegionMask(object):
             )
             print(f"Memory usage during calc:", str(usage()), "MB")
 
-            # Warp onto region
-            if warpDType is None:
-                if resampleAlg in [
-                    "bilinear",
-                    "cubic",
-                    "cubicspline",
-                    "lanczos",
-                    "average",
-                    "rms",
-                    "med",
-                    "q1",
-                    "q3",
-                    "sum",
-                ]:
-                    warpDType = "float32"
-                elif resampleAlg in ["near", "mode", "max", "min"]:
-                    warpDType = None  # Let the function decide
-                else:
-                    warpDType = "float32"
-
+            # Warp onto region; the data type follows resampleAlg as in geokit.raster.warp (ADR 3)
             final = self.warp(
                 newDS,
-                dtype=warpDType,
+                dtype=dtype,
                 resolutionDiv=resolutionDiv,
                 resampleAlg=resampleAlg,
                 applyMask=False,
@@ -1164,7 +1186,7 @@ class RegionMask(object):
                             "resampleAlg": resampleAlg,
                             "bufferMethod": bufferMethod,
                             "preBufferSimplification": preBufferSimplification,
-                            "warpDType": warpDType,
+                            "dtype": dtype,
                             "prunePatchSize": prunePatchSize,
                             "threshold": threshold,
                             "resultsCollector": resultsCollector,
@@ -1199,7 +1221,7 @@ class RegionMask(object):
                 resampleAlg=resampleAlg,
                 bufferMethod=bufferMethod,
                 preBufferSimplification=preBufferSimplification,
-                warpDType=warpDType,
+                dtype=dtype,
                 prunePatchSize=prunePatchSize,
                 threshold=threshold,
                 resultsCollector=resultsCollector,
@@ -1651,7 +1673,8 @@ class RegionMask(object):
 
         **kwargs:
             All other keywargs are passed on to geokit.raster.createRaster()
-            * See below for argument descriptions
+            * This includes dtype: None or "auto", "preserve_input", "smallest", or an
+              explicit type; see the dtype parameter of geokit.raster.createRaster
 
         Returns
         -------
@@ -1669,7 +1692,7 @@ class RegionMask(object):
         returnMatrix=True,
         applyMask=True,
         noData=None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **kwargs,
     ) -> gdal.Dataset | np.ndarray | None:
         """Convenience wrapper for geokit.raster.warp() which automatically sets
@@ -1690,17 +1713,25 @@ class RegionMask(object):
         output : str; optional
             A path to an output file to write to
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Knowing which option to use can have significant impacts!
-            * Options are: 'nearesampleAlg=resampleAlg, r', 'bilinear', 'cubic',
-              'average'
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
         resolutionDiv : int
             The factor by which to divide the RegionMask's native resolution
             * This is useful if you need to represent very fine details
 
-        returnAsMatrix : bool
+        returnMatrix : bool
             When True, the resulting raster's matrix is return
             * Should have the same dimensions as the RegionMask's mask matrix
 
@@ -1713,6 +1744,8 @@ class RegionMask(object):
 
         **kwargs:
             All other keywargs are passed on to geokit.raster.warp()
+            * This includes dtype: None or "auto", "preserve_input", "smallest", or an
+              explicit type; see the dtype parameter of geokit.raster.warp
 
         Returns
         -------
@@ -1809,7 +1842,7 @@ class RegionMask(object):
             The factor by which to divide the RegionMask's native resolution
             * This is useful if you need to represent very fine details
 
-        returnAsMatrix : bool; optional
+        returnMatrix : bool; optional
             When True, the resulting raster's matrix is return
             * Should have the same dimensions as the RegionMask's mask matrix
 
@@ -1822,6 +1855,8 @@ class RegionMask(object):
 
         **kwargs:
             All other keywargs are passed on to geokit.vector.rasterize()
+            * This includes dtype: None or "auto", "preserve_input", "smallest", or an
+              explicit type; see the dtype parameter of geokit.vector.rasterize
 
         Returns
         -------
@@ -1957,7 +1992,7 @@ class RegionMask(object):
         warpArgs: dict | None = None,
         applyMask: bool = True,
         processor: Callable | None = None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **mutateArgs,
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
@@ -1981,11 +2016,19 @@ class RegionMask(object):
             * If False, only warp to the RegionMask's boundaries, but keep its
               srs and resolution intact
 
-        resampleAlg : str; optional
-            The resampling algorithm to use when warping values
-            * Knowing which option to use can have significant impacts!
-            * Options are: 'nearesampleAlg=resampleAlg, r', 'bilinear', 'cubic',
-              'average'
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
         warpArgs : dict; optional
             Arguments to apply to the warping step
@@ -1995,8 +2038,8 @@ class RegionMask(object):
             The function performing the mutation of the raster's data
             * The function will take single argument (a 2D numpy.ndarray)
             * The function must return a numpy.ndarray of the same size as the input
-            * The return type must also be containable within a Float32 (int and
-              boolean is okay)
+            * The data type of the returned array decides the data type of the output
+              raster if dtype is not given; bool becomes Byte
             * See example in geokit.raster.mutateRaster for more info
 
         applyMask : bool; optional
@@ -2004,7 +2047,9 @@ class RegionMask(object):
             as described by RegionMask.applyMask
 
         **mutateArgs:
-            All other keyword arguments are passed to geokit.vector.mutateVector
+            All other keyword arguments are passed to geokit.raster.mutateRaster
+            * This includes dtype: None or "auto", "preserve_input", "smallest", or an
+              explicit type; see the dtype parameter of geokit.raster.mutateRaster
 
         Returns
         -------
@@ -2017,6 +2062,14 @@ class RegionMask(object):
 
         # Do the warp and mutation
         if matchContext:
+            # dtype applies to the raster this method returns (ADR 6), and "preserve_input" means the data type
+            # of the given source, not the one of the warped intermediate
+            dtype = mutateArgs.pop("dtype", None)
+            if DTYPES.dtype_mode(dtype) == "preserve_input":
+                dtype = DTYPES.from_band(RASTER.loadRaster(source).GetRasterBand(1))
+            if processor is None:
+                warpArgs.setdefault("dtype", dtype)
+
             source = self.warp(
                 source,
                 returnMatrix=False,
@@ -2028,7 +2081,7 @@ class RegionMask(object):
             if processor is None:
                 return source
             else:
-                return RASTER.mutateRaster(source, output=output, **mutateArgs)
+                return RASTER.mutateRaster(source, processor=processor, output=output, dtype=dtype, **mutateArgs)
 
         else:
             if applyMask:
@@ -2040,6 +2093,7 @@ class RegionMask(object):
                 source,
                 matchContext=False,
                 warpArgs=warpArgs,
+                processor=processor,
                 resampleAlg=resampleAlg,
                 **mutateArgs,
             )
@@ -2116,7 +2170,15 @@ class RegionMask(object):
         """
         return GEOM.polygonizeMask(mask, bounds=self.extent.xyXY, srs=self.srs, flat=flat, shrink=shrink)
 
-    def contoursFromRaster(self, raster, contourEdges, applyMask=True, contoursKwargs={}, warpKwargs={}):
+    def contoursFromRaster(
+        self,
+        raster,
+        contourEdges,
+        applyMask=True,
+        contoursKwargs={},
+        warpKwargs={},
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+    ):
         """Convenience wrapper for geokit.raster.contours which automatically
         warps a raster to the invoking RegioNmask.
 
@@ -2145,6 +2207,22 @@ class RegionMask(object):
             Keyword arguments to pass on to the raster warp function
             * See geokit.RegionMask.warp
 
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            The default is "bilinear", because contours need a continuous surface. A resampleAlg in
+            warpKwargs takes precedence.
+
         Returns
         -------
         pandas.DataFrame
@@ -2153,7 +2231,10 @@ class RegionMask(object):
             'geom' -> The contiguous-valued geometries
             'ID' -> The associated contour edge for each object
         """
-        raster = self.warp(raster, applyMask=applyMask, returnMatrix=False, **warpKwargs)
+        # warpKwargs is a mutable default argument, so the resampling algorithm goes into a copy
+        warp_kwargs = dict(warpKwargs)
+        warp_kwargs.setdefault("resampleAlg", resampleAlg)
+        raster = self.warp(raster, applyMask=applyMask, returnMatrix=False, **warp_kwargs)
         geoms = RASTER.contours(raster, contourEdges, **contoursKwargs)
 
         return geoms

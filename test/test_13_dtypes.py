@@ -24,6 +24,7 @@ import inspect
 import pathlib
 import re
 import warnings
+from typing import get_args
 
 import numpy as np
 import pandas as pd
@@ -32,6 +33,7 @@ from osgeo import gdal, ogr
 from typeguard import suppress_type_checks
 
 import geokit
+from geokit.data_types import gdal_resample_alogorithms_literal
 from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
 from test.gdal_builders import (
     band_type_name,
@@ -191,6 +193,18 @@ def extent_mutate(source, processor=None):
         source_raster = source()
         source_extent = geokit.Extent.fromRaster(source_raster)
         return source_extent.mutateRaster(source_raster, processor=processor, **dtype)
+
+    return build
+
+
+def region_mask_mutate(source):
+    """RegionMask.mutateRaster onto a region mask with the extent and the pixels of the source."""
+
+    def build(_, **dtype):
+        source_raster = source()
+        source_extent = geokit.Extent.fromRaster(source_raster)
+        region_mask = geokit.RegionMask.fromGeom(source_extent.box, pixelRes=100, srs=3035)
+        return region_mask.mutateRaster(source_raster, applyMask=False, **dtype)
 
     return build
 
@@ -363,6 +377,7 @@ EXPLICIT_CASES = {
     "M15_Extent.mutateRaster_Int16":                         (extent_mutate(byte_0_to_127),               "Int16",            "Int16",   distinct(0, 50, 100, 127)),
     "M15_Extent.mutateRaster_preserve_input":                (extent_mutate(byte_0_to_127),               "preserve_input",   "Byte",    distinct(0, 50, 100, 127)),
     "M15_Extent.mutateRaster_preserve_input_with_processor": (extent_mutate(byte_0_to_127, double),       "preserve_input",   "Byte",    distinct(0, 100, 200, 254)),
+    "M15_RegionMask.mutateRaster_Int16":                     (region_mask_mutate(byte_0_to_127),          "Int16",            "Int16",   distinct(0, 50, 100, 127)),
 }
 
 # ----------------------------------------------------------------------------------------------
@@ -381,12 +396,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "M15_Extent.mutateRaster_Int16":                          "PR 8",
-    "M15_Extent.mutateRaster_preserve_input":                 "PR 8",
-    "M15_Extent.mutateRaster_preserve_input_with_processor":  "PR 8",
-    "M17_Extent.mutateRaster_default":                        "PR 8",
-    "M17_RegionMask.mutateRaster_default":                    "PR 8",
-    "M17_RegionMask.warp_default":                            "PR 8",
     "D20_createVector_float16":                               "PR 9",
     "D20_createVector_pandas_boolean":                        "PR 9",
     "D20_createVector_uint32":                                "PR 9",
@@ -400,7 +409,6 @@ PENDING = {
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
 # request deletes the lines of its functions.
 WITHOUT_MODES = {
-    "RegionMask.indicateValues":                              "PR 8",
 }
 # fmt: on
 
@@ -909,6 +917,33 @@ def test_createRasterLike_data_type_as_string_is_deprecated():
         copied_raster = geokit.raster.createRasterLike(byte_ones(), data_type_as_string="Int16")
 
     assert band_type_name(copied_raster) == "Int16"
+
+
+def test_resampling_functions_share_the_resample_alg_docstring_block():
+    """Every function that documents resampleAlg carries the shared block of geokit.raster word for word."""
+    resampling_functions = [
+        geokit.raster.warp,
+        geokit.raster.drawRaster,
+        geokit.Extent.mutateRaster,
+        geokit.Extent.rasterMosaic,
+        geokit.RegionMask.indicateValues,
+        geokit.RegionMask.warp,
+        geokit.RegionMask.mutateRaster,
+        geokit.RegionMask.contoursFromRaster,
+    ]
+    for function in resampling_functions:
+        assert geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING in inspect.getdoc(function), function.__qualname__
+
+
+def test_resample_alg_docstring_block_lists_every_algorithm():
+    """The bullets of the shared block open with exactly the algorithms of the resampleAlg type, so both agree."""
+    algorithms_that_open_a_bullet = set()
+    for line in geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING.splitlines():
+        leading_names = re.match(r'\s*- ((?:"\w+"(?:, )?)+)', line)
+        if leading_names is not None:
+            algorithms_that_open_a_bullet.update(re.findall(r'"(\w+)"', leading_names.group(1)))
+
+    assert algorithms_that_open_a_bullet == set(get_args(gdal_resample_alogorithms_literal))
 
 
 # ----------------------------------------------------------------------------------------------
