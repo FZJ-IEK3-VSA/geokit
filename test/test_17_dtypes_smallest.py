@@ -11,6 +11,13 @@ from geokit import dtypes
 from test.gdal_builders import create_gdal_raster
 
 
+def array_id(value):
+    """An id that shows the dtype of an array, because several rows differ only in it."""
+    if isinstance(value, np.ndarray):
+        return f"{value.dtype}{value.tolist()}"
+    return None
+
+
 @pytest.mark.parametrize(
     "values, no_data, expected",
     [
@@ -36,7 +43,7 @@ from test.gdal_builders import create_gdal_raster
         (np.array([2**24 + 1.0]), None, "int32"),
         (np.array([np.inf, 1.0]), None, "float32"),
     ],
-    ids=str,
+    ids=array_id,
 )
 def test_smallest_dtype_for_array(values, no_data, expected):
     """The smallest type holds every value and the noData value exactly; NaN keeps a float type."""

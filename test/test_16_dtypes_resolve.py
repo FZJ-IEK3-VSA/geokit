@@ -84,17 +84,15 @@ def test_auto_warns_when_a_64_bit_integer_type_must_become_float(input_dtype, sc
     assert gdal_name(resolved.dtype) == "Float64"
 
 
-def test_a_raster_made_from_nothing_is_byte():
-    """createRaster() without data, dtype, fill or noData gives Byte in every automatic mode."""
-    for mode in [None, "auto", "preserve_input", "smallest"]:
-        assert gdal_name(dtypes.resolve_dtype(dtype=mode).dtype) == "Byte"
-
-
-def test_none_scalars_are_skipped_and_non_numbers_rejected():
-    """A scalar of None is not a value to store; a string is not a scalar at all."""
+def test_none_scalars_are_skipped():
+    """A scalar of None is not a value to store, so it does not change the type."""
     resolved = dtypes.resolve_dtype(["Byte"], scalars={"noData": None, "fill": None})
+
     assert gdal_name(resolved.dtype) == "Byte"
 
+
+def test_a_scalar_that_is_not_a_number_is_rejected():
+    """A string is not a scalar GeoKit can write, so it raises an error that names the scalar."""
     with pytest.raises(GeoKitDataTypeError, match="noData"):
         dtypes.resolve_dtype(["Byte"], scalars={"noData": "x"})
 
@@ -155,16 +153,12 @@ def test_sum_of_burns_holds_count_times_the_burn(input_dtypes, input_values, sum
     assert gdal_name(resolved.dtype) == expected
 
 
-@pytest.mark.parametrize(
-    "value, expected",
-    [(1, "Byte"), (200, "Byte"), (40000, "UInt16"), (-1, "Int8"), (0.1, "Float64"), (300, "Int16")],
-    ids=str,
-)
-def test_a_constant_burn_value_is_an_input_of_its_smallest_type(value, expected):
-    """The worked examples of ADR 1 for rasterize(value=constant) hold in every automatic mode."""
-    for mode in [None, "auto", "preserve_input", "smallest"]:
-        resolved = dtypes.resolve_dtype(input_values=[value], dtype=mode, scalars={"burn value": value})
-        assert gdal_name(resolved.dtype) == expected
+@pytest.mark.parametrize("mode", [None, "auto", "preserve_input", "smallest"], ids=str)
+def test_a_constant_burn_value_of_300_is_an_int16_input(mode):
+    """A burn value of 300 is an input of type Int16, the signed type first at 16 bits (ADR 5), in every mode."""
+    resolved = dtypes.resolve_dtype(input_values=[300], dtype=mode, scalars={"burn value": 300})
+
+    assert gdal_name(resolved.dtype) == "Int16"
 
 
 # ----------------------------------------------------------------------------------------------

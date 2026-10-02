@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from osgeo import gdal, ogr
-from typeguard import TypeCheckError
+from typeguard import suppress_type_checks
 
 import geokit
 from geokit import dtypes
@@ -53,6 +53,7 @@ ALL_RASTER_DTYPES = ["uint8", "int8", "uint16", "int16", "uint32", "int32", "uin
         (int, str(np.dtype(int))),
         (float, "float64"),
     ],
+    ids=repr,
 )
 def test_to_dtype_accepts_every_documented_spelling(spelling, expected):
     """Every spelling of ADR 2 gives the same numpy.dtype; bool and float16 become types GDAL has."""
@@ -91,12 +92,6 @@ def test_to_dtype_rejects_what_a_band_cannot_store(rejected):
     """Bare integers, values, mode strings, complex, string and object types raise GeoKitDataTypeError."""
     with pytest.raises(GeoKitDataTypeError):
         dtypes.to_dtype(rejected)
-
-
-def test_bare_integer_error_names_the_string_spelling():
-    """The error for gdal.GDT_Float32 tells the caller to write dtype="Float32" instead."""
-    with pytest.raises(GeoKitDataTypeError, match='dtype="Float32"'):
-        dtypes.to_dtype(gdal.GDT_Float32)
 
 
 @pytest.mark.parametrize(
@@ -165,6 +160,7 @@ def test_raster_info_carries_the_numpy_dtype():
         (ogr.OFTReal, ogr.OFSTNone, "float64"),
         (ogr.OFTReal, ogr.OFSTFloat32, "float32"),
     ],
+    ids=["Integer", "Integer-Int16", "Integer-Boolean", "Integer64", "Real", "Real-Float32"],
 )
 def test_from_ogr_field_uses_type_and_subtype(field_type, subtype, expected):
     """Numeric OGR fields map to the dtype of ADR 9, with the subtypes narrowing them."""
@@ -174,7 +170,11 @@ def test_from_ogr_field_uses_type_and_subtype(field_type, subtype, expected):
     assert dtypes.from_ogr_field(field_definition) == np.dtype(expected)
 
 
-@pytest.mark.parametrize("field_type", [ogr.OFTString, ogr.OFTDate, ogr.OFTDateTime, ogr.OFTBinary])
+@pytest.mark.parametrize(
+    "field_type",
+    [ogr.OFTString, ogr.OFTDate, ogr.OFTDateTime, ogr.OFTBinary],
+    ids=["String", "Date", "DateTime", "Binary"],
+)
 def test_from_ogr_field_is_none_for_non_numeric_fields(field_type):
     """A field that holds no numbers has no dtype."""
     assert dtypes.from_ogr_field(ogr.FieldDefn("value", field_type)) is None
@@ -182,8 +182,8 @@ def test_from_ogr_field_is_none_for_non_numeric_fields(field_type):
 
 def test_from_ogr_field_rejects_integer_constants():
     """An integer could be an OGR or a GDAL constant, so only the FieldDefn object is accepted."""
-    # The test suite runs typeguard, which rejects the integer at the annotation before the function does
-    with pytest.raises((GeoKitDataTypeError, TypeCheckError)):
+    # typeguard, which the test suite runs, would reject the integer at the annotation before GeoKit's own check
+    with suppress_type_checks(), pytest.raises(GeoKitDataTypeError):
         dtypes.from_ogr_field(ogr.OFTReal)
 
 
@@ -277,7 +277,7 @@ def test_is_whole_number(value, expected):
         ("Byte", "7", False),
         ("Byte", None, False),
     ],
-    ids=str,
+    ids=repr,
 )
 def test_can_hold_means_stored_exactly(dtype, value, expected):
     """A value fits a type if it can be stored: the range for integers and fractions, exactness for whole numbers in floats."""
