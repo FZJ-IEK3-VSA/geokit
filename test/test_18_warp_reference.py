@@ -1,9 +1,10 @@
-"""warp against plain gdal.Warp as the reference (ADR 1, ADR 3; D12 to D14 in #405).
+"""warp against plain gdal.Warp as the reference (ADR 1, ADR 3, ADR 10; D12 to D14 in #405).
 
 For every resampling algorithm, source type and operation: under "auto" the values equal the same gdal.Warp
 into Float64, so nothing is rounded or clipped, and the type is the one of the algorithm's rule in ADR 3; under
 "preserve_input" they equal the same gdal.Warp into the source type, which is the GDAL convention; under
-"smallest" they are the values of "auto" in the narrowest type that stores them.
+"smallest" they are the values of "auto" in the narrowest type that stores them. resampleAlg="auto" is compared
+as the algorithm it stands for: near for integer sources, bilinear for float sources (ADR 10).
 """
 
 import warnings
@@ -41,8 +42,18 @@ ALGORITHMS_WITH_FRACTIONAL_RESULTS = {"bilinear", "average", "cubic", "cubicspli
 TYPES_EXACT_IN_FLOAT32 = {"Byte", "Int16", "UInt16", "Float32"}
 
 
+def algorithm_for(resampleAlg, type_name):
+    """The algorithm that resampleAlg="auto" stands for on a source of this type (ADR 10), or resampleAlg itself."""
+    if resampleAlg != "auto":
+        return resampleAlg
+    if type_name.startswith("Float"):
+        return "bilinear"
+    return "near"
+
+
 def type_under_auto(resampleAlg, type_name):
     """The output type of warp under "auto", from the rule of the algorithm in ADR 3."""
+    resampleAlg = algorithm_for(resampleAlg, type_name)
     if resampleAlg in ALGORITHMS_THAT_KEEP_THE_VALUES:
         return type_name
     if resampleAlg in ALGORITHMS_WITH_FRACTIONAL_RESULTS:
@@ -110,9 +121,10 @@ def test_auto_type_follows_the_rule_of_the_algorithm(resampleAlg, type_name):
 def test_auto_equals_gdal_into_float64(resampleAlg, type_name, operation):
     """Under auto the values equal the same gdal.Warp into Float64: nothing is rounded or clipped."""
     source = source_raster(type_name)
+    reference_algorithm = algorithm_for(resampleAlg, type_name)
 
     result = geokit_warp(source, resampleAlg, operation)
-    reference = reference_warp(source, result, resampleAlg, gdal.GDT_Float64)
+    reference = reference_warp(source, result, reference_algorithm, gdal.GDT_Float64)
 
     np.testing.assert_allclose(pixel_values(result), pixel_values(reference), rtol=1e-5, atol=1e-4)
 
@@ -122,9 +134,10 @@ def test_preserve_input_equals_gdal_into_the_source_type(resampleAlg, type_name,
     """Under preserve_input the source type is kept and the values are what GDAL writes into that type."""
     source = source_raster(type_name)
     _, source_gdal_type = SOURCE_TYPES[type_name]
+    reference_algorithm = algorithm_for(resampleAlg, type_name)
 
     result = geokit_warp(source, resampleAlg, operation, dtype="preserve_input")
-    reference = reference_warp(source, result, resampleAlg, source_gdal_type)
+    reference = reference_warp(source, result, reference_algorithm, source_gdal_type)
 
     assert band_type_name(result) == type_name
     np.testing.assert_array_equal(pixel_values(result), pixel_values(reference))

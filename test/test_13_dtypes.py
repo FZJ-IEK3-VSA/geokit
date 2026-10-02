@@ -381,7 +381,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "M17_warp_byte_classes_default":                          "PR 6",
     "D27_checkSimilarRasters":                                "PR 7",
     "D27_combineSimilarRasters":                              "PR 7",
     "M13_rasterMosaic_byte_then_int16_1000":                  "PR 7",

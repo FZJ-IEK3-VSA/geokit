@@ -2646,6 +2646,19 @@ _RESAMPLING_THAT_KEEPS_THE_VALUES = ("near", "mode", "min", "max", "med", "q1", 
 _RESAMPLING_WITH_FRACTIONAL_RESULTS = ("bilinear", "average", "cubic", "cubicspline", "lanczos", "rms")
 
 
+def _resolve_resampling_algorithm(resampleAlg: str, source_dtype: np.dtype) -> str:
+    """Return the algorithm that resampleAlg="auto" stands for, or resampleAlg itself (ADR 10).
+
+    "auto" resamples integer and bool rasters with "near", which keeps their values, and float rasters with
+    "bilinear", which interpolates them.
+    """
+    if resampleAlg != "auto":
+        return resampleAlg
+    if source_dtype.kind == "f":  # "f" = floating point
+        return "bilinear"
+    return "near"
+
+
 def _warp_rule(resampleAlg: str) -> DTYPES.DtypeRule:
     """The effect of a resampling algorithm on the value range, which decides the output type (ADR 3)."""
     algorithm = str(resampleAlg).lower()
@@ -2696,7 +2709,7 @@ def _reason_warp_creates_pixels(
 
 def warp(
     source: load_raster_input,
-    resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+    resampleAlg: gdal_resample_alogorithms_literal = "auto",
     cutline: str | ogr.Geometry | None = None,
     output: str | pathlib.Path | None = None,
     pixelHeight: numeric | None = None,
@@ -2741,9 +2754,12 @@ def warp(
     resampleAlg : str; optional
         The resampling algorithm to use when translating pixel values
         * Knowing which option to use can have significant impacts!
-        * Options are: near , bilinear, cubic,
+        * Options are: auto, near , bilinear, cubic,
         cubicspline, lanczos, average, rms, mode,
         max, min, med, Q1, Q3, sum
+        * "auto", the default, uses "near" for integer rasters and "bilinear" for float rasters, so
+          an integer raster keeps its values and its data type. Pass "bilinear" to interpolate an
+          integer raster, such as an elevation model.
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
@@ -2781,7 +2797,7 @@ def warp(
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
         The input of the choice is the data type of the source band. The rule follows
-        resampleAlg: near, mode, min, max, med, q1 and q3 keep the data type; bilinear,
+        resampleAlg: auto, near, mode, min, max, med, q1 and q3 keep the data type; bilinear,
         average, cubic, cubicspline, lanczos and rms give Float32 (Float64 for 32-bit and
         wider integers and for Float64 sources); sum gives Float64. No values are read.
 
@@ -2834,8 +2850,6 @@ def warp(
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
-    _warnNonReproducibleResampling(resampleAlg)
-
     # open source and get info
     source = loadRaster(source)
     dsInfo = rasterInfo(sourceDS=source)
@@ -2884,6 +2898,10 @@ def warp(
         raise GeoKitDataTypeError(
             f"warp: the source has the pixel type {dsInfo.data_type_name_str}, which GeoKit does not support."
         )
+    # "auto" stands for near on integer rasters and bilinear on float rasters (ADR 10); the warning, the rule,
+    # gdal.Warp and the provenance metadata all see the algorithm it stands for
+    resampleAlg = _resolve_resampling_algorithm(resampleAlg, dsInfo.numpy_dtype)
+    _warnNonReproducibleResampling(resampleAlg)
     resolved = DTYPES.resolve_dtype(
         [dsInfo.numpy_dtype],
         _warp_rule(resampleAlg),
