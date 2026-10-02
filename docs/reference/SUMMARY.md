@@ -6,7 +6,6 @@
     * [data_types](data_types.md)
     * [dtypes](dtypes/index.md)
         * [conversions](dtypes/conversions.md)
-        * [options](dtypes/options.md)
         * [resolve](dtypes/resolve.md)
         * [smallest](dtypes/smallest.md)
     * [error](error.md)

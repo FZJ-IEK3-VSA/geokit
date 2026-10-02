@@ -1,10 +1,9 @@
-"""Unit tests of ``geokit.dtypes.resolve`` and ``geokit.dtypes.options``: the modes, the rules and the checks.
+"""Unit tests of ``geokit.dtypes.resolve``: the modes, the rules and the widening for scalars.
 
-The tables are those of ADR 1 (modes and worked examples), ADR 3 (rules), ADR 4 (scalar widening) and
-ADR 10 (options). No GeoKit function is called; the call sites follow in later pull requests.
+The tables are those of ADR 1 (modes and worked examples), ADR 3 (rules) and ADR 4 (scalar widening). No GeoKit
+function is called; the call sites follow in later pull requests.
 """
 
-import threading
 import warnings
 
 import numpy as np
@@ -14,15 +13,6 @@ from osgeo import gdal
 from geokit import dtypes
 from geokit.dtypes import DtypeRule
 from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
-
-
-@pytest.fixture(autouse=True)
-def restore_options():
-    """Every test starts with the default options and leaves them as they were."""
-    options_before = dtypes.get_options()
-    dtypes.set_options(checks=True)
-    yield
-    dtypes.set_options(checks=options_before.checks)
 
 
 def gdal_name(numpy_dtype) -> str:
@@ -270,60 +260,3 @@ def test_explicit_integer_type_with_nan_nodata_raises():
     """NaN cannot be stored in an integer type, so an explicit Int32 with noData=nan is an error."""
     with pytest.raises(GeoKitDataTypeError, match="Int32"):
         dtypes.resolve_dtype(dtype="Int32", scalars={"noData": np.nan})
-
-
-# ----------------------------------------------------------------------------------------------
-# options
-
-
-def test_checks_are_on_by_default():
-    """The default options issue the warnings."""
-    assert dtypes.get_options().checks is True
-
-
-def test_set_options_turns_the_warnings_off_but_keeps_the_type_and_the_errors():
-    """With checks off, Int64 + NaN still gives Float64 silently, and impossible requests still raise."""
-    dtypes.set_options(checks=False)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", GeoKitDataTypeWarning)
-        resolved = dtypes.resolve_dtype(["Int64"], scalars={"noData": np.nan})
-    assert gdal_name(resolved.dtype) == "Float64"
-
-    with pytest.raises(GeoKitDataTypeError):
-        dtypes.resolve_dtype(dtype="Byte", scalars={"noData": -1})
-
-
-def test_options_context_restores_the_previous_setting():
-    """The options block changes the setting inside only and restores it afterwards, also when nested."""
-    with dtypes.options(checks=False):
-        assert dtypes.get_options().checks is False
-        with dtypes.options(checks=True):
-            assert dtypes.get_options().checks is True
-        assert dtypes.get_options().checks is False
-    assert dtypes.get_options().checks is True
-
-
-def test_options_context_does_not_leak_into_other_threads():
-    """A block in one thread leaves the other threads with the process-wide setting."""
-    seen_in_thread = []
-
-    def read_checks():
-        seen_in_thread.append(dtypes.get_options().checks)
-
-    with dtypes.options(checks=False):
-        other_thread = threading.Thread(target=read_checks)
-        other_thread.start()
-        other_thread.join()
-
-    assert seen_in_thread == [True]
-
-
-def test_issue_warning_respects_the_checks_option():
-    """issue_warning warns with GeoKitDataTypeWarning, and is silent when the checks are off."""
-    with pytest.warns(GeoKitDataTypeWarning, match="dtype"):
-        dtypes.issue_warning("the dtype may lose values")
-
-    with dtypes.options(checks=False), warnings.catch_warnings():
-        warnings.simplefilter("error", GeoKitDataTypeWarning)
-        dtypes.issue_warning("the dtype may lose values")

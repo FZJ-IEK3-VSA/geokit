@@ -7,6 +7,7 @@ and the widening for the noData, fill and burn values GeoKit writes itself (ADR 
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -27,8 +28,7 @@ from geokit.dtypes.conversions import (
     to_dtype,
     to_gdal,
 )
-from geokit.dtypes.options import issue_warning
-from geokit.error import GeoKitDataTypeError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning
 
 __all__ = ["DTYPE_MODES", "DTYPE_PARAMETER_DOCSTRING", "DtypeRule", "ResolvedDtype", "dtype_mode", "resolve_dtype"]
 
@@ -245,10 +245,12 @@ def _widen_for_scalars(chosen: np.dtype, named_scalars: Mapping[str, object], co
         # "i"/"u" = signed/unsigned integer kinds, "f" = floating point
         loses_whole_numbers = chosen.kind in "iu" and chosen.itemsize == 8 and widened.kind == "f"
         if loses_whole_numbers:
-            issue_warning(
+            warnings.warn(
                 f"{_prefix(context)}{scalar_name}={value!r} does not fit {gdal_type_name(chosen)}. The output dtype "
                 f"becomes {gdal_type_name(widened)}, which stores whole numbers exactly only up to 2**53. Pass a "
-                f'{scalar_name} that fits, or dtype="{gdal_type_name(chosen)}", to keep the integer type.'
+                f'{scalar_name} that fits, or dtype="{gdal_type_name(chosen)}", to keep the integer type.',
+                GeoKitDataTypeWarning,
+                stacklevel=2,
             )
         chosen = widened
     return chosen
