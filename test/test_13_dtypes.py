@@ -197,6 +197,18 @@ def extent_mutate(source, processor=None):
     return build
 
 
+def region_mask_mutate(source):
+    """RegionMask.mutateRaster onto a region mask with the extent and the pixels of the source."""
+
+    def build(_, **dtype):
+        source_raster = source()
+        source_extent = geokit.Extent.fromRaster(source_raster)
+        region_mask = geokit.RegionMask.fromGeom(source_extent.box, pixelRes=100, srs=3035)
+        return region_mask.mutateRaster(source_raster, applyMask=False, **dtype)
+
+    return build
+
+
 def mosaic(*tiles):
     """Extent.rasterMosaic of GeoTIFF tiles, each given as (value, numpy type, GDAL type) and placed side by side."""
 
@@ -365,6 +377,7 @@ EXPLICIT_CASES = {
     "M15_Extent.mutateRaster_Int16":                         (extent_mutate(byte_0_to_127),               "Int16",            "Int16",   distinct(0, 50, 100, 127)),
     "M15_Extent.mutateRaster_preserve_input":                (extent_mutate(byte_0_to_127),               "preserve_input",   "Byte",    distinct(0, 50, 100, 127)),
     "M15_Extent.mutateRaster_preserve_input_with_processor": (extent_mutate(byte_0_to_127, double),       "preserve_input",   "Byte",    distinct(0, 100, 200, 254)),
+    "M15_RegionMask.mutateRaster_Int16":                     (region_mask_mutate(byte_0_to_127),          "Int16",            "Int16",   distinct(0, 50, 100, 127)),
 }
 
 # ----------------------------------------------------------------------------------------------
@@ -383,9 +396,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "M15_Extent.mutateRaster_Int16":                          "PR 8",
-    "M15_Extent.mutateRaster_preserve_input":                 "PR 8",
-    "M15_Extent.mutateRaster_preserve_input_with_processor":  "PR 8",
     "M17_Extent.mutateRaster_default":                        "PR 8",
     "M17_RegionMask.mutateRaster_default":                    "PR 8",
     "M17_RegionMask.warp_default":                            "PR 8",
@@ -402,7 +412,6 @@ PENDING = {
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
 # request deletes the lines of its functions.
 WITHOUT_MODES = {
-    "RegionMask.indicateValues":                              "PR 8",
 }
 # fmt: on
 

@@ -1351,8 +1351,10 @@ class Extent(object):
               Float64; use them for continuous data such as elevation.
             - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
 
-        **kwargs:
-            All other keyword arguments are passed to geokit.vector.mutateVector
+        **mutateArgs:
+            All other keyword arguments are passed to geokit.raster.mutateRaster, or to the warp if there is no
+            processor. This includes dtype, which applies to the returned raster; under "preserve_input" it
+            keeps the data type of ``source``.
 
         Returns
         -------
@@ -1362,10 +1364,21 @@ class Extent(object):
         if warpArgs is None:
             warpArgs = {}
 
+        # dtype applies to the raster this function returns (ADR 6): the warp writes it if there is no processor,
+        # otherwise mutateRaster does. "preserve_input" means the data type of the given source, not the one of
+        # the warped intermediate.
+        source = RASTER.loadRaster(source)
+        dtype = mutateArgs.pop("dtype", None)
+        if DTYPES.dtype_mode(dtype) == "preserve_input":
+            dtype = DTYPES.from_band(source.GetRasterBand(1))
+
         if processor is None:  # We won't do a mutation without a processor, since everything else
             # can be handled by Warp. Therefore we pass on any 'output' that is
             # given to the warping stage, unless one was already given
             warpArgs["output"] = warpArgs.get("output", mutateArgs.get("output", None))
+            warpArgs.setdefault("dtype", dtype)
+        else:
+            mutateArgs["dtype"] = dtype
 
         # Warp the source
         # TODO: Should the warping be updated to use Extent.clipRaster???

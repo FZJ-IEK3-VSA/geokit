@@ -15,6 +15,7 @@ from osgeo import gdal, ogr, osr
 
 from geokit.error import checkMultiProcessingAvailability
 from geokit import geom as GEOM
+from geokit import dtypes as DTYPES
 from geokit import raster as RASTER
 from geokit import srs as SRS
 from geokit import util as UTIL
@@ -2054,6 +2055,14 @@ class RegionMask(object):
 
         # Do the warp and mutation
         if matchContext:
+            # dtype applies to the raster this method returns (ADR 6), and "preserve_input" means the data type
+            # of the given source, not the one of the warped intermediate
+            dtype = mutateArgs.pop("dtype", None)
+            if DTYPES.dtype_mode(dtype) == "preserve_input":
+                dtype = DTYPES.from_band(RASTER.loadRaster(source).GetRasterBand(1))
+            if processor is None:
+                warpArgs.setdefault("dtype", dtype)
+
             source = self.warp(
                 source,
                 returnMatrix=False,
@@ -2065,7 +2074,7 @@ class RegionMask(object):
             if processor is None:
                 return source
             else:
-                return RASTER.mutateRaster(source, output=output, **mutateArgs)
+                return RASTER.mutateRaster(source, processor=processor, output=output, dtype=dtype, **mutateArgs)
 
         else:
             if applyMask:
@@ -2077,6 +2086,7 @@ class RegionMask(object):
                 source,
                 matchContext=False,
                 warpArgs=warpArgs,
+                processor=processor,
                 resampleAlg=resampleAlg,
                 **mutateArgs,
             )

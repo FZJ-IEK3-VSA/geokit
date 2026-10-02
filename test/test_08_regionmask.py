@@ -372,18 +372,35 @@ def test_RegionMask_indicateValues():
     assert np.isclose(res7.sum(), 45724.746, 1e-4)
 
 
-def test_RegionMask_indicateValues_dtype_and_deprecated_warpDType():
-    """The dtype parameter sets the type of the warped indication; warpDType still works but warns."""
+def test_RegionMask_indicateValues_warpDType_is_a_deprecated_alias_of_dtype():
+    """The deprecated warpDType still sets the data type of the warped indication, with a FutureWarning."""
     rm = RegionMask.fromVector(AACHEN_SHAPE_PATH, pixelRes=0.001, srs=EPSG4326)
 
     with_dtype = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), dtype="float64", multiProcess=False)
     with pytest.warns(FutureWarning, match="warpDType"):
         with_warp_dtype = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), warpDType="float64", multiProcess=False)
-    nearest = rm.indicateValues(CLC_RASTER_PATH, value=(20, None), resampleAlg="near", multiProcess=False)
 
-    assert with_dtype.dtype == np.float64
-    assert (with_dtype == with_warp_dtype).all()
-    assert nearest.dtype == np.uint8  # the indication is a Byte raster and near keeps it
+    assert with_warp_dtype.dtype == np.float64
+    np.testing.assert_array_equal(with_warp_dtype, with_dtype)
+
+
+@pytest.mark.parametrize("matchContext", [True, False], ids=["matchContext", "no-matchContext"])
+def test_RegionMask_mutateRaster_applies_the_processor(matchContext):
+    """The processor given to RegionMask.mutateRaster is applied, with and without matchContext."""
+    source_values = np.full((10, 10), 3, np.uint8)
+    source_raster = raster.createRaster(
+        bounds=(0, 0, 1000, 1000), pixelWidth=100, pixelHeight=100, srs=3035, data=source_values
+    )
+    region_mask = RegionMask.fromGeom(geom.box(0, 0, 1000, 1000, srs=3035), pixelRes=100, srs=3035)
+
+    def seven_everywhere(matrix):
+        return np.full(matrix.shape, 7, np.uint8)
+
+    mutated = region_mask.mutateRaster(
+        source_raster, processor=seven_everywhere, matchContext=matchContext, applyMask=False
+    )
+
+    assert np.unique(raster.extractMatrix(mutated)).tolist() == [7]
 
 
 def test_RegionMask_indicateFeatures():
