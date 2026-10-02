@@ -522,7 +522,8 @@ def createRasterLike(
           the results, so the same losses as under "preserve_input" can occur without a warning.
 
         A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
-        If ``dtype`` is not given, the data type of the source is kept.
+        If ``dtype`` is not given, the data type of the source is kept. With ``data``, the output gets a data
+        type that holds both the data type of the source and that of ``data``.
     **kwargs
         Passed on to createRaster.
     """
