@@ -1297,7 +1297,7 @@ class Extent(object):
         matchContext: bool = False,
         warpArgs: dict | None = None,
         processor: Callable | None = None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **mutateArgs,
     ):
         """Convenience function for geokit.raster.mutateRaster which automatically
@@ -1343,6 +1343,8 @@ class Extent(object):
             The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
             not line up. Which one is right depends on the data:
 
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
             - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
               values. The output keeps the data type of the source, and categorical data such as land
               cover stays categorical.
@@ -1669,6 +1671,8 @@ class Extent(object):
             The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
             not line up. Which one is right depends on the data:
 
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
             - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
               values. The output keeps the data type of the source, and categorical data such as land
               cover stays categorical.
@@ -1676,7 +1680,8 @@ class Extent(object):
               average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
               Float64; use them for continuous data such as elevation.
             - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
-            The sources are put onto the grid of the first source.
+            The sources are put onto the grid of the first source. "auto" follows the promoted
+            data type of all sources.
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds

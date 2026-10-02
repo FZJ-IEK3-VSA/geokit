@@ -842,6 +842,8 @@ class RegionMask(object):
             The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
             not line up. Which one is right depends on the data:
 
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
             - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
               values. The output keeps the data type of the source, and categorical data such as land
               cover stays categorical.
@@ -851,7 +853,8 @@ class RegionMask(object):
             - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
             When indicating from a raster of lower resolution than the RegionMask, "near",
             "bilinear" or "cubic" work best; from a raster of higher resolution, "average",
-            "mode", "max" or "min".
+            "mode", "max" or "min". The default is "bilinear", because the warped indication
+            holds fractions that threshold compares.
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
@@ -1689,7 +1692,7 @@ class RegionMask(object):
         returnMatrix=True,
         applyMask=True,
         noData=None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **kwargs,
     ) -> gdal.Dataset | np.ndarray | None:
         """Convenience wrapper for geokit.raster.warp() which automatically sets
@@ -1714,6 +1717,8 @@ class RegionMask(object):
             The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
             not line up. Which one is right depends on the data:
 
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
             - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
               values. The output keeps the data type of the source, and categorical data such as land
               cover stays categorical.
@@ -1987,7 +1992,7 @@ class RegionMask(object):
         warpArgs: dict | None = None,
         applyMask: bool = True,
         processor: Callable | None = None,
-        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+        resampleAlg: gdal_resample_alogorithms_literal = "auto",
         **mutateArgs,
     ):
         """Convenience wrapper for geokit.vector.mutateRaster which automatically
@@ -2015,6 +2020,8 @@ class RegionMask(object):
             The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
             not line up. Which one is right depends on the data:
 
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
             - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
               values. The output keeps the data type of the source, and categorical data such as land
               cover stays categorical.
@@ -2163,7 +2170,15 @@ class RegionMask(object):
         """
         return GEOM.polygonizeMask(mask, bounds=self.extent.xyXY, srs=self.srs, flat=flat, shrink=shrink)
 
-    def contoursFromRaster(self, raster, contourEdges, applyMask=True, contoursKwargs={}, warpKwargs={}):
+    def contoursFromRaster(
+        self,
+        raster,
+        contourEdges,
+        applyMask=True,
+        contoursKwargs={},
+        warpKwargs={},
+        resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+    ):
         """Convenience wrapper for geokit.raster.contours which automatically
         warps a raster to the invoking RegioNmask.
 
@@ -2192,6 +2207,22 @@ class RegionMask(object):
             Keyword arguments to pass on to the raster warp function
             * See geokit.RegionMask.warp
 
+        resampleAlg : str, optional
+            The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
+            not line up. Which one is right depends on the data:
+
+            - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+              type of the source stays under dtype "auto".
+            - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
+              values. The output keeps the data type of the source, and categorical data such as land
+              cover stays categorical.
+            - "bilinear", "average", "cubic", "cubicspline", "lanczos", "rms" interpolate or
+              average, so the results are fractional. Under dtype "auto" the output becomes Float32 or
+              Float64; use them for continuous data such as elevation.
+            - "sum" adds the source pixels up. Under dtype "auto" the output becomes Float64.
+            The default is "bilinear", because contours need a continuous surface. A resampleAlg in
+            warpKwargs takes precedence.
+
         Returns
         -------
         pandas.DataFrame
@@ -2200,7 +2231,10 @@ class RegionMask(object):
             'geom' -> The contiguous-valued geometries
             'ID' -> The associated contour edge for each object
         """
-        raster = self.warp(raster, applyMask=applyMask, returnMatrix=False, **warpKwargs)
+        # warpKwargs is a mutable default argument, so the resampling algorithm goes into a copy
+        warp_kwargs = dict(warpKwargs)
+        warp_kwargs.setdefault("resampleAlg", resampleAlg)
+        raster = self.warp(raster, applyMask=applyMask, returnMatrix=False, **warp_kwargs)
         geoms = RASTER.contours(raster, contourEdges, **contoursKwargs)
 
         return geoms

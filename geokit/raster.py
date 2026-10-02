@@ -2244,6 +2244,8 @@ def drawRaster(
         The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
         not line up. Which one is right depends on the data:
 
+        - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+          type of the source stays under dtype "auto".
         - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
           values. The output keeps the data type of the source, and categorical data such as land
           cover stays categorical.
@@ -2677,6 +2679,8 @@ RESAMPLE_ALG_PARAMETER_DOCSTRING = f"""resampleAlg : str, optional
     The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
     not line up. Which one is right depends on the data:
 
+    - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+      type of the source stays under dtype "auto".
     - {_quoted_names(_RESAMPLING_THAT_KEEPS_THE_VALUES)} pick one of the source
       values. The output keeps the data type of the source, and categorical data such as land
       cover stays categorical.
@@ -2789,6 +2793,8 @@ def warp(
         The resampling algorithm gdal.Warp uses where the pixels of the source and of the output do
         not line up. Which one is right depends on the data:
 
+        - "auto" uses "near" for integer rasters and "bilinear" for float rasters, so the data
+          type of the source stays under dtype "auto".
         - "near", "mode", "min", "max", "med", "q1", "q3" pick one of the source
           values. The output keeps the data type of the source, and categorical data such as land
           cover stays categorical.

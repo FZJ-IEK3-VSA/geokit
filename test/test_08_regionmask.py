@@ -565,8 +565,8 @@ def test_RegionMask_warp():
     # basic warp Raster
     warped_1 = rm_3035.warp(CLC_RASTER_PATH)
 
-    # the default resampler, bilinear, gives Float32 with the exact interpolated values (D12 in #405)
-    assert warped_1.dtype == np.float32
+    # the default resampling of a Byte raster is near, which keeps the type (M17 in #405)
+    assert warped_1.dtype == np.uint8
     assert warped_1.shape == rm_3035.mask.shape
     assert np.isclose(warped_1.sum(), 88128.0)
     assert np.isclose(warped_1.std(), 9.400516510009766)
@@ -575,7 +575,7 @@ def test_RegionMask_warp():
     # basic warp Raster (FLIP CHECK!)
     warped_1f = rm_3035.warp(CLC_FLIPCHECK_PATH)
 
-    assert warped_1f.dtype == np.float32
+    assert warped_1f.dtype == np.uint8
     assert warped_1f.shape == rm_3035.mask.shape
     assert np.isclose(warped_1f.sum(), 88128.0)
     assert np.isclose(warped_1f.std(), 9.400516510009766)
@@ -583,8 +583,8 @@ def test_RegionMask_warp():
 
     assert (warped_1 == warped_1f).all()
 
-    # basic warp Raster with srs change
-    warped_2 = rm.warp(CLC_RASTER_PATH)
+    # basic warp Raster with srs change; bilinear gives Float32 with the exact interpolated values (D12 in #405)
+    warped_2 = rm.warp(CLC_RASTER_PATH, resampleAlg="bilinear")
     assert warped_2.dtype == np.float32
     assert warped_2.shape == rm.mask.shape
     assert np.isclose(warped_2.sum(), 449635.375)
@@ -608,6 +608,28 @@ def test_RegionMask_warp():
     assert np.isclose(warped_4.sum(), 11240881)
     assert np.isclose(warped_4.std(), 9.37633272361)
     # rm.createRaster(5, data=warped_4, output=result("regionMask_warp_4.tif"), noData=0, overwrite=True)
+
+
+@pytest.mark.filterwarnings("ignore:The current behavior of geokits's contours function:DeprecationWarning")
+def test_RegionMask_contoursFromRaster_passes_resampleAlg_on(monkeypatch):
+    """The warp of contoursFromRaster uses bilinear by default, else its resampleAlg; warpKwargs take precedence."""
+    region_mask = RegionMask.fromGeom(geom.point(6.20, 50.75).Buffer(0.05), srs=3035)
+    used_algorithms = []
+    original_warp = RegionMask.warp
+
+    def recording_warp(self, *args, **kwargs):
+        used_algorithms.append(kwargs["resampleAlg"])
+        return original_warp(self, *args, **kwargs)
+
+    monkeypatch.setattr(RegionMask, "warp", recording_warp)
+    contour_arguments = dict(contourEdges=[10, 20], applyMask=False)
+    region_mask.contoursFromRaster(CLC_RASTER_PATH, **contour_arguments)
+    region_mask.contoursFromRaster(CLC_RASTER_PATH, **contour_arguments, resampleAlg="near")
+    region_mask.contoursFromRaster(
+        CLC_RASTER_PATH, **contour_arguments, warpKwargs={"resampleAlg": "average"}, resampleAlg="near"
+    )
+
+    assert used_algorithms == ["bilinear", "near", "average"]
 
 
 def test_RegionMask_rasterize():

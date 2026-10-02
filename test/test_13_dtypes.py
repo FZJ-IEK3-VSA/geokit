@@ -396,9 +396,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "M17_Extent.mutateRaster_default":                        "PR 8",
-    "M17_RegionMask.mutateRaster_default":                    "PR 8",
-    "M17_RegionMask.warp_default":                            "PR 8",
     "D20_createVector_float16":                               "PR 9",
     "D20_createVector_pandas_boolean":                        "PR 9",
     "D20_createVector_uint32":                                "PR 9",
@@ -932,15 +929,21 @@ def test_resampling_functions_share_the_resample_alg_docstring_block():
         geokit.RegionMask.indicateValues,
         geokit.RegionMask.warp,
         geokit.RegionMask.mutateRaster,
+        geokit.RegionMask.contoursFromRaster,
     ]
     for function in resampling_functions:
         assert geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING in inspect.getdoc(function), function.__qualname__
 
 
 def test_resample_alg_docstring_block_lists_every_algorithm():
-    """The shared block names every algorithm of the resampleAlg type, so the two cannot drift apart."""
-    for algorithm in get_args(gdal_resample_alogorithms_literal):
-        assert f'"{algorithm}"' in geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING, algorithm
+    """The bullets of the shared block open with exactly the algorithms of the resampleAlg type, so both agree."""
+    algorithms_that_open_a_bullet = set()
+    for line in geokit.raster.RESAMPLE_ALG_PARAMETER_DOCSTRING.splitlines():
+        leading_names = re.match(r'\s*- ((?:"\w+"(?:, )?)+)', line)
+        if leading_names is not None:
+            algorithms_that_open_a_bullet.update(re.findall(r'"(\w+)"', leading_names.group(1)))
+
+    assert algorithms_that_open_a_bullet == set(get_args(gdal_resample_alogorithms_literal))
 
 
 # ----------------------------------------------------------------------------------------------
