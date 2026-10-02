@@ -35,6 +35,7 @@ from geokit.data_types import (
     gdal_resample_alogorithms_literal,
 )
 from geokit import dtypes as DTYPES
+from geokit.data_types import dtype_input
 from geokit.error import GeoKitDataTypeError, GeoKitGeomError, GeoKitRasterError
 
 if "win" in sys.platform:
@@ -141,7 +142,7 @@ def createRaster(
     output: None | str | pathlib.Path = None,
     pixelWidth: numeric = 100,
     pixelHeight: numeric = 100,
-    dtype: None | geokit_c_data_types_literal = None,
+    dtype: dtype_input = None,
     srs: srs_input | None = None,
     compress: bool = True,
     noData: numeric | None = None,
@@ -188,12 +189,20 @@ def createRaster(
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : geokit_c_data_types_literal, none
-        The datatype of the represented by the created raster's band
-        * Options are: Byte, Int16, Int32, Int64, Float32, Float64
-        * If dtype is None and data is None, the assumed datatype is a 'Byte'
-        * If dtype is None and data is not None, the datatype will be inferred
-          from the given data
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the point to create
@@ -210,12 +219,14 @@ def createRaster(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Must fit the data type of the raster: an explicit ``dtype`` that cannot
+          store it raises a GeoKitDataTypeError, an automatic one is widened
 
     fill : numeric; optional
         The initial value given to all pixels in the created raster band
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Must fit the data type of the raster, like noData
+        * Without fill and data the raster starts as noData, or as 0 if no noData
+          is given
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
@@ -233,13 +244,11 @@ def createRaster(
 
     scale : numeric; optional
         The scaling value given to apply to all values
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Stored as metadata of the band; it does not change the data type
 
     offset : numeric; optional
         The offset value given to apply to all values
-        - numeric
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Stored as metadata of the band; it does not change the data type
 
     raster_band_index: int, defaults to 1
         Determines which band is written to in the output raster dataset.
@@ -250,6 +259,108 @@ def createRaster(
     * If 'output' is a string: The path to the output is returned (for easy opening).
                                 It has to be saved as geotiff with .tif suffix.
     """
+    if data is not None and not isinstance(data, np.ndarray):
+        raise GeoKitRasterError("Data must be given as a numpy ndarray or None")
+
+    chosen_dtype = _resolve_dtype_for_new_raster(
+        dtype=dtype,
+        data=data,
+        noData=noData,
+        fill=fill,
+        context="createRaster",
+    )
+
+    return _create_raster(
+        bounds=bounds,
+        output=output,
+        pixelWidth=pixelWidth,
+        pixelHeight=pixelHeight,
+        dtype=chosen_dtype,
+        srs=srs,
+        compress=compress,
+        noData=noData,
+        overwrite=overwrite,
+        fill=fill,
+        data=data,
+        meta=meta,
+        scale=scale,
+        offset=offset,
+        creationOptions=creationOptions,
+        raster_band_index=raster_band_index,
+    )
+
+
+def _resolve_dtype_for_new_raster(
+    dtype: dtype_input,
+    data: np.ndarray | None,
+    noData: numeric | None,
+    fill: numeric | None,
+    context: str,
+    source_dtype: np.dtype | None = None,
+    noData_from_the_source: bool = False,
+) -> np.dtype:
+    """Choose the data type of a raster that is created from ``data`` or filled with ``fill`` (identity rule).
+
+    The inputs are the data type of the source raster, if there is one, and the data type of ``data``. Under
+    ``"smallest"`` the values that will be written (``data``, else ``fill``) and the noData value decide.
+    ``noData_from_the_source`` marks a noData value that the public function keeps from its source and has no
+    parameter for, so that an error suggests only another type.
+    """
+    input_dtypes = []
+    if source_dtype is not None:
+        input_dtypes.append(source_dtype)
+    if data is not None:
+        input_dtypes.append(data.dtype)
+
+    scalars_from_the_source = ()
+    if noData_from_the_source:
+        scalars_from_the_source = ("noData",)
+    resolved = DTYPES.resolve_dtype(
+        input_dtypes,
+        DTYPES.DtypeRule.IDENTITY,
+        scalars={"noData": noData, "fill": fill},
+        scalars_from_the_source=scalars_from_the_source,
+        dtype=dtype,
+        context=context,
+    )
+    if not resolved.shrink_output:
+        return resolved.dtype
+    if data is not None:
+        return DTYPES.smallest_dtype_for_array(data, noData)
+    if fill is None:
+        written_values = np.array([])
+    else:
+        written_values = np.array([fill])
+    return DTYPES.smallest_dtype_for_array(written_values, noData)
+
+
+def _create_raster(
+    bounds: tuple[numeric, numeric, numeric, numeric],
+    dtype: dtype_input,
+    output: None | str | pathlib.Path = None,
+    pixelWidth: numeric = 100,
+    pixelHeight: numeric = 100,
+    srs: srs_input | None = None,
+    compress: bool = True,
+    noData: numeric | None = None,
+    overwrite: bool = True,
+    fill: numeric | None = None,
+    data: np.ndarray | None = None,
+    meta: dict | None = None,
+    scale: numeric | None = 1,
+    offset: numeric | None = 0,
+    creationOptions: dict | None = None,
+    raster_band_index: int = 1,
+) -> gdal.Dataset | str:
+    """Create the raster with a data type that has already been chosen (``createRaster`` without the choice).
+
+    The data type given as ``dtype`` is converted with ``geokit.dtypes.to_gdal`` and used as it is. The public
+    functions choose it once with ``geokit.dtypes.resolve_dtype`` before they call this helper (ADR 6). All
+    other parameters are
+    those of ``createRaster``.
+    """
+    data_type_constant = DTYPES.to_gdal(dtype)
+
     # Check for existing file
 
     if output is not None:
@@ -274,9 +385,6 @@ def createRaster(
             print(os.path.dirname(output))
             raise PermissionError(f"Writing permission error for path: {os.path.dirname(output)}")
 
-    # Ensure bounds is okay
-    # bounds = UTIL.fitBoundsTo(bounds, pixelWidth, pixelHeight)
-
     # Make a raster dataset and pull the band/maskBand objects
     x_min = bounds[0]
     y_min = bounds[1]
@@ -285,36 +393,6 @@ def createRaster(
 
     cols = int(round((x_max - x_min) / pixelWidth))
     rows = int(round((y_max - y_min) / abs(pixelHeight)))
-
-    list_of_numbers = []
-    minimum_gdal_type_list = []
-    if isinstance(dtype, str):
-        minimum_gdal_type_list.append(dtype)
-    if isinstance(noData, numeric):
-        list_of_numbers.append(noData)
-
-    if isinstance(fill, numeric):
-        list_of_numbers.append(fill)
-    if isinstance(data, np.ndarray):
-        numpy_data_type = str(data.dtype)
-        minimum_gdal_type_list.append(numpy_data_type)
-        list_of_numbers.append(data.min())
-        list_of_numbers.append(data.max())
-    elif data is None:
-        pass
-    else:
-        raise GeoKitRasterError("Data must be given as a numpy ndarray or None")
-
-    data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
-    )
-    # # Get DataType
-    # if dtype is not None:  # a dtype was given, use it!
-    #     dtype = gdalType(dtype)
-    # elif data is not None:  # a data matrix was give, use it's dtype! (assume a numpy array or derivative)
-    #     dtype = gdalType(data.dtype)
-    # else:  # Otherwise, just assume we want a Byte
-    #     dtype = "GDT_Byte"
 
     # Open the driver
     opts = OrderedDict()
@@ -357,14 +435,15 @@ def createRaster(
 
         if noData is not None:
             band.SetNoDataValue(noData)
-            if fill is None and data is None:
-                band.Fill(noData)
 
         if data is None:
-            if fill is None:
-                band.Fill(0)
-            else:
+            # a raster without data starts as the fill value, else as noData, else as 0
+            if fill is not None:
                 band.Fill(fill)
+            elif noData is not None:
+                band.Fill(noData)
+            else:
+                band.Fill(0)
         else:
             # make sure dimension size is good
             if not (data.shape[0] == rows and data.shape[1] == cols):
@@ -415,16 +494,45 @@ def createRasterLike(
     copyMetadata: bool = True,
     metadata: dict | None = None,
     data: None | np.ndarray = None,
-    dtype: None | geokit_c_data_types_literal = None,
+    dtype: dtype_input = None,
     **kwargs,
 ):
     """Create a raster described by the given raster info (as returned from a
     call to rasterInfo() ).
 
     * This copies all characteristics of the given raster, including: bounds,
-      pixelWidth, pixelHeight, dtype, srs, noData, and meta.
+      pixelWidth, pixelHeight, data type, srs, noData, and meta.
     * Any keyword argument which is given will override values found in the
       source
+
+    Parameters
+    ----------
+    source : Anything acceptable by loadRaster(), or a RasterInfo
+        The raster whose characteristics are copied.
+    copyMetadata : bool
+        Whether the metadata of the source is copied. Cannot be True when ``metadata`` is given.
+    metadata : dict, optional
+        Metadata written to the new raster instead of the source's.
+    data : numpy.ndarray, optional
+        A matrix to write into the new raster.
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        If ``dtype`` is not given, the data type of the source is kept. With ``data``, the output gets a data
+        type that holds both the data type of the source and that of ``data``.
+    **kwargs
+        Passed on to createRaster.
     """
     if UTIL.isRaster(source):
         raster_info = rasterInfo(source)
@@ -436,63 +544,126 @@ def createRasterLike(
     if copyMetadata and metadata is not None:
         raise GeoKitRasterError("If metadata is given, copyMetadata cannot be True!")
 
+    if "data_type_as_string" in kwargs:
+        warnings.warn(
+            "The keyword 'data_type_as_string' of createRasterLike is deprecated and will be removed in a later "
+            "release. Use 'dtype' instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        dtype = kwargs.pop("data_type_as_string")
+
     bounds = kwargs.pop("bounds", raster_info.bounds)
     pixelWidth = kwargs.pop("pixelWidth", raster_info.pixelWidth)
     pixelHeight = kwargs.pop("pixelHeight", raster_info.pixelHeight)
     srs = kwargs.pop("srs", raster_info.srs)
     noData = kwargs.pop("noData", raster_info.noData)
-    data_type_as_string = kwargs.pop("data_type_as_string", dtype)
     if copyMetadata:
         meta = kwargs.pop("meta", raster_info.meta)
     else:
         meta = metadata
 
-    return createRaster(
+    if raster_info.numpy_dtype is None:
+        raise GeoKitDataTypeError(
+            f"createRasterLike: the source has the pixel type {raster_info.data_type_name_str}, which GeoKit "
+            f"does not support."
+        )
+    chosen_dtype = _resolve_dtype_for_new_raster(
+        dtype=dtype,
+        data=data,
+        noData=noData,
+        fill=kwargs.get("fill"),
+        context="createRasterLike",
+        source_dtype=raster_info.numpy_dtype,
+    )
+
+    return _create_raster(
         bounds=bounds,
         pixelWidth=pixelWidth,
         pixelHeight=pixelHeight,
         srs=srs,
         noData=noData,
         meta=meta,
-        dtype=data_type_as_string,
+        dtype=chosen_dtype,
         data=data,
         **kwargs,
     )
 
 
-def saveRasterAsTif(source: gdal.Dataset, output: str, **kwargs):
-    """Write a osgeo.gdal.Dataset in memory to a GeoTiff file to disk.
+def saveRasterAsTif(source: load_raster_input, output: str, dtype: dtype_input = None, **kwargs):
+    """Write a raster to a GeoTiff file on disk as an exact copy: values, data type, scale, offset and noData.
 
     Parameters
     ----------
-    source : osgeo.gdal.Dataset
-
+    source : Anything acceptable by loadRaster()
+        The raster to write.
     output : str
-        A path to an output file
+        A path to an output file (``.tif`` or ``.tiff``).
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        If ``dtype`` is not given, the data type of the source is kept. The copy keeps the noData value
+        of the source, so a fixed type has to store it.
+    **kwargs
+        Passed on to createRaster, for example ``compress`` or ``meta``.
 
     Returns
     -------
     str
         Path to the saved file on disk.
     """
-    # assert os.path.isdir(os.path.dirname(output)), 'Output folder does not exist!'
     assert output.split(".")[-1] in [
         "tif",
         "tiff",
     ], "Wrong type specified, use *.tif or *.tiff"
 
-    sourceInfo = rasterInfo(source)
-    data = extractMatrix(source)
+    source_dataset = loadRaster(source)
+    source_info = rasterInfo(source_dataset)
+    if source_info.numpy_dtype is None:
+        raise GeoKitDataTypeError(
+            f"saveRasterAsTif: the source has the pixel type {source_info.data_type_name_str}, which GeoKit does "
+            f"not support."
+        )
 
-    return createRaster(
-        bounds=sourceInfo.bounds,
-        pixelWidth=sourceInfo.dx,
-        pixelHeight=sourceInfo.dy,
-        noData=sourceInfo.noData,
-        dtype=sourceInfo.data_type_name_str,
-        srs=sourceInfo.srs,
-        data=data,
+    # The stored values, not the scaled ones: scale and offset are copied as metadata
+    stored_values = source_dataset.GetRasterBand(1).ReadAsArray()
+    if not source_info.yAtTop:
+        stored_values = stored_values[::-1, :]
+
+    chosen_dtype = _resolve_dtype_for_new_raster(
+        dtype=dtype,
+        data=stored_values,
+        noData=source_info.noData,
+        fill=None,
+        context="saveRasterAsTif",
+        source_dtype=source_info.numpy_dtype,
+        noData_from_the_source=True,
+    )
+    scale = kwargs.pop("scale", source_info.scale)
+    offset = kwargs.pop("offset", source_info.offset)
+
+    return _create_raster(
+        bounds=source_info.bounds,
+        pixelWidth=source_info.dx,
+        pixelHeight=source_info.dy,
+        noData=source_info.noData,
+        dtype=chosen_dtype,
+        srs=source_info.srs,
+        data=stored_values,
         output=output,
+        scale=scale,
+        offset=offset,
         **kwargs,
     )
 
@@ -1648,7 +1819,7 @@ def mutateRaster(
     boundsSRS: srs_input = "latlon",
     autocorrect: bool = False,
     output: str | None = None,
-    dtype: geokit_c_data_types_literal | None = None,
+    dtype: dtype_input = None,
     **create_raster_kwargs,
 ):
     """Process all pixels in a raster according to a given function. The boundaries
@@ -1664,8 +1835,8 @@ def mutateRaster(
         The function performing the mutation of the raster's data
         * The function will take single argument (a 2D numpy.ndarray)
         * The function must return a numpy.ndarray of the same size as the input
-        * The return type must also be containable within a Float32 (int and
-          boolean is okay)
+        * The data type of the returned array decides the data type of the output
+          raster if ``dtype`` is not given; bool becomes Byte
         * See example below for more info
 
     bounds: tuple or Extent
@@ -1695,12 +1866,21 @@ def mutateRaster(
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : Type, str, or numpy-dtype; optional
-        If given, forces the processed data to be a particular datatype
-        * Example
-          - A python numeric type  such as bool, int, or float
-          - A Numpy datatype such as numpy.uint8 or numpy.float64
-          - a String such as "Byte", "UInt16", or "Double"
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        Under "preserve_input" the processed values are cast to the data type of the source raster.
 
     **kwargs:
         * All kwargs are passed on to a call to createRaster()
@@ -1755,39 +1935,35 @@ def mutateRaster(
             format(processedData.shape, sourceData.shape),
         )
     del sourceData
-    list_of_numbers = [processedData.min(), processedData.max()]
-    minimum_gdal_type_list = [str(processedData.dtype)]
-    if isinstance(dtype, str):
-        minimum_gdal_type_list.append(dtype)
 
-    gdal_data_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-        list_of_numbers=list_of_numbers, minimum_gdal_type_list=minimum_gdal_type_list
-    )
-    # Create an output raster
-    if output is None:
-        return UTIL.quickRaster(
-            dy=dsInfo.dy,
-            dx=dsInfo.dx,
-            bounds=workingExtent,
-            dtype=gdal_data_string,
-            srs=dsInfo.srs,
-            data=processedData,
-            **create_raster_kwargs,
-        )
-
+    noData = create_raster_kwargs.get("noData")
+    if DTYPES.dtype_mode(dtype) == "preserve_input":
+        # the processed values are cast to the source type when they are written
+        input_dtypes = [dsInfo.numpy_dtype]
     else:
-        createRaster(
-            pixelHeight=dsInfo.dy,
-            pixelWidth=dsInfo.dx,
-            bounds=workingExtent,
-            srs=dsInfo.srs,
-            data=processedData,
-            output=output,
-            dtype=gdal_data_string,
-            **create_raster_kwargs,
-        )
+        input_dtypes = [processedData.dtype]
+    resolved = DTYPES.resolve_dtype(
+        input_dtypes,
+        DTYPES.DtypeRule.USER_FUNCTION,
+        scalars={"noData": noData},
+        dtype=dtype,
+        context="mutateRaster",
+    )
+    if resolved.shrink_output:
+        output_dtype = DTYPES.smallest_dtype_for_array(processedData, noData)
+    else:
+        output_dtype = resolved.dtype
 
-        return output
+    return _create_raster(
+        bounds=workingExtent,
+        pixelWidth=dsInfo.dx,
+        pixelHeight=dsInfo.dy,
+        srs=dsInfo.srs,
+        data=processedData,
+        output=output,
+        dtype=output_dtype,
+        **create_raster_kwargs,
+    )
 
 
 def indexToCoord(
