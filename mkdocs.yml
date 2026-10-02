@@ -202,7 +202,7 @@ nav:
           - Configuration:
                 - Overview: example_articles/_07_configuration.md
                 - Spatial Reference Systems: Examples/_07_configuration_options/_01_srs.ipynb
-                - C Data Types: Examples/_07_configuration_options/_02_c_datatypes.ipynb
+                - Data Types: Examples/_07_configuration_options/_02_c_datatypes.ipynb
 
     - Explanation:
           - explanation/index.md

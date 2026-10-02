@@ -1,3 +1,11 @@
+"""Deprecated: the former data-type handler of GeoKit.
+
+``MinimumCDataTypeHandler`` chose raster types from sample numbers. It is replaced by ``geokit.dtypes``: the
+raster functions take ``dtype="auto"``, ``"preserve_input"``, ``"smallest"`` or an explicit type, and
+``geokit.dtypes.to_dtype`` and ``dtype_for_value`` convert and choose types. Importing this module issues a
+``FutureWarning``; the module is removed in a later release.
+"""
+
 from dataclasses import dataclass
 from typing import Literal
 import warnings
@@ -5,13 +13,21 @@ import warnings
 import numpy as np
 from osgeo import gdal
 from geokit.error import GeoKitCDataError
-from geokit.data_types import (
-    gdal_abbreviation_mapper_dict,
-    gdal_c_raster_data_types_literal,
-    geokit_c_data_types_literal,
-    integer_data_types_literal,
-    _gdal_c_raster_data_types_list,
+from geokit.data_types import _DEPRECATED_TYPE_ALIASES, _gdal_c_raster_data_types_list
+
+warnings.warn(
+    "geokit.c_data_type_handler and MinimumCDataTypeHandler are deprecated and will be removed in a later release. "
+    'GeoKit chooses data types with geokit.dtypes now: the raster functions take dtype="auto", "preserve_input", '
+    '"smallest" or an explicit type, and geokit.dtypes.to_dtype and dtype_for_value convert and choose types.',
+    FutureWarning,
+    stacklevel=2,
 )
+
+# the deprecated aliases, taken without the warning that every other access issues
+gdal_abbreviation_mapper_dict = _DEPRECATED_TYPE_ALIASES["gdal_abbreviation_mapper_dict"]
+gdal_c_raster_data_types_literal = _DEPRECATED_TYPE_ALIASES["gdal_c_raster_data_types_literal"]
+geokit_c_data_types_literal = _DEPRECATED_TYPE_ALIASES["geokit_c_data_types_literal"]
+integer_data_types_literal = _DEPRECATED_TYPE_ALIASES["integer_data_types_literal"]
 
 
 @dataclass
