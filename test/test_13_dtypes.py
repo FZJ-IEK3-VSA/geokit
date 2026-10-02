@@ -381,18 +381,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "D8_warp_int32_nan_nodata":                               "PR 6",
-    "D11_warpLike_Float32_of_a_Float64_source":               "PR 6",
-    "D11_warp_Float32_of_a_Float64_source":                   "PR 6",
-    "D12_warp_byte_average":                                  "PR 6",
-    "D12_warp_byte_bilinear":                                 "PR 6",
-    "D12_warp_int32_average":                                 "PR 6",
-    "D13_warp_byte_cubic_overshoot":                          "PR 6",
-    "D14_warp_byte_sum_16_times_200":                         "PR 6",
-    "D15_warp_reprojection_without_nodata":                   "PR 6",
-    "D27_warp":                                               "PR 6",
-    "M1_warp_byte_near":                                      "PR 6",
-    "M17_warp_byte_classes_default":                          "PR 6",
     "D27_checkSimilarRasters":                                "PR 7",
     "D27_combineSimilarRasters":                              "PR 7",
     "M13_rasterMosaic_byte_then_int16_1000":                  "PR 7",
@@ -417,7 +405,6 @@ PENDING = {
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
 # request deletes the lines of its functions.
 WITHOUT_MODES = {
-    "warp":                                                   "PR 6",
     "combineSimilarRasters":                                  "PR 7",
     "rasterMosaic":                                           "PR 7",
     "RegionMask.indicateValues":                              "PR 8",

@@ -36,7 +36,7 @@ from geokit.data_types import (
 )
 from geokit import dtypes as DTYPES
 from geokit.data_types import dtype_input
-from geokit.error import GeoKitDataTypeError, GeoKitGeomError, GeoKitRasterError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning, GeoKitGeomError, GeoKitRasterError
 
 if "win" in sys.platform:
     COMPRESSION_OPTION = ["COMPRESS=LZW"]
@@ -2642,16 +2642,81 @@ def _warnNonReproducibleResampling(resampleAlg) -> None:
     )
 
 
+_RESAMPLING_THAT_KEEPS_THE_VALUES = ("near", "mode", "min", "max", "med", "q1", "q3")
+_RESAMPLING_WITH_FRACTIONAL_RESULTS = ("bilinear", "average", "cubic", "cubicspline", "lanczos", "rms")
+
+
+def _resolve_resampling_algorithm(resampleAlg: str, source_dtype: np.dtype) -> str:
+    """Return the algorithm that resampleAlg="auto" stands for, or resampleAlg itself (ADR 10).
+
+    "auto" resamples integer and bool rasters with "near", which keeps their values, and float rasters with
+    "bilinear", which interpolates them.
+    """
+    if resampleAlg != "auto":
+        return resampleAlg
+    if source_dtype.kind == "f":  # "f" = floating point
+        return "bilinear"
+    return "near"
+
+
+def _warp_rule(resampleAlg: str) -> DTYPES.DtypeRule:
+    """The effect of a resampling algorithm on the value range, which decides the output type (ADR 3)."""
+    algorithm = str(resampleAlg).lower()
+    if algorithm in _RESAMPLING_THAT_KEEPS_THE_VALUES:
+        return DTYPES.DtypeRule.SUBSET
+    if algorithm in _RESAMPLING_WITH_FRACTIONAL_RESULTS:
+        return DTYPES.DtypeRule.FRACTIONAL
+    if algorithm == "sum":
+        return DTYPES.DtypeRule.SUM
+    known_algorithms = ", ".join(_RESAMPLING_THAT_KEEPS_THE_VALUES + _RESAMPLING_WITH_FRACTIONAL_RESULTS + ("sum",))
+    raise GeoKitRasterError(f"warp: unknown resampleAlg '{resampleAlg}'. Options are: {known_algorithms}.")
+
+
+def _reason_warp_creates_pixels(
+    source_info: RasterInfo,
+    output_bounds: tuple[numeric, numeric, numeric, numeric],
+    output_srs: osr.SpatialReference | None,
+    same_srs: bool,
+    cutline,
+) -> str | None:
+    """Why the output has pixels outside the source data, or None if the source covers the whole output.
+
+    A reprojected output is checked through the envelope of its bounds in the source srs: if even that
+    envelope lies inside the source, every output pixel has source data.
+    """
+    if cutline is not None:
+        return "the cutline leaves pixels outside it"
+    if same_srs:
+        output_bounds_in_source_srs = output_bounds
+    else:
+        output_bounds_in_source_srs = GEOM.boundsToBounds(output_bounds, output_srs, source_info.srs)
+
+    x_min, y_min, x_max, y_max = output_bounds_in_source_srs
+    tolerance_x = 1e-6 * source_info.dx
+    tolerance_y = 1e-6 * source_info.dy
+    output_is_inside_source = (
+        x_min >= source_info.xMin - tolerance_x
+        and y_min >= source_info.yMin - tolerance_y
+        and x_max <= source_info.xMax + tolerance_x
+        and y_max <= source_info.yMax + tolerance_y
+    )
+    if output_is_inside_source:
+        return None
+    if same_srs:
+        return "the output bounds reach beyond the source"
+    return "the reprojected output reaches beyond the source"
+
+
 def warp(
     source: load_raster_input,
-    resampleAlg: gdal_resample_alogorithms_literal = "bilinear",
+    resampleAlg: gdal_resample_alogorithms_literal = "auto",
     cutline: str | ogr.Geometry | None = None,
     output: str | pathlib.Path | None = None,
     pixelHeight: numeric | None = None,
     pixelWidth: numeric | None = None,
     srs: srs_input | None = None,
     bounds: tuple[numeric, numeric, numeric, numeric] | None = None,
-    dtype: None | geokit_c_data_types_literal = None,
+    dtype: dtype_input = None,
     noData: numeric | None = None,
     overwrite: bool = True,
     meta: None | dict[str, str] = None,
@@ -2689,9 +2754,12 @@ def warp(
     resampleAlg : str; optional
         The resampling algorithm to use when translating pixel values
         * Knowing which option to use can have significant impacts!
-        * Options are: near , bilinear, cubic,
+        * Options are: auto, near , bilinear, cubic,
         cubicspline, lanczos, average, rms, mode,
         max, min, med, Q1, Q3, sum
+        * "auto", the default, uses "near" for integer rasters and "bilinear" for float rasters, so
+          an integer raster keeps its values and its data type. Pass "bilinear" to interpolate an
+          integer raster, such as an elevation model.
 
     cutline : str or ogr.Geometry; optional
         The cutline to limit the drawn data too
@@ -2714,16 +2782,31 @@ def warp(
         The (xMin, yMin, xMax, yMax) limits of the output raster
         * Only required if this value should be changed
 
-    dtype : Type, str, or numpy-dtype; optional
-        If given, forces the processed data to be a particular datatype
-        * Only required if this value should be changed
-        * Example
-          - A python numeric type  such as bool, int, or float
-          - A Numpy datatype such as numpy.uint8 or numpy.float64
-          - a String such as "Byte", "UInt16", or "Double"
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        The input of the choice is the data type of the source band. The rule follows
+        resampleAlg: auto, near, mode, min, max, med, q1 and q3 keep the data type; bilinear,
+        average, cubic, cubicspline, lanczos and rms give Float32 (Float64 for 32-bit and
+        wider integers and for Float64 sources); sum gives Float64. No values are read.
 
     noData : numeric; optional
         Replaces all previous noData values with this value in the output raster.
+        * Must fit the data type of the raster: an explicit ``dtype`` that cannot store it
+          raises a GeoKitDataTypeError, an automatic one is widened
+        * If the output has pixels outside the source (a reprojection, larger bounds or a
+          cutline) and no noData value is set, GDAL fills them with 0 and GeoKit warns once
 
     meta: dict; optional: contains a key value pair that is passed to the
           output gdal.dataset using the SetMetadataItem method.
@@ -2767,11 +2850,9 @@ def warp(
     * If 'output' is None: gdal.Dataset
     * If 'output' is a string: The path to the output is returned (for easy opening)
     """
-    _warnNonReproducibleResampling(resampleAlg)
-
     # open source and get info
     source = loadRaster(source)
-    dsInfo = rasterInfo(sourceDS=source, compute_statistics=True)
+    dsInfo = rasterInfo(sourceDS=source)
 
     # Handle potentially missing arguments
     if srs is not None:
@@ -2808,24 +2889,26 @@ def warp(
         noDataRead = dsInfo.noData
     else:
         noDataRead = noData
-    list_of_numbers = []
-    if isinstance(noDataRead, (numeric, bool)):
-        list_of_numbers.append(noDataRead)
-    elif noDataRead is None:
-        pass
-    else:
+    if noDataRead is not None and not isinstance(noDataRead, (numeric, bool)):
         raise GeoKitRasterError("noData must be a numeric or boolean value but got: %s" % str(type(noDataRead)))
 
-    list_of_datatypes = []
-    if isinstance(dtype, str):
-        list_of_datatypes.append(dtype)
-    elif dtype is None:
-        pass
-    else:
-        raise GeoKitRasterError("dtype must be a gdal data type, string or None value but got: %s" % str(type(dtype)))
-    list_of_datatypes.append(dsInfo.data_type_name_str)
-    list_of_numbers.append(dsInfo.minimum_value)
-    list_of_numbers.append(dsInfo.maximum_value)
+    # Choose the data type once (ADR 6): the source type under the rule of the resampling algorithm,
+    # widened for the noData value. No statistics are read (ADR 3).
+    if dsInfo.numpy_dtype is None:
+        raise GeoKitDataTypeError(
+            f"warp: the source has the pixel type {dsInfo.data_type_name_str}, which GeoKit does not support."
+        )
+    # "auto" stands for near on integer rasters and bilinear on float rasters (ADR 10); the warning, the rule,
+    # gdal.Warp and the provenance metadata all see the algorithm it stands for
+    resampleAlg = _resolve_resampling_algorithm(resampleAlg, dsInfo.numpy_dtype)
+    _warnNonReproducibleResampling(resampleAlg)
+    resolved = DTYPES.resolve_dtype(
+        [dsInfo.numpy_dtype],
+        _warp_rule(resampleAlg),
+        scalars={"noData": noDataRead},
+        dtype=dtype,
+        context="warp",
+    )
 
     # If a cutline is given, create the output
     if cutline is not None:
@@ -2838,14 +2921,6 @@ def warp(
         else:
             raise GeoKitRasterError("cutline must be a Geometry or a path to a shape file")
 
-    # Single dtype decision shared by both the on-disk and in-memory paths (outputType is a GDAL
-    # constant and format-agnostic, so there is no need for a separate string/constant code path).
-    gdal_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-        list_of_numbers=list_of_numbers,
-        minimum_gdal_type_list=list_of_datatypes,
-        user_defined_minimum_gdal_type=dtype,
-    )
-
     # Build one set of warp options shared by both the on-disk and in-memory paths so they produce
     # byte-identical output. When cropToCutline is requested the cutline drives the output extent,
     # so we must NOT pin an explicit grid (outputBounds/width/height conflict with cropToCutline in
@@ -2856,7 +2931,7 @@ def warp(
         raise GeoKitRasterError("cropToCutline=True requires a 'cutline' to be given")
 
     shared_warp_options = dict(
-        outputType=gdal_data_type_constant,
+        outputType=resolved.gdal_constant,
         dstSRS=srs,
         dstNodata=noDataRead,
         resampleAlg=resampleAlg,
@@ -2882,10 +2957,21 @@ def warp(
             height=rows,
         )
 
+    # Pixels outside the source data get GDAL's 0; without a noData value nothing marks them (ADR 4)
+    if noDataRead is None:
+        reason_for_created_pixels = _reason_warp_creates_pixels(dsInfo, bounds, srs, srsOkay, cutline)
+        if reason_for_created_pixels is not None:
+            warnings.warn(
+                f"warp: {reason_for_created_pixels}, and no noData value is set. GDAL fills these pixels with 0 "
+                "and they are not flagged. Pass noData= to flag them.",
+                GeoKitDataTypeWarning,
+                stacklevel=2,
+            )
+
     # Workflow depends on whether or not we have an output
     if isinstance(output, pathlib.Path):
         output = str(output)
-    if isinstance(output, str):  # Write to disk
+    if isinstance(output, str):
         if os.path.isfile(output):
             if overwrite is True:
                 os.remove(output)
@@ -2894,6 +2980,9 @@ def warp(
             else:
                 raise GeoKitRasterError("Output file already exists: %s" % output)
 
+    # "smallest" warps in memory first, because the finished raster is read before it is written
+    writes_to_disk_directly = isinstance(output, str) and not resolved.shrink_output
+    if writes_to_disk_directly:
         gdal_warp_options = gdal.WarpOptions(
             format="GTiff",
             creationOptions=COMPRESSION_OPTION if creationOptions is None else creationOptions,
@@ -2911,6 +3000,8 @@ def warp(
         output_dataset = gdal.Warp("", source, options=gdal_warp_options)
         if not UTIL.isRaster(output_dataset):
             raise GeoKitRasterError("Failed to warp raster in memory")
+        if resolved.shrink_output:
+            output_dataset = DTYPES.shrink_dataset(output_dataset)
         destination_raster = output_dataset
 
     # Stamp provenance (toolchain versions) and apply any user metadata directly on the open warp
@@ -2923,6 +3014,18 @@ def warp(
 
     # FlushCache writes all changes; closing the on-disk handle finalises the file on disk.
     output_dataset.FlushCache()
+    if isinstance(output, str) and not writes_to_disk_directly:
+        # the shrunk in-memory raster is written now, with its metadata
+        written_dataset = gdal.Translate(
+            output,
+            output_dataset,
+            format="GTiff",
+            creationOptions=COMPRESSION_OPTION if creationOptions is None else creationOptions,
+        )
+        if not UTIL.isRaster(written_dataset):
+            raise GeoKitRasterError("Failed to write the warped raster")
+        written_dataset = None
+        destination_raster = output
     if isinstance(destination_raster, str):
         output_dataset = None
 
@@ -2945,10 +3048,8 @@ def warpLike(dataSource: load_raster_input, contextSource: load_raster_input, co
         If True, the metadata of the dataSource raster will be copied, else
         metadata will be empty or as possibly provided in kwargs. Defaults to False.
     **kwargs
-        All kwargs will be passed on to raster.warp()
-        NOTE: If no 'dtype' value as kwargs is given, dtype will be defined
-        automatically based on the value range, this can be time-consuming
-        depending on data size. Avoid by specifying dtype explicitly.
+        All kwargs will be passed on to raster.warp(), including 'dtype': the data type
+        of the output follows the rules of warp and no values are read for it.
     """
     if UTIL.isRaster(dataSource):
         dataInfo = rasterInfo(dataSource)

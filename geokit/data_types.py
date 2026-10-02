@@ -302,6 +302,7 @@ for rigorous_gdal_type, no_prefix_type, no_prefix_lower_type in zip(
     gdal_abbreviation_mapper_dict[no_prefix_lower_type] = rigorous_gdal_type
 
 gdal_resample_alogorithms_literal = Literal[
+    "auto",
     "near",
     "bilinear",
     "cubic",
