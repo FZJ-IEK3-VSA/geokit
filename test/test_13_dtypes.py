@@ -396,14 +396,6 @@ PENDING = {
     "D25_indicateValues_nodata_nan":                          "PR 2",
     "D26_applyMask":                                          "PR 2",
     "gradient_mode_ew":                                       "PR 2",
-    "D20_createVector_float16":                               "PR 9",
-    "D20_createVector_pandas_boolean":                        "PR 9",
-    "D20_createVector_uint32":                                "PR 9",
-    "D20_createVector_uint64":                                "PR 9",
-    "D21_polygonizeRaster_float":                             "PR 9",
-    "D21_polygonizeRaster_uint32":                            "PR 9",
-    "D22_polygonizeMatrix_uint32":                            "PR 9",
-    "M16_extractFeatures_integer64_with_null":                "PR 9",
 }
 
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull

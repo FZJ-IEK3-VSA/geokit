@@ -17,6 +17,7 @@ from osgeo import gdal, ogr, osr
 
 from geokit import srs as SRS
 from geokit import util as UTIL
+from geokit import dtypes as DTYPES
 from geokit.data_types import AxHands, numeric, srs_input
 from geokit.error import GeoKitGeomError
 from pandas.api.types import is_numeric_dtype
@@ -583,10 +584,9 @@ def polygonizeMatrix(
     # Make sure we have a boolean numpy matrix
     if not isinstance(matrix, np.ndarray):
         matrix = np.array(matrix)
-    if matrix.dtype == bool or matrix.dtype == np.uint8:
-        dtype = "GDT_Byte"
-    elif np.issubdtype(matrix.dtype, np.integer):
-        dtype = "GDT_Int32"
+    if matrix.dtype == bool or np.issubdtype(matrix.dtype, np.integer):
+        # the temporary band keeps the data type of the matrix, bool becomes Byte (ADR 9)
+        band_dtype = DTYPES.to_dtype(matrix.dtype)
     else:
         raise GeoKitGeomError("matrix must be a 2D boolean or integer numpy ndarray")
 
@@ -622,7 +622,7 @@ def polygonizeMatrix(
 
     # Open the driver
     driver = gdal.GetDriverByName("Mem")  # create a raster in memory
-    raster = driver.Create("", cols, rows, 1, getattr(gdal, dtype))
+    raster = driver.Create("", cols, rows, 1, DTYPES.to_gdal(band_dtype))
 
     if raster is None:
         raise GeoKitGeomError("Failed to create temporary raster")
@@ -651,7 +651,7 @@ def polygonizeMatrix(
     vecDS = gdal.GetDriverByName("Memory").Create("", 0, 0, 0, gdal.GDT_Unknown)
     vector_layer = vecDS.CreateLayer("mem", srs=srs)
 
-    field = ogr.FieldDefn("DN", ogr.OFTInteger)
+    field = ogr.FieldDefn("DN", DTYPES.to_ogr_field(band_dtype))  # Integer64 for uint32 and 64-bit matrices
     vector_layer.CreateField(field)
 
     # Polygonize geometry

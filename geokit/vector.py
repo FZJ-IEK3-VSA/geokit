@@ -21,7 +21,7 @@ from geokit import util as UTIL
 from geokit.extent import Extent
 from geokit import dtypes as DTYPES
 from geokit.data_types import dtype_input, load_vector_input, numeric, srs_input, vecInfo
-from geokit.error import GeoKitDataTypeError, GeoKitRasterError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning, GeoKitRasterError, GeoKitVectorError
 ####################################################################
 # INTERNAL FUNCTIONS
 
@@ -99,58 +99,42 @@ def loopFeatures(source: load_vector_input):
 
 
 # OGR type map
-_ogrIntToType = dict((v, k) for k, v in filter(lambda x: "OFT" in x[0], gdal.__dict__.items()))
-_ogrStrToType = {
-    "bool": "OFTInteger",
-    "int8": "OFTInteger",
-    "int16": "OFTInteger",
-    "int32": "OFTInteger",
-    "int64": "OFTInteger64",
-    "uint8": "OFTInteger",
-    "uint16": "OFTInteger",
-    "uint32": "OFTInteger",
-    "float32": "OFTReal",
-    "float64": "OFTReal",
-    "string": "OFTString",
-    "Object": "OFTString",
-}
+# OGR field type constant -> its name, for example ogr.OFTInteger64 -> "OFTInteger64"
+_ogrIntToType = {value: name for name, value in vars(ogr).items() if name.startswith("OFT") and isinstance(value, int)}
 
 
-def ogrType(s):
-    """Tries to determine the corresponding OGR type according to the input."""
+def ogrType(s) -> str:
+    """Return the OGR field type name ("OFTInteger", "OFTInteger64", "OFTReal", "OFTString") for a type.
+
+    Accepts OGR names with or without the ``OFT`` prefix, OGR constants, NumPy and pandas dtypes and their
+    names, Python types, NumPy scalars and arrays, pandas Series and other iterables (by their first element).
+    NumPy, pandas and Python types are mapped by ``geokit.dtypes.to_ogr_field`` (ADR 9): integers up to 32 bits
+    give ``OFTInteger``; ``uint32``, ``int64`` and ``uint64`` give ``OFTInteger64``; floats give ``OFTReal``;
+    strings and objects give ``OFTString``.
+    """
     if isinstance(s, str):
         if hasattr(ogr, s):
             return s
-        elif s.lower() in _ogrStrToType:
-            return _ogrStrToType[s.lower()]
-        elif hasattr(ogr, "OFT%s" % s):
-            return "OFT%s" % s
-        return "OFTString"
-
-    elif s is str:
-        return "OFTString"
-    elif isinstance(s, pd.api.extensions.ExtensionDtype):
-        # pandas >=3.0 infers string columns as StringDtype (and nullable
-        # Int64/Float64/boolean) instead of the numpy 'object' dtype. These
-        # are ExtensionDtypes, not np.dtype, so map them via their name
-        # (e.g. 'string' -> OFTString, 'Int64' -> OFTInteger64).
-        return ogrType(s.name)
-    elif isinstance(s, np.dtype):
-        return ogrType(str(s))
-    elif isinstance(s, np.generic):
-        return ogrType(s.dtype)
-    elif s is bool:
+        if hasattr(ogr, "OFT" + s):
+            return "OFT" + s
+        try:
+            pandas_or_numpy_dtype = pd.api.types.pandas_dtype(s)
+        except TypeError:
+            raise GeoKitDataTypeError(f"ogrType: '{s}' is neither an OGR field type nor a known type name.") from None
+        return _ogrIntToType[DTYPES.to_ogr_field(pandas_or_numpy_dtype)]
+    if isinstance(s, bool):
         return "OFTInteger"
-    elif s is int:
-        return "OFTInteger64"
-    elif isinstance(s, int):
-        return _ogrIntToType[s]
-    elif s is float:
+    if isinstance(s, int):
+        return _ogrIntToType[s]  # an OGR field type constant
+    if isinstance(s, float):
         return "OFTReal"
-    elif isinstance(s, Iterable):
+    if isinstance(s, (np.ndarray, pd.Series)):
+        return ogrType(s.dtype)
+    if isinstance(s, np.generic):
+        return ogrType(s.dtype)
+    if isinstance(s, Iterable):
         return ogrType(s[0])
-
-    raise ValueError("OGR type could not be determined")
+    return _ogrIntToType[DTYPES.to_ogr_field(s)]
 
 
 # Mapping of geometry names to their OGR wkb type, used to resolve a
@@ -502,6 +486,35 @@ def _extractFeatures(
             yield UTIL.Feature(oGeom, oItems)
 
 
+def _warn_for_integer64_fields_that_float64_changes(source, layerName, fields: dict) -> None:
+    """Warn for each Integer64 field with missing values and a value beyond 2**53 (M16, ADR 9).
+
+    pandas stores an integer column with missing values as float64, which holds whole numbers exactly only up to
+    2**53. The check runs on the collected Python ints, which are still exact.
+    """
+    source_dataset = loadVector(source)
+    if layerName is None:
+        layer = source_dataset.GetLayer()
+    else:
+        layer = source_dataset.GetLayerByName(layerName)
+    layer_definition = layer.GetLayerDefn()
+    for field_index in range(layer_definition.GetFieldCount()):
+        field_definition = layer_definition.GetFieldDefn(field_index)
+        if field_definition.GetType() != ogr.OFTInteger64:
+            continue
+        field_name = field_definition.GetName()
+        field_values = fields.get(field_name, [])
+        has_missing_values = any(value is None for value in field_values)
+        has_values_beyond_2_53 = any(abs(value) > 2**53 for value in field_values if value is not None)
+        if has_missing_values and has_values_beyond_2_53:
+            warnings.warn(
+                f"extractFeatures: the Integer64 field {field_name!r} has missing values, so pandas stores it as "
+                f"float64, which changes integers beyond 2**53. Use asPandas=False for the exact values.",
+                GeoKitDataTypeWarning,
+                stacklevel=3,
+            )
+
+
 def extractFeatures(
     source,
     where=None,
@@ -561,6 +574,8 @@ def extractFeatures(
     asPandas : bool; optional
         Whether or not the result should be returned as a pandas.DataFrame (when
         onlyGeom is False) or pandas.Series (when onlyGeom is True)
+        * An Integer64 field with missing values becomes a float64 column, which is exact only
+          up to 2**53; beyond that, extractFeatures warns. asPandas=False returns the exact values
 
     indexCol : str; optional
         The feature identifier to use as the DataFrams's index
@@ -620,6 +635,8 @@ def extractFeatures(
             for k, v in a.items():
                 fields[k].append(v)
 
+        if not onlyGeom:  # the attribute columns are dropped for onlyGeom, so no value reaches the caller
+            _warn_for_integer64_fields_that_float64_changes(source, layerName, fields)
         df = pd.DataFrame(fields)
         if not indexCol is None:
             df.set_index(indexCol, inplace=True, drop=False)
@@ -989,6 +1006,28 @@ def extractAndClipFeatures(
 
 ####################################################################
 # Create a vector
+_INTEGER_FIELD_LIMITS = {"OFTInteger": (-(2**31), 2**31 - 1), "OFTInteger64": (-(2**63), 2**63 - 1)}
+
+
+def _fieldValueForOgr(field_type_name: str, raw_value, field_name: str):
+    """Cast a column value to what the OGR field stores; None stands for a missing value, written as NULL."""
+    if raw_value is None or pd.isna(raw_value):
+        return None
+    if field_type_name == "OFTString":
+        return str(raw_value)
+    if field_type_name in _INTEGER_FIELD_LIMITS:
+        whole_number = int(raw_value)
+        lowest, highest = _INTEGER_FIELD_LIMITS[field_type_name]
+        if not lowest <= whole_number <= highest:
+            raise GeoKitDataTypeError(
+                f"createVector: the value {whole_number} of field '{field_name}' does not fit an "
+                f"{field_type_name[3:]} field (range {lowest} to {highest}). Request a wider field with fieldDef, "
+                f"or store the values as Real."
+            )
+        return whole_number
+    return float(raw_value)
+
+
 def createVector(
     geoms: ogr.Geometry | str | pd.Series | pd.DataFrame | np.ndarray | list[ogr.Geometry | str],
     output: str | None = None,
@@ -1049,6 +1088,8 @@ def createVector(
         * The length of each column/list MUST match the number of geometries
         * All values in a single column/list must share the same type
             - Options are int, float, or str
+        * Missing values (None, NaN, pandas NA) are written as NULL
+        * An integer value that its field cannot hold raises a GeoKitDataTypeError
 
     fieldDef : dict; optional
         A dictionary specifying the datatype of each attribute when written into
@@ -1284,18 +1325,11 @@ def createVector(
             # Fill the attributes, if required
             if not fieldVals is None:
                 for fieldName, value in fieldVals.items():
-                    _type = fieldDef[fieldName]
-
-                    # cast to basic type
-                    if _type == "OFTString":
-                        val = str(value.iloc[gi])
-                    elif _type == "OFTInteger" or _type == "OFTInteger64":
-                        val = int(value.iloc[gi])
+                    field_value = _fieldValueForOgr(fieldDef[fieldName], value.iloc[gi], str(fieldName))
+                    if field_value is None:
+                        feature.SetFieldNull(str(fieldName))
                     else:
-                        val = float(value.iloc[gi])
-
-                    # Write to feature
-                    feature.SetField(str(fieldName), val)
+                        feature.SetField(str(fieldName), field_value)
 
             # Set the Geometry
             feature.SetGeometry(geoms[gi])

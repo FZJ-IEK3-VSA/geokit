@@ -2392,7 +2392,10 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     ----------
     source : Anything acceptable by loadRaster()
         The raster datasource to polygonize
-        * The Datatype MUST be of boolean of integer type
+        * Meant for a boolean or integer raster, whose equal values form the areas
+        * A float raster is polygonized with its values rounded to the nearest integer, halves away
+          from zero, so areas whose values round to the same integer merge; a GeoKitDataTypeWarning
+          says so
 
     srs : Anything acceptable to geokit.srs.loadSRS(); optional
         The srs of the polygons to create
@@ -2422,6 +2425,22 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     if srs is None:
         srs = SRS.loadSRS(source.GetProjectionRef())
 
+    # The field takes its type from the band (ADR 9). gdal.Polygonize rounds the values of a float band to integers,
+    # so a float band warns and gets an Integer64 field, which holds the rounded values
+    band_dtype = DTYPES.from_band(band)
+    if band_dtype.kind == "f":  # "f" = floating point
+        warnings.warn(
+            f"polygonizeRaster: the raster has the data type {DTYPES.gdal_type_name(band_dtype)}. gdal.Polygonize "
+            f"rounds the values to integers, which the value field stores as Integer64, so areas whose values round "
+            f"to the same integer merge (1.7 and 2.4 both become 2). Convert the raster to an integer type first, "
+            f"for example with mutateRaster and an explicit dtype.",
+            GeoKitDataTypeWarning,
+            stacklevel=2,
+        )
+        field_type = ogr.OFTInteger64
+    else:
+        field_type = DTYPES.to_ogr_field(band_dtype)  # Integer64 for UInt32 and 64-bit bands
+
     # Do polygonize
     vecDS = gdal.GetDriverByName("Memory").Create("", 0, 0, 0, gdal.GDT_Unknown)
     vecLyr = vecDS.CreateLayer("mem", srs=srs)
@@ -2429,7 +2448,7 @@ def polygonizeRaster(source, srs=None, flat=False, shrink=True):
     # vecDS = gdal.GetDriverByName("ESRI Shapefile").Create("deleteme.tif", 0, 0, 0, gdal.GDT_Unknown )
     # vecLyr = vecDS.CreateLayer("layer",srs=srs)
 
-    vecField = ogr.FieldDefn("DN", ogr.OFTInteger)
+    vecField = ogr.FieldDefn("DN", field_type)
     vecLyr.CreateField(vecField)
 
     # Polygonize geometry

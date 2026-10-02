@@ -2,26 +2,19 @@ from functools import reduce
 from os.path import dirname, join
 import json
 import pathlib
+import warnings
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
+from osgeo import ogr
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
 from geokit.get_test_data import get_test_data
-from geokit.error import GeoKitDataTypeError, GeoKitError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning, GeoKitError, GeoKitVectorError
+from test.gdal_builders import write_gdal_geopackage
 from test.helpers import *
-
-# ogrType
-
-
-def test_ogrType():
-    assert vector.ogrType(bool) == "OFTInteger"
-    assert vector.ogrType("float32") == "OFTReal"
-    assert vector.ogrType("Integer64") == "OFTInteger64"
-    assert vector.ogrType(NUMPY_FLOAT_ARRAY) == "OFTReal"
-    assert vector.ogrType(NUMPY_FLOAT_ARRAY.dtype) == "OFTReal"
 
 
 def test_countFeatures():
@@ -581,6 +574,100 @@ def test_rasterize():
     mat = raster.extractMatrix(r, autocorrect=True)
     assert np.isclose(np.isnan(mat).sum(), 53706)
     assert np.isclose(np.nanmean(mat), 2004.96384743)
+
+
+@pytest.mark.parametrize(
+    "given, expected",
+    [
+        ("uint32", "OFTInteger64"),
+        ("Int64", "OFTInteger64"),
+        ("string", "OFTString"),
+        (pd.BooleanDtype(), "OFTInteger"),
+        ("Real", "OFTReal"),
+        ("Integer64", "OFTInteger64"),
+        (ogr.OFTInteger64, "OFTInteger64"),
+        (np.array([1.5]), "OFTReal"),
+        (np.dtype("float64"), "OFTReal"),
+        (np.uint32, "OFTInteger64"),
+        (bool, "OFTInteger"),
+    ],
+    ids=repr,
+)
+def test_ogrType_follows_the_field_table_of_adr_9(given, expected):
+    """NumPy, pandas and Python types map to the OGR field of ADR 9; OGR names and constants pass through."""
+    assert vector.ogrType(given) == expected
+
+
+def test_ogrType_rejects_unknown_type_names():
+    """A string that is neither an OGR field type nor a type name raises GeoKitDataTypeError."""
+    with pytest.raises(GeoKitDataTypeError):
+        vector.ogrType("no_such_type")
+
+
+@pytest.mark.parametrize(
+    "column",
+    [
+        np.array([0, 1, 127], np.int8),
+        np.array([0, 1, 255], np.uint8),
+        np.array([0, 1, 32767], np.int16),
+        np.array([0, 1, 65535], np.uint16),
+        np.array([0, 1, 2**31 - 1], np.int32),
+        np.array([0, 1, 2**32 - 1], np.uint32),
+        np.array([0, 1, 2**62 + 1], np.int64),
+        np.array([0, 1, 2**63 - 1], np.uint64),
+        np.array([0.5, 1.5, -2.5], np.float16),
+        np.array([0.5, 1.5, -2.5], np.float32),
+        np.array([0.5, 1.5, -2.5], np.float64),
+    ],
+    ids=lambda column: str(column.dtype),
+)
+def test_createVector_extractFeatures_round_trip_keeps_values(column):
+    """Every NumPy integer and float column survives createVector and extractFeatures with its exact values."""
+    # 2**62 + 1 and 2**63 - 1 are not exact in float64, so a column written as a Real field would fail here
+    points = [geom.point(6.1 + 0.1 * i, 50.1, srs=4326) for i in range(3)]
+
+    vector_source = vector.createVector(pd.DataFrame({"geom": points, "v": column}))
+    extracted = vector.extractFeatures(vector_source)
+
+    assert extracted["v"].tolist() == column.tolist()
+
+
+def test_createVector_writes_missing_values_as_null():
+    """None, NaN and pandas NA become NULL fields instead of 0, "nan" or an error."""
+    points = [geom.point(6.1, 50.1, srs=4326), geom.point(6.2, 50.1, srs=4326)]
+    attributes = pd.DataFrame(
+        {
+            "geom": points,
+            "count": pd.array([7, None], dtype="Int64"),
+            "share": [0.5, np.nan],
+            "name": ["a", None],
+        }
+    )
+
+    vector_source = vector.createVector(attributes)
+
+    second_feature = vector_source.GetLayer().GetFeature(1)
+    for field_name in ["count", "share", "name"]:
+        assert second_feature.IsFieldNull(field_name), field_name
+
+
+def test_createVector_rejects_integer_values_the_field_cannot_hold():
+    """A uint64 value above 2**63 - 1 does not fit an Integer64 field and raises instead of being clipped."""
+    attributes = pd.DataFrame({"geom": [geom.point(6.1, 50.1, srs=4326)], "v": np.array([2**63], np.uint64)})
+
+    with pytest.raises(GeoKitDataTypeError, match="Integer64"):
+        vector.createVector(attributes)
+
+
+def test_extractFeatures_reads_integer64_with_nulls_and_small_values_without_a_warning(tmp_path):
+    """An Integer64 field with NULLs and values within 2**53 reads without a warning, as a float64 column."""
+    vector_path = write_gdal_geopackage(tmp_path / "ids.gpkg", "id", ogr.OFTInteger64, [5, None])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", GeoKitDataTypeWarning)
+        features = vector.extractFeatures(vector_path)
+
+    assert features["id"].dtype == np.float64
 
 
 @pytest.mark.parametrize(
