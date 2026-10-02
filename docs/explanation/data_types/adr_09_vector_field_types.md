@@ -1,7 +1,7 @@
 # ADR 9: Field Types Between Raster and Vector
 
 **Status:** accepted on 2026-09-30, being implemented
-([#396](https://github.com/FZJ-IEK3-VSA/geokit/issues/396))
+([#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405))
 
 ## Context
 

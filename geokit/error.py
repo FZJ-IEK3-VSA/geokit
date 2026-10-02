@@ -55,9 +55,10 @@ class GeoKitDataTypeError(GeoKitError):
 
 
 class GeoKitDataTypeWarning(UserWarning):
-    """A data-type check found a possible loss: precision above 2**53, or pixels created without a noData value.
+    """A possible loss GeoKit cannot avoid: integers above 2**53 in Float64, or pixels created without noData.
 
-    ``geokit.dtypes.set_options(checks=False)`` turns these warnings off.
+    Python's warning filters turn it off, for example
+    ``warnings.filterwarnings("ignore", category=GeoKitDataTypeWarning)``.
     """
 
 

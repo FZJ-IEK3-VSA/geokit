@@ -1,7 +1,7 @@
 # ADR 7: `numpy.dtype` Is the Only Type Inside GeoKit
 
 **Status:** accepted on 2026-09-30, being implemented
-([#396](https://github.com/FZJ-IEK3-VSA/geokit/issues/396))
+([#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405))
 
 ## Context
 
@@ -44,8 +44,9 @@ NumPy 2 changed how scalars are promoted (NEP 50), and GeoKit supports both NumP
 dtypes gives the same result on both.
 
 Every data-type error raises one class, `GeoKitDataTypeError`, and every data-type warning one class,
-`GeoKitDataTypeWarning`. `GeoKitDataTypeError` is defined in `geokit.error` next to the other GeoKit errors
-and is a subclass of `GeoKitError`. `GeoKitCDataError` is not part of the new design.
+`GeoKitDataTypeWarning`. Both are defined in `geokit.error` next to the other GeoKit errors.
+`GeoKitDataTypeError` is a subclass of `GeoKitError`, and `GeoKitDataTypeWarning` a subclass of `UserWarning`,
+so existing warning filters keep working. `GeoKitCDataError` is not part of the new design.
 
 ## Consequences
 

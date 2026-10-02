@@ -1,4 +1,4 @@
-# ADR 3: The Type Follows the Operation; Statistics Depend on the Mode
+# ADR 3: The Type Follows the Operation
 
 ## Context
 
@@ -11,21 +11,15 @@ widens the values:
 - `rasterize(add=True)` of two overlapping features of 100 stores 127 instead of 200 (D16).
 - Cubic resampling overshoots the input range, and the overshoot is clipped (D13).
 - Averaging a 0/1 mask stores 0.75 as 1 (D12).
+- `Extent.rasterMosaic` takes the type of its first source, so the values of a later `Int16` source are
+  clipped (M13).
 
 To get the minimum and maximum, `warp`, `checkSimilarRasters` and `combineSimilarRasters` compute exact
 statistics over the whole source on every call. This is an extra full read, and GDAL writes `.aux.xml` files
 next to the inputs (D27). Because `dtype` acted as a lower bound, statistics could only widen the type, and the
 minimum and maximum of a band always fit its own type. So the read never changed a result (M9).
 
-The input types alone give a safe bound on the values an operation can produce, but not a tight one. This
-matters when the output type is fixed in advance, as under `"preserve_input"` or with an explicit type.
-Warping a `Byte` raster to a coarser grid with `sum` adds up several source pixels per target pixel. From the
-type alone, GeoKit can only say that the sums *may* exceed 255. Whether they do depends on the values: a 0/1
-mask summed over 4 × 4 pixels fits `Byte`, a raster of 200s does not. Finding out costs a read of the input.
-
 ## Decision
-
-### Rules
 
 Every operation declares one rule that describes its effect on the value range. Under `"auto"`, the output
 type follows from the input types and this rule. Then it is widened for the scalars GeoKit writes
@@ -46,56 +40,21 @@ The input type of `rasterize` is the type of the attribute field, or, for a cons
 type that holds that constant. A constant is the one case where every value written is known in advance, so
 it needs no read.
 
-Under `"auto"`, these types hold every value the operation can produce, for any input of the given types.
-Overflow is not possible: a sum goes to `Float64`, an average or an interpolation stays within the range of
-its inputs, and the overshoot of `cubic` and `lanczos` is small compared with the range of `Float32`.
-
-### When GeoKit reads values
-
-Whether GeoKit reads values depends on the mode ([ADR 1](adr_01_dtype_modes.md)):
-
-| Mode | What GeoKit reads | Why |
-|---|---|---|
-| `"auto"` (default) | nothing | The rules above already give a type that holds every possible value. Reading could only make the type narrower, and that is what `"smallest"` is for. |
-| `"preserve_input"` | nothing | The input fixes the type. GeoKit does not check whether the values of the operation fit it. |
-| an explicit type | nothing | The caller fixes the type. GeoKit does not check whether the values of the operation fit it. |
-| `"smallest"` | the finished output, once | to choose the narrowest lossless type |
-
-Under `"preserve_input"` and with an explicit type, GeoKit runs no checks of the values against the type and
-issues no warning about them. If the operation produces values that the type cannot hold, GDAL clips them
-(overflow), rounds fractional results, or loses precision. The docstring of `dtype` states these risks
-([ADR 1](adr_01_dtype_modes.md#docstring)). Choosing a fixed type moves the responsibility for these losses to
-the caller.
-
-`ComputeStatistics` is no longer called. Where `"smallest"` needs the minimum and maximum of a raster on disk,
-GeoKit computes them with `ComputeRasterMinMax`, which writes no `.aux.xml` file. Statistics stored in the
-metadata of an input are not used. They may be approximate or out of date, and the result would depend on
-whether an `.aux.xml` file happens to exist next to the input.
+These types hold every value the operation can produce, for any input of the given types. Overflow is not
+possible: a sum goes to `Float64`, an average or an interpolation stays within the range of its inputs, and
+the overshoot of `cubic` and `lanczos` is small compared with the range of `Float32`.
 
 ## Consequences
 
-- The default mode never reads values. The same call gives the same type for every input of the same type
-  ([goal G4](index.md#goals)).
-- `warp` no longer computes statistics on every call and no longer writes `.aux.xml` files.
-- Only `"smallest"` reads values. Under `"preserve_input"` and with an explicit type, sums can overflow and
-  fractional results are rounded without a warning. The docstring says so.
+- No rule needs the values, so `ComputeStatistics` is no longer called. `warp`, `checkSimilarRasters` and
+  `combineSimilarRasters` read no statistics and write no `.aux.xml` files.
 - Type limits can be wider than needed. `bilinear` on an `Int32` raster gives `Float64` even if every value
-  is small. Users who want the narrowest lossless type pass `dtype="smallest"`.
+  is small. Users who want the narrowest lossless type pass `dtype="smallest"`
+  ([ADR 1](adr_01_dtype_modes.md)).
 - A new GeoKit function that writes a raster has to declare its rule.
 
 ## Alternatives considered
 
-- **Check sums against the input's minimum and maximum under `"preserve_input"` and explicit types.** GeoKit
-  would read the input once and warn only if the sums can actually overflow. But a caller who fixes the type
-  takes the responsibility for it, and the check would cost a read on calls that did not ask for one. The
-  docstring states the risk instead.
-- **Warn from the type limits alone under `"preserve_input"` and explicit types.** The type limits flag
-  almost every sum into the input type as a possible overflow, even when the values are small. A warning that
-  appears on every call gets ignored.
-- **Read statistics under `"auto"` too, to choose a narrower type**, as the handler does. Reading is not
-  needed for a correct result under `"auto"`. It would cost a full read on every default call
-  ([goal G5](index.md#goals)) and make the type depend on the data ([goal G4](index.md#goals)). Users who want
-  a type chosen from the values use `"smallest"`.
 - **Full range propagation.** Each operation would transform a value range `[lo, hi]`, with measured
   overshoot factors for `cubic` and `lanczos`. For `sum`, GeoKit would compute the number of source pixels per
   target pixel from the transformed footprint of the output grid. That number depends on the coordinate

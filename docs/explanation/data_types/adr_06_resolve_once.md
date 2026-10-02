@@ -1,7 +1,7 @@
 # ADR 6: Choose the Type Once per Call
 
 **Status:** accepted on 2026-09-30, being implemented
-([#396](https://github.com/FZJ-IEK3-VSA/geokit/issues/396))
+([#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405))
 
 ## Context
 
@@ -17,6 +17,9 @@ This is the mechanism behind many entries of the defect catalogue in
 - `Extent.rasterMosaic` and `combineSimilarRasters` turn `Byte` inputs into `Int8` (D5, D19).
 - `mutateRaster` clips a processor's `uint8` or `uint16` output (M11).
 
+Functions that wrap others can lose the type altogether. `Extent.mutateRaster` without a processor returns the
+result of its warp step, and its `dtype` never reaches that step (M15).
+
 ## Decision
 
 - The type is chosen once, by the public function that knows the inputs, the operation and the scalars
@@ -28,6 +31,9 @@ This is the mechanism behind many entries of the defect catalogue in
   `_create_raster`, which only converts it. `quickRaster`, `Extent._quickRaster`, `rasterize`,
   `Extent.rasterMosaic` and `combineSimilarRasters` call the internal one.
 - `quickRaster` stays public. It keeps accepting strings and NumPy types, because code outside GeoKit uses it.
+- A function that wraps others, such as `Extent.mutateRaster`, `RegionMask.mutateRaster` and
+  `RegionMask.indicateValues`, passes `dtype` to the step that writes its output. Under `"preserve_input"` the
+  output keeps the type of the source the caller gave, not the type of an intermediate result.
 
 ## Consequences
 

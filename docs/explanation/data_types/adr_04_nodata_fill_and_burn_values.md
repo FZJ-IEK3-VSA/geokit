@@ -1,7 +1,7 @@
 # ADR 4: noData, Fill and Burn Values Must Fit
 
 **Status:** accepted on 2026-09-30, being implemented
-([#396](https://github.com/FZJ-IEK3-VSA/geokit/issues/396))
+([#405](https://github.com/FZJ-IEK3-VSA/geokit/issues/405))
 
 ## Context
 
@@ -33,8 +33,9 @@ value, so they look like data (D15). This is standard GDAL behaviour.
 - **Pixels created by `warp`** keep GDAL's value 0. If no noData value is set, GeoKit warns once, in every
   mode, and suggests passing `noData=`. GeoKit does not choose a noData value by itself.
 
-The warnings on this page are not issued when the checks are turned off
-([ADR 10](adr_10_turning_checks_off.md)). The errors are raised in any case.
+These are the only two data-type warnings. Each names the function, the input type, the chosen type and how to
+avoid the warning. `GeoKitDataTypeWarning` is a `UserWarning`, so Python's warning filters turn it off, for
+example `warnings.filterwarnings("ignore", category=GeoKitDataTypeWarning)`.
 
 Examples of the widening under `"auto"`:
 
@@ -70,7 +71,7 @@ Examples of the widening under `"auto"`:
 - **Set a noData value for created pixels automatically**: NaN for floats, and for
   integers either an unused value or a type widened by one step. This was rejected:
     - An unused value can only be found from the data or from stored statistics, so the result would depend
-      on the data ([goal G4](index.md#goals)).
+      on the data ([goal G1](index.md#goals)).
     - Widening by one step would turn every reprojection of an `Int16` raster into `Int32`, a type change of a
       correct result.
     - A noData value the user did not ask for changes later results, for example of
