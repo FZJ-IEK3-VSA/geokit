@@ -21,7 +21,7 @@ from geokit import util as UTIL
 from geokit.extent import Extent
 from geokit import dtypes as DTYPES
 from geokit.data_types import dtype_input, load_vector_input, numeric, srs_input, vecInfo
-from geokit.error import GeoKitDataTypeError, GeoKitRasterError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning, GeoKitRasterError, GeoKitVectorError
 ####################################################################
 # INTERNAL FUNCTIONS
 
@@ -486,6 +486,35 @@ def _extractFeatures(
             yield UTIL.Feature(oGeom, oItems)
 
 
+def _warn_for_integer64_fields_that_float64_changes(source, layerName, fields: dict) -> None:
+    """Warn for each Integer64 field with missing values and a value beyond 2**53 (M16, ADR 9).
+
+    pandas stores an integer column with missing values as float64, which holds whole numbers exactly only up to
+    2**53. The check runs on the collected Python ints, which are still exact.
+    """
+    source_dataset = loadVector(source)
+    if layerName is None:
+        layer = source_dataset.GetLayer()
+    else:
+        layer = source_dataset.GetLayerByName(layerName)
+    layer_definition = layer.GetLayerDefn()
+    for field_index in range(layer_definition.GetFieldCount()):
+        field_definition = layer_definition.GetFieldDefn(field_index)
+        if field_definition.GetType() != ogr.OFTInteger64:
+            continue
+        field_name = field_definition.GetName()
+        field_values = fields.get(field_name, [])
+        has_missing_values = any(value is None for value in field_values)
+        has_values_beyond_2_53 = any(abs(value) > 2**53 for value in field_values if value is not None)
+        if has_missing_values and has_values_beyond_2_53:
+            warnings.warn(
+                f"extractFeatures: the Integer64 field {field_name!r} has missing values, so pandas stores it as "
+                f"float64, which changes integers beyond 2**53. Use asPandas=False for the exact values.",
+                GeoKitDataTypeWarning,
+                stacklevel=3,
+            )
+
+
 def extractFeatures(
     source,
     where=None,
@@ -545,6 +574,8 @@ def extractFeatures(
     asPandas : bool; optional
         Whether or not the result should be returned as a pandas.DataFrame (when
         onlyGeom is False) or pandas.Series (when onlyGeom is True)
+        * An Integer64 field with missing values becomes a float64 column, which is exact only
+          up to 2**53; beyond that, extractFeatures warns. asPandas=False returns the exact values
 
     indexCol : str; optional
         The feature identifier to use as the DataFrams's index
@@ -604,6 +635,8 @@ def extractFeatures(
             for k, v in a.items():
                 fields[k].append(v)
 
+        if not onlyGeom:  # the attribute columns are dropped for onlyGeom, so no value reaches the caller
+            _warn_for_integer64_fields_that_float64_changes(source, layerName, fields)
         df = pd.DataFrame(fields)
         if not indexCol is None:
             df.set_index(indexCol, inplace=True, drop=False)

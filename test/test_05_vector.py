@@ -2,15 +2,18 @@ from functools import reduce
 from os.path import dirname, join
 import json
 import pathlib
+import warnings
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
+from osgeo import ogr
 from typeguard import suppress_type_checks
 
 from geokit import geom, raster, util, vector
 from geokit.get_test_data import get_test_data
-from geokit.error import GeoKitDataTypeError, GeoKitError, GeoKitVectorError
+from geokit.error import GeoKitDataTypeError, GeoKitDataTypeWarning, GeoKitError, GeoKitVectorError
+from test.gdal_builders import write_gdal_geopackage
 from test.helpers import *
 
 
@@ -654,6 +657,17 @@ def test_createVector_rejects_integer_values_the_field_cannot_hold():
 
     with pytest.raises(GeoKitDataTypeError, match="Integer64"):
         vector.createVector(attributes)
+
+
+def test_extractFeatures_reads_integer64_with_nulls_and_small_values_without_a_warning(tmp_path):
+    """An Integer64 field with NULLs and values within 2**53 reads without a warning, as a float64 column."""
+    vector_path = write_gdal_geopackage(tmp_path / "ids.gpkg", "id", ogr.OFTInteger64, [5, None])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", GeoKitDataTypeWarning)
+        features = vector.extractFeatures(vector_path)
+
+    assert features["id"].dtype == np.float64
 
 
 @pytest.mark.parametrize(
