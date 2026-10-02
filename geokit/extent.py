@@ -14,6 +14,7 @@ from geokit import raster as RASTER
 from geokit import srs as SRS
 from geokit import util as UTIL
 from geokit import vector as VECTOR
+from geokit import dtypes as DTYPES
 from geokit.location import Location, LocationSet
 from geokit.data_types import (
     dtype_input,
@@ -25,10 +26,20 @@ from geokit.data_types import (
     geokit_c_data_types_literal,
     gdal_resample_alogorithms_literal,
 )
-from geokit.error import GeoKitExtentError
+from geokit.error import GeoKitDataTypeError, GeoKitExtentError
 
 IndexSet = namedtuple("IndexSet", "xStart yStart xWin yWin xEnd yEnd")
 TileIndexBox = namedtuple("tileBox", "xi_start xi_stop yi_start yi_stop zoom")
+
+
+def _mosaicRule(resampleAlg: str) -> DTYPES.DtypeRule:
+    """The rule of a mosaic: the union of the source types, or the rule of the resampling algorithm when it
+    interpolates or sums (ADR 3).
+    """
+    rule = RASTER.resamplingRule(resampleAlg)
+    if rule == DTYPES.DtypeRule.SUBSET:
+        return DTYPES.DtypeRule.UNION
+    return rule
 
 
 class Extent(object):
@@ -1607,22 +1618,13 @@ class Extent(object):
         zoom : int
             The zoom level of the expected tile source
 
-        pixelsPerTile : int, (int,int)
-            The number of pixels found in each tile
-
-        workingType : np.dtype
-            The datatype of the working matrix (should match the raster source)
-
-        noData : numeric
-            The value to treat as 'no data'
-
-        output : str
-            An optional path for an output raster (.tif) file
+        **kwargs
+            Passed on to rasterMosaic, for example resampleAlg and dtype
 
         Returns
         -------
-        * If 'output' is None: gdal.Dataset
-        * If 'output' is a string: None
+        gdal.Dataset
+            The mosaic of the tiles over the Extent, in memory
         """
         sources = list(self.tileSources(zoom=zoom, source=source))
         return self.rasterMosaic(sources, _skipFiltering=True, **kwargs)
@@ -1631,6 +1633,7 @@ class Extent(object):
         self,
         sources: list[load_raster_input],
         resampleAlg: gdal_resample_alogorithms_literal = "near",
+        dtype: dtype_input = None,
         _warpKwargs={},
         _skipFiltering: bool = False,
     ):
@@ -1641,10 +1644,35 @@ class Extent(object):
         sources : list, or something acceptable to gk.Extent.filterSources
             The sources to add together over the invoking Extent
 
+        resampleAlg : str; optional
+            The resampling algorithm gdal.Warp uses to put the sources onto the grid of the
+            first source, by default 'near'. "auto" uses "near" if the promoted data type of
+            all sources is an integer type and "bilinear" if it is a float type.
+
+        dtype : str, numpy.dtype, type or None, optional
+            The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+            every value the operation can produce.
+
+            - "auto": a type that holds every possible result, chosen from the input types and the operation.
+            - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+              type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+              lost, without a warning.
+            - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+              output once.
+            - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+              the results, so the same losses as under "preserve_input" can occur without a warning.
+
+            A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+            The inputs of the choice are the data types of all sources. The rule follows
+            resampleAlg as in warp: the promotion of the source types for near, mode, min,
+            max, med, q1 and q3, a float type for the interpolating algorithms, Float64
+            for sum. The mosaic keeps the noData value of the first source, so a fixed type
+            has to store it.
+
         Returns
         -------
-        * If 'output' is None: gdal.Dataset
-        * If 'output' is a string: None
+        gdal.Dataset
+            The mosaic over the Extent, in memory
         """
         if _skipFiltering:
             sources = sorted(list(sources))
@@ -1655,17 +1683,40 @@ class Extent(object):
             warnings.warn("No suitable sources found")
             return None
 
-        raster_info = RASTER.rasterInfo(sources[0])
+        raster_info_list = [RASTER.rasterInfo(source) for source in sources]
+        first_raster_info = raster_info_list[0]
 
-        ext = self.castTo(raster_info.srs).fit((raster_info.dx, raster_info.dy))
+        # Choose the data type once (ADR 6): the promotion of all source types under the rule of the
+        # resampling algorithm, widened for the noData value
+        for raster_info in raster_info_list:
+            if raster_info.numpy_dtype is None:
+                raise GeoKitDataTypeError(
+                    f"rasterMosaic: the source {raster_info.source} has the pixel type "
+                    f"{raster_info.data_type_name_str}, which GeoKit does not support."
+                )
+        input_dtypes = [raster_info.numpy_dtype for raster_info in raster_info_list]
+        # "auto" stands for near or bilinear by the promoted data type of all sources (ADR 10)
+        promoted_dtype = DTYPES.promote_dtypes(input_dtypes)
+        resampleAlg = RASTER._resolve_resampling_algorithm(resampleAlg, promoted_dtype)
+        # the mosaic keeps the noData value of the first source and has no noData parameter
+        resolved = DTYPES.resolve_dtype(
+            input_dtypes,
+            _mosaicRule(resampleAlg),
+            scalars={"noData": first_raster_info.noData},
+            scalars_from_the_source=("noData",),
+            dtype=dtype,
+            context="rasterMosaic",
+        )
+
+        ext = self.castTo(first_raster_info.srs).fit((first_raster_info.dx, first_raster_info.dy))
 
         master_raster = ext._quickRaster(
-            dx=raster_info.pixelWidth,
-            dy=raster_info.pixelHeight,
-            noData=raster_info.noData,
-            scale=raster_info.scale,
-            offset=raster_info.offset,
-            dtype=raster_info.data_type_name_str,
+            dx=first_raster_info.pixelWidth,
+            dy=first_raster_info.pixelHeight,
+            noData=first_raster_info.noData,
+            scale=first_raster_info.scale,
+            offset=first_raster_info.offset,
+            dtype=resolved.dtype,
         )
         gdal.Warp(
             master_raster,
@@ -1673,6 +1724,8 @@ class Extent(object):
             resampleAlg=resampleAlg,
             **_warpKwargs,
         )
+        if resolved.shrink_output:
+            master_raster = DTYPES.shrink_dataset(master_raster)
 
         return master_raster
 
