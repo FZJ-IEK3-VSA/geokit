@@ -71,6 +71,7 @@ from glob import glob as _glob
 
 # import the special algorithms
 import geokit.algorithms
+import geokit.dtypes
 import geokit.geom
 import geokit.raster
 import geokit.srs

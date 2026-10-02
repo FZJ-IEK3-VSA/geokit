@@ -74,6 +74,8 @@ class RasterInfo(NamedTuple):
     # Minimum and maximum value of the raster data
     minimum_value: numeric | None
     maximum_value: numeric | None
+    # The pixel type as a numpy.dtype (see geokit.dtypes); None for a type GeoKit does not support
+    numpy_dtype: np.dtype | None = None
 
 
 # vecInfo = namedtuple("vecInfo", "srs bounds xMin yMin xMax yMax count attributes source")
