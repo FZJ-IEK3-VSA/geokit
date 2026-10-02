@@ -84,6 +84,18 @@ def test_auto_warns_when_a_64_bit_integer_type_must_become_float(input_dtype, sc
     assert gdal_name(resolved.dtype) == "Float64"
 
 
+def test_the_warning_suggests_a_dtype_that_takes_the_scalar_without_a_warning():
+    """The warning for Int64 data with a NaN noData suggests dtype="Float64", which then takes the noData silently."""
+    with pytest.warns(GeoKitDataTypeWarning, match='dtype="Float64"'):
+        dtypes.resolve_dtype(["Int64"], scalars={"noData": np.nan}, context="rasterize")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", GeoKitDataTypeWarning)
+        resolved = dtypes.resolve_dtype(["Int64"], scalars={"noData": np.nan}, dtype="Float64", context="rasterize")
+
+    assert gdal_name(resolved.dtype) == "Float64"
+
+
 def test_none_scalars_are_skipped():
     """A scalar of None is not a value to store, so it does not change the type."""
     resolved = dtypes.resolve_dtype(["Byte"], scalars={"noData": None, "fill": None})
@@ -241,6 +253,24 @@ def test_an_explicit_type_that_cannot_store_a_scalar_raises_with_the_message_of_
     )
     assert 'dtype="Int32"' in message
     assert 'dtype="auto"' in message
+
+
+@pytest.mark.parametrize("dtype", ["Byte", "preserve_input"], ids=str)
+def test_a_scalar_from_the_source_that_does_not_fit_is_met_with_a_type_only(dtype):
+    """A noData value the function keeps from its source, without a parameter for it, gets only a type suggested."""
+    with pytest.raises(GeoKitDataTypeError) as raised:
+        dtypes.resolve_dtype(
+            ["Byte"],
+            scalars={"noData": -9999},
+            scalars_from_the_source={"noData"},
+            dtype=dtype,
+            context="saveRasterAsTif",
+        )
+
+    message = str(raised.value)
+    assert message.startswith("saveRasterAsTif: the noData value -9999 of the source cannot be stored in")
+    assert 'dtype="Int16"' in message
+    assert "value that fits" not in message
 
 
 @pytest.mark.parametrize("explicit", [gdal.GDT_Float32, "auto_please", "CInt16"], ids=str)

@@ -8,7 +8,7 @@ and the widening for the noData, fill and burn values GeoKit writes itself (ADR 
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -111,6 +111,7 @@ def resolve_dtype(
     *,
     input_values: Iterable = (),
     scalars: Mapping[str, object] | None = None,
+    scalars_from_the_source: Collection[str] = (),
     dtype=None,
     sum_count: int = 1,
     context: str = "",
@@ -130,6 +131,10 @@ def resolve_dtype(
         The values GeoKit writes itself: ``noData``, ``fill`` and the burn value. ``None`` values are skipped.
         Under ``"auto"`` and ``"smallest"`` the type widens until every scalar fits; under ``"preserve_input"``
         and with an explicit type a scalar that does not fit raises a ``GeoKitDataTypeError``.
+    scalars_from_the_source : collection of str
+        The names in ``scalars`` whose value the public function keeps from its source and has no parameter for,
+        such as the noData value that ``saveRasterAsTif`` copies. The error for such a value suggests only
+        another type.
     dtype : the ``dtype`` argument of the public function
         ``None`` or ``"auto"``, ``"preserve_input"``, ``"smallest"``, or an explicit type.
     sum_count : int
@@ -148,14 +153,14 @@ def resolve_dtype(
 
     if mode == "explicit":
         chosen = to_dtype(dtype)
-        _require_scalars_fit(chosen, named_scalars, mode=mode, context=context)
+        _require_scalars_fit(chosen, named_scalars, scalars_from_the_source, mode=mode, context=context)
         return ResolvedDtype(chosen, mode)
 
     if promoted_input is None:
         promoted_input = np.dtype(np.uint8)  # a raster made from nothing is a Byte raster
 
     if mode == "preserve_input":
-        _require_scalars_fit(promoted_input, named_scalars, mode=mode, context=context)
+        _require_scalars_fit(promoted_input, named_scalars, scalars_from_the_source, mode=mode, context=context)
         return ResolvedDtype(promoted_input, mode)
 
     chosen = _apply_rule(promoted_input, rule, input_dtypes, input_values, sum_count)
@@ -248,7 +253,8 @@ def _widen_for_scalars(chosen: np.dtype, named_scalars: Mapping[str, object], co
             warnings.warn(
                 f"{_prefix(context)}{scalar_name}={value!r} does not fit {gdal_type_name(chosen)}. The output dtype "
                 f"becomes {gdal_type_name(widened)}, which stores whole numbers exactly only up to 2**53. Pass a "
-                f'{scalar_name} that fits, or dtype="{gdal_type_name(chosen)}", to keep the integer type.',
+                f"{scalar_name} that fits {gdal_type_name(chosen)} to keep the integer type, or "
+                f'dtype="{gdal_type_name(widened)}" to accept {gdal_type_name(widened)} without this warning.',
                 GeoKitDataTypeWarning,
                 stacklevel=2,
             )
@@ -256,28 +262,46 @@ def _widen_for_scalars(chosen: np.dtype, named_scalars: Mapping[str, object], co
     return chosen
 
 
-def _require_scalars_fit(chosen: np.dtype, named_scalars: Mapping[str, object], mode: str, context: str) -> None:
+def _require_scalars_fit(
+    chosen: np.dtype,
+    named_scalars: Mapping[str, object],
+    scalars_from_the_source: Collection[str],
+    mode: str,
+    context: str,
+) -> None:
     """Raise a ``GeoKitDataTypeError`` for the first scalar that does not fit ``chosen``."""
     for scalar_name, value in named_scalars.items():
         if can_hold(chosen, value):
             continue
-        raise _scalar_does_not_fit_error(chosen, scalar_name, value, mode=mode, context=context)
+        is_from_the_source = scalar_name in scalars_from_the_source
+        raise _scalar_does_not_fit_error(chosen, scalar_name, value, is_from_the_source, mode=mode, context=context)
 
 
 def _scalar_does_not_fit_error(
-    chosen: np.dtype, scalar_name: str, value, mode: str, context: str
+    chosen: np.dtype, scalar_name: str, value, is_from_the_source: bool, mode: str, context: str
 ) -> GeoKitDataTypeError:
-    """Build the error for a scalar that ``chosen`` cannot hold."""
+    """Build the error for a scalar that ``chosen`` cannot hold.
+
+    The error suggests a value that fits only where the caller can pass one; for a value kept from the source it
+    suggests only another type.
+    """
     type_description = f"{gdal_type_name(chosen)} ({describe_range(chosen)})"
     if mode == "explicit":
         where = f"the requested dtype {type_description}"
     else:
         where = f'the input dtype {type_description}, which dtype="preserve_input" keeps'
     holding_dtype = promote_dtypes([chosen, dtype_for_value(value)])
+    type_advice = (
+        f'a type that holds it such as dtype="{gdal_type_name(holding_dtype)}", or dtype="auto" to let GeoKit choose.'
+    )
+    if is_from_the_source:
+        return GeoKitDataTypeError(
+            f"{_prefix(context)}the {scalar_name} value {value!r} of the source cannot be stored in {where}. The "
+            f"output keeps this value, so pass {type_advice}"
+        )
     return GeoKitDataTypeError(
         f"{_prefix(context)}{scalar_name}={value!r} cannot be stored in {where}. Pass a {scalar_name} value that "
-        f'fits, a type that holds it such as dtype="{gdal_type_name(holding_dtype)}", or dtype="auto" to let '
-        f"GeoKit choose."
+        f"fits, {type_advice}"
     )
 
 
