@@ -2,17 +2,26 @@
 docs/explanation/data_types.
 
 - MODE_CASES (ADR 1, 3, 4, 5): one row per call, with the band type per mode and the values the call keeps. Each
-  row runs as the default call and with dtype="auto", "preserve_input" and "smallest".
-- EXPLICIT_CASES (ADR 2): an explicit dtype gives exactly that band type, or raises.
-- One test per entry where no raster type is chosen: values handled in NumPy (ADR 8), field types of vectors
-  (ADR 9), warnings and reads (ADR 3, 4).
-- test_every_catalogue_entry_is_pinned: every ID of the catalogue is pinned by a row or a test of this module.
+  row runs with dtype="auto", "preserve_input" and "smallest".
+- EXPLICIT_CASES (ADR 2): a fixed dtype gives exactly that band type, or raises.
+- Standalone tests for the entries where no raster type is chosen: values handled in NumPy (ADR 8), field types of
+  vectors (ADR 9), warnings and reads (ADR 3, 4).
 
-A row or test that is not fixed on this branch is pending: it is marked xfail(strict=True) with its catalogue ID.
-The PR that fixes it deletes its line in PENDING, or its @pending mark. A strict mark fails the run as soon as its
-case passes, so the marks cannot go stale.
+A case whose name starts with a catalogue ID, such as "D2_rasterize_200", pins that entry of #405, so
+``pytest -k D2_`` runs every case of D2. A row of MODE_CASES with a catalogue ID also runs as the default call,
+without dtype, because that is the call the entry is about. The other rows pin decisions of the ADRs.
+
+What this branch does not fix yet is marked xfail(strict=True):
+
+- PENDING lists the catalogue cases that are not fixed, with the pull request that fixes them;
+- WITHOUT_MODES lists the functions that do not take the dtype modes, with the pull request that adds them.
+
+Each pull request deletes its lines from the two lists, so its test diff shows what it fixes. A strict mark fails the
+run as soon as its case passes, so the lists cannot go stale.
 """
 
+import pathlib
+import re
 import warnings
 
 import numpy as np
@@ -119,14 +128,14 @@ def create(**kwargs):
     )
 
 
-def quick():
+def quick(**kwargs):
     """A quickRaster call on a 10 x 10 grid of 1 degree."""
     wgs84 = spatial_reference_from_epsg(4326)
-    return lambda _, **dtype: geokit.util.quickRaster(bounds=(0, 0, 10, 10), srs=wgs84, dx=1, dy=1, **dtype)
+    return lambda _, **dtype: geokit.util.quickRaster(bounds=(0, 0, 10, 10), srs=wgs84, dx=1, dy=1, **kwargs, **dtype)
 
 
-def create_like(source):
-    return lambda _, **dtype: geokit.raster.createRasterLike(source(), **dtype)
+def create_like(source, **kwargs):
+    return lambda _, **dtype: geokit.raster.createRasterLike(source(), **kwargs, **dtype)
 
 
 def save_as_tif(source):
@@ -148,14 +157,33 @@ def burn_field(values, numpy_type=None, **kwargs):
     )
 
 
-def warp(source, resampleAlg, pixel_size=None, **kwargs):
+def warp(source, resampleAlg=None, pixel_size=None, **kwargs):
+    """A warp call; without resampleAlg, warp uses its default resampling."""
+    if resampleAlg is not None:
+        kwargs.update(resampleAlg=resampleAlg)
     if pixel_size is not None:
         kwargs.update(pixelWidth=pixel_size, pixelHeight=pixel_size)
-    return lambda _, **dtype: geokit.raster.warp(source(), resampleAlg=resampleAlg, **kwargs, **dtype)
+    return lambda _, **dtype: geokit.raster.warp(source(), **kwargs, **dtype)
+
+
+def warp_like(source):
+    """A warpLike call onto the grid of a second copy of the source."""
+    return lambda _, **dtype: geokit.raster.warpLike(source(), source(), **dtype)
 
 
 def mutate(processor, source=byte_ones):
     return lambda _, **dtype: geokit.raster.mutateRaster(source(), processor=processor, **dtype)
+
+
+def extent_mutate(source, processor=None):
+    """Extent.mutateRaster over the extent of the source itself."""
+
+    def build(_, **dtype):
+        source_raster = source()
+        source_extent = geokit.Extent.fromRaster(source_raster)
+        return source_extent.mutateRaster(source_raster, processor=processor, **dtype)
+
+    return build
 
 
 def mosaic(*tiles):
@@ -191,6 +219,10 @@ def combine(*tiles):
 
 def halve(matrix):
     return matrix * 0.5
+
+
+def double(matrix):
+    return matrix * 2
 
 
 def times_200_in_uint8(matrix):
@@ -230,28 +262,13 @@ def spans(below, above):
 
 
 # ----------------------------------------------------------------------------------------------
-# marks of the tests outside the two tables
-
-PINNED_BY_TESTS = set()
-
-
-def pins(*catalogue_ids):
-    """Record the catalogue IDs of #405 that a test pins."""
-    PINNED_BY_TESTS.update(catalogue_ids)
-    return lambda test: test
-
-
-def pending(reason):
-    """Mark a test xfail(strict=True) until the PR that fixes it deletes this mark."""
-    return pytest.mark.xfail(strict=True, reason=reason)
-
-
-# ----------------------------------------------------------------------------------------------
 # the two tables
 
 INT64_0_TO_5 = np.arange(100, dtype=np.int64).reshape(10, 10) % 6
 UINT8_ONES = np.ones((10, 10), np.uint8)
 INT32_ABOVE_2_24 = np.full((10, 10), 2**24 + 1, np.int32)
+BOOL_HALVES = np.arange(100).reshape(10, 10) < 50
+FLOAT64_HALVES = np.full((4, 4), 0.5)
 BYTE = (np.uint8, gdal.GDT_Byte)
 INT16 = (np.int16, gdal.GDT_Int16)
 INT32 = (np.int32, gdal.GDT_Int32)
@@ -261,162 +278,248 @@ INT32 = (np.int32, gdal.GDT_Int32)
 # are checked in every mode but "preserve_input", which may round or clip by design.
 # fmt: off
 MODE_CASES = {
-    # name                                  call                                          auto preserve_input smallest            values                       catalogue
-    "createRaster_empty":                  (create(),                                     "Byte Byte Byte",                       None,                        ()),
-    "createRaster_int64_0_to_5":           (create(data=INT64_0_TO_5),                    "Int64 Int64 Byte",                     distinct(0, 1, 2, 3, 4, 5),  ()),
-    "createRaster_uint8_nodata_-1":        (create(data=UINT8_ONES, noData=-1),           "Int16 error Int8",                     distinct(1),                 ()),
-    "createRaster_above_2**24_nodata_0.5": (create(data=INT32_ABOVE_2_24, noData=0.5),    "Float64 error Float64",                distinct(2**24 + 1),         ("D9",)),
-    "createRaster_nodata_without_data":    (create(noData=5),                             "Byte Byte Byte",                       distinct(5),                 ("M6",)),
-    "createRasterLike_float32":            (create_like(float32_fractions),               "Float32 Float32 Byte",                 None,                        ("D6",)),
-    "saveRasterAsTif_byte":                (save_as_tif(byte_0_to_127),                   "Byte Byte Byte",                       distinct(0, 50, 100, 127),   ("D4",)),
-    "saveRasterAsTif_float64_whole":       (save_as_tif(float64_whole_numbers),           "Float64 Float64 Byte",                 distinct(0, 1, 2, 3),        ()),
-    "rasterize_1":                         (burn(1, 0),                                   "Byte Byte Byte",                       distinct(1),                 ()),
-    "rasterize_200":                       (burn(200, 0),                                 "Byte Byte Byte",                       distinct(200),               ("D2",)),
-    "rasterize_40000":                     (burn(40000, 0),                               "UInt16 UInt16 UInt16",                 distinct(40000),             ("M2",)),
-    "rasterize_2**31":                     (burn(2**31, 0),                               "UInt32 UInt32 UInt32",                 distinct(2**31),             ("M2",)),
-    "rasterize_-1":                        (burn(-1, 0),                                  "Int8 Int8 Int8",                       distinct(-1),                ()),
-    "rasterize_0.1":                       (burn(0.1, 0),                                 "Float64 Float64 Float64",              distinct(0.1),               ("D9",)),
+    # name                                       call                                            auto preserve_input smallest             values
+    "M4_createRaster_empty":                    (create(),                                      "Byte Byte Byte",                        None),
+    "createRaster_int64_0_to_5":                (create(data=INT64_0_TO_5),                     "Int64 Int64 Byte",                      distinct(0, 1, 2, 3, 4, 5)),
+    "createRaster_uint8_nodata_-1":             (create(data=UINT8_ONES, noData=-1),            "Int16 error Int8",                      distinct(1)),
+    "D9_createRaster_above_2**24_nodata_0.5":   (create(data=INT32_ABOVE_2_24, noData=0.5),     "Float64 error Float64",                 distinct(2**24 + 1)),
+    "D9_createRaster_fill_12.34":               (create(fill=12.34),                            "Float64 error Float64",                 distinct(12.34)),
+    "D28_createRaster_bool_data":               (create(data=BOOL_HALVES),                      "Byte Byte Byte",                        distinct(0, 1)),
+    "M6_createRaster_nodata_without_data":      (create(noData=5),                              "Byte Byte Byte",                        distinct(5)),
+    "quickRaster_nodata_-9999":                 (quick(noData=-9999),                           "Int16 error Int16",                     distinct(-9999)),
+    "D6_createRasterLike_float32":              (create_like(float32_fractions),                "Float32 Float32 Byte",                  None),
+    "createRasterLike_float64_data":            (create_like(byte_ones, data=FLOAT64_HALVES),   "Float64 Float64 Float32",               distinct(0.5)),
+    "D4_saveRasterAsTif_byte":                  (save_as_tif(byte_0_to_127),                    "Byte Byte Byte",                        distinct(0, 50, 100, 127)),
+    "saveRasterAsTif_float64_whole":            (save_as_tif(float64_whole_numbers),            "Float64 Float64 Byte",                  distinct(0, 1, 2, 3)),
+    "mutateRaster_halve":                       (mutate(halve),                                 "Float64 Byte Float32",                  distinct(0.5)),
+    "M11_mutateRaster_uint8_200":               (mutate(times_200_in_uint8),                    "Byte Byte Byte",                        distinct(200)),
+    "M11_mutateRaster_uint16_40000":            (mutate(times_40000_in_uint16),                 "UInt16 Byte UInt16",                    distinct(40000)),
+    "M4_rasterize_1":                           (burn(1, 0),                                    "Byte Byte Byte",                        distinct(1)),
+    "D2_rasterize_200":                         (burn(200, 0),                                  "Byte Byte Byte",                        distinct(200)),
+    "M2_rasterize_40000":                       (burn(40000, 0),                                "UInt16 UInt16 UInt16",                  distinct(40000)),
+    "M2_rasterize_2**31":                       (burn(2**31, 0),                                "UInt32 UInt32 UInt32",                  distinct(2**31)),
+    "rasterize_-1":                             (burn(-1, 0),                                   "Int8 Int8 Int8",                        distinct(-1)),
+    "D9_rasterize_0.1":                         (burn(0.1, 0),                                  "Float64 Float64 Float64",               distinct(0.1)),
     # three features of 100 can add up to 300, which needs Int16; at most two overlap, so 200 is the maximum
-    "rasterize_add_100_three_squares":     (burn(100, 0, 500, 1000, add=True),            "Int16 Byte Byte",                      distinct(100, 200),          ("D16",)),
-    "rasterize_int32_field":               (burn_field([1, 2, 3], np.int32),              "Int32 Int32 Byte",                     distinct(0, 1, 2, 3),        ("D1",)),
-    "rasterize_int64_field":               (burn_field([1, 2, 3], np.int64),              "Int64 Int64 Byte",                     distinct(0, 1, 2, 3),        ("M5",)),
-    "rasterize_real_field_of_396":         (burn_field([7.0, 9.3, 1.392]),                "Float64 Float64 Float64",              distinct(0, 1.392, 7, 9.3),  ("D1",)),
-    "rasterize_real_field_float32_exact":  (burn_field([0.5, 1.5, 2.5]),                  "Float64 Float64 Float32",              distinct(0, 0.5, 1.5, 2.5),  ()),
-    "rasterize_int64_field_nan_nodata":    (burn_field([123456789, 987654321, 5], np.int64, noData=np.nan),
-                                                                                          "Float64+warning error Float64+warning", distinct(5, 123456789, 987654321), ("D8",)),
-    "warp_byte_near":                      (warp(byte_mask, "near"),                      "Byte Byte Byte",                       distinct(0, 1),              ("M1",)),
-    "warp_byte_average":                   (warp(byte_mask, "average", 400),              "Float32 Byte Float32",                 distinct(0, 0.75, 1),        ("D12",)),
-    "warp_byte_default_bilinear":          (warp(byte_mask, "bilinear", 400),             "Float32 Byte Float32",                 None,                        ()),
-    "warp_byte_cubic_overshoot":           (warp(byte_step, "cubic", 25),                 "Float32 Byte Float32",                 spans(0, 255),               ("D13",)),
-    "warp_byte_sum_16_times_200":          (warp(byte_200s, "sum", 400),                  "Float64 Byte Int16",                   distinct(3200),              ("D14",)),
-    "warp_int32_average":                  (warp(int32_0_to_15, "average", 200),          "Float64 Int32 Float32",                None,                        ()),
-    "warp_int32_nan_nodata":               (warp(int32_large_ids, "near", noData=np.nan), "Float64 error Float64",                distinct(123456789, 987654321), ("D8",)),
-    "mutateRaster_halve":                  (mutate(halve),                                "Float64 Byte Float32",                 distinct(0.5),               ()),
-    "mutateRaster_uint8_200":              (mutate(times_200_in_uint8),                   "Byte Byte Byte",                       distinct(200),               ("M11",)),
-    "mutateRaster_uint16_40000":           (mutate(times_40000_in_uint16),                "UInt16 Byte UInt16",                   distinct(40000),             ("M11",)),
-    "rasterMosaic_byte_200":               (mosaic((200, *BYTE)),                         "Byte Byte Byte",                       distinct(200),               ("D5",)),
-    "rasterMosaic_byte_and_int16":         (mosaic((100, *BYTE), (50, *INT16)),           "Int16 Int16 Byte",                     distinct(50, 100),           ()),
-    "combineSimilarRasters_byte":          (combine((100, *BYTE), (200, *BYTE)),          "Byte Byte Byte",                       distinct(100, 200),          ("D19",)),
-    "combineSimilarRasters_int32_3000_7":  (combine((3000, *INT32), (7, *INT32)),         "Int32 Int32 Int16",                    distinct(7, 3000),           ()),
+    "D16_rasterize_add_100_three_squares":      (burn(100, 0, 500, 1000, add=True),             "Int16 Byte Byte",                       distinct(100, 200)),
+    "D1_rasterize_int32_field":                 (burn_field([1, 2, 3], np.int32),               "Int32 Int32 Byte",                      distinct(0, 1, 2, 3)),
+    "rasterize_int64_field":                    (burn_field([1, 2, 3], np.int64),               "Int64 Int64 Byte",                      distinct(0, 1, 2, 3)),
+    "D1_rasterize_real_field_of_396":           (burn_field([7.0, 9.3, 1.392]),                 "Float64 Float64 Float64",               distinct(0, 1.392, 7, 9.3)),
+    "D1_rasterize_real_field_float32_exact":    (burn_field([0.5, 1.5, 2.5]),                   "Float64 Float64 Float32",               distinct(0, 0.5, 1.5, 2.5)),
+    "D8_rasterize_int64_field_nan_nodata":      (burn_field([123456789, 987654321, 5], np.int64, noData=np.nan),
+                                                                                                "Float64+warning error Float64+warning", distinct(5, 123456789, 987654321)),
+    "M1_warp_byte_near":                        (warp(byte_mask, "near"),                       "Byte Byte Byte",                        distinct(0, 1)),
+    "D12_warp_byte_average":                    (warp(byte_mask, "average", 400),               "Float32 Byte Float32",                  distinct(0, 0.75, 1)),
+    "D12_warp_byte_default_resampling":         (warp(byte_mask, pixel_size=400),               "Float32 Byte Float32",                  None),
+    "D12_warp_int32_average":                   (warp(int32_0_to_15, "average", 200),           "Float64 Int32 Float32",                 None),
+    "D13_warp_byte_cubic_overshoot":            (warp(byte_step, "cubic", 25),                  "Float32 Byte Float32",                  spans(0, 255)),
+    "D14_warp_byte_sum_16_times_200":           (warp(byte_200s, "sum", 400),                   "Float64 Byte Int16",                    distinct(3200)),
+    "warp_byte_nan_nodata":                     (warp(byte_mask, "near", noData=np.nan),        "Float32 error Float32",                 distinct(0, 1)),
+    "D8_warp_int32_nan_nodata":                 (warp(int32_large_ids, "near", noData=np.nan),  "Float64 error Float64",                 distinct(123456789, 987654321)),
+    "D5_rasterMosaic_byte_200":                 (mosaic((200, *BYTE)),                          "Byte Byte Byte",                        distinct(200)),
+    "M13_rasterMosaic_byte_then_int16_1000":    (mosaic((100, *BYTE), (1000, *INT16)),          "Int16 Int16 Int16",                     distinct(100, 1000)),
+    "D19_combineSimilarRasters_byte":           (combine((100, *BYTE), (200, *BYTE)),           "Byte Byte Byte",                        distinct(100, 200)),
+    "combineSimilarRasters_int32_3000_7":       (combine((3000, *INT32), (7, *INT32)),          "Int32 Int32 Int16",                     distinct(7, 3000)),
 }
 
-# An explicit dtype is used exactly as given and gives no warning (ADR 2). "error" is a GeoKitDataTypeError.
+# A fixed dtype is used exactly as given and gives no warning (ADR 2). "error" is a GeoKitDataTypeError. The M15
+# rows pass "preserve_input", because that entry is about passing dtype on.
 EXPLICIT_CASES = {
-    # name                                 call                             dtype                band type  values               catalogue
-    "createRaster-Byte":                  (create(),                        "Byte",              "Byte",    None,                ("D3",)),
-    "createRaster-UInt16":                (create(),                        "UInt16",            "UInt16",  None,                ("D3",)),
-    "createRaster-UInt32":                (create(),                        "UInt32",            "UInt32",  None,                ("D3",)),
-    "quickRaster-Byte":                   (quick(),                         "Byte",              "Byte",    None,                ("D3",)),
-    "quickRaster-UInt16":                 (quick(),                         "UInt16",            "UInt16",  None,                ("D3",)),
-    "quickRaster-UInt32":                 (quick(),                         "UInt32",            "UInt32",  None,                ("D3",)),
-    "quickRaster-np.float32":             (quick(),                         np.float32,          "Float32", None,                ("D7",)),
-    "createRaster-np.float32":            (create(),                        np.float32,          "Float32", None,                ("D7",)),
-    "createRaster-float":                 (create(),                        float,               "Float64", None,                ("D7",)),
-    "createRaster-np.dtype-uint16":       (create(),                        np.dtype("uint16"),  "UInt16",  None,                ("D7",)),
-    "createRaster-Float32":               (create(),                        "Float32",           "Float32", None,                ()),
-    "createRaster-Int16":                 (create(),                        "Int16",             "Int16",   None,                ()),
-    "createRaster-bool":                  (create(),                        bool,                "Byte",    None,                ()),
-    "quickRaster-bool":                   (quick(),                         "bool",              "Byte",    None,                ()),
-    "createRaster-scalars-that-fit":      (create(noData=65535, fill=1),    "UInt16",            "UInt16",  distinct(1),         ()),
-    "createRaster-noData-out-of-range":   (create(noData=-1),               "UInt16",            "error",   None,                ("D10",)),
-    "rasterize-Byte":                     (burn(1, 0),                      "Byte",              "Byte",    distinct(1),         ("M3",)),
-    "rasterize-np.float32":               (burn(1, 0),                      np.float32,          "Float32", distinct(1),         ("D7",)),
-    "warp-Float32-of-a-Float64-source":   (warp(float64_quarters, "near"),  "Float32",           "Float32", distinct(0.25, 0.5), ("D11",)),
-    "mutateRaster-bool":                  (mutate(greater_than_five, byte_0_to_127), "bool",     "Byte",    distinct(0, 1),      ("D28",)),
-    "combineSimilarRasters-Float32":      (combine((100, *BYTE), (200, *BYTE)), "Float32",   "Float32", distinct(100, 200),  ()),
-    "combineSimilarRasters-np.int16":     (combine((100, *BYTE), (200, *BYTE)), np.int16,    "Int16",   distinct(100, 200),  ()),
+    # name                                                    call                                        dtype               band type  values
+    "D3_createRaster_Byte":                                  (create(),                                   "Byte",             "Byte",    None),
+    "D3_createRaster_UInt16":                                (create(),                                   "UInt16",           "UInt16",  None),
+    "D3_createRaster_UInt32":                                (create(),                                   "UInt32",           "UInt32",  None),
+    "D3_quickRaster_Byte":                                   (quick(),                                    "Byte",             "Byte",    None),
+    "D3_quickRaster_UInt16":                                 (quick(),                                    "UInt16",           "UInt16",  None),
+    "D3_quickRaster_UInt32":                                 (quick(),                                    "UInt32",           "UInt32",  None),
+    "D7_quickRaster_np.float32":                             (quick(),                                    np.float32,         "Float32", None),
+    "D7_createRaster_np.float32":                            (create(),                                   np.float32,         "Float32", None),
+    "D7_createRaster_float":                                 (create(),                                   float,              "Float64", None),
+    "D7_createRaster_np.dtype_uint16":                       (create(),                                   np.dtype("uint16"), "UInt16",  None),
+    "createRaster_Float32":                                  (create(),                                   "Float32",          "Float32", None),
+    "createRaster_Int16":                                    (create(),                                   "Int16",            "Int16",   None),
+    "D28_createRaster_bool":                                 (create(),                                   bool,               "Byte",    None),
+    "D28_quickRaster_bool":                                  (quick(),                                    "bool",             "Byte",    None),
+    "createRaster_scalars_that_fit":                         (create(noData=65535, fill=1),               "UInt16",           "UInt16",  distinct(1)),
+    "D10_createRaster_noData_out_of_range":                  (create(noData=-1),                          "UInt16",           "error",   None),
+    "M3_rasterize_Byte":                                     (burn(1, 0),                                 "Byte",             "Byte",    distinct(1)),
+    "M3_rasterize_Int16_of_an_Int64_field":                  (burn_field([1, 2, 3], np.int64),            "Int16",            "Int16",   distinct(0, 1, 2, 3)),
+    "D7_rasterize_np.float32":                               (burn(1, 0),                                 np.float32,         "Float32", distinct(1)),
+    "D11_warp_Float32_of_a_Float64_source":                  (warp(float64_quarters, "near"),             "Float32",          "Float32", distinct(0.25, 0.5)),
+    "D11_warpLike_Float32_of_a_Float64_source":              (warp_like(float64_quarters),                "Float32",          "Float32", distinct(0.25, 0.5)),
+    "D28_mutateRaster_bool":                                 (mutate(greater_than_five, byte_0_to_127),   "bool",             "Byte",    distinct(0, 1)),
+    "M14_combineSimilarRasters_Float32":                     (combine((100, *BYTE), (200, *BYTE)),        "Float32",          "Float32", distinct(100, 200)),
+    "M14_combineSimilarRasters_np.int16":                    (combine((100, *BYTE), (200, *BYTE)),        np.int16,           "Int16",   distinct(100, 200)),
+    "M15_Extent.mutateRaster_Int16":                         (extent_mutate(byte_0_to_127),               "Int16",            "Int16",   distinct(0, 50, 100, 127)),
+    "M15_Extent.mutateRaster_preserve_input":                (extent_mutate(byte_0_to_127),               "preserve_input",   "Byte",    distinct(0, 50, 100, 127)),
+    "M15_Extent.mutateRaster_preserve_input_with_processor": (extent_mutate(byte_0_to_127, double),       "preserve_input",   "Byte",    distinct(0, 100, 200, 254)),
+}
+
+# ----------------------------------------------------------------------------------------------
+# the two pending lists
+
+# Catalogue cases of #405 that this branch does not fix, with the pull request that fixes them. That pull request
+# deletes the lines of its cases.
+PENDING = {
+    "D17_gradient_unsigned_dem":                              "PR 2",
+    "D18_KernelProcessor_float_matrix":                       "PR 2",
+    "D23_extractMatrix":                                      "PR 2",
+    "D23_extractValues":                                      "PR 2",
+    "D23_interpolateValues":                                  "PR 2",
+    "D24_rasterStats":                                        "PR 2",
+    "D25_indicateValues_nodata_-1":                           "PR 2",
+    "D25_indicateValues_nodata_nan":                          "PR 2",
+    "D26_applyMask":                                          "PR 2",
+    "gradient_mode_ew":                                       "PR 2",
+    "D2_rasterize_200":                                       "PR 4",
+    "D3_createRaster_Byte":                                   "PR 4",
+    "D3_createRaster_UInt16":                                 "PR 4",
+    "D3_createRaster_UInt32":                                 "PR 4",
+    "D3_quickRaster_Byte":                                    "PR 4",
+    "D3_quickRaster_UInt16":                                  "PR 4",
+    "D3_quickRaster_UInt32":                                  "PR 4",
+    "D4_saveRasterAsTif_byte":                                "PR 4",
+    "D4_saveRasterAsTif_scale_offset_nodata":                 "PR 4",
+    "D5_rasterMosaic_byte_200":                               "PR 4",
+    "D6_createRasterLike_float32":                            "PR 4",
+    "D7_createRaster_float":                                  "PR 4",
+    "D7_createRaster_np.dtype_uint16":                        "PR 4",
+    "D7_createRaster_np.float32":                             "PR 4",
+    "D7_quickRaster_np.float32":                              "PR 4",
+    "D9_createRaster_above_2**24_nodata_0.5":                 "PR 4",
+    "D9_createRaster_fill_12.34":                             "PR 4",
+    "D10_createRaster_noData_out_of_range":                   "PR 4",
+    "D19_combineSimilarRasters_byte":                         "PR 4",
+    "D28_createRaster_bool":                                  "PR 4",
+    "D28_createRaster_bool_data":                             "PR 4",
+    "D28_mutateRaster_bool":                                  "PR 4",
+    "D28_quickRaster_bool":                                   "PR 4",
+    "M2_rasterize_2**31":                                     "PR 4",
+    "M2_rasterize_40000":                                     "PR 4",
+    "M4_RegionMask.createRaster":                             "PR 4",
+    "M4_createRaster_empty":                                  "PR 4",
+    "M6_createRaster_nodata_without_data":                    "PR 4",
+    "M11_mutateRaster_uint16_40000":                          "PR 4",
+    "M11_mutateRaster_uint8_200":                             "PR 4",
+    "M12_createRaster_bare_integer":                          "PR 4",
+    "D1_rasterize_int32_field":                               "PR 5",
+    "D1_rasterize_real_field_float32_exact":                  "PR 5",
+    "D1_rasterize_real_field_of_396":                         "PR 5",
+    "D7_rasterize_np.float32":                                "PR 5",
+    "D8_rasterize_int64_field_nan_nodata":                    "PR 5",
+    "D9_rasterize_0.1":                                       "PR 5",
+    "D16_rasterize_add_100_three_squares":                    "PR 5",
+    "M3_rasterize_Byte":                                      "PR 5",
+    "M3_rasterize_Int16_of_an_Int64_field":                   "PR 5",
+    "M4_RegionMask.rasterize":                                "PR 5",
+    "M4_rasterize_1":                                         "PR 5",
+    "M8_vectorInfo_field_types":                              "PR 5",
+    "D8_warp_int32_nan_nodata":                               "PR 6",
+    "D11_warpLike_Float32_of_a_Float64_source":               "PR 6",
+    "D11_warp_Float32_of_a_Float64_source":                   "PR 6",
+    "D12_warp_byte_average":                                  "PR 6",
+    "D12_warp_byte_default_resampling":                       "PR 6",
+    "D12_warp_int32_average":                                 "PR 6",
+    "D13_warp_byte_cubic_overshoot":                          "PR 6",
+    "D14_warp_byte_sum_16_times_200":                         "PR 6",
+    "D15_warp_reprojection_without_nodata":                   "PR 6",
+    "D27_warp":                                               "PR 6",
+    "M1_warp_byte_near":                                      "PR 6",
+    "D27_checkSimilarRasters":                                "PR 7",
+    "D27_combineSimilarRasters":                              "PR 7",
+    "M13_rasterMosaic_byte_then_int16_1000":                  "PR 7",
+    "M14_combineSimilarRasters_Float32":                      "PR 7",
+    "M14_combineSimilarRasters_np.int16":                     "PR 7",
+    "M15_Extent.mutateRaster_Int16":                          "PR 8",
+    "M15_Extent.mutateRaster_preserve_input":                 "PR 8",
+    "M15_Extent.mutateRaster_preserve_input_with_processor":  "PR 8",
+    "D20_createVector_float16":                               "PR 9",
+    "D20_createVector_pandas_boolean":                        "PR 9",
+    "D20_createVector_uint32":                                "PR 9",
+    "D20_createVector_uint64":                                "PR 9",
+    "D21_polygonizeRaster_float":                             "PR 9",
+    "D21_polygonizeRaster_uint32":                            "PR 9",
+    "D22_polygonizeMatrix_uint32":                            "PR 9",
+}
+
+# Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
+# request deletes the lines of its functions.
+WITHOUT_MODES = {
+    "createRaster":                                           "PR 4",
+    "createRasterLike":                                       "PR 4",
+    "mutateRaster":                                           "PR 4",
+    "quickRaster":                                            "PR 4",
+    "saveRasterAsTif":                                        "PR 4",
+    "rasterize":                                              "PR 5",
+    "warp":                                                   "PR 6",
+    "combineSimilarRasters":                                  "PR 7",
+    "rasterMosaic":                                           "PR 7",
+    "RegionMask.indicateValues":                              "PR 8",
 }
 # fmt: on
 
-# Rows of the two tables that are not fixed on this branch, with the reason of their xfail(strict=True) mark. The PR
-# that fixes a row deletes its line.
-PENDING = {
-    # fixed by #411
-    "createRaster_empty": "createRaster gives Int8 for a raster made from nothing",
-    "createRaster_int64_0_to_5": "createRaster does not take the dtype modes",
-    "createRaster_uint8_nodata_-1": "createRaster does not take the dtype modes",
-    "createRaster_above_2**24_nodata_0.5": "D9: integers above 2**24 with a fractional noData go to Float32",
-    "createRaster_nodata_without_data": "M6: createRaster(noData=x) without fill or data fills with 0",
-    "createRasterLike_float32": "D6: createRasterLike does not copy the data type",
-    "saveRasterAsTif_byte": "D4: saveRasterAsTif writes a Byte raster as Int8",
-    "saveRasterAsTif_float64_whole": "saveRasterAsTif does not take the dtype modes",
-    "mutateRaster_halve": "mutateRaster does not take the dtype modes",
-    "mutateRaster_uint8_200": "M11: mutateRaster clips uint8 output of 200 to 127",
-    "mutateRaster_uint16_40000": "M11: mutateRaster clips uint16 output of 40000 to 32767",
-    "createRaster-Byte": "D3: an explicit unsigned type becomes signed",
-    "createRaster-UInt16": "D3: an explicit unsigned type becomes signed",
-    "createRaster-UInt32": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-Byte": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-UInt16": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-UInt32": "D3: an explicit unsigned type becomes signed",
-    "quickRaster-np.float32": "D7: quickRaster raises for a dtype that is not a string",
-    "createRaster-np.float32": "D7: a dtype that is not a string is ignored",
-    "createRaster-float": "D7: a dtype that is not a string is ignored",
-    "createRaster-np.dtype-uint16": "D7: a dtype that is not a string is ignored",
-    "createRaster-bool": "dtype=bool gives Int8",
-    "quickRaster-bool": "dtype='bool' gives Int8",
-    "createRaster-noData-out-of-range": "D10: an explicit dtype that cannot hold noData is widened silently",
-    "mutateRaster-bool": "D28: dtype='bool' gives Int8",
-    # fixed by #412
-    "rasterize_1": "rasterize(value=1) gives Int8",
-    "rasterize_200": "D2: rasterize(value=200) burns 127 into Int8",
-    "rasterize_40000": "M2: rasterize(value=40000) burns 32767 into Int16",
-    "rasterize_2**31": "M2: rasterize(value=2**31) burns 2147483647 into Int32",
-    "rasterize_-1": "rasterize does not take the dtype modes",
-    "rasterize_0.1": "D9: rasterize(value=0.1) burns into Float32",
-    "rasterize_add_100_three_squares": "D16: rasterize(add=True) overflows Int8",
-    "rasterize_int32_field": "D1: rasterize raises for an Integer field",
-    "rasterize_int64_field": "M5: rasterize gives Int64 for an Integer64 field only by coincidence",
-    "rasterize_real_field_of_396": "D1: rasterize burns a Real field into Int16 (#396)",
-    "rasterize_real_field_float32_exact": "D1: rasterize burns a Real field into Int16 (#396)",
-    "rasterize_int64_field_nan_nodata": "D8: Int64 IDs with a NaN noData go to Float32 and lose precision",
-    "rasterize-Byte": "M3: rasterize(value=1, dtype='Byte') gives Int8",
-    "rasterize-np.float32": "D7: rasterize ignores a dtype that is not a string",
-    # fixed by #414
-    "warp_byte_near": "M1: warp(near) of a Byte raster gives Int8",
-    "warp_byte_average": "D12: warp(average) of a 0/1 mask stores 0.75 as 1",
-    "warp_byte_default_bilinear": "warp chooses its type from statistics, not from the resampling",
-    "warp_byte_cubic_overshoot": "D13: warp(cubic) clips the overshoot to the Byte range",
-    "warp_byte_sum_16_times_200": "D14: warp(sum) into Byte clips 3200 to 255",
-    "warp_int32_average": "warp chooses its type from statistics, not from the resampling",
-    "warp_int32_nan_nodata": "D8: warp of Int32 with a NaN noData gives Float32",
-    "warp-Float32-of-a-Float64-source": "D11: warp(dtype='Float32') of a Float64 source gives Float64",
-    # fixed by #416
-    "rasterMosaic_byte_200": "D5: rasterMosaic of a Byte source clips 200 to 127",
-    "rasterMosaic_byte_and_int16": "rasterMosaic takes the type of the first source only",
-    "combineSimilarRasters_byte": "D19: combineSimilarRasters turns Byte into Int8",
-    "combineSimilarRasters_int32_3000_7": "combineSimilarRasters has no dtype parameter",
-    "combineSimilarRasters-Float32": "combineSimilarRasters has no dtype parameter",
-    "combineSimilarRasters-np.int16": "combineSimilarRasters has no dtype parameter",
-}
 
-# Pending rows of MODE_CASES whose default call already gives the expected type and values
-DEFAULT_CALL_HOLDS = {
-    "createRaster_int64_0_to_5",
-    "saveRasterAsTif_float64_whole",
-    "mutateRaster_halve",
-    "rasterize_-1",
-    "rasterize_int64_field",
-    "combineSimilarRasters_int32_3000_7",
-}
+def catalogue_id(case_name):
+    """The catalogue ID that a case name starts with, such as "D2" for "D2_rasterize_200", or None."""
+    match = re.match(r"([DM]\d+)_", case_name)
+    return match.group(1) if match else None
 
 
-def pending_mark(name, mode=None):
-    if name not in PENDING or (mode is None and name in DEFAULT_CALL_HOLDS):
-        return ()
-    return pytest.mark.xfail(strict=True, reason=PENDING[name])
+def function_of(case_name):
+    """The GeoKit function that a case name names after its catalogue ID, such as "rasterize"."""
+    name_parts = case_name.split("_")
+    if catalogue_id(case_name) is not None:
+        name_parts = name_parts[1:]
+    return name_parts[0]
+
+
+def xfail_until(pull_request, case_name):
+    """xfail(strict=True) while a pull request is still needed, otherwise no effect."""
+    return pytest.mark.xfail(pull_request is not None, reason=f"{case_name}: fixed by {pull_request}", strict=True)
+
+
+STANDALONE_CASES = set()
+FUNCTIONS_WITH_MODE_TESTS = set()
+
+
+def case(case_name):
+    """Register a case of a standalone test; xfail(strict=True) while it is listed in PENDING."""
+    STANDALONE_CASES.add(case_name)
+    return xfail_until(PENDING.get(case_name), case_name)
+
+
+def case_param(case_name, *values):
+    """A pytest.param of a standalone case, with the case name as its id."""
+    return pytest.param(*values, id=case_name, marks=case(case_name))
+
+
+def modes_of(function_name):
+    """xfail(strict=True) while the function is listed in WITHOUT_MODES."""
+    FUNCTIONS_WITH_MODE_TESTS.add(function_name)
+    return xfail_until(WITHOUT_MODES.get(function_name), f"the dtype modes of {function_name}")
+
+
+# ----------------------------------------------------------------------------------------------
+# the tests of the two tables
 
 
 def mode_case_params():
     for name in MODE_CASES:
-        for mode in [None, "auto", "preserve_input", "smallest"]:
-            yield pytest.param(name, mode, id=f"{name}-{mode or 'default'}", marks=pending_mark(name, mode))
+        modes = ["auto", "preserve_input", "smallest"]
+        if catalogue_id(name) is not None:
+            modes = [None, *modes]
+        for mode in modes:
+            if mode is None:
+                pull_request = PENDING.get(name)
+            else:
+                pull_request = WITHOUT_MODES.get(function_of(name)) or PENDING.get(name)
+            yield pytest.param(name, mode, id=f"{name}-{mode or 'default'}", marks=xfail_until(pull_request, name))
 
 
 @pytest.mark.parametrize("name, mode", list(mode_case_params()))
 def test_mode_case(name, mode, tmp_path):
     """The call gives the band type of its row in this mode, and keeps the values of its row."""
-    build, types, check_values, _ = MODE_CASES[name]
+    build, types, check_values = MODE_CASES[name]
     auto, preserve_input, smallest = types.split()
     expected = {None: auto, "auto": auto, "preserve_input": preserve_input, "smallest": smallest}[mode]
     dtype_argument = {} if mode is None else {"dtype": mode}
@@ -440,10 +543,15 @@ def test_mode_case(name, mode, tmp_path):
         check_values(geokit.raster.extractMatrix(raster))
 
 
-@pytest.mark.parametrize("name", [pytest.param(name, marks=pending_mark(name)) for name in EXPLICIT_CASES])
+def explicit_case_params():
+    for name in EXPLICIT_CASES:
+        yield pytest.param(name, id=name, marks=xfail_until(PENDING.get(name), name))
+
+
+@pytest.mark.parametrize("name", list(explicit_case_params()))
 def test_explicit_case(name, tmp_path):
-    """An explicit dtype gives exactly that band type, without a warning, or raises a GeoKitDataTypeError."""
-    build, dtype, expected, check_values, _ = EXPLICIT_CASES[name]
+    """A fixed dtype gives exactly that band type, without a warning, or raises a GeoKitDataTypeError."""
+    build, dtype, expected, check_values = EXPLICIT_CASES[name]
 
     if expected == "error":
         with pytest.raises(GeoKitDataTypeError):
@@ -459,20 +567,19 @@ def test_explicit_case(name, tmp_path):
         check_values(geokit.raster.extractMatrix(raster))
 
 
-@pending("ADR 2: a bare integer dtype is not rejected")
-def test_bare_integer_dtype_is_rejected(tmp_path):
+# ----------------------------------------------------------------------------------------------
+# raster types outside the two tables
+
+
+@case("M12_createRaster_bare_integer")
+def test_M12_bare_integer_dtype_is_rejected(tmp_path):
     """A bare integer such as gdal.GDT_Float32 raises an error that names the string spelling (ADR 2, #396)."""
     # typeguard, which the test suite runs, would reject the integer at the annotation before GeoKit's own check
     with suppress_type_checks(), pytest.raises(GeoKitDataTypeError, match='dtype="Float32"'):
         create()(tmp_path, dtype=gdal.GDT_Float32)
 
 
-# ----------------------------------------------------------------------------------------------
-# tests outside the two tables
-
-
-@pending("D15: a reprojection creates unflagged zero pixels silently")
-@pins("D15")
+@case("D15_warp_reprojection_without_nodata")
 def test_D15_warp_warns_about_created_pixels():
     """A reprojection without noData warns that the created pixels hold 0 and are not flagged."""
     int16_raster = gdal_raster(np.arange(1, 401).reshape(20, 20), np.int16, gdal.GDT_Int16, x_min=4e6, y_max=3e6)
@@ -483,39 +590,46 @@ def test_D15_warp_warns_about_created_pixels():
     assert (geokit.raster.extractMatrix(warped) == 0).any()
 
 
-@pending("D27: warp computes statistics of its source")
-@pins("D27")
-def test_D27_warp_reads_no_statistics(tmp_path):
-    """No .aux.xml file appears next to the source of warp, because it computes no statistics."""
-    source_path = tile(tmp_path, "source.tif", 7, np.uint8, gdal.GDT_Byte)
-
-    geokit.raster.warp(source_path, resampleAlg="near")
-
-    assert list(tmp_path.glob("*.aux.xml")) == []
+def warp_the_tiles(tile_paths):
+    geokit.raster.warp(tile_paths[0], resampleAlg="near")
 
 
-@pending("D27: checkSimilarRasters and combineSimilarRasters compute statistics of their inputs")
-@pins("D27")
-def test_D27_checkSimilarRasters_and_combineSimilarRasters_read_no_statistics(tmp_path):
-    """No .aux.xml file appears next to the inputs of checkSimilarRasters and combineSimilarRasters."""
+def check_the_tiles(tile_paths):
     from geokit._algorithms.combineSimilarRasters import checkSimilarRasters
 
+    checkSimilarRasters(tile_paths)
+
+
+def combine_the_tiles(tile_paths):
+    from geokit._algorithms.combineSimilarRasters import combineSimilarRasters
+
+    combined_path = pathlib.Path(tile_paths[0]).with_name("combined.tif")
+    combineSimilarRasters(tile_paths, output=str(combined_path), verbose=False)
+
+
+@pytest.mark.parametrize(
+    "read_the_tiles",
+    [
+        case_param("D27_warp", warp_the_tiles),
+        case_param("D27_checkSimilarRasters", check_the_tiles),
+        case_param("D27_combineSimilarRasters", combine_the_tiles),
+    ],
+)
+def test_D27_no_statistics_are_read(read_the_tiles, tmp_path):
+    """No .aux.xml file appears next to the input rasters, because no statistics are computed."""
     left_tile = tile(tmp_path, "left.tif", 100, np.uint8, gdal.GDT_Byte)
     right_tile = tile(tmp_path, "right.tif", 200, np.uint8, gdal.GDT_Byte, x_min=400)
 
-    checkSimilarRasters([left_tile, right_tile])
-    combine((100, *BYTE), (200, *BYTE))(tmp_path)
+    read_the_tiles([left_tile, right_tile])
 
-    assert list(tmp_path.glob("left.tif.aux.xml")) == []
-    assert list(tmp_path.glob("right.tif.aux.xml")) == []
+    assert not (tmp_path / "left.tif.aux.xml").exists()
+    assert not (tmp_path / "right.tif.aux.xml").exists()
 
 
-@pending("D4: saveRasterAsTif loses scale and offset")
-@pins("D4")
+@case("D4_saveRasterAsTif_scale_offset_nodata")
 def test_D4_saveRasterAsTif_keeps_scale_offset_and_nodata(tmp_path):
     """The copy written by saveRasterAsTif keeps the stored values, scale, offset and noData of the source."""
-    source = gdal_raster([[-9999, 100, 200]], np.int16, gdal.GDT_Int16, noData=-9999, scale=0.1)
-    source.GetRasterBand(1).SetOffset(5.0)
+    source = gdal_raster([[-9999, 100, 200]], np.int16, gdal.GDT_Int16, noData=-9999, scale=0.1, offset=5.0)
 
     saved = geokit.raster.saveRasterAsTif(source, str(tmp_path / "saved.tif"))
 
@@ -526,18 +640,45 @@ def test_D4_saveRasterAsTif_keeps_scale_offset_and_nodata(tmp_path):
     np.testing.assert_array_equal(saved_band.ReadAsArray(), [[-9999, 100, 200]])
 
 
-@pending("M4: RegionMask.createRaster gives Int8 and RegionMask.rasterize int8")
-@pins("M4")
-def test_M4_regionmask_gives_byte():
-    """RegionMask.createRaster gives a Byte band and RegionMask.rasterize a uint8 matrix."""
-    region_mask = geokit.RegionMask.fromGeom(square_polygon(0), pixelRes=100, srs=3035)
+def square_region_mask():
+    return geokit.RegionMask.fromGeom(square_polygon(0), pixelRes=100, srs=3035)
 
-    created_raster = region_mask.createRaster()
-    rasterized_matrix = region_mask.rasterize(squares(0), value=1)
+
+@case("M4_RegionMask.createRaster")
+def test_M4_RegionMask_createRaster_gives_byte():
+    """RegionMask.createRaster without data gives a Byte band."""
+    created_raster = square_region_mask().createRaster()
 
     assert band_type_name(created_raster) == "Byte"
+
+
+@case("M4_RegionMask.rasterize")
+def test_M4_RegionMask_rasterize_gives_uint8():
+    """RegionMask.rasterize with a burn value of 1 gives a uint8 matrix."""
+    rasterized_matrix = square_region_mask().rasterize(squares(0), value=1)
+
     assert rasterized_matrix.dtype == np.uint8
     assert rasterized_matrix.max() == 1
+
+
+@pytest.mark.parametrize(
+    "mode, expected_dtype",
+    [
+        pytest.param("auto", np.float32, id="auto", marks=modes_of("RegionMask.indicateValues")),
+        pytest.param("preserve_input", np.uint8, id="preserve_input", marks=modes_of("RegionMask.indicateValues")),
+        pytest.param("smallest", np.float32, id="smallest", marks=modes_of("RegionMask.indicateValues")),
+    ],
+)
+def test_indicateValues_takes_the_dtype_modes(mode, expected_dtype):
+    """The indication keeps its fractions under auto and smallest, and its Byte type under preserve_input."""
+    # bilinear resampling of the 0/1 indication onto 400 m pixels gives fractions where it crosses the edge
+    region_mask = geokit.RegionMask.fromGeom(geokit.geom.box(0, 0, 2000, 2000, srs=3035), pixelRes=400, srs=3035)
+
+    indicated = region_mask.indicateValues(
+        byte_mask(), value=(1, None), dtype=mode, applyMask=False, multiProcess=False
+    )
+
+    assert indicated.dtype == expected_dtype
 
 
 # ----------------------------------------------------------------------------------------------
@@ -549,40 +690,37 @@ def scaled_int16_raster_with_nodata():
     return gdal_raster([[-9999, 100, 200]], np.int16, gdal.GDT_Int16, noData=-9999, scale=0.1)
 
 
-@pending("D23: extractMatrix(autocorrect=True) compares noData after scaling")
-@pins("D23")
-def test_D23_extractMatrix_masks_nodata_before_scaling():
-    """The noData mask of extractMatrix(autocorrect=True) is built on the stored values, before the scale."""
-    matrix = geokit.raster.extractMatrix(scaled_int16_raster_with_nodata(), autocorrect=True)
-
-    assert np.isnan(matrix[0, 0])
-    np.testing.assert_allclose(matrix[0, 1:], [10.0, 20.0])
+def first_two_values_of_extractMatrix(raster):
+    return geokit.raster.extractMatrix(raster, autocorrect=True)[0, :2]
 
 
-@pending("D23: extractValues compares noData after scaling")
-@pins("D23")
-def test_D23_extractValues_masks_nodata_before_scaling():
-    """The noData mask of extractValues is built on the stored values, before the scale."""
-    extracted = geokit.raster.extractValues(scaled_int16_raster_with_nodata(), [(50, 50), (150, 50)], pointSRS=3035)
-
-    assert np.isnan(extracted.data[0])
-    assert np.isclose(extracted.data[1], 10.0)
+def first_two_values_of_extractValues(raster):
+    extracted = geokit.raster.extractValues(raster, [(50, 50), (150, 50)], pointSRS=3035)
+    return np.asarray(extracted.data)
 
 
-@pending("D23: interpolateValues compares noData after scaling")
-@pins("D23")
-def test_D23_interpolateValues_masks_nodata_before_scaling():
-    """The noData mask of interpolateValues is built on the stored values, before the scale."""
-    interpolated = geokit.raster.interpolateValues(
-        scaled_int16_raster_with_nodata(), [(50, 50), (150, 50)], pointSRS=3035, mode="near"
-    )
-
-    assert np.isnan(interpolated[0])
-    assert np.isclose(interpolated[1], 10.0)
+def first_two_values_of_interpolateValues(raster):
+    interpolated = geokit.raster.interpolateValues(raster, [(50, 50), (150, 50)], pointSRS=3035, mode="near")
+    return np.asarray(interpolated)
 
 
-@pending("D24: rasterStats treats scaled noData as data")
-@pins("D24")
+@pytest.mark.parametrize(
+    "first_two_values",
+    [
+        case_param("D23_extractMatrix", first_two_values_of_extractMatrix),
+        case_param("D23_extractValues", first_two_values_of_extractValues),
+        case_param("D23_interpolateValues", first_two_values_of_interpolateValues),
+    ],
+)
+def test_D23_nodata_is_masked_before_the_scale(first_two_values):
+    """The noData pixel of a scaled raster comes back as NaN, because the mask is built on the stored values."""
+    nodata_value, data_value = first_two_values(scaled_int16_raster_with_nodata())
+
+    assert np.isnan(nodata_value)
+    assert np.isclose(data_value, 10.0)
+
+
+@case("D24_rasterStats")
 def test_D24_rasterStats_leaves_out_scaled_nodata():
     """The statistics of rasterStats leave out the noData pixels of a scaled raster."""
     stats = geokit.raster.rasterStats(scaled_int16_raster_with_nodata())
@@ -591,8 +729,7 @@ def test_D24_rasterStats_leaves_out_scaled_nodata():
     assert np.isclose(stats.mean, 15.0)
 
 
-@pending("D17: gradient of a UInt16 DEM wraps around")
-@pins("D17")
+@case("D17_gradient_unsigned_dem")
 def test_D17_gradient_of_unsigned_dem():
     """The gradient of a UInt16 elevation model is computed in float and does not wrap around."""
     # the terrain rises 1 m per 100 m pixel towards the east: (100 - 102) m / (2 * 100 m) = -0.01, while in uint16
@@ -604,9 +741,9 @@ def test_D17_gradient_of_unsigned_dem():
     np.testing.assert_allclose(east_west_gradient[:, 1:-1], -0.01)
 
 
-@pending("found on the way: gradient(mode='ew') raises UnboundLocalError")
+@case("gradient_mode_ew")
 def test_gradient_ew_is_east_west():
-    """The gradient with mode='ew' is the same as with mode='east-west'."""
+    """The gradient with mode='ew' is the same as with mode='east-west' (found on the way, no catalogue entry)."""
     dem_raster = gdal_raster([[100, 101, 102, 103]] * 4, np.float64, gdal.GDT_Float64)
 
     short_mode_gradient = geokit.raster.gradient(dem_raster, mode="ew", asMatrix=True)
@@ -615,8 +752,7 @@ def test_gradient_ew_is_east_west():
     np.testing.assert_array_equal(short_mode_gradient, long_mode_gradient)
 
 
-@pending("D18: KernelProcessor pads with an integer array and truncates floats")
-@pins("D18")
+@case("D18_KernelProcessor_float_matrix")
 def test_D18_kernel_processor_keeps_floats():
     """KernelProcessor pads in a type that holds the matrix, so an integer edgeValue does not truncate floats."""
     float_matrix = np.array([[0.5, 1.5], [2.5, 3.5]])
@@ -632,9 +768,10 @@ def test_D18_kernel_processor_keeps_floats():
     np.testing.assert_array_equal(output, float_matrix)
 
 
-@pytest.mark.parametrize("noData", [-1, np.nan], ids=["-1", "nan"])
-@pending("D25: indicateValues writes noData into a bool array and indicates every noData pixel")
-@pins("D25")
+@pytest.mark.parametrize(
+    "noData",
+    [case_param("D25_indicateValues_nodata_-1", -1), case_param("D25_indicateValues_nodata_nan", np.nan)],
+)
 def test_D25_indicateValues_does_not_indicate_nodata(noData):
     """NoData pixels of the source are not indicated by indicateValues, for an integer and a NaN noData."""
     left_half_nan_values = np.full((10, 10), 5.0, np.float32)
@@ -653,8 +790,7 @@ def test_D25_indicateValues_does_not_indicate_nodata(noData):
     assert (indicated[~is_nodata] == 1).sum() == 50
 
 
-@pending("D26: applyMask wraps a NumPy-integer noData into uint8")
-@pins("D26")
+@case("D26_applyMask")
 def test_D26_applyMask_widens_for_nodata():
     """A uint8 matrix is widened by applyMask, so a NumPy-integer noData of -1 is stored and not wrapped to 255."""
     triangle = geokit.geom.polygon([(0, 0), (1000, 0), (0, 1000), (0, 0)], srs=3035)
@@ -678,20 +814,41 @@ def first_field_value(column):
     return vector.GetLayer().GetNextFeature().GetField("v")
 
 
-@pending("D20: createVector clips a uint32 above 2**31 - 1")
-@pins("D20")
-def test_D20_createVector_keeps_uint32_above_2_31():
-    """A uint32 value above 2**31 - 1 survives createVector."""
-    assert first_field_value(np.array([3_000_000_000], np.uint32)) == 3_000_000_000
+def through_createVector(value):
+    return [first_field_value(np.array([value], np.uint32))]
+
+
+def through_polygonizeRaster(value):
+    uint32_raster = gdal_raster(np.full((4, 4), value), np.uint32, gdal.GDT_UInt32)
+    return list(geokit.raster.polygonizeRaster(uint32_raster)["value"])
+
+
+def through_polygonizeMatrix(value):
+    uint32_matrix = np.full((2, 2), value, np.uint32)
+    return list(geokit.geom.polygonizeMatrix(uint32_matrix)["value"])
+
+
+@pytest.mark.parametrize(
+    "into_a_vector",
+    [
+        case_param("D20_createVector_uint32", through_createVector),
+        case_param("D21_polygonizeRaster_uint32", through_polygonizeRaster),
+        case_param("D22_polygonizeMatrix_uint32", through_polygonizeMatrix),
+    ],
+)
+def test_uint32_above_2_31_survives_the_way_into_a_vector(into_a_vector):
+    """A uint32 value of 3 000 000 000, above 2**31 - 1, keeps its value in the field of the vector."""
+    assert into_a_vector(3_000_000_000) == [3_000_000_000]
 
 
 @pytest.mark.parametrize(
     "column, expected",
-    [(np.array([5], np.uint64), 5), (np.array([1.5], np.float16), 1.5), (pd.array([True], dtype="boolean"), 1)],
-    ids=["uint64", "float16", "pandas-boolean"],
+    [
+        case_param("D20_createVector_uint64", np.array([5], np.uint64), 5),
+        case_param("D20_createVector_float16", np.array([1.5], np.float16), 1.5),
+        case_param("D20_createVector_pandas_boolean", pd.array([True], dtype="boolean"), 1),
+    ],
 )
-@pending("D20: createVector writes uint64, float16 and pandas boolean columns as strings")
-@pins("D20")
 def test_D20_createVector_writes_numeric_columns_as_numbers(column, expected):
     """Columns of uint64, float16 and pandas boolean become numeric fields in createVector, not strings."""
     field_value = first_field_value(column)
@@ -700,17 +857,7 @@ def test_D20_createVector_writes_numeric_columns_as_numbers(column, expected):
     assert field_value == expected
 
 
-@pending("D21: polygonizeRaster clips UInt32 above 2**31 - 1")
-@pins("D21")
-def test_D21_polygonizeRaster_keeps_uint32_above_2_31():
-    """UInt32 values above 2**31 - 1 survive polygonizeRaster."""
-    uint32_raster = gdal_raster(np.full((4, 4), 3_000_000_000), np.uint32, gdal.GDT_UInt32)
-
-    assert list(geokit.raster.polygonizeRaster(uint32_raster)["value"]) == [3_000_000_000]
-
-
-@pending("D21: polygonizeRaster truncates float rasters and merges their areas")
-@pins("D21")
+@case("D21_polygonizeRaster_float")
 def test_D21_polygonizeRaster_rejects_float_rasters():
     """A float raster is rejected by polygonizeRaster instead of truncating 1.7 and 2.4 and merging their areas."""
     float_values = np.full((4, 4), 1.7, np.float32)
@@ -721,17 +868,7 @@ def test_D21_polygonizeRaster_rejects_float_rasters():
         geokit.raster.polygonizeRaster(float_raster)
 
 
-@pending("D22: polygonizeMatrix always uses an Int32 band")
-@pins("D22")
-def test_D22_polygonizeMatrix_keeps_uint32_above_2_31():
-    """Values above 2**31 - 1 in a uint32 matrix survive polygonizeMatrix."""
-    uint32_matrix = np.full((2, 2), 3_000_000_000, np.uint32)
-
-    assert list(geokit.geom.polygonizeMatrix(uint32_matrix)["value"]) == [3_000_000_000]
-
-
-@pending("M8: vectorInfo reports GDAL names of OGR constants")
-@pins("M8")
+@case("M8_vectorInfo_field_types")
 def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
     """The field type names of vectorInfo are OGR names, deprecated in favour of the dtypes of attribute_dtypes."""
     point = geokit.geom.point(6.1, 50.1, srs=4326)
@@ -761,22 +898,33 @@ def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
 # ----------------------------------------------------------------------------------------------
 # coverage of the catalogue
 
-CATALOGUE = {f"D{number}" for number in range(1, 30)} | {f"M{number}" for number in range(1, 12)}
+CATALOGUE = {f"D{number}" for number in range(1, 30)} | {f"M{number}" for number in range(1, 16)}
 
-# entries of the catalogue that no test can pin
+# entries of the catalogue that no case can pin
 NOT_PINNED = {
     "D29": "minor issues inside the replaced handler, without effect with the supported GDAL and NumPy",
+    "M5": "v1.9.1 already gives Int64 for an Integer64 field, by coincidence; rasterize_int64_field pins the type",
     "M7": "not a defect: the dtypes of the DataFrames from extractFeatures stay as they are",
     "M9": "not a defect: the statistics pass of D27 never changed a result",
     "M10": "withdrawn: the memory print of indicateValues is wanted",
 }
 
 
+def all_case_names():
+    return [*MODE_CASES, *EXPLICIT_CASES, *STANDALONE_CASES]
+
+
 def test_every_catalogue_entry_is_pinned():
-    """Every entry of the defect catalogue in #405 is pinned by this module, or listed as not pinnable."""
-    pinned = set(PINNED_BY_TESTS)
-    for *_, catalogue_ids in [*MODE_CASES.values(), *EXPLICIT_CASES.values()]:
-        pinned.update(catalogue_ids)
+    """Every entry of the defect catalogue in #405 has a case in this module, or is listed as not pinnable."""
+    pinned = {catalogue_id(name) for name in all_case_names()} - {None}
 
     assert pinned.isdisjoint(NOT_PINNED)
     assert pinned | set(NOT_PINNED) == CATALOGUE
+
+
+def test_the_pending_lists_name_existing_cases_and_functions():
+    """Every line of PENDING names a case of this module, and every line of WITHOUT_MODES a function with modes."""
+    functions_with_modes = {function_of(name) for name in MODE_CASES} | FUNCTIONS_WITH_MODE_TESTS
+
+    assert set(PENDING) <= set(all_case_names())
+    assert set(WITHOUT_MODES) <= functions_with_modes

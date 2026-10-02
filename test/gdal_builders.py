@@ -17,6 +17,7 @@ def create_gdal_raster(
     gdal_type,
     noData=None,
     scale=None,
+    offset=None,
     epsg=3035,
     pixel_size=100,
     x_min=0.0,
@@ -39,6 +40,8 @@ def create_gdal_raster(
         band.SetNoDataValue(noData)
     if scale is not None:
         band.SetScale(scale)
+    if offset is not None:
+        band.SetOffset(offset)
     band.FlushCache()
     return dataset
 
