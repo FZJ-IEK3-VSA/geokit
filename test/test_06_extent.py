@@ -1,9 +1,11 @@
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from geokit import Extent, LocationSet, geom, raster, srs, util, vector
 from geokit.get_test_data import get_all_shape_files, get_test_data
-from geokit.error import GeoKitError, GeoKitExtentError
+from geokit.error import GeoKitDataTypeError, GeoKitError, GeoKitExtentError
+from test.gdal_builders import write_gdal_geotiff
 from test.helpers import *
 
 
@@ -696,6 +698,46 @@ def test_Extent_mosaicTiles():
     assert np.isclose(np.nanmean(rasmat), 568.8451589061345)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
     assert np.isclose(np.nanstd(rasmat), 672.636988117134)
+
+
+def mosaic_of_shifted_tiles(tmp_path, numpy_type, gdal_type, resampleAlg):
+    """A mosaic of two 4 x 4 tiles of 100 m pixels; the second is shifted by half a pixel, so it is resampled."""
+    first_tile = write_gdal_geotiff(tmp_path / "first.tif", np.full((4, 4), 10, numpy_type), gdal_type)
+    class_values = np.full((4, 4), 30, numpy_type)
+    class_values[:, :2] = 10
+    second_tile = write_gdal_geotiff(tmp_path / "second.tif", class_values, gdal_type, x_min=450)
+    mosaic_extent = Extent(0, 0, 800, 400, srs=3035)
+    mosaic = mosaic_extent.rasterMosaic([first_tile, second_tile], resampleAlg=resampleAlg, _skipFiltering=True)
+    return raster.extractMatrix(mosaic)
+
+
+@pytest.mark.parametrize(
+    "numpy_type, gdal_type, stands_for, other_algorithm",
+    [(np.int16, gdal.GDT_Int16, "near", "bilinear"), (np.float32, gdal.GDT_Float32, "bilinear", "near")],
+    ids=["Int16", "Float32"],
+)
+def test_Extent_rasterMosaic_auto_resamples_like_the_algorithm_it_stands_for(
+    tmp_path, numpy_type, gdal_type, stands_for, other_algorithm
+):
+    """resampleAlg="auto" in rasterMosaic gives the result of near for integer tiles and of bilinear for float ones."""
+    auto_values = mosaic_of_shifted_tiles(tmp_path, numpy_type, gdal_type, "auto")
+    stands_for_values = mosaic_of_shifted_tiles(tmp_path, numpy_type, gdal_type, stands_for)
+    other_values = mosaic_of_shifted_tiles(tmp_path, numpy_type, gdal_type, other_algorithm)
+
+    np.testing.assert_array_equal(auto_values, stands_for_values)
+    assert not np.array_equal(auto_values, other_values)
+
+
+def test_Extent_rasterMosaic_suggests_only_a_type_for_the_nodata_of_the_sources(tmp_path):
+    """A dtype that cannot store the noData of the sources raises an error that suggests a type, not another noData."""
+    tile_values = np.array([[-9999, 0], [5, 7]], np.int16)
+    tile_path = write_gdal_geotiff(tmp_path / "tile.tif", tile_values, gdal.GDT_Int16, noData=-9999)
+    mosaic_extent = Extent(0, 0, 200, 200, srs=3035)
+
+    with pytest.raises(GeoKitDataTypeError, match='dtype="Int16"') as raised:
+        mosaic_extent.rasterMosaic([tile_path], dtype="Byte", _skipFiltering=True)
+
+    assert "value that fits" not in str(raised.value)
 
 
 if __name__ == "__main__":

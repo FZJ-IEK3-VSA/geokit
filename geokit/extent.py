@@ -1646,7 +1646,8 @@ class Extent(object):
 
         resampleAlg : str; optional
             The resampling algorithm gdal.Warp uses to put the sources onto the grid of the
-            first source, by default 'near'
+            first source, by default 'near'. "auto" uses "near" if the promoted data type of
+            all sources is an integer type and "bilinear" if it is a float type.
 
         dtype : str, numpy.dtype, type or None, optional
             The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
@@ -1665,7 +1666,8 @@ class Extent(object):
             The inputs of the choice are the data types of all sources. The rule follows
             resampleAlg as in warp: the promotion of the source types for near, mode, min,
             max, med, q1 and q3, a float type for the interpolating algorithms, Float64
-            for sum.
+            for sum. The mosaic keeps the noData value of the first source, so a fixed type
+            has to store it.
 
         Returns
         -------
@@ -1693,10 +1695,15 @@ class Extent(object):
                     f"{raster_info.data_type_name_str}, which GeoKit does not support."
                 )
         input_dtypes = [raster_info.numpy_dtype for raster_info in raster_info_list]
+        # "auto" stands for near or bilinear by the promoted data type of all sources (ADR 10)
+        promoted_dtype = DTYPES.promote_dtypes(input_dtypes)
+        resampleAlg = RASTER._resolve_resampling_algorithm(resampleAlg, promoted_dtype)
+        # the mosaic keeps the noData value of the first source and has no noData parameter
         resolved = DTYPES.resolve_dtype(
             input_dtypes,
             _mosaicRule(resampleAlg),
             scalars={"noData": first_raster_info.noData},
+            scalars_from_the_source=("noData",),
             dtype=dtype,
             context="rasterMosaic",
         )
