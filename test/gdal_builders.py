@@ -1,6 +1,6 @@
 """Rasters and vectors built with plain GDAL, so that GeoKit's type logic is not involved in the inputs."""
 
-from osgeo import gdal, osr
+from osgeo import gdal, ogr, osr
 
 import geokit
 
@@ -64,3 +64,18 @@ def square_polygon(x_min: float, size: float = 1000.0):
     """A square in EPSG:3035 whose lower left corner is (x_min, 0)."""
     corners = [(x_min, 0), (x_min + size, 0), (x_min + size, size), (x_min, size), (x_min, 0)]
     return geokit.geom.polygon(corners, srs=3035)
+
+
+def write_gdal_geopackage(path, field_name, field_type, field_values):
+    """Write one 1000 m square per value, side by side, to a GeoPackage with plain OGR and return its path."""
+    data_source = ogr.GetDriverByName("GPKG").CreateDataSource(str(path))
+    layer = data_source.CreateLayer("squares", spatial_reference_from_epsg(3035), ogr.wkbPolygon25D)
+    layer.CreateField(ogr.FieldDefn(field_name, field_type))
+    for index, field_value in enumerate(field_values):
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetGeometry(square_polygon(2000 * index))
+        if field_value is not None:  # None leaves the field NULL
+            feature.SetField(field_name, field_value)
+        layer.CreateFeature(feature)
+    data_source = None  # closing the data source writes the file
+    return str(path)

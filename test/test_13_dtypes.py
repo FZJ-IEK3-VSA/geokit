@@ -1,11 +1,11 @@
 """The data-type contract of GeoKit: every entry of the defect catalogue in #405 and the decisions in
 docs/explanation/data_types.
 
-- MODE_CASES (ADR 1, 3, 4, 5): one row per call, with the band type per mode and the values the call keeps. Each
-  row runs with dtype="auto", "preserve_input" and "smallest".
+- MODE_CASES (ADR 1, 3, 4, 5, 10): one row per call, with the band type per mode and the values the call keeps.
+  Each row runs with dtype="auto", "preserve_input" and "smallest".
 - EXPLICIT_CASES (ADR 2): a fixed dtype gives exactly that band type, or raises.
 - Standalone tests for the entries where no raster type is chosen: values handled in NumPy (ADR 8), field types of
-  vectors (ADR 9), warnings and reads (ADR 3, 4).
+  vectors (ADR 9), the default resampling of the wrappers (ADR 10), warnings and reads (ADR 3, 4).
 
 A case whose name starts with a catalogue ID, such as "D2_rasterize_200", pins that entry of #405, so
 ``pytest -k D2_`` runs every case of D2. A row of MODE_CASES with a catalogue ID also runs as the default call,
@@ -37,6 +37,7 @@ from test.gdal_builders import (
     create_gdal_raster,
     spatial_reference_from_epsg,
     square_polygon,
+    write_gdal_geopackage,
     write_gdal_geotiff,
 )
 
@@ -61,6 +62,13 @@ def byte_step():
     step_values = np.zeros((20, 20), np.uint8)
     step_values[:, 10:] = 255
     return create_gdal_raster(step_values, gdal.GDT_Byte)
+
+
+def byte_10_and_30():
+    """20 x 20 pixels; the left ten columns are 10, the others 30."""
+    class_values = np.full((20, 20), 30, np.uint8)
+    class_values[:, :10] = 10
+    return create_gdal_raster(class_values, gdal.GDT_Byte)
 
 
 def byte_ones():
@@ -310,8 +318,9 @@ MODE_CASES = {
                                                                                                 "Float64+warning error Float64+warning", distinct(5, 123456789, 987654321)),
     "M1_warp_byte_near":                        (warp(byte_mask, "near"),                       "Byte Byte Byte",                        distinct(0, 1)),
     "D12_warp_byte_average":                    (warp(byte_mask, "average", 400),               "Float32 Byte Float32",                  distinct(0, 0.75, 1)),
-    "D12_warp_byte_default_resampling":         (warp(byte_mask, pixel_size=400),               "Float32 Byte Float32",                  None),
+    "D12_warp_byte_bilinear":                   (warp(byte_mask, "bilinear", 400),              "Float32 Byte Float32",                  None),
     "D12_warp_int32_average":                   (warp(int32_0_to_15, "average", 200),           "Float64 Int32 Float32",                 None),
+    "M17_warp_byte_classes_default":            (warp(byte_10_and_30, pixel_size=50),           "Byte Byte Byte",                        distinct(10, 30)),
     "D13_warp_byte_cubic_overshoot":            (warp(byte_step, "cubic", 25),                  "Float32 Byte Float32",                  spans(0, 255)),
     "D14_warp_byte_sum_16_times_200":           (warp(byte_200s, "sum", 400),                   "Float64 Byte Int16",                    distinct(3200)),
     "warp_byte_nan_nodata":                     (warp(byte_mask, "near", noData=np.nan),        "Float32 error Float32",                 distinct(0, 1)),
@@ -418,13 +427,14 @@ PENDING = {
     "D11_warpLike_Float32_of_a_Float64_source":               "PR 6",
     "D11_warp_Float32_of_a_Float64_source":                   "PR 6",
     "D12_warp_byte_average":                                  "PR 6",
-    "D12_warp_byte_default_resampling":                       "PR 6",
+    "D12_warp_byte_bilinear":                                 "PR 6",
     "D12_warp_int32_average":                                 "PR 6",
     "D13_warp_byte_cubic_overshoot":                          "PR 6",
     "D14_warp_byte_sum_16_times_200":                         "PR 6",
     "D15_warp_reprojection_without_nodata":                   "PR 6",
     "D27_warp":                                               "PR 6",
     "M1_warp_byte_near":                                      "PR 6",
+    "M17_warp_byte_classes_default":                          "PR 6",
     "D27_checkSimilarRasters":                                "PR 7",
     "D27_combineSimilarRasters":                              "PR 7",
     "M13_rasterMosaic_byte_then_int16_1000":                  "PR 7",
@@ -433,6 +443,9 @@ PENDING = {
     "M15_Extent.mutateRaster_Int16":                          "PR 8",
     "M15_Extent.mutateRaster_preserve_input":                 "PR 8",
     "M15_Extent.mutateRaster_preserve_input_with_processor":  "PR 8",
+    "M17_Extent.mutateRaster_default":                        "PR 8",
+    "M17_RegionMask.mutateRaster_default":                    "PR 8",
+    "M17_RegionMask.warp_default":                            "PR 8",
     "D20_createVector_float16":                               "PR 9",
     "D20_createVector_pandas_boolean":                        "PR 9",
     "D20_createVector_uint32":                                "PR 9",
@@ -440,6 +453,7 @@ PENDING = {
     "D21_polygonizeRaster_float":                             "PR 9",
     "D21_polygonizeRaster_uint32":                            "PR 9",
     "D22_polygonizeMatrix_uint32":                            "PR 9",
+    "M16_extractFeatures_integer64_with_null":                "PR 9",
 }
 
 # Functions that do not take the dtype modes on this branch, with the pull request that adds them. That pull
@@ -661,6 +675,41 @@ def test_M4_RegionMask_rasterize_gives_uint8():
     assert rasterized_matrix.max() == 1
 
 
+def region_mask_with_50_m_pixels():
+    """A region mask over the 2000 m square of the 20 x 20 sources, with pixels half as wide as theirs."""
+    return geokit.RegionMask.fromGeom(geokit.geom.box(0, 0, 2000, 2000, srs=3035), pixelRes=50, srs=3035)
+
+
+def warp_onto_50_m_pixels(source_raster):
+    return region_mask_with_50_m_pixels().warp(source_raster, applyMask=False)
+
+
+def extent_mutate_onto_50_m_pixels(source_raster):
+    source_extent = geokit.Extent.fromRaster(source_raster)
+    mutated_raster = source_extent.mutateRaster(source_raster, pixelWidth=50, pixelHeight=50, matchContext=True)
+    return geokit.raster.extractMatrix(mutated_raster)
+
+
+def region_mask_mutate_onto_50_m_pixels(source_raster):
+    mutated_raster = region_mask_with_50_m_pixels().mutateRaster(source_raster, applyMask=False)
+    return geokit.raster.extractMatrix(mutated_raster)
+
+
+@pytest.mark.parametrize(
+    "resample_onto_50_m_pixels",
+    [
+        case_param("M17_RegionMask.warp_default", warp_onto_50_m_pixels),
+        case_param("M17_Extent.mutateRaster_default", extent_mutate_onto_50_m_pixels),
+        case_param("M17_RegionMask.mutateRaster_default", region_mask_mutate_onto_50_m_pixels),
+    ],
+)
+def test_M17_default_resampling_keeps_the_classes(resample_onto_50_m_pixels):
+    """The default resampling of the warping wrappers keeps the classes of a categorical raster."""
+    resampled_values = resample_onto_50_m_pixels(byte_10_and_30())
+
+    assert set(np.unique(resampled_values).tolist()) == {10, 30}
+
+
 @pytest.mark.parametrize(
     "mode, expected_dtype",
     [
@@ -858,14 +907,25 @@ def test_D20_createVector_writes_numeric_columns_as_numbers(column, expected):
 
 
 @case("D21_polygonizeRaster_float")
-def test_D21_polygonizeRaster_rejects_float_rasters():
-    """A float raster is rejected by polygonizeRaster instead of truncating 1.7 and 2.4 and merging their areas."""
+def test_D21_polygonizeRaster_warns_for_float_rasters():
+    """A float raster is polygonized with rounded values and a warning, because 1.7 and 2.4 both become 2 and merge."""
     float_values = np.full((4, 4), 1.7, np.float32)
     float_values[:, 2:] = 2.4
     float_raster = create_gdal_raster(float_values, gdal.GDT_Float32)
 
-    with pytest.raises(GeoKitDataTypeError):
-        geokit.raster.polygonizeRaster(float_raster)
+    with pytest.warns(GeoKitDataTypeWarning, match="rounds"):
+        polygons = geokit.raster.polygonizeRaster(float_raster)
+
+    assert sorted(polygons["value"]) == [2]
+
+
+@case("M16_extractFeatures_integer64_with_null")
+def test_M16_extractFeatures_warns_for_integer64_with_null(tmp_path):
+    """An Integer64 field with NULLs and a value beyond 2**53 warns, because pandas stores it as float64."""
+    vector_path = write_gdal_geopackage(tmp_path / "ids.gpkg", "id", ogr.OFTInteger64, [2**60 + 1, None])
+
+    with pytest.warns(GeoKitDataTypeWarning, match="asPandas=False"):
+        geokit.vector.extractFeatures(vector_path)
 
 
 @case("M8_vectorInfo_field_types")
@@ -898,7 +958,7 @@ def test_M8_vectorInfo_reports_ogr_names_and_dtypes():
 # ----------------------------------------------------------------------------------------------
 # coverage of the catalogue
 
-CATALOGUE = {f"D{number}" for number in range(1, 30)} | {f"M{number}" for number in range(1, 16)}
+CATALOGUE = {f"D{number}" for number in range(1, 30)} | {f"M{number}" for number in range(1, 18)}
 
 # entries of the catalogue that no case can pin
 NOT_PINNED = {
@@ -906,7 +966,7 @@ NOT_PINNED = {
     "M5": "v1.9.1 already gives Int64 for an Integer64 field, by coincidence; rasterize_int64_field pins the type",
     "M7": "not a defect: the dtypes of the DataFrames from extractFeatures stay as they are",
     "M9": "not a defect: the statistics pass of D27 never changed a result",
-    "M10": "withdrawn: the memory print of indicateValues is wanted",
+    "M10": "not a defect: the memory print of indicateValues is wanted",
 }
 
 

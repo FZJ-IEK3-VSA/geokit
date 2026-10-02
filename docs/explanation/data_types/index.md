@@ -42,7 +42,9 @@ Several of the decisions below restore the behaviour before v1.7.1. They do not 
 - **G2 Arrays and vector fields keep their values.** Where GeoKit works on values in NumPy arrays (noData
   masks, scale and offset, its own arithmetic) or writes them into vector fields, it uses a type that holds
   them. Where no such type exists, it raises an error instead of changing the value. This holds in every
-  mode.
+  mode. Two calls keep their results from v1.9.1 and warn instead: `polygonizeRaster` rounds the values of a
+  float raster, and `extractFeatures` returns an `Integer64` field with missing values as `float64`
+  ([ADR 9](adr_09_vector_field_types.md)).
 
 Out of scope: complex types, GDAL's `Float16` (GDAL 3.11 and later), and multi-band rasters whose bands have
 different types.
@@ -72,20 +74,15 @@ The sweep traced the defects to six causes:
 | [6](adr_06_resolve_once.md) | The type is chosen once per public call. Internal helpers only convert it, and wrappers pass `dtype` on. |
 | [7](adr_07_numpy_dtype_inside.md) | Inside GeoKit a type is always a `numpy.dtype`. GDAL, OGR and pandas types are converted at the edges, in one package. One error class and one warning class cover data types. |
 | [8](adr_08_values_in_numpy.md) | A value is never written into a NumPy array that cannot hold it. GeoKit's own arithmetic runs in `float64`. |
-| [9](adr_09_vector_field_types.md) | OGR field types follow from the dtype, including 64-bit and unsigned integers. `polygonizeRaster` rejects float rasters. |
+| [9](adr_09_vector_field_types.md) | OGR field types follow from the dtype, including 64-bit and unsigned integers. `polygonizeRaster` warns for float rasters, whose values `gdal.Polygonize` rounds. `extractFeatures` keeps pandas' column types and warns where they change `Integer64` values. |
+| [10](adr_10_resampling_follows_the_data_type.md) | `resampleAlg` takes `"auto"`: nearest neighbour for integer rasters, bilinear for float rasters. It is the default of `warp`, `RegionMask.warp`, `Extent.mutateRaster` and `RegionMask.mutateRaster`; `indicateValues` and `contoursFromRaster` keep bilinear. |
 
 ## Open questions
 
-These are not decided and are not part of the current work:
+This is not decided and is not part of the current work:
 
-- **Default resampling for integer rasters.** `warp` and `RegionMask.warp` default to `resampleAlg="bilinear"`,
-  which is wrong for categorical rasters such as land cover. Under the `"auto"` mode, such a call returns
-  `Float32`. Changing the default to `"near"` for integer inputs would change the values of default calls,
-  so it needs its own decision.
-- **An automatic noData for created pixels.** An opt-in `noData="auto"` could flag the pixels that a
-  reprojection creates outside the source. See [ADR 4](adr_04_nodata_fill_and_burn_values.md).
-- **Typed columns from `extractFeatures`.** Columns could take their dtype from the OGR field type (`int32` for
-  an `Integer` field) instead of pandas' inference (`int64`). This would change the dtypes of every
-  DataFrame users get back, so it would be optional at most.
-- **Polygonizing float rasters.** `gdal.FPolygonize` could polygonize float rasters exactly, at the cost of
-  many more polygons for continuous data. See [ADR 9](adr_09_vector_field_types.md).
+- **Exact polygonizing of float rasters.** Polygonizing integer labels of the distinct values (`numpy.unique`)
+  with `gdal.Polygonize` keeps every `Float32` and `Float64` value exactly and is about as fast as
+  `gdal.FPolygonize`, but reads the band into memory. `gdal.FPolygonize` rounds `Float64` values to `float32`
+  and merges neighbouring values a few units in the last place apart. Either could become an option of
+  `polygonizeRaster` or a separate function. See [ADR 9](adr_09_vector_field_types.md).

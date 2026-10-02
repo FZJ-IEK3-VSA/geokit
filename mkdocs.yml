@@ -217,6 +217,7 @@ nav:
                 - "ADR 7: numpy.dtype Inside": explanation/data_types/adr_07_numpy_dtype_inside.md
                 - "ADR 8: Values in NumPy": explanation/data_types/adr_08_values_in_numpy.md
                 - "ADR 9: Vector Field Types": explanation/data_types/adr_09_vector_field_types.md
+                - "ADR 10: Default Resampling": explanation/data_types/adr_10_resampling_follows_the_data_type.md
 
     - API Reference: reference/
 

@@ -33,9 +33,10 @@ value, so they look like data (D15). This is standard GDAL behaviour.
 - **Pixels created by `warp`** keep GDAL's value 0. If no noData value is set, GeoKit warns once, in every
   mode, and suggests passing `noData=`. GeoKit does not choose a noData value by itself.
 
-These are the only two data-type warnings. Each names the function, the input type, the chosen type and how to
-avoid the warning. `GeoKitDataTypeWarning` is a `UserWarning`, so Python's warning filters turn it off, for
-example `warnings.filterwarnings("ignore", category=GeoKitDataTypeWarning)`.
+Besides these two warnings, `polygonizeRaster` and `extractFeatures` warn ([ADR 9](adr_09_vector_field_types.md)).
+Each warning names the function, the input type, the chosen type and how to avoid the warning.
+`GeoKitDataTypeWarning` is a `UserWarning`, so Python's warning filters turn it off, for example
+`warnings.filterwarnings("ignore", category=GeoKitDataTypeWarning)`.
 
 Examples of the widening under `"auto"`:
 
@@ -77,5 +78,3 @@ Examples of the widening under `"auto"`:
     - A noData value the user did not ask for changes later results, for example of
       `extractMatrix(autocorrect=True)`, `rasterStats` and the noData check in `checkSimilarRasters`.
     - Filling with 0 is what other tools do, and users know it.
-
-    An opt-in `noData="auto"` remains an [open question](index.md#open-questions).

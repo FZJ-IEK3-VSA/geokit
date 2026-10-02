@@ -118,10 +118,9 @@ The type of the output band, per mode. "Error" is a `GeoKitDataTypeError`.
 
 - Default results are exact. The cost is memory where the old result was wrong: a `bilinear` warp of a `Byte`
   raster now needs four times the memory (`Float32`), one of an `Int32` raster twice (`Float64`).
-- `warp` and `RegionMask.warp` default to `resampleAlg="bilinear"`. Under `"auto"`, the default call on a
-  categorical `Byte` raster therefore returns `Float32`. For categorical data, pass `resampleAlg="near"`
-  (the type stays `Byte`) or `dtype="preserve_input"`. Whether the default resampler should change is an
-  [open question](index.md#open-questions).
+- A default warp keeps the type of an integer raster, because the default resampling follows the data type
+  ([ADR 10](adr_10_resampling_follows_the_data_type.md)). The float types of the fractional rule come from an
+  explicit interpolating `resampleAlg`, such as `"bilinear"`.
 - `"preserve_input"` gives the GDAL convention, which is also how `warp` behaved up to v1.7.0.
 - `"smallest"` is the only mode whose type depends on the data. Users opt into it.
 
