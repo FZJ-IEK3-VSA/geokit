@@ -191,7 +191,7 @@ def test_extractValues():
     # The last point on the PTS list is intentionally out of
     # bounds, so a warning should be raised, but this should
     # not be displayed to the testing user.
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="the source's limits"):
         v4 = raster.extractValues(
             source=sources,
             points=pts,
