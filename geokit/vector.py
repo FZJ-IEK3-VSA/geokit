@@ -19,12 +19,9 @@ from geokit import raster as RASTER
 from geokit import srs as SRS
 from geokit import util as UTIL
 from geokit.extent import Extent
-from geokit.data_types import load_vector_input, numeric, srs_input, vecInfo
-from geokit.c_data_type_handler import (
-    geokit_c_data_types_literal,
-    MinimumCDataTypeHandler,
-)
-from geokit.error import GeoKitRasterError, GeoKitVectorError
+from geokit import dtypes as DTYPES
+from geokit.data_types import dtype_input, load_vector_input, numeric, srs_input, vecInfo
+from geokit.error import GeoKitDataTypeError, GeoKitRasterError, GeoKitVectorError
 ####################################################################
 # INTERNAL FUNCTIONS
 
@@ -279,7 +276,11 @@ def vectorInfo(source) -> vecInfo:
                    xMax : The source's yMin boundaries (in the srs's units),
                    yMax : The source's yMax boundaries (in the srs's units),
                    count : The number of features in the source,
-                   attributes : The attribute titles for the source's features,)
+                   attributes : The attribute titles for the source's features,
+                   attribute_dtypes : The data type of each attribute as a numpy.dtype,
+                                      None for a non-numeric field,
+                   attribute_data_types_constant : The OGR field type constant of each attribute,
+                   attribute_data_types_str : The OGR field type name of each attribute (deprecated),)
     """
     info = {}
 
@@ -301,15 +302,17 @@ def vectorInfo(source) -> vecInfo:
     info["attributes"] = []
     info["attribute_data_types_constant"] = {}
     info["attribute_data_types_str"] = {}
+    info["attribute_dtypes"] = {}
     layerDef: ogr.FeatureDefn = vecLyr.GetLayerDefn()
-    for layer_number in range(layerDef.GetFieldCount()):
-        field_definition: ogr.FieldDefn = layerDef.GetFieldDefn(layer_number)
+    for field_number in range(layerDef.GetFieldCount()):
+        field_definition: ogr.FieldDefn = layerDef.GetFieldDefn(field_number)
         field_name = field_definition.GetName()
         field_type_constant = field_definition.GetType()
-        field_type_constant_str = gdal.GetDataTypeName(field_type_constant)
         info["attributes"].append(field_name)
         info["attribute_data_types_constant"][field_name] = field_type_constant
-        info["attribute_data_types_str"][field_name] = field_type_constant_str
+        # OGR names (Integer, Integer64, Real, String): an OGR constant must not be read with GDAL's names
+        info["attribute_data_types_str"][field_name] = ogr.GetFieldTypeName(field_type_constant)
+        info["attribute_dtypes"][field_name] = DTYPES.from_ogr_field(field_definition)
 
     return vecInfo(**info)
 
@@ -1657,6 +1660,22 @@ def mutateVector(
         return createVector(geoms, srs=srs, output=output, fieldDef=fieldDef, **create_vector_kwargs)
 
 
+def _dtype_of_attribute_field(vector_info: vecInfo, attribute: str) -> np.dtype:
+    """The data type of the attribute field that rasterize burns; a missing or non-numeric field is an error."""
+    if attribute not in vector_info.attribute_dtypes:
+        raise GeoKitVectorError(
+            f"rasterize: the vector has no attribute '{attribute}'. Its attributes are {vector_info.attributes}."
+        )
+    field_dtype = vector_info.attribute_dtypes[attribute]
+    if field_dtype is None:
+        field_type_name = ogr.GetFieldTypeName(vector_info.attribute_data_types_constant[attribute])
+        raise GeoKitDataTypeError(
+            f"rasterize: the attribute '{attribute}' is a {field_type_name} field, which holds no numbers to burn. "
+            f"Pass a numeric attribute or a constant value."
+        )
+    return field_dtype
+
+
 def rasterize(
     source: str | pathlib.Path | ogr.Geometry | gdal.Dataset,
     pixelWidth: numeric,
@@ -1666,7 +1685,7 @@ def rasterize(
     where: str | None = None,
     value: numeric | str = 1,
     output: str | None = None,
-    dtype: geokit_c_data_types_literal | None = None,
+    dtype: dtype_input = None,
     compress=True,
     noData=None,
     overwrite: bool = True,
@@ -1711,7 +1730,8 @@ def rasterize(
     value : numeric, str
         The values to burn into the raster
         * If a numeric is given, all pixels are burned with the specified value
-        * If a string is given, then one the feature attribute names is expected
+        * If a string is given, then one the feature attribute names is expected;
+          the field must be numeric, otherwise a GeoKitDataTypeError is raised
 
     output : str; optional
         A path to an output file
@@ -1720,12 +1740,23 @@ def rasterize(
         * If output is given, the raster will be written to disk and nothing will
           be returned
 
-    dtype : str; optional
-        The datatype of the represented by the created raster's band
-        * Options are: Byte, Int16, Int32, Int64, Float32, Float64
-        * If dtype is None and data is None, the assumed datatype is a 'Byte'
-        * If dtype is None and data is not None, the datatype will be inferred
-          from the given data
+    dtype : str, numpy.dtype, type or None, optional
+        The data type of the output raster. By default (None or "auto"), GeoKit chooses a type that holds
+        every value the operation can produce.
+
+        - "auto": a type that holds every possible result, chosen from the input types and the operation.
+        - "preserve_input": the type of the input. GeoKit does not check the results. Results that this
+          type cannot hold are clipped (overflow), fractional results are rounded, and precision can be
+          lost, without a warning.
+        - "smallest": as "auto", then the smallest type that stores every result exactly. Reads the
+          output once.
+        - an explicit type, such as "Byte", "Float32" or np.uint16: used as given. GeoKit does not check
+          the results, so the same losses as under "preserve_input" can occur without a warning.
+
+        A noData, fill or burn value that the type cannot store raises a GeoKitDataTypeError.
+        The input of the choice is the data type of the attribute field, or the smallest
+        data type that holds a constant burn value. With add=True the data type holds
+        the feature count times the burn value.
 
     compress : bool
         A flag instructing the output raster to use a compression algorithm
@@ -1735,7 +1766,8 @@ def rasterize(
     noData : numeric; optional
         Specifies which value should be considered as 'no data' in the created
         raster
-        * Must be the same datatype as the 'dtype' input (or that which is derived)
+        * Must fit the data type of the raster: an explicit ``dtype`` that cannot
+          store it raises a GeoKitDataTypeError, an automatic one is widened
 
     overwrite : bool
         A flag to overwrite a pre-existing output file
@@ -1783,42 +1815,43 @@ def rasterize(
     if output is None and not "bands" in kwargs:
         kwargs["bands"] = [1]
 
-    list_of_data_types = []
-
-    if isinstance(dtype, str):
-        list_of_data_types.append(dtype)
-
-    list_of_numbers = []
-
+    # Choose the data type once (ADR 6): the input is the field or the constant burn value, the noData
+    # value must fit, and add=True sums up to one burn per feature
     if isinstance(value, str):
         kwargs["attribute"] = value
-        data_type_of_field_as_string = vecinfo.attribute_data_types_str
-        list_of_data_types.append(data_type_of_field_as_string[value])
-
+        input_dtypes = [_dtype_of_attribute_field(vecinfo, value)]
+        input_values = []
     else:
-        kwargs["burnValues"] = [
-            value,
-        ]
-        list_of_numbers.append(value)
+        kwargs["burnValues"] = [value]
+        input_dtypes = []
+        input_values = [value]
 
-    if isinstance(noData, (numeric, bool)):
-        list_of_numbers.append(noData)
+    if kwargs.get("add", False):
+        rule = DTYPES.DtypeRule.SUM_OF_BURNS
+    else:
+        rule = DTYPES.DtypeRule.IDENTITY
 
-    # minimum_data_type = dtype
-    # just to raise error early if invalid
+    resolved = DTYPES.resolve_dtype(
+        input_dtypes,
+        rule,
+        input_values=input_values,
+        scalars={"noData": noData},
+        dtype=dtype,
+        sum_count=vecinfo.count,
+        context="rasterize",
+    )
+
     # Do 'in memory' rasterization
     # We need to follow this path in both cases since the below fails when simultaneously rasterizing and writing to disk (I couldn't figure out why...)
-    if output is None or not srsOkay:
-        minimum_data_type_string = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_string(
-            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_data_types
-        )
+    # "smallest" also takes this path, because the finished raster has to be read before it is written
+    if output is None or not srsOkay or resolved.shrink_output:
         # Create temporary output file
         outputDS = UTIL.quickRaster(
             bounds=bounds,
             srs=srs,
             dx=pixelWidth,
             dy=pixelHeight,
-            dtype=minimum_data_type_string,
+            dtype=resolved.dtype,
             noData=noData,
         )
 
@@ -1828,11 +1861,14 @@ def rasterize(
             raise GeoKitRasterError("Rasterization failed!")
         outputDS.FlushCache()
 
+        if resolved.shrink_output:
+            outputDS = DTYPES.shrink_dataset(outputDS)
+
         if output is None:
             return outputDS
         else:
-            ri = RASTER.rasterInfo(outputDS)
-            RASTER.createRasterLike(ri, output=output, data=RASTER.extractMatrix(outputDS))
+            stored_values = outputDS.GetRasterBand(1).ReadAsArray()
+            RASTER.createRasterLike(outputDS, output=output, data=stored_values, compress=compress, overwrite=overwrite)
             return output
 
     # Do a rasterization to a file on disk
@@ -1865,9 +1901,6 @@ def rasterize(
             bounds[3] - 0.001 * pixelHeight,
         )
 
-        minimum_data_type_constant = MinimumCDataTypeHandler.get_valid_gdal_data_type_as_constant(
-            list_of_numbers=list_of_numbers, minimum_gdal_type_list=list_of_data_types
-        )
         # Do rasterize
         tmp = gdal.Rasterize(
             output,
@@ -1880,7 +1913,7 @@ def rasterize(
             where=where,
             creationOptions=creation_options,
             targetAlignedPixels=aligned,
-            outputType=minimum_data_type_constant,
+            outputType=resolved.gdal_constant,
             **kwargs,
         )
 
