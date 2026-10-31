@@ -9,4 +9,4 @@ Many operations require you to set a spatial reference system, and there are mul
 
 ## Internal Data Type Handling
 
-ETHOS.GeoKit uses GDAL, which uses C data types. ETHOS.GeoKit automates many processes related to this topic, as shown in [this example](../Examples/_07_configuration_options/_02_c_datatypes.ipynb).
+ETHOS.GeoKit uses GDAL, which uses C data types. ETHOS.GeoKit automates many processes related to this topic, as shown in [this example](../Examples/_07_configuration_options/_02_c_datatypes.ipynb). Why GeoKit chooses the types it does is explained in [Data Types](../explanation/data_types/index.md).

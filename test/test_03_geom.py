@@ -301,7 +301,7 @@ def test_polygonizeMask():
 
 def test_polygonize_matrix_all_false():
     all_false_matrix = np.full(shape=(2, 2), fill_value=False)
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="No features created"):
         empty_data_frame = geom.polygonizeMatrix(matrix=all_false_matrix)
 
     assert isinstance(empty_data_frame, pd.DataFrame)
