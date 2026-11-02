@@ -28,7 +28,7 @@ dependencies:
   - ruff =0.14.1
   - typeguard <=4.6.0
   - nbconvert <=7.17.2
-  - nbval <=0.11.0
+  - nbval >=0.10.0,<=0.11.0
   # documentation (MkDocs)
   - mkdocs >=1.6,<1.7
   - mkdocs-material >=9.5
